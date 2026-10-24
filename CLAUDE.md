@@ -38,7 +38,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
-  - `player.ts`: gästspelare (namn + figur i localStorage), lobbykoder, värdflagga
+  - `player.ts`: gästspelare (namn + figur i localStorage, spelar-id i sessionStorage), lobbykoder, värdflagga (sessionStorage)
   - `narmast.ts`: spellogiken för gissningsspelen Närmast vinner och Gissa priset, plus topplistan (rena funktioner)
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa) och poängräkningen `pricePoints`
   - `belopp.ts`: omräkning av gissningar i Gissa priset (tal + enhet som öre eller miljarder till kronor)
@@ -49,6 +49,9 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Alla i en lobby ansluter till Realtime-kanalen `lobby:KOD`.
 - Den som skapade lobbyn är värd och äger spelets tillstånd. Värden skickar ut hela tillståndet (`state`) till alla.
 - Övriga skickar bara sina gissningar (`guess`) till värden. Nya spelare skickar `hello` för att få aktuellt läge.
+- Spelar-id och värdflaggan sparas per flik (sessionStorage), så varje flik är en egen spelare. Det går att testa med flera spelare i flera flikar.
+- Värden väljer spel i väntrummet (fältet `game` i tillståndet). Spelet från startsidan är bara förvalt.
+- Topplistan gäller hela lobbyn oavsett spel och räknar vunna matcher. Delad seger ger alla på förstaplatsen en vinst.
 - Lämnar värden försvinner lobbyn. Inget sparas i databasen ännu.
 
 ## Routes
