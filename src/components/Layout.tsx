@@ -19,6 +19,9 @@ export function Layout() {
             </span>
           </Link>
           <nav className="flex items-center gap-4 text-sm font-semibold">
+            <Link to="/#sa-funkar" className="hidden text-muted-foreground hover:text-foreground sm:inline">
+              Så funkar det
+            </Link>
             <Link to="/#spel" className="text-muted-foreground hover:text-foreground">
               Alla spel
             </Link>

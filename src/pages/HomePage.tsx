@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
-import { LogIn, Plus } from 'lucide-react'
+import { ArrowDown, LogIn, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
 
@@ -11,23 +10,27 @@ const STEPS = [
     title: 'Skapa en lobby',
     text: 'Tryck på Skapa lobby och välj ett spel. Du behöver inget konto.',
     color: 'bg-violet-500',
+    tint: 'bg-violet-50',
   },
   {
     title: 'Dela koden',
     text: 'Du får en kod på fyra bokstäver. Skicka den i Discord eller säg den högt.',
     color: 'bg-pink-500',
+    tint: 'bg-pink-50',
   },
   {
     title: 'Spela tillsammans',
     text: 'Kompisarna går med på sin egen dator eller mobil. Flest poäng vinner.',
     color: 'bg-amber-500',
+    tint: 'bg-amber-50',
   },
 ]
 
+// Ställningen efter runda 3: Oscar leder, Michaela är tvåa och Andreas sist.
 const PREVIEW_ROWS = [
-  { name: 'Oscar', guess: 40, win: true },
-  { name: 'Kompisen', guess: 57, win: false },
-  { name: 'Sara', guess: 12, win: false },
+  { name: 'Oscar', guess: 40, score: 3, win: true, color: 'bg-violet-500' },
+  { name: 'Michaela', guess: 57, score: 2, win: false, color: 'bg-pink-500' },
+  { name: 'Andreas', guess: 12, score: 1, win: false, color: 'bg-amber-500' },
 ]
 
 export function HomePage() {
@@ -83,42 +86,80 @@ export function HomePage() {
               <p className="text-sm text-muted-foreground">Har du fått en kod av en kompis?</p>
             </div>
           </div>
+          <div className="flex flex-wrap justify-center gap-2 md:justify-start">
+            <Link
+              to="/#sa-funkar"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-violet-900 shadow-sm hover:bg-white"
+            >
+              <ArrowDown className="size-4" />
+              Så funkar det
+            </Link>
+            <Link
+              to="/#spel"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-violet-900 shadow-sm hover:bg-white"
+            >
+              <ArrowDown className="size-4" />
+              Se alla spel
+            </Link>
+          </div>
         </div>
 
         {/* Förhandsvisning av en runda i Närmast vinner */}
-        <div className="mx-auto w-full max-w-sm rotate-1 rounded-3xl bg-white p-6 shadow-xl transition-transform hover:rotate-0">
-          <p className="text-sm font-semibold text-muted-foreground">Närmast vinner, runda 3 av 5</p>
+        <div className="mx-auto w-full max-w-sm rotate-1 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-violet-100 transition-transform hover:rotate-0">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground">Närmast vinner</p>
+            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-primary">Runda 3 av 5</span>
+          </div>
           <p className="mt-4 text-center text-6xl font-black text-primary tabular-nums">42</p>
           <p className="text-center text-sm text-muted-foreground">Rätt svar</p>
-          <ul className="mt-6 space-y-2">
-            {PREVIEW_ROWS.map((row) => (
+          <p className="mt-6 mb-2 text-xs font-bold tracking-wide text-muted-foreground uppercase">Ställning</p>
+          <ol className="space-y-2">
+            {PREVIEW_ROWS.map((row, index) => (
               <li
                 key={row.name}
                 className={cn(
-                  'flex items-center gap-3 rounded-2xl px-4 py-2.5',
-                  row.win ? 'bg-amber-100 font-bold' : 'bg-muted',
+                  'flex items-center gap-3 rounded-2xl px-3 py-2.5',
+                  row.win ? 'bg-amber-100 font-bold' : 'bg-violet-50',
                 )}
               >
-                <span className="flex-1">{row.name}</span>
-                <span className="tabular-nums">{row.guess}</span>
-                {row.win && <span className="text-sm">+1 poäng</span>}
+                <span className="w-4 text-center text-sm font-black text-muted-foreground">{index + 1}</span>
+                <span
+                  className={cn(
+                    'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-black text-white',
+                    row.color,
+                  )}
+                >
+                  {row.name[0]}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{row.name}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    Gissade {row.guess}
+                    {row.win && ', närmast!'}
+                  </span>
+                </span>
+                {row.win && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">+1</span>
+                )}
+                <span className="text-lg font-black text-primary tabular-nums">{row.score} p</span>
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       </section>
 
-      <Separator />
-
       {/* Så funkar det */}
-      <section className="space-y-6">
+      <section
+        id="sa-funkar"
+        className="scroll-mt-6 space-y-6 rounded-[2rem] bg-white/85 p-6 shadow-sm ring-1 ring-violet-100 sm:p-10"
+      >
         <div>
           <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Så funkar det</h2>
           <p className="mt-1 text-muted-foreground">Tre steg, och ni är igång på under en minut.</p>
         </div>
         <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
-            <li key={step.title} className="rounded-3xl bg-white p-6 shadow-sm">
+            <li key={step.title} className={cn('rounded-3xl p-6', step.tint)}>
               <span
                 className={cn(
                   'flex size-12 items-center justify-center rounded-2xl text-2xl font-black text-white',
@@ -134,17 +175,21 @@ export function HomePage() {
         </ol>
       </section>
 
-      <Separator />
-
-      {/* Alla spel */}
-      <section id="spel" className="scroll-mt-6 space-y-6">
+      {/* Alla spel, på ett lila band så att de syns direkt */}
+      <section id="spel" className="scroll-mt-6 space-y-6 rounded-[2rem] bg-violet-600 p-6 shadow-xl shadow-violet-600/20 sm:p-10">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Alla spel</h2>
-          <p className="mt-1 text-muted-foreground">Fler spel är på väg.</p>
+          <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">Alla spel</h2>
+          <p className="mt-1 text-violet-100">Välj ett spel och skapa en lobby. Fler spel är på väg.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.map((game) => (
-            <div key={game.id} className="flex flex-col gap-4 rounded-3xl border bg-white p-6 shadow-sm">
+            <div
+              key={game.id}
+              className={cn(
+                'flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-md transition-transform',
+                game.playable && 'hover:-translate-y-1',
+              )}
+            >
               <div className="flex items-start justify-between">
                 <span className={cn('flex size-12 items-center justify-center rounded-2xl', game.color)}>
                   <game.icon className="size-6" />
