@@ -550,10 +550,29 @@ function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
 
 /* ---------- Gissa priset: gissa ---------- */
 
-// Gör om "1 500 000" eller "1500000" till 1500000. Allt som inte är siffror ignoreras.
+// Delar upp det man skrivit i kronor och ören. Mellanslag ignoreras, och komma eller punkt
+// fungerar som decimaltecken (max två decimaler).
+function splitTyped(text: string): { whole: string; decimals: string | undefined } {
+  const [whole = '', decimals] = text.replace(/\s/g, '').replace('.', ',').split(',')
+  return {
+    whole: whole.replace(/\D/g, '').slice(0, MAX_PRICE_DIGITS),
+    decimals: decimals === undefined ? undefined : decimals.replace(/\D/g, '').slice(0, 2),
+  }
+}
+
+// "1 500 000" -> 1500000 och "0,15" -> 0.15.
 function parseKronor(text: string): number {
-  const digits = text.replace(/\D/g, '').slice(0, MAX_PRICE_DIGITS)
-  return digits ? Number(digits) : Number.NaN
+  const { whole, decimals } = splitTyped(text)
+  if (!whole && !decimals) return Number.NaN
+  return Number(`${whole || '0'}.${decimals || '0'}`)
+}
+
+// Visar det man skriver med mellanslag mellan tusental, men behåller ett påbörjat decimalkomma.
+function formatTyped(text: string): string {
+  const { whole, decimals } = splitTyped(text)
+  const grouped = whole ? Number(whole).toLocaleString('sv-SE') : ''
+  if (decimals === undefined) return grouped
+  return `${grouped || '0'},${decimals}`
 }
 
 function PriceGuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
@@ -587,8 +606,18 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
 
       <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
         <p className="text-7xl">{item?.emoji ?? '🏷️'}</p>
-        <p className="mt-2 text-sm font-semibold text-muted-foreground">Vad såldes det här för?</p>
+        {item && (
+          <p className="mx-auto mt-3 w-fit rounded-full bg-primary px-5 py-1.5 text-xl font-black text-primary-foreground shadow-md shadow-primary/30">
+            År {item.year}
+          </p>
+        )}
+        <p className="mt-3 text-sm font-semibold text-muted-foreground">Vad kostade det?</p>
         <h1 className="mx-auto mt-1 max-w-xl text-2xl font-black text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
+        {item?.clue && (
+          <p className="mx-auto mt-3 w-fit max-w-xl rounded-2xl bg-violet-50 px-4 py-1.5 text-sm font-semibold text-primary">
+            {item.clue}
+          </p>
+        )}
       </div>
 
       <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -606,8 +635,8 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
             <div className="relative">
               <Input
                 type="text"
-                inputMode="numeric"
-                value={Number.isNaN(value) ? '' : value.toLocaleString('sv-SE')}
+                inputMode="decimal"
+                value={formatTyped(text)}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="0"
                 aria-label="Din gissning i kronor"
@@ -619,7 +648,11 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
               </span>
             </div>
             <p className="h-5 text-center text-sm text-muted-foreground">
-              {valid && value >= 1_000_000 ? `Ungefär ${formatSekShort(value)}` : 'Skriv i kronor'}
+              {valid && value >= 1_000_000
+                ? `Ungefär ${formatSekShort(value)}`
+                : valid && value < 1
+                  ? formatSek(value)
+                  : 'Skriv i kronor. Använd komma för ören, t.ex. 0,15.'}
             </p>
             <Button
               type="submit"
@@ -703,6 +736,7 @@ function PriceRevealView({ state, me, isHost, clockOffset, onNext }: RevealViewP
       <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
         <p className="text-5xl">{item?.emoji ?? '🏷️'}</p>
         <p className="mt-2 font-bold text-balance">{item?.name}</p>
+        {item && <p className="text-sm font-semibold text-primary">År {item.year}</p>}
         <p className="mt-4 text-sm font-semibold text-muted-foreground">Det såldes för ungefär</p>
         <p
           className={cn(

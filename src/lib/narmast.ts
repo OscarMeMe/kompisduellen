@@ -151,9 +151,12 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
 }
 
 export function isValidGuess(game: string, value: number): boolean {
-  if (!Number.isInteger(value)) return false
-  if (game === PRICE_GAME) return value >= 1 && value <= MAX_PRICE
-  return value >= MIN_NUMBER && value <= MAX_NUMBER
+  // Gissa priset: kronor med upp till två decimaler (gamla priser kan vara några ören).
+  if (game === PRICE_GAME) {
+    const hasMaxTwoDecimals = Math.abs(Math.round(value * 100) - value * 100) < 1e-6
+    return Number.isFinite(value) && value >= 0.01 && value <= MAX_PRICE && hasMaxTwoDecimals
+  }
+  return Number.isInteger(value) && value >= MIN_NUMBER && value <= MAX_NUMBER
 }
 
 export function addGuess(state: GameState, playerId: string, value: number): GameState {
