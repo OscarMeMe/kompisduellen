@@ -14,7 +14,7 @@ type PlayerSetupProps = {
 export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   const saved = loadPlayer()
   const [name, setName] = useState(saved?.name ?? '')
-  const [avatar, setAvatar] = useState(saved?.avatar ?? AVATARS[Math.floor(Math.random() * AVATARS.length)])
+  const [avatar, setAvatar] = useState(() => saved?.avatar ?? AVATARS[Math.floor(Math.random() * AVATARS.length)])
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
