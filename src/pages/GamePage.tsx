@@ -1,16 +1,7 @@
-import { Link, useParams } from 'react-router'
-import { PageHeader } from '@/components/PageHeader'
-import { Button } from '@/components/ui/button'
+import { Navigate, useParams } from 'react-router'
 
+// Hela spelet körs i lobbysidan så att alla stannar i samma realtidskanal.
 export function GamePage() {
   const { code } = useParams()
-
-  return (
-    <>
-      <PageHeader title="Spel" description="Här kommer frågorna och duellerna att visas." />
-      <Button asChild size="lg" className="h-12 text-base">
-        <Link to={`/resultat/${code}`}>Visa resultat</Link>
-      </Button>
-    </>
-  )
+  return <Navigate to={`/lobby/${code ?? ''}`} replace />
 }
