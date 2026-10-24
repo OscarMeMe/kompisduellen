@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Check, Copy, Crown, ExternalLink, Lock, Loader2 } from 'lucide-react'
 import { Countdown } from '@/components/Countdown'
@@ -21,7 +21,16 @@ import {
   ROUND_OPTIONS,
   type GameState,
 } from '@/lib/narmast'
-import { findPriceItem, formatSek, formatSekShort, MAX_PRICE_DIGITS } from '@/lib/prisdata'
+import {
+  DEFAULT_UNIT,
+  describeKronor,
+  formatTypedNumber,
+  parseTypedNumber,
+  PRICE_UNITS,
+  toKronor,
+  type PriceUnit,
+} from '@/lib/belopp'
+import { findPriceItem, formatSek, formatSekShort } from '@/lib/prisdata'
 import { hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -550,36 +559,16 @@ function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
 
 /* ---------- Gissa priset: gissa ---------- */
 
-// Delar upp det man skrivit i kronor och ören. Mellanslag ignoreras, och komma eller punkt
-// fungerar som decimaltecken (max två decimaler).
-function splitTyped(text: string): { whole: string; decimals: string | undefined } {
-  const [whole = '', decimals] = text.replace(/\s/g, '').replace('.', ',').split(',')
-  return {
-    whole: whole.replace(/\D/g, '').slice(0, MAX_PRICE_DIGITS),
-    decimals: decimals === undefined ? undefined : decimals.replace(/\D/g, '').slice(0, 2),
-  }
-}
-
-// "1 500 000" -> 1500000 och "0,15" -> 0.15.
-function parseKronor(text: string): number {
-  const { whole, decimals } = splitTyped(text)
-  if (!whole && !decimals) return Number.NaN
-  return Number(`${whole || '0'}.${decimals || '0'}`)
-}
-
-// Visar det man skriver med mellanslag mellan tusental, men behåller ett påbörjat decimalkomma.
-function formatTyped(text: string): string {
-  const { whole, decimals } = splitTyped(text)
-  const grouped = whole ? Number(whole).toLocaleString('sv-SE') : ''
-  if (decimals === undefined) return grouped
-  return `${grouped || '0'},${decimals}`
-}
-
 function PriceGuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const item = findPriceItem(state.itemId)
   const [text, setText] = useState('')
+  // Vyn får en ny key varje runda, så enheten börjar om på kr inför varje fråga.
+  const [unit, setUnit] = useState<PriceUnit>(DEFAULT_UNIT)
   const [sent, setSent] = useState<number | null>(null)
-  const value = parseKronor(text)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const typed = parseTypedNumber(text)
+  // Det tolkade beloppet i kronor är det som skickas som gissning.
+  const value = toKronor(typed, unit)
   const valid = isValidGuess(state.game, value)
   const confirmed = state.guesses[me.id]
   const locked = confirmed ?? sent
@@ -632,27 +621,52 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={formatTyped(text)}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="0"
-                aria-label="Din gissning i kronor"
-                className="h-20 rounded-2xl pr-16 text-center text-4xl font-black sm:text-5xl"
-                autoFocus
-              />
-              <span className="pointer-events-none absolute top-1/2 right-5 -translate-y-1/2 text-xl font-bold text-muted-foreground">
-                kr
-              </span>
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              value={formatTypedNumber(text)}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="0"
+              aria-label="Din gissning, ett tal"
+              className="h-20 rounded-2xl text-center text-4xl font-black sm:text-5xl"
+              autoFocus
+            />
+            {/* Mobil: tre knappar på första raden och två på andra. Bred skärm: alla fem på en rad. */}
+            <div role="group" aria-label="Enhet" className="grid grid-cols-6 gap-2 sm:grid-cols-5">
+              {PRICE_UNITS.map((u, index) => (
+                <Button
+                  key={u.id}
+                  type="button"
+                  variant={unit === u.id ? 'default' : 'outline'}
+                  aria-pressed={unit === u.id}
+                  className={cn(
+                    'h-12 rounded-2xl px-2 text-base font-bold sm:col-span-1',
+                    index < 3 ? 'col-span-2' : 'col-span-3',
+                    unit === u.id && 'shadow-md shadow-primary/30',
+                  )}
+                  onClick={() => {
+                    setUnit(u.id)
+                    inputRef.current?.focus()
+                  }}
+                >
+                  {u.label}
+                </Button>
+              ))}
             </div>
-            <p className="h-5 text-center text-sm text-muted-foreground">
-              {valid && value >= 1_000_000
-                ? `Ungefär ${formatSekShort(value)}`
-                : valid && value < 1
-                  ? formatSek(value)
-                  : 'Skriv i kronor. Använd komma för ören, t.ex. 0,15.'}
+            <p
+              className={cn(
+                'min-h-7 text-center text-lg font-bold break-words',
+                valid ? 'text-primary' : 'text-sm font-normal text-muted-foreground',
+              )}
+            >
+              {Number.isNaN(typed)
+                ? 'Skriv ett tal och välj enhet. Komma eller punkt för decimaler.'
+                : valid
+                  ? describeKronor(value)
+                  : value > 0
+                    ? 'Det är för mycket. Max 1 000 miljarder kr.'
+                    : 'Minst 1 öre.'}
             </p>
             <Button
               type="submit"
