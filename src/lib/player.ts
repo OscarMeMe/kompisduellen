@@ -1,4 +1,7 @@
 // Spelarens identitet sparas lokalt i webbläsaren. Ingen inloggning behövs för att spela som gäst.
+// - Namn och figur sparas i localStorage, så att man slipper skriva in dem igen.
+// - Spelar-id och värdflaggan sparas i sessionStorage, alltså per flik. Då blir varje flik
+//   en egen spelare, och bara fliken som skapade lobbyn är värd.
 
 export type Player = {
   id: string
@@ -8,30 +11,45 @@ export type Player = {
 
 export const AVATARS = ['🦊', '🐸', '🐼', '🦄', '🐙', '🐯', '🐧', '🦖', '🐝', '🐨', '🦉', '🐳']
 
-const PLAYER_KEY = 'kd-player'
+const PROFILE_KEY = 'kd-player'
+const PLAYER_ID_KEY = 'kd-player-id'
 
-function safeGet(key: string): string | null {
+type StorageKind = 'local' | 'session'
+
+function safeGet(kind: StorageKind, key: string): string | null {
   try {
-    return localStorage.getItem(key)
+    return (kind === 'local' ? localStorage : sessionStorage).getItem(key)
   } catch {
     return null
   }
 }
 
-function safeSet(key: string, value: string) {
+function safeSet(kind: StorageKind, key: string, value: string) {
   try {
-    localStorage.setItem(key, value)
+    const store = kind === 'local' ? localStorage : sessionStorage
+    store.setItem(key, value)
   } catch {
     // Privat läge eller blockerad lagring: spelet fungerar ändå under sessionen.
   }
 }
 
+// Flikens spelar-id. Skapas första gången det behövs och gäller sedan så länge fliken är öppen.
+// Är sessionStorage blockerad finns id:t kvar i minnet tills sidan laddas om.
+let memoryId: string | null = null
+function playerId(): string {
+  const saved = safeGet('session', PLAYER_ID_KEY) ?? memoryId
+  if (saved) return saved
+  memoryId = crypto.randomUUID()
+  safeSet('session', PLAYER_ID_KEY, memoryId)
+  return memoryId
+}
+
 export function loadPlayer(): Player | null {
-  const raw = safeGet(PLAYER_KEY)
+  const raw = safeGet('local', PROFILE_KEY)
   if (!raw) return null
   try {
-    const parsed = JSON.parse(raw) as Player
-    if (parsed.id && parsed.name && parsed.avatar) return parsed
+    const parsed = JSON.parse(raw) as Partial<Player>
+    if (parsed.name && parsed.avatar) return { id: playerId(), name: parsed.name, avatar: parsed.avatar }
   } catch {
     // Trasig data: be om namn igen.
   }
@@ -39,14 +57,9 @@ export function loadPlayer(): Player | null {
 }
 
 export function savePlayer(name: string, avatar: string): Player {
-  const existing = loadPlayer()
-  const player: Player = {
-    id: existing?.id ?? crypto.randomUUID(),
-    name: name.trim().slice(0, 20),
-    avatar,
-  }
-  safeSet(PLAYER_KEY, JSON.stringify(player))
-  return player
+  const profile = { name: name.trim().slice(0, 20), avatar }
+  safeSet('local', PROFILE_KEY, JSON.stringify(profile))
+  return { id: playerId(), ...profile }
 }
 
 // Bokstäver som är lätta att läsa högt och svåra att blanda ihop (inga I, O, Q osv.).
@@ -64,11 +77,12 @@ export function normalizeCode(code: string): string {
   return code.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4)
 }
 
-// Den som skapar lobbyn är värd. Det sparas per lobbykod.
+// Den som skapar lobbyn är värd. Det sparas per lobbykod i fliken, tillsammans med spelet
+// som valdes på startsidan (det är bara förvalt, värden kan byta i väntrummet).
 export function markAsHost(code: string, gameId: string) {
-  safeSet(`kd-host:${code}`, gameId)
+  safeSet('session', `kd-host:${code}`, gameId)
 }
 
 export function hostedGame(code: string): string | null {
-  return safeGet(`kd-host:${code}`)
+  return safeGet('session', `kd-host:${code}`)
 }

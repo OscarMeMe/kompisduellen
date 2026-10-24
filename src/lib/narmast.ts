@@ -37,14 +37,14 @@ export type RoundResult = {
   itemId: string | null
 }
 
-// En rad i lobbyns topplista. Poängen från varje avslutad match läggs på här.
+// En rad i lobbyns topplista. Gäller hela lobbyn, oavsett spel.
 export type LeaderboardEntry = PlayerInfo & {
-  points: number
-  wins: number
+  wins: number // vunna matcher
+  played: number // spelade matcher
 }
 
 export type GameState = {
-  game: string // id från GAMES, så att alla vet vilket spel topplistan gäller
+  game: string // id från GAMES. Värden kan byta spel i väntrummet inför varje match.
   phase: Phase
   rounds: number
   round: number
@@ -58,6 +58,8 @@ export type GameState = {
   itemId: string | null
   usedItemIds: string[]
   matchesPlayed: number
+  // Antal spelade matcher per spel, t.ex. { narmast: 2, 'gissa-priset': 1 }.
+  gamesPlayed: Record<string, number>
   leaderboard: Record<string, LeaderboardEntry>
 }
 
@@ -86,6 +88,7 @@ export function initialState(game = 'narmast'): GameState {
     itemId: null,
     usedItemIds: [],
     matchesPlayed: 0,
+    gamesPlayed: {},
     leaderboard: {},
   }
 }
@@ -106,6 +109,12 @@ function pickItem(state: GameState): Pick<GameState, 'itemId' | 'usedItemIds'> {
 export function setRounds(state: GameState, rounds: number): GameState {
   if (state.phase !== 'waiting') return state
   return { ...state, rounds }
+}
+
+// Byter spel i väntrummet. Antal rundor och topplistan följer med.
+export function setGame(state: GameState, game: string): GameState {
+  if (state.phase !== 'waiting' || state.game === game) return state
+  return { ...state, game }
 }
 
 // Lägger till spelare som anslutit. Befintliga poäng behålls.
@@ -151,9 +160,12 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
 }
 
 export function isValidGuess(game: string, value: number): boolean {
-  if (!Number.isInteger(value)) return false
-  if (game === PRICE_GAME) return value >= 1 && value <= MAX_PRICE
-  return value >= MIN_NUMBER && value <= MAX_NUMBER
+  // Gissa priset: kronor med upp till två decimaler (gamla priser kan vara några ören).
+  if (game === PRICE_GAME) {
+    const hasMaxTwoDecimals = Math.abs(Math.round(value * 100) - value * 100) < 1e-6
+    return Number.isFinite(value) && value >= 0.01 && value <= MAX_PRICE && hasMaxTwoDecimals
+  }
+  return Number.isInteger(value) && value >= MIN_NUMBER && value <= MAX_NUMBER
 }
 
 export function addGuess(state: GameState, playerId: string, value: number): GameState {
@@ -225,20 +237,32 @@ export function nextRound(state: GameState, now: number): GameState {
   }
 }
 
-// Lägger matchens poäng på topplistan. Den eller de med flest poäng får en vinst.
+// Den eller de med flest poäng i matchen. Delad seger ger alla på förstaplatsen en vinst.
+// Fick ingen några poäng blir det ingen vinnare.
+export function matchWinners(state: GameState): string[] {
+  const best = Math.max(0, ...Object.keys(state.players).map((id) => state.scores[id] ?? 0))
+  if (best === 0) return []
+  return Object.keys(state.players).filter((id) => (state.scores[id] ?? 0) === best)
+}
+
+// Lägger matchens vinster på topplistan.
 function finishMatch(state: GameState): GameState {
-  const best = Math.max(0, ...Object.values(state.scores))
+  const winners = matchWinners(state)
   const leaderboard = { ...state.leaderboard }
   for (const [id, info] of Object.entries(state.players)) {
-    const score = state.scores[id] ?? 0
     const previous = leaderboard[id]
     leaderboard[id] = {
       ...info,
-      points: (previous?.points ?? 0) + score,
-      wins: (previous?.wins ?? 0) + (best > 0 && score === best ? 1 : 0),
+      wins: (previous?.wins ?? 0) + (winners.includes(id) ? 1 : 0),
+      played: (previous?.played ?? 0) + 1,
     }
   }
-  return { ...state, leaderboard, matchesPlayed: state.matchesPlayed + 1 }
+  return {
+    ...state,
+    leaderboard,
+    matchesPlayed: state.matchesPlayed + 1,
+    gamesPlayed: { ...state.gamesPlayed, [state.game]: (state.gamesPlayed[state.game] ?? 0) + 1 },
+  }
 }
 
 export function backToWaiting(state: GameState): GameState {
@@ -270,13 +294,12 @@ export function rankPlayers(state: GameState): RankedPlayer[] {
   }))
 }
 
-// Topplistan sorterad på totala poäng, sedan antal vinster. Lika ger samma placering.
+// Topplistan sorterad på antal vinster. Lika många vinster ger samma placering.
 export function rankLeaderboard(state: GameState): RankedEntry[] {
   const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))
-  const better = (a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points || b.wins - a.wins
-  list.sort((a, b) => better(a, b) || a.name.localeCompare(b.name, 'sv'))
+  list.sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name, 'sv'))
   return list.map((entry) => ({
     ...entry,
-    place: 1 + list.filter((other) => better(entry, other) > 0).length,
+    place: 1 + list.filter((other) => other.wins > entry.wins).length,
   }))
 }

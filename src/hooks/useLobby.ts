@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { findGame } from '@/lib/games'
 import { supabase } from '@/lib/supabase'
 import type { Player } from '@/lib/player'
 import {
@@ -10,6 +11,7 @@ import {
   initialState,
   nextRound,
   resolveRound,
+  setGame,
   setRounds,
   startGame,
   type GameState,
@@ -182,6 +184,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     () => ({
       setRounds: (rounds: number) => {
         if (isHost) publish(setRounds(stateRef.current, rounds))
+      },
+      setGame: (game: string) => {
+        if (isHost && findGame(game)?.playable) publish(setGame(stateRef.current, game))
       },
       start: () => {
         if (!isHost) return

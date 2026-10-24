@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Check, Copy, Crown, ExternalLink, Lock, Loader2 } from 'lucide-react'
 import { Countdown } from '@/components/Countdown'
@@ -15,13 +15,23 @@ import {
   MAX_NUMBER,
   MIN_NUMBER,
   PRICE_GAME,
+  matchWinners,
   rankLeaderboard,
   rankPlayers,
   revealSeconds,
   ROUND_OPTIONS,
   type GameState,
 } from '@/lib/narmast'
-import { findPriceItem, formatSek, formatSekShort, MAX_PRICE_DIGITS } from '@/lib/prisdata'
+import {
+  DEFAULT_UNIT,
+  describeKronor,
+  formatTypedNumber,
+  parseTypedNumber,
+  PRICE_UNITS,
+  toKronor,
+  type PriceUnit,
+} from '@/lib/belopp'
+import { findPriceItem, formatSek, formatSekShort } from '@/lib/prisdata'
 import { hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -99,6 +109,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           online={online}
           rounds={state.rounds}
           onSetRounds={actions.setRounds}
+          onSetGame={actions.setGame}
           onStart={actions.start}
         />
       )
@@ -170,10 +181,11 @@ type WaitingRoomProps = {
   online: OnlinePlayer[]
   rounds: number
   onSetRounds: (rounds: number) => void
+  onSetGame: (game: string) => void
   onStart: () => void
 }
 
-function WaitingRoom({ code, game, state, isHost, online, rounds, onSetRounds, onStart }: WaitingRoomProps) {
+function WaitingRoom({ code, game, state, isHost, online, rounds, onSetRounds, onSetGame, onStart }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
   const link = `${window.location.origin}/lobby/${code}`
 
@@ -220,6 +232,39 @@ function WaitingRoom({ code, game, state, isHost, online, rounds, onSetRounds, o
       </div>
 
       <div className="space-y-4 rounded-3xl bg-white p-6 shadow-sm">
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xl font-black">Välj spel</h2>
+            {!isHost && <span className="text-sm text-muted-foreground">Värden väljer</span>}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {GAMES.filter((g) => g.playable).map((option) => {
+              const selected = option.id === game.id
+              return (
+                <Button
+                  key={option.id}
+                  variant="outline"
+                  aria-pressed={selected}
+                  disabled={!isHost}
+                  onClick={() => onSetGame(option.id)}
+                  className={cn(
+                    'h-auto justify-start gap-3 rounded-2xl border-2 p-4 text-left whitespace-normal',
+                    selected ? 'border-primary bg-violet-50 disabled:opacity-100' : 'bg-white',
+                  )}
+                >
+                  <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl', option.color)}>
+                    <option.icon className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-black text-violet-900">{option.name}</span>
+                    <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
+                  </span>
+                  {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}
+                </Button>
+              )
+            })}
+          </div>
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-bold">Antal rundor</p>
           <div className="flex gap-2">
@@ -243,16 +288,16 @@ function WaitingRoom({ code, game, state, isHost, online, rounds, onSetRounds, o
         </p>
         {isHost ? (
           <Button size="lg" className="h-14 w-full rounded-2xl text-lg shadow-lg shadow-primary/30" onClick={onStart}>
-            Starta spelet
+            Starta {game.name}
           </Button>
         ) : (
           <p className="flex items-center justify-center gap-2 rounded-2xl bg-violet-50 py-4 font-semibold text-primary">
-            <Loader2 className="size-5 animate-spin" /> Väntar på att värden startar…
+            <Loader2 className="size-5 animate-spin" /> Väntar på att värden startar {game.name}…
           </p>
         )}
       </div>
 
-      <Leaderboard game={game} entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} />
+      <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
     </Wide>
   )
 }
@@ -518,16 +563,18 @@ function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
       <div className="text-center">
         <p className="text-5xl">🏆</p>
         <h1 className="mt-2 text-4xl font-black tracking-tight">Matchen är slut!</h1>
-        <p className="mt-1 text-muted-foreground">{state.rounds} rundor spelade</p>
+        <p className="mt-1 text-muted-foreground">
+          {game.name} · {state.rounds} rundor spelade
+        </p>
       </div>
 
       <Podium players={ranked} />
 
       <Leaderboard
-        game={game}
         entries={rankLeaderboard(state)}
         matchesPlayed={state.matchesPlayed}
-        lastScores={state.scores}
+        gamesPlayed={state.gamesPlayed}
+        lastWinners={matchWinners(state)}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -537,7 +584,7 @@ function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
           </Button>
         ) : (
           <p className="flex items-center justify-center rounded-2xl bg-white px-4 py-4 text-center font-semibold text-muted-foreground shadow-sm sm:flex-1">
-            Värden kan starta en ny match
+            Värden väljer nästa spel
           </p>
         )}
         <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white text-lg sm:flex-1">
@@ -550,17 +597,16 @@ function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
 
 /* ---------- Gissa priset: gissa ---------- */
 
-// Gör om "1 500 000" eller "1500000" till 1500000. Allt som inte är siffror ignoreras.
-function parseKronor(text: string): number {
-  const digits = text.replace(/\D/g, '').slice(0, MAX_PRICE_DIGITS)
-  return digits ? Number(digits) : Number.NaN
-}
-
 function PriceGuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const item = findPriceItem(state.itemId)
   const [text, setText] = useState('')
+  // Vyn får en ny key varje runda, så enheten börjar om på kr inför varje fråga.
+  const [unit, setUnit] = useState<PriceUnit>(DEFAULT_UNIT)
   const [sent, setSent] = useState<number | null>(null)
-  const value = parseKronor(text)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const typed = parseTypedNumber(text)
+  // Det tolkade beloppet i kronor är det som skickas som gissning.
+  const value = toKronor(typed, unit)
   const valid = isValidGuess(state.game, value)
   const confirmed = state.guesses[me.id]
   const locked = confirmed ?? sent
@@ -587,8 +633,18 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
 
       <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
         <p className="text-7xl">{item?.emoji ?? '🏷️'}</p>
-        <p className="mt-2 text-sm font-semibold text-muted-foreground">Vad såldes det här för?</p>
+        {item && (
+          <p className="mx-auto mt-3 w-fit rounded-full bg-primary px-5 py-1.5 text-xl font-black text-primary-foreground shadow-md shadow-primary/30">
+            År {item.year}
+          </p>
+        )}
+        <p className="mt-3 text-sm font-semibold text-muted-foreground">Vad kostade det?</p>
         <h1 className="mx-auto mt-1 max-w-xl text-2xl font-black text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
+        {item?.clue && (
+          <p className="mx-auto mt-3 w-fit max-w-xl rounded-2xl bg-violet-50 px-4 py-1.5 text-sm font-semibold text-primary">
+            {item.clue}
+          </p>
+        )}
       </div>
 
       <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
@@ -603,23 +659,52 @@ function PriceGuessingView({ state, me, online, clockOffset, onGuess }: Guessing
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Input
-                type="text"
-                inputMode="numeric"
-                value={Number.isNaN(value) ? '' : value.toLocaleString('sv-SE')}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="0"
-                aria-label="Din gissning i kronor"
-                className="h-20 rounded-2xl pr-16 text-center text-4xl font-black sm:text-5xl"
-                autoFocus
-              />
-              <span className="pointer-events-none absolute top-1/2 right-5 -translate-y-1/2 text-xl font-bold text-muted-foreground">
-                kr
-              </span>
+            <Input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              value={formatTypedNumber(text)}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="0"
+              aria-label="Din gissning, ett tal"
+              className="h-20 rounded-2xl text-center text-4xl font-black sm:text-5xl"
+              autoFocus
+            />
+            {/* Mobil: tre knappar på första raden och två på andra. Bred skärm: alla fem på en rad. */}
+            <div role="group" aria-label="Enhet" className="grid grid-cols-6 gap-2 sm:grid-cols-5">
+              {PRICE_UNITS.map((u, index) => (
+                <Button
+                  key={u.id}
+                  type="button"
+                  variant={unit === u.id ? 'default' : 'outline'}
+                  aria-pressed={unit === u.id}
+                  className={cn(
+                    'h-12 rounded-2xl px-2 text-base font-bold sm:col-span-1',
+                    index < 3 ? 'col-span-2' : 'col-span-3',
+                    unit === u.id && 'shadow-md shadow-primary/30',
+                  )}
+                  onClick={() => {
+                    setUnit(u.id)
+                    inputRef.current?.focus()
+                  }}
+                >
+                  {u.label}
+                </Button>
+              ))}
             </div>
-            <p className="h-5 text-center text-sm text-muted-foreground">
-              {valid && value >= 1_000_000 ? `Ungefär ${formatSekShort(value)}` : 'Skriv i kronor'}
+            <p
+              className={cn(
+                'min-h-7 text-center text-lg font-bold break-words',
+                valid ? 'text-primary' : 'text-sm font-normal text-muted-foreground',
+              )}
+            >
+              {Number.isNaN(typed)
+                ? 'Skriv ett tal och välj enhet. Komma eller punkt för decimaler.'
+                : valid
+                  ? describeKronor(value)
+                  : value > 0
+                    ? 'Det är för mycket. Max 1 000 miljarder kr.'
+                    : 'Minst 1 öre.'}
             </p>
             <Button
               type="submit"
@@ -703,6 +788,7 @@ function PriceRevealView({ state, me, isHost, clockOffset, onNext }: RevealViewP
       <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
         <p className="text-5xl">{item?.emoji ?? '🏷️'}</p>
         <p className="mt-2 font-bold text-balance">{item?.name}</p>
+        {item && <p className="text-sm font-semibold text-primary">År {item.year}</p>}
         <p className="mt-4 text-sm font-semibold text-muted-foreground">Det såldes för ungefär</p>
         <p
           className={cn(
