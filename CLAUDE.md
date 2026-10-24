@@ -9,6 +9,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Nycklar ligger i `.env.local`, aldrig i koden. Nya miljövariabler läggs till i både `.env.example` och `src/vite-env.d.ts`.
 - Små ändringar per commit, beskrivande commit-meddelanden på svenska.
 - Jobba på en egen branch, aldrig direkt på main (undantag: första grundcommiten).
+- Supabase: nya tabeller exponeras inte automatiskt och har RLS. Skapa alltid policies och grants när du skapar en tabell.
 - Använd shadcn/ui-komponenter och Tailwind-klasser, inte egen CSS.
 - Kör `npm run build` innan du säger att något är klart.
 
