@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
+import { LogIn, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { GAMES } from '@/lib/games'
@@ -29,26 +30,51 @@ export function HomePage() {
       {/* Hero */}
       <section className="grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
         <div className="space-y-6 text-center md:text-left">
-          <p className="text-sm font-semibold text-primary">Gratis och utan konto</p>
+          <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-primary shadow-sm">
+            <span className="size-2 rounded-full bg-green-500" />
+            Gratis och utan konto
+          </span>
           <h1 className="text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-            Gissningslekar att spela med kompisarna
+            Gissningslekar att spela med{' '}
+            <span className="rounded-xl bg-pink-200 px-2 text-pink-950 [box-decoration-break:clone]">kompisarna</span>
           </h1>
           <p className="mx-auto max-w-lg text-lg text-muted-foreground md:mx-0">
             Skapa en lobby, dela koden med gänget och spela på var sin skärm. Passar på förfesten, i Discord eller i
             soffan.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
-            <Button asChild size="lg" className="h-14 rounded-2xl px-8 text-lg">
-              <Link to="/skapa?spel=narmast">Skapa lobby</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white px-8 text-lg">
-              <Link to="/ga-med">Jag har en kod</Link>
-            </Button>
+          <div className="grid gap-3 sm:grid-cols-2 md:max-w-lg">
+            <div className="space-y-1.5">
+              <Button
+                asChild
+                size="lg"
+                className="h-14 w-full rounded-2xl text-lg shadow-lg shadow-primary/30 transition-transform hover:-translate-y-0.5"
+              >
+                <Link to="/skapa?spel=narmast">
+                  <Plus className="size-5" />
+                  Skapa lobby
+                </Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Starta ett spel och bjud in andra</p>
+            </div>
+            <div className="space-y-1.5">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-14 w-full rounded-2xl border-2 border-primary/30 bg-white text-lg transition-transform hover:-translate-y-0.5"
+              >
+                <Link to="/ga-med">
+                  <LogIn className="size-5" />
+                  Gå med i lobby
+                </Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Har du fått en kod av en kompis?</p>
+            </div>
           </div>
         </div>
 
         {/* Förhandsvisning av en runda i Närmast vinner */}
-        <div className="mx-auto w-full max-w-sm rounded-3xl border bg-white p-6 shadow-sm">
+        <div className="mx-auto w-full max-w-sm rotate-1 rounded-3xl bg-white p-6 shadow-xl transition-transform hover:rotate-0">
           <p className="text-sm font-semibold text-muted-foreground">Närmast vinner, runda 3 av 5</p>
           <p className="mt-4 text-center text-6xl font-black text-primary tabular-nums">42</p>
           <p className="text-center text-sm text-muted-foreground">Rätt svar</p>
