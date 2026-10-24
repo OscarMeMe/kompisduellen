@@ -41,6 +41,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `player.ts`: gästspelare (namn + figur i localStorage), lobbykoder, värdflagga
   - `narmast.ts`: spellogiken för gissningsspelen Närmast vinner och Gissa priset, plus topplistan (rena funktioner)
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa) och poängräkningen `pricePoints`
+  - `belopp.ts`: omräkning av gissningar i Gissa priset (tal + enhet som öre eller miljarder till kronor)
 - Importera med aliaset `@/` (pekar på `src/`)
 
 ## Så fungerar lobbyn
