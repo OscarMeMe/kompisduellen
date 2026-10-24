@@ -1,11 +1,24 @@
-// Spellogik för "Närmast vinner". Rena funktioner utan React eller Supabase,
-// så att de är lätta att testa och läsa.
+// Spellogik för gissningsspelen "Närmast vinner" och "Gissa priset".
+// Båda går till på samma sätt: alla gissar ett tal på tid, sedan avslöjas svaret.
+// Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
-export const GUESS_SECONDS = 15
-export const REVEAL_SECONDS = 6
+import { findPriceItem, PRICE_ITEMS, pricePoints } from '@/lib/prisdata'
+
 export const ROUND_OPTIONS = [3, 5, 10] as const
 export const MIN_NUMBER = 1
 export const MAX_NUMBER = 100
+export const MAX_PRICE = 1_000_000_000_000
+
+export const PRICE_GAME = 'gissa-priset'
+
+export function guessSeconds(game: string): number {
+  return game === PRICE_GAME ? 20 : 15
+}
+
+// Gissa priset får lite längre tid så att man hinner läsa faktameningen.
+export function revealSeconds(game: string): number {
+  return game === PRICE_GAME ? 8 : 6
+}
 
 export type Phase = 'waiting' | 'guessing' | 'reveal' | 'finished'
 
@@ -18,6 +31,10 @@ export type RoundResult = {
   target: number
   guesses: Record<string, number>
   winners: string[]
+  // Poäng som varje spelare fick just den här rundan.
+  points: Record<string, number>
+  // Gissa priset: vilken sak rundan gällde.
+  itemId: string | null
 }
 
 // En rad i lobbyns topplista. Poängen från varje avslutad match läggs på här.
@@ -37,6 +54,9 @@ export type GameState = {
   scores: Record<string, number>
   players: Record<string, PlayerInfo>
   lastResult: RoundResult | null
+  // Gissa priset: saken som visas i rundan, och saker som redan varit med.
+  itemId: string | null
+  usedItemIds: string[]
   matchesPlayed: number
   leaderboard: Record<string, LeaderboardEntry>
 }
@@ -63,9 +83,24 @@ export function initialState(game = 'narmast'): GameState {
     scores: {},
     players: {},
     lastResult: null,
+    itemId: null,
+    usedItemIds: [],
     matchesPlayed: 0,
     leaderboard: {},
   }
+}
+
+// Gissa priset: välj en slumpad sak som inte varit med än. När alla använts börjar listan om.
+function pickItem(state: GameState): Pick<GameState, 'itemId' | 'usedItemIds'> {
+  if (state.game !== PRICE_GAME) return { itemId: null, usedItemIds: state.usedItemIds }
+  let unused = PRICE_ITEMS.filter((item) => !state.usedItemIds.includes(item.id))
+  let used = state.usedItemIds
+  if (unused.length === 0) {
+    unused = PRICE_ITEMS
+    used = []
+  }
+  const item = unused[Math.floor(Math.random() * unused.length)]
+  return { itemId: item.id, usedItemIds: [...used, item.id] }
 }
 
 export function setRounds(state: GameState, rounds: number): GameState {
@@ -104,9 +139,10 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
   }
   return {
     ...state,
+    ...pickItem(state),
     phase: 'guessing',
     round: 1,
-    deadline: now + GUESS_SECONDS * 1000,
+    deadline: now + guessSeconds(state.game) * 1000,
     guesses: {},
     scores,
     players,
@@ -114,13 +150,15 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
   }
 }
 
-export function isValidGuess(value: number): boolean {
-  return Number.isInteger(value) && value >= MIN_NUMBER && value <= MAX_NUMBER
+export function isValidGuess(game: string, value: number): boolean {
+  if (!Number.isInteger(value)) return false
+  if (game === PRICE_GAME) return value >= 1 && value <= MAX_PRICE
+  return value >= MIN_NUMBER && value <= MAX_NUMBER
 }
 
 export function addGuess(state: GameState, playerId: string, value: number): GameState {
   if (state.phase !== 'guessing') return state
-  if (!isValidGuess(value)) return state
+  if (!isValidGuess(state.game, value)) return state
   if (state.guesses[playerId] !== undefined) return state
   if (!state.players[playerId]) return state
   return { ...state, guesses: { ...state.guesses, [playerId]: value } }
@@ -135,26 +173,40 @@ export function randomTarget(): number {
   return Math.floor(Math.random() * (MAX_NUMBER - MIN_NUMBER + 1)) + MIN_NUMBER
 }
 
-// Avslutar rundan: slumpar talet och ger poäng till den eller de som är närmast.
-export function resolveRound(state: GameState, now: number, target = randomTarget()): GameState {
+// Avslutar rundan och delar ut poäng.
+// Närmast vinner: talet slumpas nu, och den eller de som är närmast får 1 poäng.
+// Gissa priset: priset på rundans sak, och alla får 0–100 poäng efter hur nära de var i procent.
+export function resolveRound(state: GameState, now: number, target?: number): GameState {
   if (state.phase !== 'guessing') return state
 
   const entries = Object.entries(state.guesses)
+  const points: Record<string, number> = {}
   let winners: string[] = []
-  if (entries.length > 0) {
-    const best = Math.min(...entries.map(([, guess]) => Math.abs(guess - target)))
-    winners = entries.filter(([, guess]) => Math.abs(guess - target) === best).map(([id]) => id)
+  let answer: number
+
+  if (state.game === PRICE_GAME) {
+    answer = target ?? findPriceItem(state.itemId)?.priceSek ?? 0
+    for (const [id, guess] of entries) points[id] = pricePoints(guess, answer)
+    const best = Math.max(0, ...Object.values(points))
+    if (best > 0) winners = entries.filter(([id]) => points[id] === best).map(([id]) => id)
+  } else {
+    answer = target ?? randomTarget()
+    if (entries.length > 0) {
+      const best = Math.min(...entries.map(([, guess]) => Math.abs(guess - answer)))
+      winners = entries.filter(([, guess]) => Math.abs(guess - answer) === best).map(([id]) => id)
+    }
+    for (const id of winners) points[id] = 1
   }
 
   const scores = { ...state.scores }
-  for (const id of winners) scores[id] = (scores[id] ?? 0) + 1
+  for (const [id, gained] of Object.entries(points)) scores[id] = (scores[id] ?? 0) + gained
 
   return {
     ...state,
     phase: 'reveal',
-    deadline: now + REVEAL_SECONDS * 1000,
+    deadline: now + revealSeconds(state.game) * 1000,
     scores,
-    lastResult: { target, guesses: state.guesses, winners },
+    lastResult: { target: answer, guesses: state.guesses, winners, points, itemId: state.itemId },
   }
 }
 
@@ -165,9 +217,10 @@ export function nextRound(state: GameState, now: number): GameState {
   }
   return {
     ...state,
+    ...pickItem(state),
     phase: 'guessing',
     round: state.round + 1,
-    deadline: now + GUESS_SECONDS * 1000,
+    deadline: now + guessSeconds(state.game) * 1000,
     guesses: {},
   }
 }
@@ -199,6 +252,7 @@ export function backToWaiting(state: GameState): GameState {
     guesses: {},
     scores,
     lastResult: null,
+    itemId: null,
   }
 }
 
