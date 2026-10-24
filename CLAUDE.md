@@ -33,13 +33,14 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`)
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
   - `player.ts`: gästspelare (namn + figur i localStorage), lobbykoder, värdflagga
-  - `narmast.ts`: spellogiken för Närmast vinner (rena funktioner)
+  - `narmast.ts`: spellogiken för gissningsspelen Närmast vinner och Gissa priset, plus topplistan (rena funktioner)
+  - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa) och poängräkningen `pricePoints`
 - Importera med aliaset `@/` (pekar på `src/`)
 
 ## Så fungerar lobbyn
@@ -56,7 +57,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/` | Startsida |
 | `/skapa` | Skapa lobby |
 | `/ga-med` | Gå med (skriv in kod) |
-| `/skapa?spel=narmast` | Skapa lobby för ett visst spel |
+| `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`) |
 | `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |

@@ -1,13 +1,33 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
+import { LogIn, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
-  { emoji: '🎮', title: 'Välj ett spel', text: 'Skapa en lobby på några sekunder. Inget konto behövs.' },
-  { emoji: '🔗', title: 'Bjud in gänget', text: 'Dela den fyrbokstaviga koden i Discord eller ropa ut den i soffan.' },
-  { emoji: '🏆', title: 'Kör!', text: 'Alla spelar på sin egen skärm. Bäst i gänget hamnar överst på pallen.' },
+  {
+    title: 'Skapa en lobby',
+    text: 'Tryck på Skapa lobby och välj ett spel. Du behöver inget konto.',
+    color: 'bg-violet-500',
+  },
+  {
+    title: 'Dela koden',
+    text: 'Du får en kod på fyra bokstäver. Skicka den i Discord eller säg den högt.',
+    color: 'bg-pink-500',
+  },
+  {
+    title: 'Spela tillsammans',
+    text: 'Kompisarna går med på sin egen dator eller mobil. Flest poäng vinner.',
+    color: 'bg-amber-500',
+  },
+]
+
+const PREVIEW_ROWS = [
+  { name: 'Oscar', guess: 40, win: true },
+  { name: 'Kompisen', guess: 57, win: false },
+  { name: 'Sara', guess: 12, win: false },
 ]
 
 export function HomePage() {
@@ -18,106 +38,134 @@ export function HomePage() {
   }, [hash])
 
   return (
-    <div className="flex flex-col gap-20 pt-6 sm:pt-12">
+    <div className="flex flex-col gap-8 pt-6 sm:gap-10 sm:pt-10">
       {/* Hero */}
       <section className="grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
         <div className="space-y-6 text-center md:text-left">
           <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-primary shadow-sm">
-            🎉 Gratis · Inget konto · Spela direkt
+            <span className="size-2 rounded-full bg-green-500" />
+            Gratis och utan konto
           </span>
-          <h1 className="text-5xl leading-[1.05] font-black tracking-tight sm:text-6xl">
-            Snabba spel för <span className="text-primary">förfesten</span> och{' '}
-            <span className="text-pink-500">Discord-hänget</span>
+          <h1 className="text-4xl leading-tight font-black tracking-tight text-violet-900 sm:text-5xl">
+            Gissningslekar att spela med{' '}
+            <span className="rounded-xl bg-pink-200 px-2 text-pink-950 [box-decoration-break:clone]">kompisarna</span>
           </h1>
           <p className="mx-auto max-w-lg text-lg text-muted-foreground md:mx-0">
-            Skapa en lobby, skicka koden till gänget och se vem som är bäst. Alla spelar på sin egen dator eller mobil.
+            Skapa en lobby, dela koden med gänget och spela på var sin skärm. Passar på förfesten, i Discord eller i
+            soffan.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
-            <Button asChild size="lg" className="h-14 rounded-2xl px-8 text-lg shadow-lg shadow-primary/30">
-              <Link to="/skapa?spel=narmast">Skapa lobby</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white px-8 text-lg">
-              <Link to="/ga-med">Jag har en kod</Link>
-            </Button>
+          <div className="grid gap-3 sm:grid-cols-2 md:max-w-lg">
+            <div className="space-y-1.5">
+              <Button
+                asChild
+                size="lg"
+                className="h-14 w-full rounded-2xl text-lg shadow-lg shadow-primary/30 transition-transform hover:-translate-y-0.5"
+              >
+                <Link to="/skapa?spel=narmast">
+                  <Plus className="size-5" />
+                  Skapa lobby
+                </Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Starta ett spel och bjud in andra</p>
+            </div>
+            <div className="space-y-1.5">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-14 w-full rounded-2xl border-2 border-primary/30 bg-white text-lg transition-transform hover:-translate-y-0.5"
+              >
+                <Link to="/ga-med">
+                  <LogIn className="size-5" />
+                  Gå med i lobby
+                </Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Har du fått en kod av en kompis?</p>
+            </div>
           </div>
         </div>
 
-        {/* Liten förhandsvisning av spelet */}
-        <div className="relative mx-auto w-full max-w-sm">
-          <div className="rotate-2 rounded-3xl bg-white p-6 shadow-xl">
-            <p className="text-sm font-semibold text-muted-foreground">Runda 3 av 5 · Närmast vinner</p>
-            <p className="mt-4 text-center text-7xl font-black text-primary">42</p>
-            <p className="text-center text-sm text-muted-foreground">Rätt tal</p>
-            <ul className="mt-6 space-y-2">
-              {[
-                { avatar: '🦊', name: 'Oscar', guess: 40, win: true },
-                { avatar: '🐸', name: 'Kompisen', guess: 57, win: false },
-                { avatar: '🦄', name: 'Sara', guess: 12, win: false },
-              ].map((row) => (
-                <li
-                  key={row.name}
-                  className={cn(
-                    'flex items-center gap-3 rounded-2xl px-3 py-2',
-                    row.win ? 'bg-amber-100 font-bold' : 'bg-violet-50',
-                  )}
-                >
-                  <span className="text-2xl">{row.avatar}</span>
-                  <span className="flex-1">{row.name}</span>
-                  <span className="tabular-nums">{row.guess}</span>
-                  {row.win && <span>+1</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="absolute -top-5 -left-5 -rotate-12 rounded-2xl bg-pink-500 px-4 py-2 text-lg font-black text-white shadow-lg">
-            Närmast!
-          </div>
+        {/* Förhandsvisning av en runda i Närmast vinner */}
+        <div className="mx-auto w-full max-w-sm rotate-1 rounded-3xl bg-white p-6 shadow-xl transition-transform hover:rotate-0">
+          <p className="text-sm font-semibold text-muted-foreground">Närmast vinner, runda 3 av 5</p>
+          <p className="mt-4 text-center text-6xl font-black text-primary tabular-nums">42</p>
+          <p className="text-center text-sm text-muted-foreground">Rätt svar</p>
+          <ul className="mt-6 space-y-2">
+            {PREVIEW_ROWS.map((row) => (
+              <li
+                key={row.name}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl px-4 py-2.5',
+                  row.win ? 'bg-amber-100 font-bold' : 'bg-muted',
+                )}
+              >
+                <span className="flex-1">{row.name}</span>
+                <span className="tabular-nums">{row.guess}</span>
+                {row.win && <span className="text-sm">+1 poäng</span>}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
+
+      <Separator />
 
       {/* Så funkar det */}
       <section className="space-y-6">
-        <h2 className="text-center text-3xl font-black tracking-tight">Så funkar det</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <div key={step.title} className="rounded-3xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{step.emoji}</span>
-                <span className="text-sm font-bold text-primary">Steg {index + 1}</span>
-              </div>
-              <h3 className="mt-3 text-xl font-bold">{step.title}</h3>
-              <p className="mt-1 text-muted-foreground">{step.text}</p>
-            </div>
-          ))}
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Så funkar det</h2>
+          <p className="mt-1 text-muted-foreground">Tre steg, och ni är igång på under en minut.</p>
         </div>
+        <ol className="grid gap-4 sm:grid-cols-3">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="rounded-3xl bg-white p-6 shadow-sm">
+              <span
+                className={cn(
+                  'flex size-12 items-center justify-center rounded-2xl text-2xl font-black text-white',
+                  step.color,
+                )}
+              >
+                {index + 1}
+              </span>
+              <h3 className="mt-4 text-xl font-black text-violet-900">{step.title}</h3>
+              <p className="mt-1 text-muted-foreground">{step.text}</p>
+            </li>
+          ))}
+        </ol>
       </section>
+
+      <Separator />
 
       {/* Alla spel */}
       <section id="spel" className="scroll-mt-6 space-y-6">
-        <div className="text-center">
-          <h2 className="text-3xl font-black tracking-tight">Alla spel</h2>
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Alla spel</h2>
           <p className="mt-1 text-muted-foreground">Fler spel är på väg.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.map((game) => (
-            <div key={game.id} className={cn('flex flex-col gap-4 rounded-3xl p-6', game.color)}>
+            <div key={game.id} className="flex flex-col gap-4 rounded-3xl border bg-white p-6 shadow-sm">
               <div className="flex items-start justify-between">
-                <span className="text-5xl">{game.emoji}</span>
+                <span className={cn('flex size-12 items-center justify-center rounded-2xl', game.color)}>
+                  <game.icon className="size-6" />
+                </span>
                 {!game.playable && (
-                  <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">Kommer snart</span>
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                    Kommer snart
+                  </span>
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-black">{game.name}</h3>
-                <p className="mt-1 opacity-80">{game.tagline}</p>
+                <h3 className="text-xl font-black text-violet-900">{game.name}</h3>
+                <p className="mt-1 text-muted-foreground">{game.tagline}</p>
               </div>
               {game.playable ? (
                 <Button asChild size="lg" className="h-12 rounded-2xl text-base">
                   <Link to={`/skapa?spel=${game.id}`}>Spela</Link>
                 </Button>
               ) : (
-                <Button size="lg" variant="outline" className="h-12 rounded-2xl bg-white/60 text-base" disabled>
-                  Snart
+                <Button size="lg" variant="outline" className="h-12 rounded-2xl text-base" disabled>
+                  Inte klart än
                 </Button>
               )}
             </div>

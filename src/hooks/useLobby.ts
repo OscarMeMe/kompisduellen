@@ -31,8 +31,11 @@ export type LobbyStatus = 'connecting' | 'ready' | 'no-host' | 'error'
 
 const NO_HOST_GRACE_MS = 4000
 
-export function useLobby(code: string, me: Player | null, isHost: boolean) {
-  const [state, setState] = useState<GameState>(initialState)
+// game används bara av värden. Övriga får spelet från värdens tillstånd.
+export function useLobby(code: string, me: Player | null, isHost: boolean, game?: string) {
+  const [state, setState] = useState<GameState>(() => initialState(game))
+  // Övriga spelare: har vi fått något tillstånd från värden än?
+  const [received, setReceived] = useState(false)
   const [online, setOnline] = useState<OnlinePlayer[]>([])
   const [connected, setConnected] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -104,6 +107,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean) {
       const { state: next, sentAt } = payload as { state: GameState; sentAt: number }
       stateRef.current = next
       setState(next)
+      setReceived(true)
       setClockOffset(Date.now() - sentAt)
     })
 
@@ -171,7 +175,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean) {
 
   let status: LobbyStatus = 'connecting'
   if (failed) status = 'error'
-  else if (connected && (isHost || hostOnline)) status = 'ready'
+  else if (connected && (isHost || (hostOnline && received))) status = 'ready'
   else if (connected && graceOver && !hostOnline) status = 'no-host'
 
   const actions = useMemo(
