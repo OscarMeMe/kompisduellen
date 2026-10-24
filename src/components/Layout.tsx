@@ -10,17 +10,22 @@ export function Layout() {
         <div className="absolute bottom-0 left-1/3 size-80 rounded-full bg-amber-200/50 blur-3xl" />
       </div>
 
-      {/* Svagt avskild header över hela bredden */}
-      <header className="border-b border-primary/10 bg-white/30 pt-[env(safe-area-inset-top)]">
+      <header className="pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
-          <Link to="/" className="text-2xl font-black tracking-tight sm:text-3xl">
-            Kompis<span className="text-primary">duellen</span>
+          <Link to="/" className="group flex items-center gap-1 text-2xl font-black tracking-tight sm:text-3xl">
+            <span className="text-violet-900">Kompis</span>
+            <span className="inline-block -rotate-3 rounded-xl bg-primary px-2 pb-0.5 text-primary-foreground shadow-md shadow-primary/30 transition-transform group-hover:rotate-2">
+              duellen
+            </span>
           </Link>
           <nav className="flex items-center gap-4 text-sm font-semibold">
             <Link to="/#spel" className="text-muted-foreground hover:text-foreground">
               Alla spel
             </Link>
-            <Link to="/ga-med" className="rounded-full bg-white px-4 py-2 shadow-sm hover:shadow">
+            <Link
+              to="/ga-med"
+              className="rounded-full bg-pink-500 px-4 py-2 text-white shadow-sm shadow-pink-500/30 transition-transform hover:-translate-y-0.5"
+            >
               Gå med
             </Link>
           </nav>

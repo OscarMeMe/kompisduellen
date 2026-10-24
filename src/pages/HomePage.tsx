@@ -38,7 +38,7 @@ export function HomePage() {
   }, [hash])
 
   return (
-    <div className="flex flex-col gap-12 pt-6 sm:gap-16 sm:pt-12">
+    <div className="flex flex-col gap-8 pt-6 sm:gap-10 sm:pt-10">
       {/* Hero */}
       <section className="grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
         <div className="space-y-6 text-center md:text-left">
