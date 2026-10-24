@@ -434,12 +434,14 @@ function RevealView({ state, me, isHost, clockOffset, onNext }: RevealViewProps)
               )}
             >
               <span className="text-2xl">{row.avatar}</span>
-              <span className="flex-1 truncate">{row.name}</span>
-              <span className="w-24 text-right text-sm text-muted-foreground">
-                {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{row.name}</span>
+                <span className="block text-sm font-normal text-muted-foreground">
+                  {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
+                </span>
               </span>
               <span className="w-10 text-right text-xl font-black tabular-nums">{row.guess ?? '–'}</span>
-              <span className="w-24 text-right text-sm">
+              <span className="shrink-0 text-right text-sm whitespace-nowrap">
                 {row.winner ? '+1 · ' : ''}
                 {state.scores[row.id] ?? 0} p
               </span>
@@ -482,15 +484,15 @@ function FinishedView({ state, isHost, onPlayAgain }: { state: GameState; isHost
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost ? (
-          <Button size="lg" className="h-14 flex-1 rounded-2xl text-lg shadow-lg shadow-primary/30" onClick={onPlayAgain}>
+          <Button size="lg" className="h-14 rounded-2xl text-lg shadow-lg shadow-primary/30 sm:flex-1" onClick={onPlayAgain}>
             Spela igen
           </Button>
         ) : (
-          <p className="flex flex-1 items-center justify-center rounded-2xl bg-white px-4 py-4 text-center font-semibold text-muted-foreground shadow-sm">
+          <p className="flex items-center justify-center rounded-2xl bg-white px-4 py-4 text-center font-semibold text-muted-foreground shadow-sm sm:flex-1">
             Värden kan starta en ny match
           </p>
         )}
-        <Button asChild size="lg" variant="outline" className="h-14 flex-1 rounded-2xl bg-white text-lg">
+        <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white text-lg sm:flex-1">
           <Link to="/#spel">Tillbaka till alla spel</Link>
         </Button>
       </div>
