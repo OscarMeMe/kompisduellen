@@ -31,8 +31,8 @@ export type LobbyStatus = 'connecting' | 'ready' | 'no-host' | 'error'
 
 const NO_HOST_GRACE_MS = 4000
 
-export function useLobby(code: string, me: Player | null, isHost: boolean) {
-  const [state, setState] = useState<GameState>(initialState)
+export function useLobby(code: string, me: Player | null, isHost: boolean, game?: string) {
+  const [state, setState] = useState<GameState>(() => initialState(game))
   const [online, setOnline] = useState<OnlinePlayer[]>([])
   const [connected, setConnected] = useState(false)
   const [failed, setFailed] = useState(false)

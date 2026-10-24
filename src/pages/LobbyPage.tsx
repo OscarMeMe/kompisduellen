@@ -2,17 +2,19 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { Check, Copy, Crown, Lock, Loader2 } from 'lucide-react'
 import { Countdown } from '@/components/Countdown'
+import { Leaderboard } from '@/components/Leaderboard'
 import { PlayerSetup } from '@/components/PlayerSetup'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLobby, type OnlinePlayer } from '@/hooks/useLobby'
-import { findGame, GAMES } from '@/lib/games'
+import { findGame, GAMES, type GameInfo } from '@/lib/games'
 import {
   GUESS_SECONDS,
   isValidGuess,
   MAX_NUMBER,
   MIN_NUMBER,
+  rankLeaderboard,
   rankPlayers,
   REVEAL_SECONDS,
   ROUND_OPTIONS,
@@ -42,9 +44,11 @@ export function LobbyPage() {
 }
 
 function Lobby({ code, me }: { code: string; me: Player }) {
-  const isHost = hostedGame(code) !== null
-  const game = findGame(hostedGame(code)) ?? GAMES[0]
-  const { status, state, online, clockOffset, actions } = useLobby(code, me, isHost)
+  const hosted = hostedGame(code)
+  const isHost = hosted !== null
+  const { status, state, online, clockOffset, actions } = useLobby(code, me, isHost, hosted ?? undefined)
+  // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
+  const game = findGame(state.game) ?? GAMES[0]
 
   if (status === 'connecting') {
     return (
@@ -86,8 +90,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       return (
         <WaitingRoom
           code={code}
-          gameName={game.name}
-          gameEmoji={game.emoji}
+          game={game}
+          state={state}
           isHost={isHost}
           online={online}
           rounds={state.rounds}
@@ -109,7 +113,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     case 'reveal':
       return <RevealView state={state} me={me} isHost={isHost} clockOffset={clockOffset} onNext={actions.skipReveal} />
     case 'finished':
-      return <FinishedView state={state} isHost={isHost} onPlayAgain={actions.playAgain} />
+      return <FinishedView game={game} state={state} isHost={isHost} onPlayAgain={actions.playAgain} />
   }
 }
 
@@ -133,8 +137,8 @@ function RoundBadge({ state }: { state: GameState }) {
 
 type WaitingRoomProps = {
   code: string
-  gameName: string
-  gameEmoji: string
+  game: GameInfo
+  state: GameState
   isHost: boolean
   online: OnlinePlayer[]
   rounds: number
@@ -142,7 +146,7 @@ type WaitingRoomProps = {
   onStart: () => void
 }
 
-function WaitingRoom({ code, gameName, gameEmoji, isHost, online, rounds, onSetRounds, onStart }: WaitingRoomProps) {
+function WaitingRoom({ code, game, state, isHost, online, rounds, onSetRounds, onStart }: WaitingRoomProps) {
   const [copied, setCopied] = useState(false)
   const link = `${window.location.origin}/lobby/${code}`
 
@@ -161,7 +165,7 @@ function WaitingRoom({ code, gameName, gameEmoji, isHost, online, rounds, onSetR
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-3xl bg-white p-6 text-center shadow-sm">
           <p className="text-sm font-semibold text-muted-foreground">
-            {gameEmoji} {gameName} · Lobbykod
+            {game.emoji} {game.name} · Lobbykod
           </p>
           <p className="text-6xl font-black tracking-[0.25em] text-primary">{code}</p>
           <Button variant="outline" size="lg" className="h-12 w-full rounded-2xl text-base" onClick={copyLink}>
@@ -219,6 +223,8 @@ function WaitingRoom({ code, gameName, gameEmoji, isHost, online, rounds, onSetR
           </p>
         )}
       </div>
+
+      <Leaderboard game={game} entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} />
     </Wide>
   )
 }
@@ -469,7 +475,14 @@ function RevealView({ state, me, isHost, clockOffset, onNext }: RevealViewProps)
 
 /* ---------- Prispall ---------- */
 
-function FinishedView({ state, isHost, onPlayAgain }: { state: GameState; isHost: boolean; onPlayAgain: () => void }) {
+type FinishedViewProps = {
+  game: GameInfo
+  state: GameState
+  isHost: boolean
+  onPlayAgain: () => void
+}
+
+function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
   const ranked = rankPlayers(state)
 
   return (
@@ -481,6 +494,13 @@ function FinishedView({ state, isHost, onPlayAgain }: { state: GameState; isHost
       </div>
 
       <Podium players={ranked} />
+
+      <Leaderboard
+        game={game}
+        entries={rankLeaderboard(state)}
+        matchesPlayed={state.matchesPlayed}
+        lastScores={state.scores}
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost ? (

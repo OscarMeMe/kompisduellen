@@ -20,7 +20,14 @@ export type RoundResult = {
   winners: string[]
 }
 
+// En rad i lobbyns topplista. Poängen från varje avslutad match läggs på här.
+export type LeaderboardEntry = PlayerInfo & {
+  points: number
+  wins: number
+}
+
 export type GameState = {
+  game: string // id från GAMES, så att alla vet vilket spel topplistan gäller
   phase: Phase
   rounds: number
   round: number
@@ -30,6 +37,8 @@ export type GameState = {
   scores: Record<string, number>
   players: Record<string, PlayerInfo>
   lastResult: RoundResult | null
+  matchesPlayed: number
+  leaderboard: Record<string, LeaderboardEntry>
 }
 
 export type RankedPlayer = PlayerInfo & {
@@ -38,8 +47,14 @@ export type RankedPlayer = PlayerInfo & {
   place: number
 }
 
-export function initialState(): GameState {
+export type RankedEntry = LeaderboardEntry & {
+  id: string
+  place: number
+}
+
+export function initialState(game = 'narmast'): GameState {
   return {
+    game,
     phase: 'waiting',
     rounds: 5,
     round: 0,
@@ -48,6 +63,8 @@ export function initialState(): GameState {
     scores: {},
     players: {},
     lastResult: null,
+    matchesPlayed: 0,
+    leaderboard: {},
   }
 }
 
@@ -144,7 +161,7 @@ export function resolveRound(state: GameState, now: number, target = randomTarge
 export function nextRound(state: GameState, now: number): GameState {
   if (state.phase !== 'reveal') return state
   if (state.round >= state.rounds) {
-    return { ...state, phase: 'finished', deadline: null }
+    return finishMatch({ ...state, phase: 'finished', deadline: null })
   }
   return {
     ...state,
@@ -153,6 +170,22 @@ export function nextRound(state: GameState, now: number): GameState {
     deadline: now + GUESS_SECONDS * 1000,
     guesses: {},
   }
+}
+
+// Lägger matchens poäng på topplistan. Den eller de med flest poäng får en vinst.
+function finishMatch(state: GameState): GameState {
+  const best = Math.max(0, ...Object.values(state.scores))
+  const leaderboard = { ...state.leaderboard }
+  for (const [id, info] of Object.entries(state.players)) {
+    const score = state.scores[id] ?? 0
+    const previous = leaderboard[id]
+    leaderboard[id] = {
+      ...info,
+      points: (previous?.points ?? 0) + score,
+      wins: (previous?.wins ?? 0) + (best > 0 && score === best ? 1 : 0),
+    }
+  }
+  return { ...state, leaderboard, matchesPlayed: state.matchesPlayed + 1 }
 }
 
 export function backToWaiting(state: GameState): GameState {
@@ -180,5 +213,16 @@ export function rankPlayers(state: GameState): RankedPlayer[] {
   return list.map((player) => ({
     ...player,
     place: 1 + list.filter((other) => other.score > player.score).length,
+  }))
+}
+
+// Topplistan sorterad på totala poäng, sedan antal vinster. Lika ger samma placering.
+export function rankLeaderboard(state: GameState): RankedEntry[] {
+  const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))
+  const better = (a: LeaderboardEntry, b: LeaderboardEntry) => b.points - a.points || b.wins - a.wins
+  list.sort((a, b) => better(a, b) || a.name.localeCompare(b.name, 'sv'))
+  return list.map((entry) => ({
+    ...entry,
+    place: 1 + list.filter((other) => better(entry, other) > 0).length,
   }))
 }
