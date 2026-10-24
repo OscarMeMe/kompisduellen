@@ -1,6 +1,6 @@
 // Alla spel som visas på startsidan. Lägg till nya spel här.
 
-import { Target, PenLine, Vote, type LucideIcon } from 'lucide-react'
+import { Target, PenLine, Tag, Vote, type LucideIcon } from 'lucide-react'
 
 export type GameInfo = {
   id: string
@@ -20,6 +20,15 @@ export const GAMES: GameInfo[] = [
     emoji: '🎯',
     icon: Target,
     color: 'bg-violet-100 text-violet-950',
+    playable: true,
+  },
+  {
+    id: 'gissa-priset',
+    name: 'Gissa priset',
+    tagline: 'Vad kostade det egentligen? Gissa priset på udda saker som faktiskt har sålts.',
+    emoji: '🏷️',
+    icon: Tag,
+    color: 'bg-pink-100 text-pink-950',
     playable: true,
   },
   {
