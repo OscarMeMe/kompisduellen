@@ -7,9 +7,21 @@ import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
-  { title: 'Välj ett spel', text: 'Skapa en lobby på några sekunder. Du behöver inget konto.' },
-  { title: 'Bjud in gänget', text: 'Dela koden på fyra bokstäver, i Discord eller rakt ut i rummet.' },
-  { title: 'Spela', text: 'Alla svarar på sin egen dator eller mobil. Flest poäng vinner.' },
+  {
+    title: 'Skapa en lobby',
+    text: 'Tryck på Skapa lobby och välj ett spel. Du behöver inget konto.',
+    color: 'bg-violet-500',
+  },
+  {
+    title: 'Dela koden',
+    text: 'Du får en kod på fyra bokstäver. Skicka den i Discord eller säg den högt.',
+    color: 'bg-pink-500',
+  },
+  {
+    title: 'Spela tillsammans',
+    text: 'Kompisarna går med på sin egen dator eller mobil. Flest poäng vinner.',
+    color: 'bg-amber-500',
+  },
 ]
 
 const PREVIEW_ROWS = [
@@ -34,7 +46,7 @@ export function HomePage() {
             <span className="size-2 rounded-full bg-green-500" />
             Gratis och utan konto
           </span>
-          <h1 className="text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+          <h1 className="text-4xl leading-tight font-black tracking-tight text-violet-900 sm:text-5xl">
             Gissningslekar att spela med{' '}
             <span className="rounded-xl bg-pink-200 px-2 text-pink-950 [box-decoration-break:clone]">kompisarna</span>
           </h1>
@@ -100,17 +112,23 @@ export function HomePage() {
 
       {/* Så funkar det */}
       <section className="space-y-6">
-        <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Så funkar det</h2>
-        <ol className="grid gap-6 sm:grid-cols-3">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Så funkar det</h2>
+          <p className="mt-1 text-muted-foreground">Tre steg, och ni är igång på under en minut.</p>
+        </div>
+        <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map((step, index) => (
-            <li key={step.title} className="flex gap-4">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-primary-foreground">
+            <li key={step.title} className="rounded-3xl bg-white p-6 shadow-sm">
+              <span
+                className={cn(
+                  'flex size-12 items-center justify-center rounded-2xl text-2xl font-black text-white',
+                  step.color,
+                )}
+              >
                 {index + 1}
               </span>
-              <div>
-                <h3 className="text-lg font-bold">{step.title}</h3>
-                <p className="mt-1 text-muted-foreground">{step.text}</p>
-              </div>
+              <h3 className="mt-4 text-xl font-black text-violet-900">{step.title}</h3>
+              <p className="mt-1 text-muted-foreground">{step.text}</p>
             </li>
           ))}
         </ol>
@@ -121,7 +139,7 @@ export function HomePage() {
       {/* Alla spel */}
       <section id="spel" className="scroll-mt-6 space-y-6">
         <div>
-          <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Alla spel</h2>
+          <h2 className="text-2xl font-black tracking-tight text-primary sm:text-3xl">Alla spel</h2>
           <p className="mt-1 text-muted-foreground">Fler spel är på väg.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -138,7 +156,7 @@ export function HomePage() {
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-black">{game.name}</h3>
+                <h3 className="text-xl font-black text-violet-900">{game.name}</h3>
                 <p className="mt-1 text-muted-foreground">{game.tagline}</p>
               </div>
               {game.playable ? (
