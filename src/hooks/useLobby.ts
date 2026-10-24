@@ -29,8 +29,6 @@ export type OnlinePlayer = Player & {
 
 export type LobbyStatus = 'connecting' | 'ready' | 'no-host' | 'error'
 
-type PresenceMeta = OnlinePlayer & { presence_ref?: string }
-
 const NO_HOST_GRACE_MS = 4000
 
 export function useLobby(code: string, me: Player | null, isHost: boolean) {
@@ -82,10 +80,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean) {
     channelRef.current = channel
 
     channel.on('presence', { event: 'sync' }, () => {
-      const raw = channel.presenceState<PresenceMeta>()
+      const raw = channel.presenceState<OnlinePlayer>()
       const players: OnlinePlayer[] = Object.values(raw)
         .map((metas) => metas[0])
-        .filter((meta): meta is PresenceMeta => Boolean(meta?.id))
+        .filter((meta) => Boolean(meta?.id))
         .map(({ id, name, avatar, host, joinedAt }) => ({ id, name, avatar, host, joinedAt }))
         .sort((a, b) => a.joinedAt - b.joinedAt)
       onlineRef.current = players
