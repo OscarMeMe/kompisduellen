@@ -1,14 +1,7 @@
-import { Link } from 'react-router'
-import { PageHeader } from '@/components/PageHeader'
-import { Button } from '@/components/ui/button'
+import { Navigate, useParams } from 'react-router'
 
+// Prispallen visas i lobbysidan när matchen är slut.
 export function ResultsPage() {
-  return (
-    <>
-      <PageHeader title="Resultat" description="Här visas vem som vann duellen." />
-      <Button asChild size="lg" variant="outline" className="h-12 text-base">
-        <Link to="/">Till startsidan</Link>
-      </Button>
-    </>
-  )
+  const { code } = useParams()
+  return <Navigate to={`/lobby/${code ?? ''}`} replace />
 }

@@ -33,10 +33,21 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`)
+- `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
+  - `games.ts`: listan över spel på startsidan
+  - `player.ts`: gästspelare (namn + figur i localStorage), lobbykoder, värdflagga
+  - `narmast.ts`: spellogiken för Närmast vinner (rena funktioner)
 - Importera med aliaset `@/` (pekar på `src/`)
+
+## Så fungerar lobbyn
+
+- Alla i en lobby ansluter till Realtime-kanalen `lobby:KOD`.
+- Den som skapade lobbyn är värd och äger spelets tillstånd. Värden skickar ut hela tillståndet (`state`) till alla.
+- Övriga skickar bara sina gissningar (`guess`) till värden. Nya spelare skickar `hello` för att få aktuellt läge.
+- Lämnar värden försvinner lobbyn. Inget sparas i databasen ännu.
 
 ## Routes
 
@@ -45,7 +56,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/` | Startsida |
 | `/skapa` | Skapa lobby |
 | `/ga-med` | Gå med (skriv in kod) |
-| `/lobby/:code` | Väntrum |
-| `/spel/:code` | Spel |
-| `/resultat/:code` | Resultat |
+| `/skapa?spel=narmast` | Skapa lobby för ett visst spel |
+| `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
+| `/spel/:code` | Skickar vidare till `/lobby/:code` |
+| `/resultat/:code` | Skickar vidare till `/lobby/:code` |
 | `/profil` | Profil |
