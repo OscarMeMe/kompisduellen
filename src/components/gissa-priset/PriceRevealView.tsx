@@ -51,7 +51,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         <p className="text-5xl">{item?.emoji ?? '🏷️'}</p>
         <p className="mt-2 font-bold text-balance">{item?.name}</p>
         {item && <p className="text-sm font-semibold text-primary">År {item.year}</p>}
-        <p className="mt-4 text-sm font-semibold text-muted-foreground">Det såldes för ungefär</p>
+        <p className="mt-4 text-sm font-semibold text-muted-foreground">Rätt pris</p>
         <p
           className={cn(
             'text-5xl font-black text-balance transition-all duration-500 sm:text-6xl',
