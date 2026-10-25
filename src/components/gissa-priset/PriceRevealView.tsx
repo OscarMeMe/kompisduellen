@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import type { RevealViewProps } from '@/components/lobby/types'
-import { formatSekShort } from '@/lib/belopp'
+import { formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
@@ -63,7 +63,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
             revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
           )}
         >
-          {formatSekShort(result.target)}
+          {formatSek(result.target)}
         </p>
         {revealed && (
           <p className="mt-2 text-lg font-bold sm:mt-4">
@@ -92,7 +92,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.guess === undefined
                     ? 'Ingen gissning'
-                    : `${formatSekShort(row.guess)} · ${percentOff(row.guess, result.target)}`}
+                    : `${formatSek(row.guess)} · ${percentOff(row.guess, result.target)}`}
                 </span>
               </span>
               <span className="shrink-0 text-right whitespace-nowrap">

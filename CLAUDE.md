@@ -47,7 +47,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa)
-  - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (tal + enhet), min/max och visning i kronor
+  - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
