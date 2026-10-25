@@ -4,22 +4,22 @@ import { isValidPrice } from '@/lib/belopp'
 import { findPriceItem, PRICE_ITEMS } from '@/lib/prisdata'
 import type { GameRules } from '@/lib/spelregler'
 
-const GUESS_SECONDS = 20
-// Lite längre tid än i Närmast vinner, så att man hinner läsa faktameningen.
-const REVEAL_SECONDS = 8
+// Längre tider än i Närmast vinner, så att man hinner skriva ett belopp och läsa faktameningen.
+const GUESS_SECONDS = 30
+const REVEAL_SECONDS = 12
 
 // Poäng efter hur nära man är, räknat i procent och inte i kronor.
-// Exakt rätt = 100. Hälften eller dubbla priset = 70. Tio gånger fel (eller mer) = 0.
+// Exakt rätt = 100. Hälften eller dubbla priset = 85. Tio gånger fel = 50. Hundra gånger fel (eller mer) = 0.
 export function pricePoints(guess: number, price: number): number {
   if (guess <= 0 || price <= 0) return 0
   const factor = Math.abs(Math.log10(guess / price))
-  return Math.max(0, Math.round(100 * (1 - factor)))
+  return Math.max(0, Math.round(100 * (1 - factor / 2)))
 }
 
 export const priceRules: GameRules = {
   guessSeconds: GUESS_SECONDS,
   revealSeconds: REVEAL_SECONDS,
-  howTo: `Gissa vad en udda sak faktiskt såldes för, i kronor. Ni har ${GUESS_SECONDS} sekunder på er. Exakt rätt ger 100 poäng, och poängen minskar ju längre ifrån man är i procent. Tio gånger fel ger 0 poäng.`,
+  howTo: `Gissa vad en udda sak faktiskt såldes för, i kronor. Ni har ${GUESS_SECONDS} sekunder på er. Exakt rätt ger 100 poäng, och poängen minskar ju längre ifrån man är i procent. Tio gånger fel ger 50 poäng och hundra gånger fel 0 poäng.`,
   isValidGuess: isValidPrice,
 
   // En slumpad sak som inte varit med än. När alla använts börjar listan om.

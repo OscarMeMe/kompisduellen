@@ -1,9 +1,8 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
-import { Countdown } from '@/components/Countdown'
 import { AmountInput } from '@/components/gissa-priset/AmountInput'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
-import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
+import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { useMyGuess } from '@/hooks/useMyGuess'
@@ -19,9 +18,9 @@ import {
   toKronor,
   type PriceUnit,
 } from '@/lib/belopp'
+import { hasFinePointer } from '@/lib/device'
 import { isValidGuess } from '@/lib/match'
 import { findPriceItem } from '@/lib/prisdata'
-import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
@@ -43,29 +42,28 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
 
   return (
     <Wide>
-      <RoundBadge state={state} />
+      <RoundTimer state={state} clockOffset={clockOffset} />
 
-      {state.deadline !== null && (
-        <Countdown deadline={state.deadline} clockOffset={clockOffset} totalSeconds={rulesFor(state.game).guessSeconds} />
-      )}
-
-      <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
-        <p className="text-7xl">{item?.emoji ?? '🏷️'}</p>
-        {item && (
-          <p className="mx-auto mt-3 w-fit rounded-full bg-primary px-5 py-1.5 text-xl font-black text-primary-foreground shadow-md shadow-primary/30">
-            År {item.year}
-          </p>
-        )}
-        <p className="mt-3 text-sm font-semibold text-muted-foreground">Vad kostade det?</p>
-        <h1 className="mx-auto mt-1 max-w-xl text-2xl font-black text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
+      {/* Kompakt på mobilen: figur och årtal på samma rad, så att frågan och rutan syns samtidigt. */}
+      <div className="rounded-3xl bg-white p-4 text-center shadow-sm sm:p-8">
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-5xl sm:text-7xl">{item?.emoji ?? '🏷️'}</span>
+          {item && (
+            <span className="rounded-full bg-primary px-4 py-1 text-lg font-black text-primary-foreground shadow-md shadow-primary/30 sm:px-5 sm:py-1.5 sm:text-xl">
+              År {item.year}
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3">Vad kostade det?</p>
+        <h1 className="mx-auto mt-1 max-w-xl text-xl font-black text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
         {item?.clue && (
-          <p className="mx-auto mt-3 w-fit max-w-xl rounded-2xl bg-violet-50 px-4 py-1.5 text-sm font-semibold text-primary">
+          <p className="mx-auto mt-2 w-fit max-w-xl rounded-2xl bg-violet-50 px-4 py-1.5 text-sm font-semibold text-primary sm:mt-3">
             {item.clue}
           </p>
         )}
       </div>
 
-      <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <div className="rounded-3xl bg-white p-4 shadow-sm sm:p-8">
         {!inGame ? (
           <p className="py-6 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
@@ -76,7 +74,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <AmountInput text={text} onTextChange={setText} inputRef={inputRef} />
             {/* Mobil: tre knappar på första raden och två på andra. Bred skärm: alla fem på en rad. */}
             <div role="group" aria-label="Enhet" className="grid grid-cols-6 gap-2 sm:grid-cols-5">
@@ -87,13 +85,14 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
                   variant={unit === u.id ? 'default' : 'outline'}
                   aria-pressed={unit === u.id}
                   className={cn(
-                    'h-12 rounded-2xl px-2 text-base font-bold sm:col-span-1',
+                    'h-11 rounded-2xl px-2 text-base font-bold sm:col-span-1 sm:h-12',
                     index < 3 ? 'col-span-2' : 'col-span-3',
                     unit === u.id && 'shadow-md shadow-primary/30',
                   )}
                   onClick={() => {
                     setUnit(u.id)
-                    inputRef.current?.focus()
+                    // På mobilen får tangentbordet stänga sig, så att knappen Lås in syns.
+                    if (hasFinePointer()) inputRef.current?.focus()
                   }}
                 >
                   {u.label}

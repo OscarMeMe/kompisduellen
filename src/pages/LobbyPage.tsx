@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { Link, useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
@@ -11,6 +11,7 @@ import { GuessingView } from '@/components/narmast/GuessingView'
 import { RevealView } from '@/components/narmast/RevealView'
 import { PlayerSetup } from '@/components/PlayerSetup'
 import { Button } from '@/components/ui/button'
+import { useLayout } from '@/hooks/useLayout'
 import { useLobby } from '@/hooks/useLobby'
 import { findGame, GAMES } from '@/lib/games'
 import { hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
@@ -49,6 +50,14 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
+
+  // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
+  const { setInMatch } = useLayout()
+  const inMatch = status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal')
+  useEffect(() => {
+    setInMatch(inMatch)
+    return () => setInMatch(false)
+  }, [inMatch, setInMatch])
 
   if (status === 'connecting') {
     return (

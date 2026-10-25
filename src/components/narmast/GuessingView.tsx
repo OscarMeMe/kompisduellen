@@ -1,15 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
-import { Countdown } from '@/components/Countdown'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
-import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
+import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMyGuess } from '@/hooks/useMyGuess'
+import { hasFinePointer } from '@/lib/device'
 import { isValidGuess } from '@/lib/match'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
-import { rulesFor } from '@/lib/spelregler'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const [value, setValue] = useState(50)
@@ -23,11 +22,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
 
   return (
     <Wide>
-      <RoundBadge state={state} />
-
-      {state.deadline !== null && (
-        <Countdown deadline={state.deadline} clockOffset={clockOffset} totalSeconds={rulesFor(state.game).guessSeconds} />
-      )}
+      <RoundTimer state={state} clockOffset={clockOffset} />
 
       <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
         {!inGame ? (
@@ -63,7 +58,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
                 onChange={(e) => setValue(e.target.valueAsNumber)}
                 aria-label="Din gissning"
                 className="h-20 w-36 rounded-2xl text-center text-5xl font-black"
-                autoFocus
+                autoFocus={hasFinePointer()}
               />
               <Button
                 type="button"
