@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
+import { Emoji } from '@/components/Emoji'
 import type { LayoutContext } from '@/hooks/useLayout'
 import { loadPlayer } from '@/lib/player'
 import { cn } from '@/lib/utils'
@@ -33,7 +34,7 @@ export function Layout() {
                 to="/profil"
                 className="flex items-center gap-2 rounded-full border bg-card py-2 pr-4 pl-3 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
               >
-                <span className="text-xl leading-none">{player.avatar}</span>
+                <Emoji emoji={player.avatar} className="text-xl" />
                 <span className="max-w-32 truncate">{player.name}</span>
               </Link>
             ) : (

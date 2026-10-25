@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
+import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { GAMES } from '@/lib/games'
 import { cn } from '@/lib/utils'
@@ -53,7 +54,9 @@ export function HomePage() {
         {/* Förhandsvisning av en runda i Närmast vinner */}
         <div className="mx-auto w-full max-w-sm rotate-2 rounded-lg border bg-card p-5 shadow-soft transition-transform hover:rotate-0">
           <div className="flex items-center justify-between">
-            <p className="font-heading text-sm font-bold">🎯 Närmast vinner</p>
+            <p className="font-heading text-sm font-bold">
+              <Emoji emoji="🎯" /> Närmast vinner
+            </p>
             <span className="rounded-full bg-sky-soft px-3 py-1 text-xs font-semibold">Runda 3 av 5</span>
           </div>
           <div className="mt-4 rounded-lg bg-sun-soft py-5 text-center">
@@ -67,7 +70,7 @@ export function HomePage() {
                 className={cn('flex items-center gap-3 rounded-lg px-4 py-2.5', row.win ? 'bg-mint-soft' : 'bg-muted')}
               >
                 <span className="w-3 text-sm font-semibold text-muted-foreground">{index + 1}</span>
-                <span className="text-xl">{row.avatar}</span>
+                <Emoji emoji={row.avatar} className="text-xl" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-heading font-bold">{row.name}</span>
                   <span className="block text-xs text-muted-foreground">
@@ -120,7 +123,7 @@ export function HomePage() {
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="text-4xl">{game.emoji}</span>
+                <Emoji emoji={game.emoji} className="text-4xl" />
                 {!game.playable && (
                   <span className="rounded-full bg-card/80 px-3 py-1 text-xs font-semibold text-muted-foreground">
                     Kommer snart

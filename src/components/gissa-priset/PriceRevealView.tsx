@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import type { RevealViewProps } from '@/components/lobby/types'
@@ -90,7 +91,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
                 row.winner ? 'bg-mint-soft font-bold' : 'bg-card',
               )}
             >
-              <span className="text-2xl">{row.avatar}</span>
+              <Emoji emoji={row.avatar} className="text-2xl" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{row.name}</span>
                 <span className="block text-sm font-normal text-muted-foreground">

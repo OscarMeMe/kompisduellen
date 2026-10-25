@@ -1,4 +1,5 @@
 import { Crown, Trophy } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import { findGame } from '@/lib/games'
 import type { RankedEntry } from '@/lib/match'
 import { cn } from '@/lib/utils'
@@ -49,7 +50,7 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
               className={cn('flex items-center gap-2 rounded-lg px-3 py-3 sm:gap-3 sm:px-4', leader ? 'bg-sun-soft' : 'bg-muted')}
             >
               <span className="w-6 font-heading text-lg font-bold text-muted-foreground">{entry.place}</span>
-              <span className="text-2xl">{entry.avatar}</span>
+              <Emoji emoji={entry.avatar} className="text-2xl" />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 font-bold">
                   <span className="truncate">{entry.name}</span>

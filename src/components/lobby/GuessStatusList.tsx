@@ -1,4 +1,5 @@
 import { Check, Loader2 } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
@@ -19,7 +20,7 @@ export function GuessStatusList({ state, online }: { state: GameState; online: O
               done ? 'bg-mint-soft text-accent-foreground' : 'bg-card text-muted-foreground',
             )}
           >
-            <span className="text-lg">{p.avatar}</span>
+            <Emoji emoji={p.avatar} className="text-lg" />
             {p.name}
             {done ? <Check className="size-4" /> : <Loader2 className="size-4 animate-spin" />}
           </li>
