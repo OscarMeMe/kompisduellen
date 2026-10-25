@@ -17,7 +17,7 @@ export function Layout() {
         <div
           className={cn(
             'mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6',
-            inMatch ? 'justify-center py-3 sm:py-5' : 'py-5',
+            inMatch ? 'justify-center py-3 sm:py-5' : 'py-4',
           )}
         >
           {/* Loggan leder till startsidan, utom under en match så att ingen lämnar lobbyn av misstag. */}
