@@ -969,7 +969,7 @@ export const PRICE_ITEMS: PriceItem[] = [
     name: 'En ny iPod med fem gigabyte lagring',
     year: 2002,
     clue: 'Svenskt annonspris i Dagens Nyheter i augusti',
-    priceSek: 4_000,
+    priceSek: 3_995,
     fact: 'Annonspriset var 3 995 kronor; modellen med fyra gånger större lagring kostade 5 995 kronor.',
     source: 'https://mediehistorisktarkiv.se/wp-content/uploads/2020/08/bj%C3%B6rnberg.pdf',
   },
