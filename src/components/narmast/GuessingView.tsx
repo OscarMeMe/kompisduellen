@@ -24,26 +24,26 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
     <Wide>
       <RoundTimer state={state} clockOffset={clockOffset} />
 
-      <div className="rounded-3xl bg-white p-6 shadow-sm sm:p-8">
+      <div className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
         {!inGame ? (
           <p className="py-8 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
           <div className="space-y-3 py-6 text-center">
             <Lock className="mx-auto size-8 text-primary" />
             <p className="text-muted-foreground">Din gissning</p>
-            <p className="text-7xl font-black text-primary">{locked}</p>
+            <p className="font-heading text-7xl font-bold text-primary">{locked}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <h1 className="text-center text-2xl font-black">
+            <h1 className="text-center text-2xl">
               Vilket tal mellan {MIN_NUMBER} och {MAX_NUMBER}?
             </h1>
             <div className="flex items-center justify-center gap-3">
               <Button
                 type="button"
                 variant="outline"
-                className="size-14 rounded-2xl text-2xl"
+                className="size-14 text-2xl"
                 onClick={() => setValue((v) => Math.max(MIN_NUMBER, v - 1))}
                 aria-label="Minska"
               >
@@ -57,13 +57,13 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
                 value={Number.isNaN(value) ? '' : value}
                 onChange={(e) => setValue(e.target.valueAsNumber)}
                 aria-label="Din gissning"
-                className="h-20 w-36 rounded-2xl text-center text-5xl font-black"
+                className="h-20 w-36 text-center font-heading text-5xl font-bold"
                 autoFocus={hasFinePointer()}
               />
               <Button
                 type="button"
                 variant="outline"
-                className="size-14 rounded-2xl text-2xl"
+                className="size-14 text-2xl"
                 onClick={() => setValue((v) => Math.min(MAX_NUMBER, v + 1))}
                 aria-label="Öka"
               >
@@ -82,7 +82,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
             <Button
               type="submit"
               size="lg"
-              className="h-14 w-full rounded-2xl text-lg shadow-lg shadow-primary/30"
+              className="w-full"
               disabled={!valid}
             >
               Lås in gissning

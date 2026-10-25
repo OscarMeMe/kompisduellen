@@ -15,8 +15,8 @@ export function GuessStatusList({ state, online }: { state: GameState; online: O
           <li
             key={p.id}
             className={cn(
-              'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-colors',
-              done ? 'bg-emerald-100 text-emerald-900' : 'bg-white text-muted-foreground',
+              'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-soft-sm transition-colors',
+              done ? 'bg-mint-soft text-accent-foreground' : 'bg-card text-muted-foreground',
             )}
           >
             <span className="text-lg">{p.avatar}</span>

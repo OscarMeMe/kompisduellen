@@ -30,13 +30,13 @@ export function Countdown({ deadline, clockOffset, totalSeconds, label = 'Tid kv
     <div className={cn('space-y-2', className)}>
       <div className="flex items-baseline justify-between">
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
-        <span className={cn('text-2xl font-black tabular-nums', urgent && 'text-pink-600')}>{secondsLeft} s</span>
+        <span className={cn('font-heading text-2xl font-bold tabular-nums', urgent && 'text-primary')}>{secondsLeft} s</span>
       </div>
-      <div className="h-3 overflow-hidden rounded-full bg-violet-100">
+      <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
             'h-full rounded-full transition-[width] duration-200 ease-linear',
-            urgent ? 'bg-pink-500' : 'bg-gradient-to-r from-violet-500 to-pink-500',
+            urgent ? 'bg-primary' : 'bg-mint',
           )}
           style={{ width: `${progress * 100}%` }}
         />

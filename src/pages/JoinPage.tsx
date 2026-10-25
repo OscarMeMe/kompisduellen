@@ -30,10 +30,10 @@ export function JoinPage() {
             autoComplete="off"
             autoCapitalize="characters"
             autoFocus
-            className="h-20 rounded-2xl bg-white text-center text-4xl font-black tracking-[0.4em] uppercase"
+            className="h-20 text-center font-heading text-4xl font-bold tracking-[0.4em] uppercase"
           />
         </div>
-        <Button type="submit" size="lg" className="h-14 rounded-2xl text-lg" disabled={clean.length !== 4}>
+        <Button type="submit" size="lg" disabled={clean.length !== 4}>
           Gå med
         </Button>
       </form>

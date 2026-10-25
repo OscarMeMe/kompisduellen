@@ -48,7 +48,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
       <RoundBadge state={state} />
 
       {/* Priset och poängen först, sedan resultatlistan och sist faktatexten, så att det viktigaste syns direkt på mobilen. */}
-      <div className="rounded-3xl bg-white p-4 text-center shadow-sm sm:p-8">
+      <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
         <div className="flex items-center justify-center gap-3">
           <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>
           <span className="min-w-0 text-left">
@@ -59,7 +59,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         <p className="mt-3 text-sm font-semibold text-muted-foreground sm:mt-4">Rätt pris</p>
         <p
           className={cn(
-            'text-4xl font-black text-balance transition-all duration-500 sm:text-6xl',
+            'font-heading text-4xl font-bold text-balance transition-all duration-500 sm:text-6xl',
             revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
           )}
         >
@@ -86,8 +86,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
             <li
               key={row.id}
               className={cn(
-                'flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm animate-in fade-in slide-in-from-bottom-2',
-                row.winner ? 'bg-amber-100 font-bold' : 'bg-white',
+                'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-soft-sm animate-pop',
+                row.winner ? 'bg-mint-soft font-bold' : 'bg-card',
               )}
             >
               <span className="text-2xl">{row.avatar}</span>
@@ -100,7 +100,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
                 </span>
               </span>
               <span className="shrink-0 text-right whitespace-nowrap">
-                <span className="block text-xl font-black tabular-nums">+{row.points}</span>
+                <span className="block font-heading text-xl font-bold tabular-nums">+{row.points}</span>
                 <span className="block text-sm font-normal text-muted-foreground">{state.scores[row.id] ?? 0} totalt</span>
               </span>
             </li>
@@ -109,7 +109,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
       )}
 
       {revealed && item && (
-        <p className="rounded-3xl bg-white p-4 text-sm text-muted-foreground shadow-sm animate-in fade-in sm:p-6 sm:text-base">
+        <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-soft animate-in fade-in sm:p-6 sm:text-base">
           {item.fact}{' '}
           <a
             href={item.source}

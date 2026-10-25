@@ -11,11 +11,11 @@ export function CreateLobbyPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">
-      <div className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-4 rounded-lg border bg-card p-5 shadow-soft">
         <span className="text-5xl">{game.emoji}</span>
         <div>
           <p className="text-sm font-semibold text-muted-foreground">Du skapar en lobby för</p>
-          <p className="text-xl font-black">{game.name}</p>
+          <p className="font-heading text-xl font-bold">{game.name}</p>
         </div>
       </div>
       <PageHeader title="Skapa lobby" description="Du blir värd och startar spelet när alla är med." />
