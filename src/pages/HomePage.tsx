@@ -2,7 +2,9 @@ import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
+import { formatSek } from '@/lib/belopp'
 import { GAMES } from '@/lib/games'
+import { pricePoints } from '@/lib/gissa-priset'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
@@ -11,12 +13,13 @@ const STEPS = [
   { title: 'Spela!', text: 'Alla svarar på sin egen mobil. Flest poäng vinner.', color: 'bg-mint-soft' },
 ]
 
-// Ställningen efter runda 3: Oscar leder, Michaela är tvåa och Andreas sist.
+// En runda i Gissa priset med en riktig sak ur prisdata.ts. Poängen räknas som i spelet.
+const PREVIEW_ITEM = { emoji: '❤️', name: 'Ikeas hjärtformade kudde med armar', year: 1998, priceSek: 79 }
 const PREVIEW_ROWS = [
-  { name: 'Oscar', avatar: '🧙', guess: 40, score: 3, win: true },
-  { name: 'Michaela', avatar: '👽', guess: 57, score: 2, win: false },
-  { name: 'Andreas', avatar: '🤖', guess: 12, score: 1, win: false },
-]
+  { name: 'Oscar', avatar: '🧙', guess: 75 },
+  { name: 'Michaela', avatar: '👽', guess: 120 },
+  { name: 'Andreas', avatar: '🤖', guess: 30 },
+].map((row, index) => ({ ...row, points: pricePoints(row.guess, PREVIEW_ITEM.priceSek), win: index === 0 }))
 
 export function HomePage() {
   const { hash } = useLocation()
@@ -51,17 +54,20 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Förhandsvisning av en runda i Närmast vinner */}
+        {/* Förhandsvisning av en runda i Gissa priset */}
         <div className="mx-auto w-full max-w-sm rotate-2 rounded-lg border bg-card p-5 shadow-soft transition-transform hover:rotate-0">
           <div className="flex items-center justify-between">
             <p className="font-heading text-sm font-bold">
-              <Emoji emoji="🎯" /> Närmast vinner
+              <Emoji emoji="🏷️" /> Gissa priset
             </p>
             <span className="rounded-full bg-sky-soft px-3 py-1 text-xs font-semibold">Runda 3 av 5</span>
           </div>
           <div className="mt-4 rounded-lg bg-sun-soft py-5 text-center">
-            <p className="font-heading text-5xl font-bold tabular-nums">42</p>
-            <p className="text-sm text-muted-foreground">Rätt svar</p>
+            <p className="px-4 text-sm font-semibold">
+              {PREVIEW_ITEM.emoji} {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
+            </p>
+            <p className="mt-1 font-heading text-5xl font-bold tabular-nums">{formatSek(PREVIEW_ITEM.priceSek)}</p>
+            <p className="text-sm text-muted-foreground">Rätt pris</p>
           </div>
           <ol className="mt-3 space-y-2">
             {PREVIEW_ROWS.map((row, index) => (
@@ -74,11 +80,11 @@ export function HomePage() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-heading font-bold">{row.name}</span>
                   <span className="block text-xs text-muted-foreground">
-                    Gissade {row.guess}
+                    Gissade {formatSek(row.guess)}
                     {row.win && ' – närmast!'}
                   </span>
                 </span>
-                <span className="font-heading text-lg font-bold tabular-nums">{row.score}p</span>
+                <span className="font-heading text-lg font-bold tabular-nums">+{row.points}</span>
               </li>
             ))}
           </ol>
