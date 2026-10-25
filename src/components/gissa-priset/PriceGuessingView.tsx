@@ -87,7 +87,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
         )}
       </div>
 
-      <GuessStatusList state={state} online={online} />
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} />
     </Wide>
   )
 }
