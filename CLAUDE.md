@@ -34,14 +34,19 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`)
+  - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundBadge`, `GuessStatusList`, `RevealFooter`, props-typerna för spelvyer)
+  - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
+- `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
   - `player.ts`: gästspelare (namn + figur i localStorage, spelar-id i sessionStorage), lobbykoder, värdflagga (sessionStorage)
-  - `narmast.ts`: spellogiken för gissningsspelen Närmast vinner och Gissa priset, plus topplistan (rena funktioner)
-  - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa) och poängräkningen `pricePoints`
-  - `belopp.ts`: omräkning av gissningar i Gissa priset (tal + enhet som öre eller miljarder till kronor)
+  - `match.ts`: matchflödet som är gemensamt för alla spel (rundor, gissningar, poäng, topplistan). Rena funktioner
+  - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
+  - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
+  - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa)
+  - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (tal + enhet), min/max och visning i kronor
 - Importera med aliaset `@/` (pekar på `src/`)
 
 ## Så fungerar lobbyn
