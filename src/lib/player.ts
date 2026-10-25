@@ -9,7 +9,7 @@ export type Player = {
   avatar: string
 }
 
-export const AVATARS = ['🦊', '🐸', '🐼', '🦄', '🐙', '🐯', '🐧', '🦖', '🐝', '🐨', '🦉', '🐳']
+export const AVATARS = ['👻', '👽', '🤖', '👾', '🧙', '🧛', '🧜', '🦸', '🥷', '🤡', '💀', '🎃']
 
 const PROFILE_KEY = 'kd-player'
 const PLAYER_ID_KEY = 'kd-player-id'

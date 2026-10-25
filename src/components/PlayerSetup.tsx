@@ -14,7 +14,10 @@ type PlayerSetupProps = {
 export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   const saved = loadPlayer()
   const [name, setName] = useState(saved?.name ?? '')
-  const [avatar, setAvatar] = useState(() => saved?.avatar ?? AVATARS[Math.floor(Math.random() * AVATARS.length)])
+  // En sparad figur som inte längre finns att välja byts mot en slumpad.
+  const [avatar, setAvatar] = useState(() =>
+    saved && AVATARS.includes(saved.avatar) ? saved.avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
+  )
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
