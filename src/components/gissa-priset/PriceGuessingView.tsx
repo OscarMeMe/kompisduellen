@@ -6,19 +6,7 @@ import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { useMyGuess } from '@/hooks/useMyGuess'
-import {
-  DEFAULT_UNIT,
-  describeKronor,
-  formatSek,
-  formatSekShort,
-  MAX_PRICE,
-  MIN_PRICE,
-  parseTypedNumber,
-  PRICE_UNITS,
-  toKronor,
-  type PriceUnit,
-} from '@/lib/belopp'
-import { hasFinePointer } from '@/lib/device'
+import { formatSek, MAX_PRICE, MIN_PRICE, parseTypedNumber } from '@/lib/belopp'
 import { isValidGuess } from '@/lib/match'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
@@ -26,13 +14,10 @@ import { cn } from '@/lib/utils'
 export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const item = findPriceItem(state.itemId)
   const [text, setText] = useState('')
-  // Vyn får en ny key varje runda, så enheten börjar om på kr inför varje fråga.
-  const [unit, setUnit] = useState<PriceUnit>(DEFAULT_UNIT)
   const inputRef = useRef<HTMLInputElement>(null)
   const { locked, inGame, lockIn } = useMyGuess(state, me.id, onGuess)
-  const typed = parseTypedNumber(text)
   // Det tolkade beloppet i kronor är det som skickas som gissning.
-  const value = toKronor(typed, unit)
+  const value = parseTypedNumber(text)
   const valid = isValidGuess(state.game, value)
 
   function handleSubmit(event: FormEvent) {
@@ -76,41 +61,18 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <AmountInput text={text} onTextChange={setText} inputRef={inputRef} />
-            {/* Mobil: tre knappar på första raden och två på andra. Bred skärm: alla fem på en rad. */}
-            <div role="group" aria-label="Enhet" className="grid grid-cols-6 gap-2 sm:grid-cols-5">
-              {PRICE_UNITS.map((u, index) => (
-                <Button
-                  key={u.id}
-                  type="button"
-                  variant={unit === u.id ? 'default' : 'outline'}
-                  aria-pressed={unit === u.id}
-                  className={cn(
-                    'h-11 rounded-2xl px-2 text-base font-bold sm:col-span-1 sm:h-12',
-                    index < 3 ? 'col-span-2' : 'col-span-3',
-                    unit === u.id && 'shadow-md shadow-primary/30',
-                  )}
-                  onClick={() => {
-                    setUnit(u.id)
-                    // På mobilen får tangentbordet stänga sig, så att knappen Lås in syns.
-                    if (hasFinePointer()) inputRef.current?.focus()
-                  }}
-                >
-                  {u.label}
-                </Button>
-              ))}
-            </div>
             <p
               className={cn(
                 'min-h-7 text-center text-lg font-bold break-words',
                 valid ? 'text-primary' : 'text-sm font-normal text-muted-foreground',
               )}
             >
-              {Number.isNaN(typed)
-                ? 'Skriv ett tal och välj enhet. Komma eller punkt för decimaler.'
+              {Number.isNaN(value)
+                ? 'Skriv priset i kronor. Komma eller punkt för ören.'
                 : valid
-                  ? describeKronor(value)
+                  ? `= ${formatSek(value)}`
                   : value > MAX_PRICE
-                    ? `Det är för mycket. Max ${formatSekShort(MAX_PRICE)}.`
+                    ? `Det är för mycket. Max ${formatSek(MAX_PRICE)}.`
                     : `Minst ${formatSek(MIN_PRICE)}.`}
             </p>
             <Button
