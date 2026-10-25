@@ -38,6 +38,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
+- `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
@@ -47,6 +48,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa)
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (tal + enhet), min/max och visning i kronor
+  - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
 ## Så fungerar lobbyn
