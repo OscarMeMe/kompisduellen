@@ -1,6 +1,6 @@
 // Spelregler för "Gissa priset": alla gissar vad en sak kostade, sedan avslöjas priset.
 
-import { isValidPrice } from '@/lib/belopp'
+import { isValidPrice, roundSek } from '@/lib/belopp'
 import { findPriceItem, PRICE_ITEMS } from '@/lib/prisdata'
 import type { GameRules } from '@/lib/spelregler'
 
@@ -35,7 +35,9 @@ export const priceRules: GameRules = {
   },
 
   // Alla får 0–100 poäng efter hur nära priset på rundans sak de var.
-  scoreRound(guesses, itemId, target = findPriceItem(itemId)?.priceSek ?? 0) {
+  // Från en krona räknas mot priset i hela kronor, så att 2 kr ger fullpoäng när priset är 2,44 kr.
+  scoreRound(guesses, itemId, price = findPriceItem(itemId)?.priceSek ?? 0) {
+    const target = roundSek(price)
     const points: Record<string, number> = {}
     for (const [id, guess] of Object.entries(guesses)) points[id] = pricePoints(guess, target)
     return { target, points }

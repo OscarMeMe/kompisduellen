@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import type { RevealViewProps } from '@/components/lobby/types'
-import { formatSek } from '@/lib/belopp'
+import { formatExactSek, formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
@@ -65,6 +65,10 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         >
           {formatSek(result.target)}
         </p>
+        {/* Poängen räknas mot priset i hela kronor, men det exakta priset står under. */}
+        {revealed && item && item.priceSek !== result.target && (
+          <p className="text-sm font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
+        )}
         {revealed && (
           <p className="mt-2 text-lg font-bold sm:mt-4">
             {myPoints === undefined

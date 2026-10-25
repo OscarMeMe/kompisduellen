@@ -28,8 +28,8 @@ export function parseTypedNumber(text: string): number {
   return roundSek(Number(`${whole || '0'}.${decimals || '0'}`))
 }
 
-// Hela kronor från en krona och uppåt, annars hela ören.
-function roundSek(value: number): number {
+// Hela kronor från en krona och uppåt, annars hela ören. Gäller både gissningar och rätt pris.
+export function roundSek(value: number): number {
   return value >= 1 ? Math.round(value) : Math.round(value * 100) / 100
 }
 
@@ -51,4 +51,9 @@ export function isValidPrice(value: number): boolean {
 export function formatSek(value: number): string {
   if (value < 1) return `${Math.round(value * 100)} öre`
   return `${Math.round(value).toLocaleString('sv-SE')} kr`
+}
+
+// Det exakta priset med ören, t.ex. "2,44 kr". Visas under det avrundade priset.
+export function formatExactSek(value: number): string {
+  return `${value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`
 }
