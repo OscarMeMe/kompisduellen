@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { findEmoji } from '@/lib/emoji'
 import { AVATARS, loadPlayer, savePlayer, type Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -50,14 +52,14 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
               key={option}
               type="button"
               onClick={() => setAvatar(option)}
-              aria-label={`Välj ${option}`}
+              aria-label={`Välj ${findEmoji(option)?.label ?? option}`}
               aria-pressed={avatar === option}
               className={cn(
                 'grid aspect-square place-items-center rounded-lg text-2xl transition sm:text-3xl',
                 avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
-              {option}
+              <Emoji emoji={option} />
             </button>
           ))}
         </div>

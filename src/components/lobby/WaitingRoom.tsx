@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Copy, Crown, Loader2 } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Button } from '@/components/ui/button'
@@ -39,7 +40,7 @@ export function WaitingRoom({ code, game, state, isHost, online, onSetRounds, on
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-lg border bg-card p-6 text-center shadow-soft">
           <p className="text-sm font-semibold text-muted-foreground">
-            {game.emoji} {game.name} · Lobbykod
+            <Emoji emoji={game.emoji} className="text-base" /> {game.name} · Lobbykod
           </p>
           <p className="font-heading text-6xl font-bold tracking-[0.25em] text-primary">{code}</p>
           <Button variant="outline" size="lg" className="w-full" onClick={copyLink}>
@@ -57,7 +58,7 @@ export function WaitingRoom({ code, game, state, isHost, online, onSetRounds, on
           <ul className="grid grid-cols-2 gap-2">
             {online.map((p) => (
               <li key={p.id} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 animate-pop">
-                <span className="text-2xl">{p.avatar}</span>
+                <Emoji emoji={p.avatar} className="text-2xl" />
                 <span className="flex-1 truncate font-semibold">{p.name}</span>
                 {p.host && <Crown className="size-4 text-amber-500" aria-label="Värd" />}
               </li>
@@ -88,7 +89,7 @@ export function WaitingRoom({ code, game, state, isHost, online, onSetRounds, on
                   )}
                 >
                   <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-md text-2xl', option.color)}>
-                    {option.emoji}
+                    <Emoji emoji={option.emoji} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-heading text-base font-bold">{option.name}</span>
