@@ -35,6 +35,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
 - `Button` (`size="lg"` för stora knappar, 3.25rem hög) och `Input` har redan designens mått, så lägg inte till egna höjder eller rundningar på dem.
 - `animate-pop` för saker som dyker upp.
+- Spelikoner och spelarfigurer visas med `<Emoji emoji="🧙" />` som Microsoft Fluent Emoji i 3D (MIT, licensen ligger i `public/emoji/LICENSE.txt`). Bilderna ligger i `public/emoji` och hämtas aldrig från en extern sida. Storleken följer textstorleken (t.ex. `className="text-2xl"`). Saknas en bild visas tecknet. Ny figur eller nytt spel: lägg PNG-filen i `public/emoji` och en rad i `src/lib/emoji.ts`. Emojierna i Gissa priset-frågorna är vanliga tecken.
 
 ## Kommandon
 
@@ -46,7 +47,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundBadge`, `GuessStatusList`, `RevealFooter`, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
@@ -61,6 +62,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa)
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
+  - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
