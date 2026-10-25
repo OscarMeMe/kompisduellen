@@ -625,37 +625,6 @@ export const PRICE_ITEMS: PriceItem[] = [
   },
 ]
 
-// Max antal siffror man kan skriva in före decimalkommat (1 000 000 000 000 kr = 13 siffror).
-export const MAX_PRICE_DIGITS = 13
-
 export function findPriceItem(id: string | null | undefined): PriceItem | undefined {
   return PRICE_ITEMS.find((item) => item.id === id)
-}
-
-// Poäng efter hur nära man är, räknat i procent och inte i kronor.
-// Exakt rätt = 100. Hälften eller dubbla priset = 70. Tio gånger fel (eller mer) = 0.
-export function pricePoints(guess: number, price: number): number {
-  if (guess <= 0 || price <= 0) return 0
-  const factor = Math.abs(Math.log10(guess / price))
-  return Math.max(0, Math.round(100 * (1 - factor)))
-}
-
-// "67 000 000" -> "ca 67 miljoner kr"
-export function formatSekShort(value: number): string {
-  if (value >= 1_000_000_000) return `${formatDecimal(value / 1_000_000_000)} miljarder kr`
-  if (value >= 1_000_000) return `${formatDecimal(value / 1_000_000)} miljoner kr`
-  return `${formatSek(value)}`
-}
-
-export function formatSek(value: number): string {
-  if (value < 1) return `${Math.round(value * 100)} öre`
-  if (value < 100 && !Number.isInteger(value)) {
-    return `${value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`
-  }
-  return `${Math.round(value).toLocaleString('sv-SE')} kr`
-}
-
-// En decimal under 100 ("18,5 miljarder"), annars heltal ("250 miljoner").
-function formatDecimal(value: number): string {
-  return value.toLocaleString('sv-SE', { maximumFractionDigits: value < 100 ? 1 : 0 })
 }

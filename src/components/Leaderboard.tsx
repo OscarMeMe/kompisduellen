@@ -1,6 +1,6 @@
 import { Crown, Trophy } from 'lucide-react'
 import { findGame } from '@/lib/games'
-import type { RankedEntry } from '@/lib/narmast'
+import type { RankedEntry } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 type LeaderboardProps = {

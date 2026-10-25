@@ -16,7 +16,7 @@ import {
   startGame,
   type GameState,
   type PlayerInfo,
-} from '@/lib/narmast'
+} from '@/lib/match'
 
 // Hur lobbyn fungerar:
 // - Alla i lobbyn ansluter till samma Supabase Realtime-kanal (lobby:KOD). Inga databastabeller behövs.
