@@ -60,7 +60,7 @@ export function AmountInput({ text, onTextChange, inputRef }: AmountInputProps) 
       onChange={handleChange}
       placeholder="0"
       aria-label="Din gissning, ett tal"
-      className="h-20 rounded-2xl text-center text-4xl font-black sm:text-5xl"
+      className="h-16 rounded-2xl text-center text-3xl font-black sm:h-20 sm:text-5xl"
       autoFocus={hasFinePointer()}
     />
   )

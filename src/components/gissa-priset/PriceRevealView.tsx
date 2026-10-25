@@ -47,34 +47,26 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
     <Wide>
       <RoundBadge state={state} />
 
-      <div className="rounded-3xl bg-white p-6 text-center shadow-sm sm:p-8">
-        <p className="text-5xl">{item?.emoji ?? '🏷️'}</p>
-        <p className="mt-2 font-bold text-balance">{item?.name}</p>
-        {item && <p className="text-sm font-semibold text-primary">År {item.year}</p>}
-        <p className="mt-4 text-sm font-semibold text-muted-foreground">Rätt pris</p>
+      {/* Priset och poängen först, sedan resultatlistan och sist faktatexten, så att det viktigaste syns direkt på mobilen. */}
+      <div className="rounded-3xl bg-white p-4 text-center shadow-sm sm:p-8">
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>
+          <span className="min-w-0 text-left">
+            <span className="block font-bold text-balance">{item?.name}</span>
+            {item && <span className="block text-sm font-semibold text-primary">År {item.year}</span>}
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-semibold text-muted-foreground sm:mt-4">Rätt pris</p>
         <p
           className={cn(
-            'text-5xl font-black text-balance transition-all duration-500 sm:text-6xl',
+            'text-4xl font-black text-balance transition-all duration-500 sm:text-6xl',
             revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
           )}
         >
           {formatSekShort(result.target)}
         </p>
-        {revealed && item && (
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground animate-in fade-in">
-            {item.fact}{' '}
-            <a
-              href={item.source}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              Källa <ExternalLink className="size-3.5" />
-            </a>
-          </p>
-        )}
         {revealed && (
-          <p className="mt-4 text-lg font-bold">
+          <p className="mt-2 text-lg font-bold sm:mt-4">
             {myPoints === undefined
               ? 'Du hann inte gissa den här gången'
               : myPoints === 100
@@ -110,6 +102,20 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
             </li>
           ))}
         </ul>
+      )}
+
+      {revealed && item && (
+        <p className="rounded-3xl bg-white p-4 text-sm text-muted-foreground shadow-sm animate-in fade-in sm:p-6 sm:text-base">
+          {item.fact}{' '}
+          <a
+            href={item.source}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Källa <ExternalLink className="size-3.5" />
+          </a>
+        </p>
       )}
 
       <RevealFooter

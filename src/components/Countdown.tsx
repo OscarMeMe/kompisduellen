@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 type CountdownProps = {
@@ -7,10 +7,12 @@ type CountdownProps = {
   // Min klocka minus värdens klocka.
   clockOffset: number
   totalSeconds: number
+  // Texten till vänster om sekunderna.
+  label?: ReactNode
   className?: string
 }
 
-export function Countdown({ deadline, clockOffset, totalSeconds, className }: CountdownProps) {
+export function Countdown({ deadline, clockOffset, totalSeconds, label = 'Tid kvar', className }: CountdownProps) {
   const localDeadline = deadline + clockOffset
   const [now, setNow] = useState(() => Date.now())
 
@@ -27,7 +29,7 @@ export function Countdown({ deadline, clockOffset, totalSeconds, className }: Co
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium text-muted-foreground">Tid kvar</span>
+        <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <span className={cn('text-2xl font-black tabular-nums', urgent && 'text-pink-600')}>{secondsLeft} s</span>
       </div>
       <div className="h-3 overflow-hidden rounded-full bg-violet-100">

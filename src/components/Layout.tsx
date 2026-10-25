@@ -7,7 +7,7 @@ export function Layout() {
   const [inMatch, setInMatch] = useState(false)
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-x-hidden">
+    <div className="relative flex min-h-svh flex-col overflow-x-clip">
       {/* Färgglada bakgrundsbubblor */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-32 -left-24 size-96 rounded-full bg-violet-300/40 blur-3xl" />
