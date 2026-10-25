@@ -19,6 +19,7 @@ import {
   toKronor,
   type PriceUnit,
 } from '@/lib/belopp'
+import { hasFinePointer } from '@/lib/device'
 import { isValidGuess } from '@/lib/match'
 import { findPriceItem } from '@/lib/prisdata'
 import { rulesFor } from '@/lib/spelregler'
@@ -93,7 +94,8 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
                   )}
                   onClick={() => {
                     setUnit(u.id)
-                    inputRef.current?.focus()
+                    // På mobilen får tangentbordet stänga sig, så att knappen Lås in syns.
+                    if (hasFinePointer()) inputRef.current?.focus()
                   }}
                 >
                   {u.label}

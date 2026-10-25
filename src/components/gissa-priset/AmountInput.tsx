@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, type ChangeEvent, type RefObject } from 'react'
 import { Input } from '@/components/ui/input'
 import { formatTypedNumber } from '@/lib/belopp'
+import { hasFinePointer } from '@/lib/device'
 
 type AmountInputProps = {
   text: string
@@ -60,7 +61,7 @@ export function AmountInput({ text, onTextChange, inputRef }: AmountInputProps) 
       placeholder="0"
       aria-label="Din gissning, ett tal"
       className="h-20 rounded-2xl text-center text-4xl font-black sm:text-5xl"
-      autoFocus
+      autoFocus={hasFinePointer()}
     />
   )
 }

@@ -7,6 +7,7 @@ import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMyGuess } from '@/hooks/useMyGuess'
+import { hasFinePointer } from '@/lib/device'
 import { isValidGuess } from '@/lib/match'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 import { rulesFor } from '@/lib/spelregler'
@@ -63,7 +64,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
                 onChange={(e) => setValue(e.target.valueAsNumber)}
                 aria-label="Din gissning"
                 className="h-20 w-36 rounded-2xl text-center text-5xl font-black"
-                autoFocus
+                autoFocus={hasFinePointer()}
               />
               <Button
                 type="button"
