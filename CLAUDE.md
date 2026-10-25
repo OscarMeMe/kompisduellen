@@ -20,8 +20,21 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Tailwind CSS v4 (via `@tailwindcss/vite`, ingen `tailwind.config`) och shadcn/ui (stil `radix-nova`, ikoner från `lucide-react`)
 - React Router (paketet `react-router`, inte `react-router-dom`)
 - Supabase (`src/lib/supabase.ts`) för databas, inloggning och realtid
-- PWA via `vite-plugin-pwa` (manifestet ligger i `vite.config.ts`)
+- PWA via `vite-plugin-pwa` (manifestet ligger i `vite.config.ts`, ikonerna i `public/`: `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` och `icon-512-maskable.png`)
 - Driftsätts på Vercel (`vercel.json` skickar alla sökvägar till `index.html`)
+
+## Stil
+
+- Varm, ljus och lekfull: krämvit bakgrund med prickmönster, korallröd huvudfärg (`primary`), pastellfärgade kort, mjuka skuggor och stora rundningar.
+- Typsnitt: Syne för rubriker och knappar (`font-heading`, h1–h3 får det automatiskt), Plus Jakarta Sans för brödtext (`font-sans`). Båda via `@fontsource-variable`.
+- Alla färger och skuggor ligger som variabler i `src/index.css`. Använd dem i stället för Tailwinds färdiga färger (som `violet-500`):
+  - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
+  - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
+  - skuggor: `shadow-soft` (kort), `shadow-soft-sm` (små ytor), `shadow-primary` (korallknappar, finns redan på `Button`)
+- Rundning: knappar och fält `rounded-md` (1rem), kort `rounded-lg` (1.25rem), etiketter `rounded-full`.
+- Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
+- `Button` (`size="lg"` för stora knappar, 3.25rem hög) och `Input` har redan designens mått, så lägg inte till egna höjder eller rundningar på dem.
+- `animate-pop` för saker som dyker upp.
 
 ## Kommandon
 

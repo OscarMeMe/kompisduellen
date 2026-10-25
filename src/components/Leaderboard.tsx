@@ -25,13 +25,13 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
     .join(' · ')
 
   return (
-    <section className="space-y-4 rounded-3xl bg-white p-6 shadow-sm">
+    <section className="space-y-4 rounded-lg border bg-card p-4 shadow-soft sm:p-6">
       <div className="flex items-center gap-3">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-950">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-sun-soft">
           <Trophy className="size-6" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-xl font-black text-violet-900">Topplista</h2>
+          <h2 className="text-xl">Topplista</h2>
           <p className="text-sm text-muted-foreground">
             {count(matchesPlayed, 'match spelad', 'matcher spelade')} i lobbyn
           </p>
@@ -46,9 +46,9 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
           return (
             <li
               key={entry.id}
-              className={cn('flex items-center gap-3 rounded-2xl px-4 py-3', leader ? 'bg-amber-100' : 'bg-violet-50')}
+              className={cn('flex items-center gap-2 rounded-lg px-3 py-3 sm:gap-3 sm:px-4', leader ? 'bg-sun-soft' : 'bg-muted')}
             >
-              <span className="w-6 text-lg font-black text-muted-foreground">{entry.place}</span>
+              <span className="w-6 font-heading text-lg font-bold text-muted-foreground">{entry.place}</span>
               <span className="text-2xl">{entry.avatar}</span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 font-bold">
@@ -60,12 +60,12 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
                 </span>
               </span>
               {justWon && (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-sm font-bold whitespace-nowrap text-emerald-800">
+                <span className="rounded-full bg-mint px-2 py-0.5 text-sm font-bold whitespace-nowrap text-accent-foreground">
                   +1
                 </span>
               )}
               <span className="text-right whitespace-nowrap">
-                <span className="text-xl font-black text-primary tabular-nums">{entry.wins}</span>
+                <span className="font-heading text-xl font-bold text-primary tabular-nums">{entry.wins}</span>
                 <span className="ml-1 text-sm font-semibold text-muted-foreground">
                   {entry.wins === 1 ? 'vinst' : 'vinster'}
                 </span>

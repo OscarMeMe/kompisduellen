@@ -31,9 +31,9 @@ export function LobbyPage() {
   if (!me) {
     return (
       <Narrow>
-        <div className="rounded-3xl bg-white p-5 text-center shadow-sm">
+        <div className="rounded-lg border bg-card p-5 text-center shadow-soft">
           <p className="text-sm font-semibold text-muted-foreground">Du går med i lobby</p>
-          <p className="text-4xl font-black tracking-[0.3em] text-primary">{code}</p>
+          <p className="font-heading text-4xl font-bold tracking-[0.3em] text-primary">{code}</p>
         </div>
         <PlayerSetup submitLabel="Gå med i lobbyn" onDone={setMe} />
       </Narrow>
@@ -73,9 +73,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   if (status === 'no-host' || status === 'error') {
     return (
       <Narrow>
-        <div className="space-y-3 rounded-3xl bg-white p-8 text-center shadow-sm">
+        <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
           <p className="text-5xl">🤷</p>
-          <h1 className="text-2xl font-black">
+          <h1 className="text-2xl">
             {status === 'error' ? 'Kunde inte ansluta' : `Ingen lobby med koden ${code}`}
           </h1>
           <p className="text-muted-foreground">
@@ -84,10 +84,10 @@ function Lobby({ code, me }: { code: string; me: Player }) {
               : 'Kolla att koden stämmer. Lobbyn finns bara så länge värden är kvar.'}
           </p>
         </div>
-        <Button asChild size="lg" className="h-14 rounded-2xl text-lg">
+        <Button asChild size="lg">
           <Link to="/ga-med">Testa en annan kod</Link>
         </Button>
-        <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white text-lg">
+        <Button asChild size="lg" variant="outline">
           <Link to="/#spel">Tillbaka till alla spel</Link>
         </Button>
       </Narrow>

@@ -6,7 +6,7 @@ export function NotFoundPage() {
   return (
     <>
       <PageHeader title="Sidan finns inte" description="Vi hittade inte det du letade efter." />
-      <Button asChild size="lg" className="h-12 text-base">
+      <Button asChild size="lg">
         <Link to="/">Till startsidan</Link>
       </Button>
     </>

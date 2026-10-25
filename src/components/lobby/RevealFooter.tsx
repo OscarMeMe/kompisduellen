@@ -17,7 +17,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, nextLabel }: 
   const isLast = state.round >= state.rounds
 
   return (
-    <div className="space-y-3 rounded-3xl bg-white p-5 shadow-sm">
+    <div className="space-y-3 rounded-lg border bg-card p-5 shadow-soft">
       <p className="text-center text-sm font-semibold text-muted-foreground">
         {isLast ? 'Prispallen kommer strax' : nextLabel}
       </p>
@@ -25,7 +25,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, nextLabel }: 
         <Countdown deadline={state.deadline} clockOffset={clockOffset} totalSeconds={rulesFor(state.game).revealSeconds} />
       )}
       {isHost && (
-        <Button variant="outline" className="h-12 w-full rounded-2xl text-base" onClick={onNext}>
+        <Button variant="outline" size="lg" className="w-full" onClick={onNext}>
           {isLast ? 'Visa prispallen nu' : 'Nästa runda nu'}
         </Button>
       )}

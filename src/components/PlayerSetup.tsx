@@ -28,7 +28,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="space-y-2">
-        <Label htmlFor="player-name" className="text-base">
+        <Label htmlFor="player-name" className="text-sm font-bold">
           Vad heter du?
         </Label>
         <Input
@@ -39,12 +39,11 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
           maxLength={20}
           autoComplete="nickname"
           autoFocus
-          className="h-14 rounded-2xl bg-white text-lg"
         />
       </div>
 
       <div className="space-y-2">
-        <p className="text-base font-medium">Välj en figur</p>
+        <p className="text-sm font-bold">Välj en figur</p>
         <div className="grid grid-cols-6 gap-2">
           {AVATARS.map((option) => (
             <button
@@ -54,8 +53,8 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
               aria-label={`Välj ${option}`}
               aria-pressed={avatar === option}
               className={cn(
-                'flex aspect-square items-center justify-center rounded-2xl border-2 bg-white text-3xl transition-transform hover:scale-105',
-                avatar === option ? 'border-primary bg-violet-50 ring-4 ring-primary/20' : 'border-transparent',
+                'grid aspect-square place-items-center rounded-lg text-2xl transition sm:text-3xl',
+                avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
               {option}
@@ -64,7 +63,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
         </div>
       </div>
 
-      <Button type="submit" size="lg" className="h-14 rounded-2xl text-lg" disabled={!name.trim()}>
+      <Button type="submit" size="lg" disabled={!name.trim()}>
         {submitLabel}
       </Button>
     </form>

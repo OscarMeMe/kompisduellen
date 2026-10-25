@@ -30,32 +30,32 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
       <RoundTimer state={state} clockOffset={clockOffset} />
 
       {/* Kompakt på mobilen: figur och årtal på samma rad, så att frågan och rutan syns samtidigt. */}
-      <div className="rounded-3xl bg-white p-4 text-center shadow-sm sm:p-8">
+      <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
         <div className="flex items-center justify-center gap-3">
           <span className="text-5xl sm:text-7xl">{item?.emoji ?? '🏷️'}</span>
           {item && (
-            <span className="rounded-full bg-primary px-4 py-1 text-lg font-black text-primary-foreground shadow-md shadow-primary/30 sm:px-5 sm:py-1.5 sm:text-xl">
+            <span className="rounded-full bg-primary px-4 py-1 font-heading text-lg font-bold text-primary-foreground shadow-primary sm:px-5 sm:py-1.5 sm:text-xl">
               År {item.year}
             </span>
           )}
         </div>
         <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3">Vad kostade det?</p>
-        <h1 className="mx-auto mt-1 max-w-xl text-xl font-black text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
+        <h1 className="mx-auto mt-1 max-w-xl text-xl text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
         {item?.clue && (
-          <p className="mx-auto mt-2 w-fit max-w-xl rounded-2xl bg-violet-50 px-4 py-1.5 text-sm font-semibold text-primary sm:mt-3">
+          <p className="mx-auto mt-2 w-fit max-w-xl rounded-md bg-sky-soft px-4 py-1.5 text-sm font-semibold sm:mt-3">
             {item.clue}
           </p>
         )}
       </div>
 
-      <div className="rounded-3xl bg-white p-4 shadow-sm sm:p-8">
+      <div className="rounded-lg border bg-card p-4 shadow-soft sm:p-8">
         {!inGame ? (
           <p className="py-6 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
           <div className="space-y-2 py-4 text-center">
             <Lock className="mx-auto size-8 text-primary" />
             <p className="text-muted-foreground">Din gissning</p>
-            <p className="text-4xl font-black break-all text-primary sm:text-5xl">{formatSek(locked)}</p>
+            <p className="font-heading text-4xl font-bold break-all text-primary sm:text-5xl">{formatSek(locked)}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
@@ -78,7 +78,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             <Button
               type="submit"
               size="lg"
-              className="h-14 w-full rounded-2xl text-lg shadow-lg shadow-primary/30"
+              className="w-full"
               disabled={!valid}
             >
               Lås in gissning

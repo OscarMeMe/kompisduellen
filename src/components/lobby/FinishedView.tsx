@@ -20,7 +20,7 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
     <Wide>
       <div className="text-center">
         <p className="text-5xl">🏆</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight">Matchen är slut!</h1>
+        <h1 className="mt-2 text-4xl">Matchen är slut!</h1>
         <p className="mt-1 text-muted-foreground">
           {game.name} · {state.rounds} rundor spelade
         </p>
@@ -37,15 +37,15 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost ? (
-          <Button size="lg" className="h-14 rounded-2xl text-lg shadow-lg shadow-primary/30 sm:flex-1" onClick={onPlayAgain}>
+          <Button size="lg" className="sm:flex-1" onClick={onPlayAgain}>
             Spela igen
           </Button>
         ) : (
-          <p className="flex items-center justify-center rounded-2xl bg-white px-4 py-4 text-center font-semibold text-muted-foreground shadow-sm sm:flex-1">
+          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm sm:flex-1">
             Värden väljer nästa spel
           </p>
         )}
-        <Button asChild size="lg" variant="outline" className="h-14 rounded-2xl bg-white text-lg sm:flex-1">
+        <Button asChild size="lg" variant="outline" className="sm:flex-1">
           <Link to="/#spel">Tillbaka till alla spel</Link>
         </Button>
       </div>

@@ -14,7 +14,7 @@ export function Wide({ children }: { children: ReactNode }) {
 export function RoundBadge({ state }: { state: GameState }) {
   return (
     <div className="flex justify-center">
-      <span className="inline-flex rounded-full bg-white px-4 py-1.5 text-sm font-bold text-primary shadow-sm">
+      <span className="inline-flex rounded-full bg-sky-soft px-4 py-1.5 font-heading text-sm font-bold">
         Runda {state.round} av {state.rounds}
       </span>
     </div>
@@ -31,7 +31,7 @@ export function RoundTimer({ state, clockOffset }: { state: GameState; clockOffs
         clockOffset={clockOffset}
         totalSeconds={rulesFor(state.game).guessSeconds}
         label={
-          <span className="font-bold text-primary">
+          <span className="font-heading font-bold">
             Runda {state.round} av {state.rounds}
           </span>
         }

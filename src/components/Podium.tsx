@@ -2,9 +2,9 @@ import type { RankedPlayer } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 const STEP_STYLES: Record<number, { height: string; color: string; medal: string }> = {
-  1: { height: 'h-40 sm:h-48', color: 'bg-amber-300', medal: '🥇' },
-  2: { height: 'h-28 sm:h-36', color: 'bg-slate-200', medal: '🥈' },
-  3: { height: 'h-20 sm:h-24', color: 'bg-orange-200', medal: '🥉' },
+  1: { height: 'h-40 sm:h-48', color: 'bg-sun', medal: '🥇' },
+  2: { height: 'h-28 sm:h-36', color: 'bg-sky', medal: '🥈' },
+  3: { height: 'h-20 sm:h-24', color: 'bg-coral-soft', medal: '🥉' },
 }
 
 function points(score: number) {
@@ -39,7 +39,7 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
               </div>
               <div
                 className={cn(
-                  'flex w-full items-start justify-center rounded-t-2xl pt-3 text-3xl font-black shadow-inner',
+                  'flex w-full items-start justify-center rounded-t-lg pt-3 text-3xl shadow-soft-sm',
                   style.height,
                   style.color,
                 )}
@@ -54,8 +54,8 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
       {rest.length > 0 && (
         <ol className="space-y-2">
           {rest.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
-              <span className="w-8 text-lg font-black text-muted-foreground">{p.place}.</span>
+            <li key={p.id} className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-soft-sm">
+              <span className="w-8 font-heading text-lg font-bold text-muted-foreground">{p.place}.</span>
               <span className="text-2xl">{p.avatar}</span>
               <span className="flex-1 truncate font-semibold">{p.name}</span>
               <span className="text-sm text-muted-foreground">{points(p.score)}</span>

@@ -48,9 +48,9 @@ export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealVie
     <Wide>
       <RoundBadge state={state} />
 
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
+      <div className="rounded-lg border bg-card p-8 text-center shadow-soft">
         <p className="font-semibold text-muted-foreground">Det rätta talet var</p>
-        <p className={cn('text-8xl font-black tabular-nums', rolling ? 'text-muted-foreground' : 'text-primary')}>
+        <p className={cn('font-heading text-8xl font-bold tabular-nums', rolling ? 'text-muted-foreground' : 'text-primary')}>
           {shownTarget ?? '?'}
         </p>
         {!rolling && (
@@ -72,8 +72,8 @@ export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealVie
             <li
               key={row.id}
               className={cn(
-                'flex items-center gap-3 rounded-2xl px-4 py-3 shadow-sm animate-in fade-in slide-in-from-bottom-2',
-                row.winner ? 'bg-amber-100 font-bold' : 'bg-white',
+                'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-soft-sm animate-pop',
+                row.winner ? 'bg-mint-soft font-bold' : 'bg-card',
               )}
             >
               <span className="text-2xl">{row.avatar}</span>
@@ -83,7 +83,7 @@ export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealVie
                   {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
                 </span>
               </span>
-              <span className="w-10 text-right text-xl font-black tabular-nums">{row.guess ?? '–'}</span>
+              <span className="w-10 text-right font-heading text-xl font-bold tabular-nums">{row.guess ?? '–'}</span>
               <span className="shrink-0 text-right text-sm whitespace-nowrap">
                 {row.winner ? '+1 · ' : ''}
                 {state.scores[row.id] ?? 0} p

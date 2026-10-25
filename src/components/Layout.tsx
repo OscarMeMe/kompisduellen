@@ -1,20 +1,17 @@
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import type { LayoutContext } from '@/hooks/useLayout'
+import { loadPlayer } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
+  // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
+  useLocation()
+  const player = loadPlayer()
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-x-clip">
-      {/* Färgglada bakgrundsbubblor */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-32 -left-24 size-96 rounded-full bg-violet-300/40 blur-3xl" />
-        <div className="absolute top-40 -right-32 size-96 rounded-full bg-pink-300/40 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 size-80 rounded-full bg-amber-200/50 blur-3xl" />
-      </div>
-
+    <div className="flex min-h-svh flex-col overflow-x-clip">
       <header className="pt-[env(safe-area-inset-top)]">
         <div
           className={cn(
@@ -22,28 +19,31 @@ export function Layout() {
             inMatch ? 'justify-center py-3 sm:py-5' : 'py-5',
           )}
         >
+          {/* Loggan leder till startsidan, utom under en match så att ingen lämnar lobbyn av misstag. */}
           {inMatch ? (
-            <span className="flex items-center gap-1 text-2xl font-black tracking-tight sm:text-3xl">
-              <Logo />
-            </span>
+            <Logo />
           ) : (
-            <Link to="/" className="group flex items-center gap-1 text-2xl font-black tracking-tight sm:text-3xl">
+            <Link to="/" aria-label="Kompisduellen, till startsidan" className="group">
               <Logo />
             </Link>
           )}
-          <nav className={cn('flex items-center gap-4 text-sm font-semibold', inMatch && 'hidden')}>
-            <Link to="/#sa-funkar" className="hidden text-muted-foreground hover:text-foreground sm:inline">
-              Så funkar det
-            </Link>
-            <Link to="/#spel" className="text-muted-foreground hover:text-foreground">
-              Alla spel
-            </Link>
-            <Link
-              to="/ga-med"
-              className="rounded-full bg-pink-500 px-4 py-2 text-white shadow-sm shadow-pink-500/30 transition-transform hover:-translate-y-0.5"
-            >
-              Gå med
-            </Link>
+          <nav className={cn(inMatch && 'hidden')}>
+            {player ? (
+              <Link
+                to="/profil"
+                className="flex items-center gap-2 rounded-full border bg-card py-2 pr-4 pl-3 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
+              >
+                <span className="text-xl leading-none">{player.avatar}</span>
+                <span className="max-w-32 truncate">{player.name}</span>
+              </Link>
+            ) : (
+              <Link
+                to="/ga-med"
+                className="flex items-center rounded-full border bg-card px-4 py-2.5 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
+              >
+                Gå med
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -56,11 +56,11 @@ export function Layout() {
 
 function Logo() {
   return (
-    <>
-      <span className="text-violet-900">Kompis</span>
-      <span className="inline-block -rotate-3 rounded-xl bg-primary px-2 pb-0.5 text-primary-foreground shadow-md shadow-primary/30 transition-transform group-hover:rotate-2">
+    <span className="font-heading text-xl font-bold tracking-tight sm:text-2xl">
+      Kompis{' '}
+      <span className="inline-block -rotate-3 rounded-full bg-primary px-3 pb-0.5 text-primary-foreground shadow-primary transition-transform group-hover:rotate-0">
         duellen
       </span>
-    </>
+    </span>
   )
 }
