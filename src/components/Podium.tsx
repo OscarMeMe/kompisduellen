@@ -1,4 +1,4 @@
-import type { RankedPlayer } from '@/lib/narmast'
+import type { RankedPlayer } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 const STEP_STYLES: Record<number, { height: string; color: string; medal: string }> = {
