@@ -3,14 +3,15 @@ import { Link, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { formatSek } from '@/lib/belopp'
-import { GAMES } from '@/lib/games'
+import { GAMES, playersLabel } from '@/lib/games'
 import { pricePoints } from '@/lib/gissa-priset'
+import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
   { title: 'Skapa en lobby', text: 'Välj spel och skriv ditt namn. Inget konto behövs.', color: 'bg-coral-soft' },
   { title: 'Dela koden', text: 'Fyra bokstäver. Skicka i Discord eller säg den högt.', color: 'bg-sun-soft' },
-  { title: 'Spela!', text: 'Alla svarar på sin egen mobil. Flest poäng vinner.', color: 'bg-mint-soft' },
+  { title: 'Spela!', text: 'Alla svarar på sin egen skärm. Flest poäng vinner.', color: 'bg-mint-soft' },
 ]
 
 // En runda i Gissa priset med en riktig sak ur prisdata.ts. Poängen räknas som i spelet.
@@ -40,11 +41,17 @@ export function HomePage() {
             Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder.
+            För förfesten, soffhänget och bara en omgång till.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 md:max-w-md">
+            {/* Till spelkorten, utan att något spel är förvalt. Scrollar även om #spel redan står i adressen. */}
             <Button asChild size="lg">
-              <Link to="/skapa?spel=narmast">✨ Skapa lobby</Link>
+              <Link
+                to="/#spel"
+                onClick={() => document.getElementById('spel')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                ✨ Välj spel
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/ga-med">🔑 Jag har en kod</Link>
@@ -95,36 +102,50 @@ export function HomePage() {
           <h2 className="text-3xl">Spel</h2>
           <p className="text-muted-foreground">Fler spel är på väg.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {GAMES.map((game) => (
+        {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {GAMES.filter((game) => game.playable).map((game) => (
             <div
               key={game.id}
               className={cn(
-                'flex flex-col gap-2 rounded-lg border p-4 shadow-soft-sm transition-transform',
+                'flex flex-col gap-3 rounded-lg border-2 border-primary/25 p-5 shadow-soft transition-transform hover:-translate-y-1',
                 game.color,
-                game.playable && 'hover:-translate-y-1',
               )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <Emoji emoji={game.emoji} className="text-3xl" />
-                {!game.playable && (
-                  <span className="rounded-full bg-card/80 px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    Kommer snart
-                  </span>
-                )}
+              <div className="flex items-center gap-3">
+                <Emoji emoji={game.emoji} className="text-4xl" />
+                <h3 className="text-xl leading-tight">{game.name}</h3>
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg leading-tight">{game.name}</h3>
-                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{game.tagline}</p>
-              </div>
-              {/* Knappen ligger på samma rad som antal spelare, så kommande spel inte får en tom yta. */}
-              <div className="flex min-h-10 items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-muted-foreground">👥 {game.players}</p>
-                {game.playable && (
+              <p className="flex-1 leading-snug text-muted-foreground">{game.tagline}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
+                <div className="flex flex-wrap gap-2">
+                  {rulesFor(game.id).soloPractice && (
+                    <Button asChild variant="outline">
+                      <Link to={`/skapa?spel=${game.id}&testa=1`}>Testa själv</Link>
+                    </Button>
+                  )}
                   <Button asChild>
                     <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
                   </Button>
-                )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {GAMES.filter((game) => !game.playable).map((game) => (
+            <div key={game.id} className={cn('flex gap-3 rounded-lg border p-4 opacity-75', game.color)}>
+              <Emoji emoji={game.emoji} className="text-2xl" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                  <h3 className="text-base leading-tight">{game.name}</h3>
+                  <span className="rounded-full bg-card/80 px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                    Kommer snart
+                  </span>
+                </div>
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{game.tagline}</p>
+                <p className="mt-1 text-xs font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
               </div>
             </div>
           ))}
@@ -151,7 +172,6 @@ export function HomePage() {
           ))}
         </ol>
       </section>
-
     </div>
   )
 }

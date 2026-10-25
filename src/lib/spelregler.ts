@@ -12,15 +12,32 @@ export type RoundOutcome = {
 }
 
 export type GameRules = {
+  // Standardtid för att gissa. Spel med guessSecondsOptions låter värden välja en annan.
   guessSeconds: number
+  // Svarstider värden kan välja i lobbyn. Finns de kan värden också välja att gå vidare själv efter facit.
+  guessSecondsOptions?: readonly number[]
   revealSeconds: number
+  // En ensam spelare får köra en provomgång, som inte räknas i topplistan.
+  soloPractice?: boolean
   // Kort beskrivning som visas i väntrummet.
-  howTo: string
+  howTo: (guessSeconds: number) => string
+  // Den detaljerade poängförklaringen bakom "Så räknas poängen".
+  scoringDetails: string[]
   isValidGuess: (value: number) => boolean
   // Spel där varje runda gäller en sak (t.ex. Gissa priset) väljer den här.
   pickItem?: (usedItemIds: string[]) => { itemId: string; usedItemIds: string[] }
   // target kan skickas med för att slippa slump, t.ex. i tester.
   scoreRound: (guesses: Record<string, number>, itemId: string | null, target?: number) => RoundOutcome
+  // Hur långt ifrån rätt svar en gissning är, med samma mått som poängen bygger på (0 = exakt).
+  distance: (guess: number, target: number) => number
+  // Från hur stort avstånd en miss är värd att lyfta fram som "Längst från verkligheten".
+  notableMiss: number
+  // Gav gissningen full pott?
+  isBullseye: (guess: number, target: number) => boolean
+  // Ett värde som text, t.ex. "79 kr" eller "42".
+  formatValue: (value: number) => string
+  // Vad rundan gällde, t.ex. "Ikeas hjärtformade kudde med armar". null om rundan inte gällde en sak.
+  itemName: (itemId: string | null) => string | null
 }
 
 const RULES: Record<string, GameRules> = {

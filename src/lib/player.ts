@@ -86,3 +86,21 @@ export function markAsHost(code: string, gameId: string) {
 export function hostedGame(code: string): string | null {
   return safeGet('session', `kd-host:${code}`)
 }
+
+// "Testa själv": lobbyn startar en provomgång direkt när värden har anslutit. Sparas i fliken.
+export function requestPractice(code: string) {
+  safeSet('session', `kd-test:${code}`, '1')
+}
+
+export function hasPracticeRequest(code: string): boolean {
+  return safeGet('session', `kd-test:${code}`) === '1'
+}
+
+// Tas bort när provomgången startar, så att den bara startar en gång.
+export function clearPracticeRequest(code: string) {
+  try {
+    sessionStorage.removeItem(`kd-test:${code}`)
+  } catch {
+    // Blockerad lagring: då fanns inget sparat heller.
+  }
+}

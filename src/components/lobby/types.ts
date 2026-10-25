@@ -17,5 +17,6 @@ export type RevealViewProps = {
   me: Player
   isHost: boolean
   clockOffset: number
-  onNext: () => void
+  // Värden går vidare från facit. round = rundan som visades, så att ett dubbelklick inte hoppar över en runda.
+  onNext: (round: number) => void
 }

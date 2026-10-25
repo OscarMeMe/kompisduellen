@@ -3,6 +3,7 @@
 // Det som skiljer spelen åt (tider, giltiga gissningar och poäng) finns i spelregler.ts.
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
+import { findGame } from '@/lib/games'
 import { rulesFor } from '@/lib/spelregler'
 
 export const ROUND_OPTIONS = [3, 5, 10] as const
@@ -36,14 +37,23 @@ export type GameState = {
   rounds: number
   round: number
   // Tidpunkt (värdens klocka, ms) då gissningen eller visningen tar slut.
+  // null under facit när värden går vidare själv.
   deadline: number | null
   guesses: Record<string, number>
   scores: Record<string, number>
   players: Record<string, PlayerInfo>
   lastResult: RoundResult | null
+  // Alla rundor i matchen, för höjdpunkterna efter matchen.
+  matchRounds: RoundResult[]
   // Gissa priset: saken som visas i rundan, och saker som redan varit med.
   itemId: string | null
   usedItemIds: string[]
+  // Lobbyns tempo. Gäller spel som har guessSecondsOptions (Gissa priset).
+  guessSeconds: number
+  // true = nästa runda startar av sig själv efter facit. false = värden går vidare.
+  autoAdvance: boolean
+  // Matchen har bara en spelare: en provomgång som inte räknas i topplistan.
+  practice: boolean
   matchesPlayed: number
   // Antal spelade matcher per spel, t.ex. { narmast: 2, 'gissa-priset': 1 }.
   gamesPlayed: Record<string, number>
@@ -61,7 +71,7 @@ export type RankedEntry = LeaderboardEntry & {
   place: number
 }
 
-export function initialState(game = 'narmast'): GameState {
+export function initialState(game = 'gissa-priset'): GameState {
   return {
     game,
     phase: 'waiting',
@@ -72,12 +82,32 @@ export function initialState(game = 'narmast'): GameState {
     scores: {},
     players: {},
     lastResult: null,
+    matchRounds: [],
     itemId: null,
     usedItemIds: [],
+    guessSeconds: rulesFor('gissa-priset').guessSeconds,
+    autoAdvance: true,
+    practice: false,
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
   }
+}
+
+// Har spelet tempoinställningar (svarstid och vem som går vidare efter facit)?
+export function hasTempoSettings(game: string): boolean {
+  return rulesFor(game).guessSecondsOptions !== undefined
+}
+
+// Svarstiden i matchen: lobbyns val om spelet har tempoinställningar, annars spelets egen tid.
+export function guessSecondsFor(state: Pick<GameState, 'game' | 'guessSeconds'>): number {
+  const rules = rulesFor(state.game)
+  return rules.guessSecondsOptions?.includes(state.guessSeconds) ? state.guessSeconds : rules.guessSeconds
+}
+
+// Går matchen vidare av sig själv efter facit? Spel utan tempoinställningar gör det alltid.
+export function autoAdvanceFor(state: Pick<GameState, 'game' | 'autoAdvance'>): boolean {
+  return hasTempoSettings(state.game) ? state.autoAdvance : true
 }
 
 // Startar en ny runda: väljer rundans sak (om spelet har sådana) och startar klockan.
@@ -89,7 +119,7 @@ function startRound(state: GameState, round: number, now: number): GameState {
     ...item,
     phase: 'guessing',
     round,
-    deadline: now + rules.guessSeconds * 1000,
+    deadline: now + guessSecondsFor(state) * 1000,
     guesses: {},
   }
 }
@@ -99,10 +129,21 @@ export function setRounds(state: GameState, rounds: number): GameState {
   return { ...state, rounds }
 }
 
-// Byter spel i väntrummet. Antal rundor och topplistan följer med.
+// Byter spel i väntrummet. Antal rundor, tempo och topplistan följer med.
 export function setGame(state: GameState, game: string): GameState {
   if (state.phase !== 'waiting' || state.game === game) return state
   return { ...state, game }
+}
+
+// Värdens tempoval i väntrummet. Svarstider som spelet inte erbjuder ignoreras.
+export function setTempo(state: GameState, tempo: { guessSeconds?: number; autoAdvance?: boolean }): GameState {
+  if (state.phase !== 'waiting') return state
+  const options = rulesFor(state.game).guessSecondsOptions ?? []
+  const guessSeconds =
+    tempo.guessSeconds !== undefined && options.includes(tempo.guessSeconds) ? tempo.guessSeconds : state.guessSeconds
+  const autoAdvance = tempo.autoAdvance ?? state.autoAdvance
+  if (guessSeconds === state.guessSeconds && autoAdvance === state.autoAdvance) return state
+  return { ...state, guessSeconds, autoAdvance }
 }
 
 // Lägger till spelare som anslutit. Befintliga poäng behålls.
@@ -124,7 +165,16 @@ export function addPlayers(state: GameState, players: Record<string, PlayerInfo>
   return changed ? { ...state, players: nextPlayers, scores: nextScores } : state
 }
 
+// Kan en match starta med så här många i lobbyn? Spel med soloPractice får starta som provomgång
+// med en spelare. Annars krävs spelets minsta antal spelare.
+export function canStart(game: string, playerCount: number): boolean {
+  const minPlayers = findGame(game)?.minPlayers ?? 2
+  if (playerCount >= minPlayers) return true
+  return playerCount === 1 && rulesFor(game).soloPractice === true
+}
+
 export function startGame(state: GameState, onlineIds: string[], now: number): GameState {
+  if (state.phase !== 'waiting') return state
   // Ny match: bara de som är med just nu, alla börjar på noll.
   const players: Record<string, PlayerInfo> = {}
   const scores: Record<string, number> = {}
@@ -134,7 +184,13 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
       scores[id] = 0
     }
   }
-  return startRound({ ...state, scores, players, lastResult: null }, 1, now)
+  const count = Object.keys(players).length
+  if (!canStart(state.game, count)) return state
+  return startRound(
+    { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1 },
+    1,
+    now,
+  )
 }
 
 export function isValidGuess(game: string, value: number): boolean {
@@ -167,12 +223,15 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
   const scores = { ...state.scores }
   for (const [id, gained] of Object.entries(outcome.points)) scores[id] = (scores[id] ?? 0) + gained
 
+  const result: RoundResult = { ...outcome, guesses: state.guesses, winners, itemId: state.itemId }
   return {
     ...state,
     phase: 'reveal',
-    deadline: now + rules.revealSeconds * 1000,
+    // Går värden vidare själv står facit kvar utan klocka.
+    deadline: autoAdvanceFor(state) ? now + rules.revealSeconds * 1000 : null,
     scores,
-    lastResult: { ...outcome, guesses: state.guesses, winners, itemId: state.itemId },
+    lastResult: result,
+    matchRounds: [...state.matchRounds, result],
   }
 }
 
@@ -184,6 +243,22 @@ export function nextRound(state: GameState, now: number): GameState {
   return startRound(state, state.round + 1, now)
 }
 
+// Värdens timer. Gör bara något om klockan som löpte ut fortfarande är den som gäller, så att en
+// gammal timer aldrig avslutar en ny runda (t.ex. om värden precis hoppade fram).
+export function handleDeadline(state: GameState, now: number, deadline: number): GameState {
+  if (state.deadline !== deadline || now < deadline) return state
+  if (state.phase === 'guessing') return resolveRound(state, now)
+  if (state.phase === 'reveal') return nextRound(state, now)
+  return state
+}
+
+// Värden går vidare från facit. round är rundan som visades när värden klickade, så att ett
+// dubbelklick (eller ett klick samtidigt som timern) aldrig hoppar över en runda.
+export function advanceFromReveal(state: GameState, now: number, round: number): GameState {
+  if (state.phase !== 'reveal' || state.round !== round) return state
+  return nextRound(state, now)
+}
+
 // Den eller de med flest poäng i matchen. Delad seger ger alla på förstaplatsen en vinst.
 // Fick ingen några poäng blir det ingen vinnare.
 export function matchWinners(state: GameState): string[] {
@@ -192,8 +267,9 @@ export function matchWinners(state: GameState): string[] {
   return Object.keys(state.players).filter((id) => (state.scores[id] ?? 0) === best)
 }
 
-// Lägger matchens vinster på topplistan.
+// Lägger matchens vinster på topplistan. En provomgång med en spelare räknas inte.
 function finishMatch(state: GameState): GameState {
+  if (state.practice) return state
   const winners = matchWinners(state)
   const leaderboard = { ...state.leaderboard }
   for (const [id, info] of Object.entries(state.players)) {
@@ -213,6 +289,7 @@ function finishMatch(state: GameState): GameState {
 }
 
 export function backToWaiting(state: GameState): GameState {
+  if (state.phase !== 'finished') return state
   const scores: Record<string, number> = {}
   for (const id of Object.keys(state.players)) scores[id] = 0
   return {
@@ -223,7 +300,9 @@ export function backToWaiting(state: GameState): GameState {
     guesses: {},
     scores,
     lastResult: null,
+    matchRounds: [],
     itemId: null,
+    practice: false,
   }
 }
 

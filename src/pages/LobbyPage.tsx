@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { useLayout } from '@/hooks/useLayout'
 import { useLobby } from '@/hooks/useLobby'
 import { findGame, GAMES } from '@/lib/games'
-import { hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
+import { clearPracticeRequest, hasPracticeRequest, hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
 
 // Vyerna för att gissa och visa svaret i varje spel. Väntrum och prispall är gemensamma.
 const GAME_VIEWS: Record<string, { Guessing: ComponentType<GuessingViewProps>; Reveal: ComponentType<RevealViewProps> }> =
@@ -50,6 +50,16 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
+
+  // "Testa själv": starta provomgången så snart värden finns med i lobbyn. Önskemålet tas bort när
+  // den startar, och startGame gör ingenting om matchen redan har startat.
+  const meInLobby = Boolean(state.players[me.id]) && online.some((p) => p.id === me.id)
+  useEffect(() => {
+    if (!isHost || status !== 'ready' || state.phase !== 'waiting' || !meInLobby) return
+    if (!hasPracticeRequest(code)) return
+    clearPracticeRequest(code)
+    actions.start()
+  }, [isHost, status, state.phase, meInLobby, actions, code])
 
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
   const { setInMatch } = useLayout()
@@ -105,6 +115,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           online={online}
           onSetRounds={actions.setRounds}
           onSetGame={actions.setGame}
+          onSetTempo={actions.setTempo}
           onStart={actions.start}
         />
       )
