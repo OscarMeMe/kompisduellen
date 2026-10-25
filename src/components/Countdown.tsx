@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
 
 type CountdownProps = {
@@ -13,18 +14,7 @@ type CountdownProps = {
 }
 
 export function Countdown({ deadline, clockOffset, totalSeconds, label = 'Tid kvar', className }: CountdownProps) {
-  const localDeadline = deadline + clockOffset
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 200)
-    return () => clearInterval(timer)
-  }, [])
-
-  const msLeft = Math.max(0, localDeadline - now)
-  const secondsLeft = Math.ceil(msLeft / 1000)
-  const progress = Math.min(1, msLeft / (totalSeconds * 1000))
-  const urgent = secondsLeft <= 5
+  const { secondsLeft, progress, urgent } = useCountdown(deadline, clockOffset, totalSeconds)
 
   return (
     <div className={cn('space-y-2', className)}>

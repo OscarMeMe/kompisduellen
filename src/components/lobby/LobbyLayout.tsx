@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { Countdown } from '@/components/Countdown'
+import { useCountdown } from '@/hooks/useCountdown'
 import type { GameState } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
+import { cn } from '@/lib/utils'
 
 export function Narrow({ children }: { children: ReactNode }) {
   return <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">{children}</div>
@@ -21,21 +22,28 @@ export function RoundBadge({ state }: { state: GameState }) {
   )
 }
 
-// Runda och nedräkning medan man gissar. Ligger fast högst upp, så att tiden syns även när man scrollar.
+// Runda och en tunn stapel som krymper med tiden medan man gissar. Sekunderna står i statusraden
+// under gissningsrutan. Ligger fast högst upp, så att tiden syns även när man scrollar.
 export function RoundTimer({ state, clockOffset }: { state: GameState; clockOffset: number }) {
-  if (state.deadline === null) return <RoundBadge state={state} />
+  const { progress, urgent } = useCountdown(state.deadline, clockOffset, rulesFor(state.game).guessSeconds)
+
   return (
     <div className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
-      <Countdown
-        deadline={state.deadline}
-        clockOffset={clockOffset}
-        totalSeconds={rulesFor(state.game).guessSeconds}
-        label={
-          <span className="font-heading font-bold">
-            Runda {state.round} av {state.rounds}
-          </span>
-        }
-      />
+      <p className="text-center font-heading text-sm font-bold tabular-nums">
+        Runda {state.round}/{state.rounds}
+      </p>
+      {state.deadline !== null && (
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+          {/* Korallröd de sista fem sekunderna */}
+          <div
+            className={cn(
+              'h-full rounded-full transition-[width,background-color] duration-200 ease-linear',
+              urgent ? 'bg-primary' : 'bg-mint',
+            )}
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+      )}
     </div>
   )
 }

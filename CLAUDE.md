@@ -48,10 +48,11 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`)
-  - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundBadge`, `GuessStatusList`, `RevealFooter`, props-typerna för spelvyer)
+  - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
+- `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten

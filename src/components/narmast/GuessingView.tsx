@@ -91,7 +91,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
         )}
       </div>
 
-      <GuessStatusList state={state} online={online} />
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} />
     </Wide>
   )
 }
