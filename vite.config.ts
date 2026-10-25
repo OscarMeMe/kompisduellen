@@ -15,7 +15,7 @@ export default defineConfig({
       manifest: {
         name: 'Kompisduellen',
         short_name: 'Kompisduellen',
-        description: 'Utmana dina vänner – perfekt för Discordhäng och förfester.',
+        description: 'Bra sällskap. Dåliga förlorare. Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder.',
         lang: 'sv',
         dir: 'ltr',
         start_url: '/',

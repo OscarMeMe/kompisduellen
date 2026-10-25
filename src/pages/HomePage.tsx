@@ -37,12 +37,10 @@ export function HomePage() {
             🎉 Gratis · inget konto behövs
           </span>
           <h1 className="text-4xl leading-[1.05] sm:text-5xl lg:text-[3.5rem]">
-            Gissningslekar <span className="whitespace-nowrap">
-              med <span className="text-primary">kompisarna.</span>
-            </span>
+            Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            En kod, alla på sin egen mobil. Perfekt för förfesten, Discord eller soffan.
+            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 md:max-w-md">
             <Button asChild size="lg">
