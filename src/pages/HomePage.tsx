@@ -29,10 +29,10 @@ export function HomePage() {
   }, [hash])
 
   return (
-    <div className="flex flex-col gap-14 pt-4 sm:gap-20 sm:pt-10">
+    <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
-      <section className="grid items-center gap-10 md:grid-cols-[1.3fr_1fr]">
-        <div className="space-y-6 text-center md:text-left">
+      <section className="grid items-center gap-6 md:grid-cols-[1.3fr_1fr] md:gap-10">
+        <div className="space-y-5 text-center md:text-left">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-xs font-semibold text-accent-foreground">
             🎉 Gratis · inget konto behövs
           </span>
@@ -53,25 +53,25 @@ export function HomePage() {
         </div>
 
         {/* Förhandsvisning av en runda i Gissa priset */}
-        <div className="mx-auto w-full max-w-sm rotate-2 rounded-lg border bg-card p-5 shadow-soft transition-transform hover:rotate-0">
+        <div className="mx-auto w-full max-w-sm rotate-2 rounded-lg border bg-card p-4 shadow-soft transition-transform hover:rotate-0">
           <div className="flex items-center justify-between">
             <p className="font-heading text-sm font-bold">
               <Emoji emoji="🏷️" /> Gissa priset
             </p>
             <span className="rounded-full bg-sky-soft px-3 py-1 text-xs font-semibold">Runda 3 av 5</span>
           </div>
-          <div className="mt-4 rounded-lg bg-sun-soft py-5 text-center">
+          <div className="mt-2.5 rounded-lg bg-sun-soft py-2.5 text-center">
             <p className="px-4 text-sm font-semibold">
               {PREVIEW_ITEM.emoji} {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
             </p>
             <p className="mt-1 font-heading text-5xl font-bold tabular-nums">{formatSek(PREVIEW_ITEM.priceSek)}</p>
             <p className="text-sm text-muted-foreground">Rätt pris</p>
           </div>
-          <ol className="mt-3 space-y-2">
+          <ol className="mt-2 space-y-1">
             {PREVIEW_ROWS.map((row, index) => (
               <li
                 key={row.name}
-                className={cn('flex items-center gap-3 rounded-lg px-4 py-2.5', row.win ? 'bg-mint-soft' : 'bg-muted')}
+                className={cn('flex items-center gap-3 rounded-lg px-4 py-1.5', row.win ? 'bg-mint-soft' : 'bg-muted')}
               >
                 <span className="w-3 text-sm font-semibold text-muted-foreground">{index + 1}</span>
                 <Emoji emoji={row.avatar} className="text-xl" />
@@ -89,45 +89,24 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Så funkar det */}
-      <section id="sa-funkar" className="scroll-mt-6 space-y-5">
-        <div>
-          <h2 className="text-3xl">Så funkar det</h2>
-          <p className="mt-1 text-muted-foreground">Igång på under en minut.</p>
-        </div>
-        <ol className="grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <li key={step.title} className={cn('flex gap-4 rounded-lg p-5', step.color)}>
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card font-heading font-bold shadow-soft-sm">
-                {index + 1}
-              </span>
-              <div>
-                <h3 className="text-lg">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.text}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
       {/* Alla spel */}
-      <section id="spel" className="scroll-mt-6 space-y-5">
-        <div>
+      <section id="spel" className="scroll-mt-6 space-y-3">
+        <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-3xl">Spel</h2>
-          <p className="mt-1 text-muted-foreground">Fler spel är på väg.</p>
+          <p className="text-muted-foreground">Fler spel är på väg.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {GAMES.map((game) => (
             <div
               key={game.id}
               className={cn(
-                'flex flex-col gap-3 rounded-lg border p-5 shadow-soft-sm transition-transform',
+                'flex flex-col gap-2 rounded-lg border p-4 shadow-soft-sm transition-transform',
                 game.color,
                 game.playable && 'hover:-translate-y-1',
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <Emoji emoji={game.emoji} className="text-4xl" />
+                <Emoji emoji={game.emoji} className="text-3xl" />
                 {!game.playable && (
                   <span className="rounded-full bg-card/80 px-3 py-1 text-xs font-semibold text-muted-foreground">
                     Kommer snart
@@ -135,19 +114,44 @@ export function HomePage() {
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="text-lg">{game.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{game.tagline}</p>
+                <h3 className="text-lg leading-tight">{game.name}</h3>
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
-              <p className="text-xs font-semibold text-muted-foreground">👥 {game.players}</p>
-              {game.playable && (
-                <Button asChild size="lg">
-                  <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
-                </Button>
-              )}
+              {/* Knappen ligger på samma rad som antal spelare, så kommande spel inte får en tom yta. */}
+              <div className="flex min-h-10 items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-muted-foreground">👥 {game.players}</p>
+                {game.playable && (
+                  <Button asChild>
+                    <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* Så funkar det, efter spelen så att spellistan syns direkt */}
+      <section id="sa-funkar" className="scroll-mt-6 space-y-3">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-3xl">Så funkar det</h2>
+          <p className="text-muted-foreground">Igång på under en minut.</p>
+        </div>
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className={cn('flex items-start gap-3 rounded-lg px-4 py-3', step.color)}>
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-card font-heading text-sm font-bold shadow-soft-sm">
+                {index + 1}
+              </span>
+              <div>
+                <h3 className="text-lg leading-tight">{step.title}</h3>
+                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
     </div>
   )
 }
