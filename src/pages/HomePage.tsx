@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,23 @@ export function HomePage() {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' })
   }, [hash])
 
+  // "Välj spel/skapa lobby": scrolla till spelen (om det behövs), flytta fokus dit och låt korten lysa upp.
+  const [highlightGames, setHighlightGames] = useState(false)
+  const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  function pointAtGames() {
+    const games = document.getElementById('spel')
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    games?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+    games?.focus({ preventScroll: true })
+    // Av och på igen, så att animationen startar om vid varje klick.
+    setHighlightGames(false)
+    clearTimeout(highlightTimer.current)
+    highlightTimer.current = setTimeout(() => {
+      setHighlightGames(true)
+      highlightTimer.current = setTimeout(() => setHighlightGames(false), 1600)
+    }, 30)
+  }
+
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
@@ -37,21 +54,19 @@ export function HomePage() {
           <span className="inline-flex items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-xs font-semibold text-accent-foreground">
             🎉 Gratis · inget konto behövs
           </span>
-          <h1 className="text-4xl leading-[1.05] sm:text-5xl lg:text-[3.5rem]">
-            Bra sällskap. <span className="text-primary sm:whitespace-nowrap">Dåliga förlorare.</span>
+          {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
+              i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
+          <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
+            Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            För förfesten, soffhänget och bara en omgång till.
+            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 md:max-w-md">
-            {/* Till spelkorten, utan att något spel är förvalt. Scrollar även om #spel redan står i adressen. */}
-            <Button asChild size="lg">
-              <Link
-                to="/#spel"
-                onClick={() => document.getElementById('spel')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                ✨ Välj spel
-              </Link>
+          <div className="flex flex-col gap-3 sm:flex-row md:justify-start">
+            {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
+                även när allt redan syns på skärmen. */}
+            <Button size="lg" onClick={pointAtGames}>
+              ✨ Välj spel/skapa lobby
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/ga-med">🔑 Jag har en kod</Link>
@@ -97,7 +112,7 @@ export function HomePage() {
       </section>
 
       {/* Alla spel */}
-      <section id="spel" className="scroll-mt-6 space-y-3">
+      <section id="spel" tabIndex={-1} aria-label="Spel" className="scroll-mt-6 space-y-3 outline-none">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-3xl">Spel</h2>
           <p className="text-muted-foreground">Fler spel är på väg.</p>
@@ -110,6 +125,7 @@ export function HomePage() {
               className={cn(
                 'flex flex-col gap-3 rounded-lg border-2 border-primary/25 p-5 shadow-soft transition-transform hover:-translate-y-1',
                 game.color,
+                highlightGames && 'animate-pop ring-4 ring-primary/40',
               )}
             >
               <div className="flex items-center gap-3">
