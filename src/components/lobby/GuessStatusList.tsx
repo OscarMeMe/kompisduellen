@@ -2,8 +2,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
-import type { GameState } from '@/lib/match'
-import { rulesFor } from '@/lib/spelregler'
+import { guessSecondsFor, type GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 type GuessStatusListProps = {
@@ -18,7 +17,7 @@ type GuessStatusListProps = {
 // Statusraden under gissningsrutan ("⏱ 12 s kvar · 3/4 har svarat") och vilka i matchen som har gissat.
 // Räknar samma spelare som värden gör när den avgör om alla har svarat: de i matchen som är online.
 export function GuessStatusList({ state, online, clockOffset, meId, locked }: GuessStatusListProps) {
-  const { secondsLeft } = useCountdown(state.deadline, clockOffset, rulesFor(state.game).guessSeconds)
+  const { secondsLeft } = useCountdown(state.deadline, clockOffset, guessSecondsFor(state))
   const activePlayers = online.filter((p) => state.players[p.id])
   const hasAnswered = (id: string) => state.guesses[id] !== undefined || (id === meId && locked !== null)
   const answered = activePlayers.filter((p) => hasAnswered(p.id)).length

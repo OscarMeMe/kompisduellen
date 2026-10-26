@@ -6,13 +6,15 @@ import type { Player } from '@/lib/player'
 import {
   addGuess,
   addPlayers,
+  advanceFromReveal,
   backToWaiting,
   everyoneHasGuessed,
+  handleDeadline,
   initialState,
-  nextRound,
   resolveRound,
   setGame,
   setRounds,
+  setTempo,
   startGame,
   type GameState,
   type PlayerInfo,
@@ -159,17 +161,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     }
   }, [code, me, isHost, publish, resolveIfEveryoneGuessed])
 
-  // Värden: tidtagning för gissning och visning av svaret.
+  // Värden: tidtagning för gissning och visning av svaret. Timern gäller bara sin egen deadline,
+  // så den gör ingenting om rundan redan avslutats eller värden hoppat fram (se handleDeadline).
   useEffect(() => {
-    if (!isHost || state.deadline === null) return
+    const deadline = state.deadline
+    if (!isHost || deadline === null) return
     if (state.phase !== 'guessing' && state.phase !== 'reveal') return
 
-    const delay = Math.max(0, state.deadline - Date.now()) + 300
-    const timer = setTimeout(() => {
-      const current = stateRef.current
-      if (current.phase === 'guessing') publish(resolveRound(current, Date.now()))
-      else if (current.phase === 'reveal') publish(nextRound(current, Date.now()))
-    }, delay)
+    const delay = Math.max(0, deadline - Date.now()) + 300
+    const timer = setTimeout(() => publish(handleDeadline(stateRef.current, Date.now(), deadline)), delay)
     return () => clearTimeout(timer)
   }, [isHost, state.phase, state.deadline, state.round, publish])
 
@@ -188,6 +188,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setGame: (game: string) => {
         if (isHost && findGame(game)?.playable) publish(setGame(stateRef.current, game))
       },
+      setTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => {
+        if (isHost) publish(setTempo(stateRef.current, tempo))
+      },
       start: () => {
         if (!isHost) return
         const ids = onlineRef.current.map((p) => p.id)
@@ -201,8 +204,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           payload: { id: me.id, value },
         })
       },
-      skipReveal: () => {
-        if (isHost) publish(nextRound(stateRef.current, Date.now()))
+      // round = rundan som visades när värden klickade. Ett dubbelklick hoppar inte över en runda.
+      skipReveal: (round: number) => {
+        if (isHost) publish(advanceFromReveal(stateRef.current, Date.now(), round))
       },
       playAgain: () => {
         if (isHost) publish(backToWaiting(stateRef.current))

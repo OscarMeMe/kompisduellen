@@ -42,6 +42,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `npm run dev`: startar dev-servern på http://localhost:5173
 - `npm run build`: typkontroll och produktionsbygge till `dist/`
 - `npm run lint`: kör oxlint
+- `npm test`: kör testerna (Vitest). Tester ligger bredvid koden, t.ex. `src/lib/match.test.ts`
 - `npx shadcn@latest add <komponent>`: lägger till en shadcn-komponent i `src/components/ui/`
 
 ## Struktur
@@ -64,6 +65,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa)
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
+  - `hojdpunkter.ts`: höjdpunkterna efter en match (fullträff, längst ifrån, avgjorde i sista rundan)
+  - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
@@ -75,7 +78,9 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Spelar-id och värdflaggan sparas per flik (sessionStorage), så varje flik är en egen spelare. Det går att testa med flera spelare i flera flikar.
 - Värden väljer spel i väntrummet (fältet `game` i tillståndet). Spelet från startsidan är bara förvalt.
 - Topplistan gäller hela lobbyn oavsett spel och räknar vunna matcher. Delad seger ger alla på förstaplatsen en vinst.
-- Lämnar värden försvinner lobbyn. Inget sparas i databasen ännu.
+- Gissa priset har tempo i lobbyn: svarstid (20, 30 eller 60 s) och om facit går vidare automatiskt eller när värden klickar. Värdens timer gäller bara sin egen deadline (`handleDeadline`), och "nästa runda" tar med sig rundan som visades (`advanceFromReveal`), så inget hoppas över.
+- En match med en spelare är en provomgång (`practice`) och räknas inte i topplistan. "Testa själv" (`/skapa?spel=gissa-priset&testa=1`) startar en direkt. Närmast vinner kräver två spelare.
+- Lämnar värden försvinner lobbyn. Laddar värden om sidan finns lobbykoden kvar och gästerna återansluter, men match, topplista och inställningar börjar om. Inget sparas i databasen ännu.
 
 ## Routes
 

@@ -1,12 +1,20 @@
-import { useState } from 'react'
-import { Check, Copy, Crown, Loader2 } from 'lucide-react'
+import { useId } from 'react'
+import { Check, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
+import { InviteCard } from '@/components/lobby/InviteCard'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Button } from '@/components/ui/button'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { GAMES, type GameInfo } from '@/lib/games'
-import { rankLeaderboard, ROUND_OPTIONS, type GameState } from '@/lib/match'
+import {
+  canStart,
+  guessSecondsFor,
+  hasTempoSettings,
+  rankLeaderboard,
+  ROUND_OPTIONS,
+  type GameState,
+} from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
@@ -18,56 +26,48 @@ type WaitingRoomProps = {
   online: OnlinePlayer[]
   onSetRounds: (rounds: number) => void
   onSetGame: (game: string) => void
+  onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
   onStart: () => void
 }
 
-export function WaitingRoom({ code, game, state, isHost, online, onSetRounds, onSetGame, onStart }: WaitingRoomProps) {
-  const [copied, setCopied] = useState(false)
-  const link = `${window.location.origin}/lobby/${code}`
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Urklipp blockerat: koden syns ändå på skärmen.
-    }
-  }
+export function WaitingRoom({
+  code,
+  game,
+  state,
+  isHost,
+  online,
+  onSetRounds,
+  onSetGame,
+  onSetTempo,
+  onStart,
+}: WaitingRoomProps) {
+  const rules = rulesFor(state.game)
+  const startable = canStart(state.game, online.length)
+  const practice = startable && online.length === 1
 
   return (
     <Wide>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4 rounded-lg border bg-card p-6 text-center shadow-soft">
-          <p className="text-sm font-semibold text-muted-foreground">
-            <Emoji emoji={game.emoji} className="text-base" /> {game.name} · Lobbykod
-          </p>
-          <p className="font-heading text-6xl font-bold tracking-[0.25em] text-primary">{code}</p>
-          <Button variant="outline" size="lg" className="w-full" onClick={copyLink}>
-            {copied ? <Check /> : <Copy />}
-            {copied ? 'Länken är kopierad' : 'Kopiera inbjudningslänk'}
-          </Button>
-          <p className="text-sm text-muted-foreground">Kompisarna går in på sidan och skriver koden, eller öppnar länken.</p>
-        </div>
+        <InviteCard code={code} game={game} />
 
-        <div className="space-y-3 rounded-lg border bg-card p-6 shadow-soft">
+        <div className="min-w-0 space-y-3 rounded-lg border bg-card p-6 shadow-soft">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl">Spelare</h2>
             <span className="text-sm text-muted-foreground">{online.length} i lobbyn</span>
           </div>
-          <ul className="grid grid-cols-2 gap-2">
+          <ul className="grid gap-2 min-[360px]:grid-cols-2">
             {online.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 animate-pop">
+              <li key={p.id} className="flex min-w-0 items-center gap-2 rounded-md bg-muted px-3 py-2 animate-pop">
                 <Emoji emoji={p.avatar} className="text-2xl" />
                 <span className="flex-1 truncate font-semibold">{p.name}</span>
-                {p.host && <Crown className="size-4 text-amber-500" aria-label="Värd" />}
+                {p.host && <Crown className="size-4 shrink-0 text-amber-500" aria-label="Värd" />}
               </li>
             ))}
           </ul>
         </div>
       </div>
 
-      <div className="space-y-4 rounded-lg border bg-card p-6 shadow-soft">
+      <div className="space-y-5 rounded-lg border bg-card p-6 shadow-soft">
         <div className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xl">Välj spel</h2>
@@ -101,35 +101,121 @@ export function WaitingRoom({ code, game, state, isHost, online, onSetRounds, on
             })}
           </div>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-bold">Antal rundor</p>
-          <div className="flex gap-2">
-            {ROUND_OPTIONS.map((option) => (
-              <Button
-                key={option}
-                variant={state.rounds === option ? 'default' : 'outline'}
-                className="h-11 min-w-16 text-base"
-                disabled={!isHost}
-                onClick={() => onSetRounds(option)}
-              >
-                {option}
-              </Button>
-            ))}
-          </div>
+
+        <Choice
+          label="Antal rundor"
+          options={ROUND_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+          selected={state.rounds}
+          disabled={!isHost}
+          onSelect={onSetRounds}
+        />
+
+        {/* Tempo för spel som har det (Gissa priset). Gäller hela lobbyn. */}
+        {hasTempoSettings(state.game) && (
+          <>
+            <Choice
+              label="Svarstid"
+              options={(rules.guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
+              selected={guessSecondsFor(state)}
+              disabled={!isHost}
+              onSelect={(guessSeconds) => onSetTempo({ guessSeconds })}
+            />
+            <Choice
+              label="Efter facit"
+              hint={state.autoAdvance ? undefined : 'Facit står kvar tills värden går vidare.'}
+              options={[
+                { value: 1, label: 'Automatiskt' },
+                { value: 0, label: 'Värden går vidare' },
+              ]}
+              selected={state.autoAdvance ? 1 : 0}
+              disabled={!isHost}
+              onSelect={(value) => onSetTempo({ autoAdvance: value === 1 })}
+            />
+          </>
+        )}
+
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">{rules.howTo(guessSecondsFor(state))}</p>
+          <details className="rounded-md bg-muted px-4 text-sm">
+            {/* Hela raden är tryckbar, minst 44 px hög. */}
+            <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så räknas poängen</summary>
+            <ul className="list-disc space-y-1 pb-3 pl-5 text-muted-foreground">
+              {rules.scoringDetails.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </details>
         </div>
-        <p className="text-sm text-muted-foreground">{rulesFor(state.game).howTo}</p>
+
+        {practice && (
+          <p className="rounded-md bg-lilac/40 px-4 py-3 text-sm">
+            <strong>Testläge:</strong> du är ensam i lobbyn, så det blir en provomgång som inte räknas i topplistan.
+            Vill du spela med kompisar? Dela koden eller länken ovan och starta när de är med.
+          </p>
+        )}
+
         {isHost ? (
-          <Button size="lg" className="w-full" onClick={onStart}>
-            Starta {game.name}
-          </Button>
+          <div className="space-y-2">
+            <Button size="lg" className="w-full" onClick={onStart} disabled={!startable}>
+              {practice ? `Testa ${game.name} själv` : `Starta ${game.name}`}
+            </Button>
+            {!startable && (
+              <p className="text-center text-sm text-muted-foreground">
+                Minst {game.minPlayers} spelare behövs. Bjud in en kompis med koden ovan.
+              </p>
+            )}
+          </div>
         ) : (
           <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft py-4 font-semibold">
-            <Loader2 className="size-5 animate-spin" /> Väntar på att värden startar {game.name}…
+            <Loader2 className="size-5 animate-spin" aria-hidden /> Väntar på att värden startar {game.name}…
           </p>
         )}
       </div>
 
       <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
     </Wide>
+  )
+}
+
+type ChoiceProps = {
+  label: string
+  hint?: string
+  options: { value: number; label: string }[]
+  selected: number
+  disabled: boolean
+  onSelect: (value: number) => void
+}
+
+// En rad med val, t.ex. antal rundor. Valt alternativ har en bock, så att det inte bara syns på färgen.
+function Choice({ label, hint, options, selected, disabled, onSelect }: ChoiceProps) {
+  const labelId = useId()
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p id={labelId} className="font-bold">
+          {label}
+        </p>
+        {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+      </div>
+      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const active = option.value === selected
+          return (
+            <Button
+              key={option.value}
+              variant={active ? 'default' : 'outline'}
+              aria-pressed={active}
+              className="h-11 min-w-16 text-base disabled:opacity-100 data-[active=false]:disabled:opacity-60"
+              data-active={active}
+              disabled={disabled}
+              onClick={() => onSelect(option.value)}
+            >
+              {active && <Check aria-hidden />}
+              {option.label}
+            </Button>
+          )
+        })}
+      </div>
+    </div>
   )
 }

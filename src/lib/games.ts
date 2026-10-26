@@ -1,4 +1,4 @@
-// Alla spel som visas på startsidan. Lägg till nya spel här.
+// Alla spel som visas på startsidan, i den ordning de visas. Lägg till nya spel här.
 
 export type GameInfo = {
   id: string
@@ -6,27 +6,28 @@ export type GameInfo = {
   tagline: string
   emoji: string
   color: string // Tailwind-klass för kortets pastellfärg
-  players: string // antal spelare på startsidan
+  // Minsta antal spelare för en vanlig match. Det finns ingen övre gräns i lobbyn.
+  minPlayers: number
   playable: boolean
 }
 
 export const GAMES: GameInfo[] = [
   {
-    id: 'narmast',
-    name: 'Närmast vinner',
-    tagline: 'Gissa ett tal mellan 1 och 100. Den som hamnar närmast tar poängen.',
-    emoji: '🎯',
-    color: 'bg-coral-soft',
-    players: '2+ spelare',
+    id: 'gissa-priset',
+    name: 'Gissa priset',
+    tagline: 'Vad kostar det – eller vad kostade det förr?',
+    emoji: '🏷️',
+    color: 'bg-sun-soft',
+    minPlayers: 2,
     playable: true,
   },
   {
-    id: 'gissa-priset',
-    name: 'Gissa priset',
-    tagline: 'Vad kostade det egentligen? Gissa priset på udda saker som faktiskt har sålts.',
-    emoji: '🏷️',
-    color: 'bg-sun-soft',
-    players: '2+ spelare',
+    id: 'narmast',
+    name: 'Närmast vinner',
+    tagline: 'Ett snabbt turspel: gissa ett tal mellan 1 och 100. Talet slumpas, så det handlar om tur.',
+    emoji: '🎯',
+    color: 'bg-coral-soft',
+    minPlayers: 2,
     playable: true,
   },
   {
@@ -35,7 +36,7 @@ export const GAMES: GameInfo[] = [
     tagline: 'Alla svarar anonymt. Kan du lista ut vem som skrev vad?',
     emoji: '🕵️',
     color: 'bg-mint-soft',
-    players: '3+ spelare',
+    minPlayers: 3,
     playable: false,
   },
   {
@@ -44,11 +45,16 @@ export const GAMES: GameInfo[] = [
     tagline: 'Rösta fram vem i gänget som passar bäst in på påståendet.',
     emoji: '🗳️',
     color: 'bg-sky-soft',
-    players: '3+ spelare',
+    minPlayers: 3,
     playable: false,
   },
 ]
 
 export function findGame(id: string | null | undefined): GameInfo | undefined {
   return GAMES.find((game) => game.id === id)
+}
+
+// "2+ spelare". Lobbyn har ingen övre gräns, så bara det minsta antalet visas.
+export function playersLabel(game: GameInfo): string {
+  return `${game.minPlayers}+ spelare`
 }
