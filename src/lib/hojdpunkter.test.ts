@@ -37,7 +37,7 @@ describe('matchens höjdpunkter', () => {
     // 790 kr är tio gånger fel. 10 kr är nästan åtta gånger fel, alltså lite närmare.
     const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 790, mia: 10 }, price: 79 }])
     const miss = matchHighlights(state).find((h) => h.id === 'langst-ifran')
-    expect(miss?.text).toBe('Oscar gissade 790 kr på Ikeas hjärtformade kudde med armar. Rätt pris var 79 kr.')
+    expect(miss?.text).toBe('Oscar gissade 790 kr på ”Ikeas hjärtformade kudde med armar”. Rätt pris var 79 kr.')
   })
 
   it('räknar inte uteblivna svar som dåliga gissningar', () => {

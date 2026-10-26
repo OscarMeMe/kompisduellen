@@ -50,12 +50,12 @@ export function WaitingRoom({
       <div className="grid gap-6 md:grid-cols-2">
         <InviteCard code={code} game={game} />
 
-        <div className="space-y-3 rounded-lg border bg-card p-6 shadow-soft">
+        <div className="min-w-0 space-y-3 rounded-lg border bg-card p-6 shadow-soft">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl">Spelare</h2>
             <span className="text-sm text-muted-foreground">{online.length} i lobbyn</span>
           </div>
-          <ul className="grid grid-cols-2 gap-2">
+          <ul className="grid gap-2 min-[360px]:grid-cols-2">
             {online.map((p) => (
               <li key={p.id} className="flex min-w-0 items-center gap-2 rounded-md bg-muted px-3 py-2 animate-pop">
                 <Emoji emoji={p.avatar} className="text-2xl" />
@@ -136,9 +136,10 @@ export function WaitingRoom({
 
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">{rules.howTo(guessSecondsFor(state))}</p>
-          <details className="rounded-md bg-muted px-4 py-3 text-sm">
-            <summary className="cursor-pointer font-semibold">Så räknas poängen</summary>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          <details className="rounded-md bg-muted px-4 text-sm">
+            {/* Hela raden är tryckbar, minst 44 px hög. */}
+            <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så räknas poängen</summary>
+            <ul className="list-disc space-y-1 pb-3 pl-5 text-muted-foreground">
               {rules.scoringDetails.map((line) => (
                 <li key={line}>{line}</li>
               ))}

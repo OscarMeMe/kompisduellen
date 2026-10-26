@@ -105,7 +105,7 @@ function furthestMiss(state: GameState): Highlight | null {
     const guessed = rules.formatValue(g.guess)
     const answer = rules.formatValue(g.round.target)
     text = item
-      ? `${nameOf(state, g.id)} gissade ${guessed} på ${item}. Rätt pris var ${answer}.`
+      ? `${nameOf(state, g.id)} gissade ${guessed} på ”${item}”. Rätt pris var ${answer}.`
       : `${nameOf(state, g.id)} gissade ${guessed} när rätt tal var ${answer}.`
   } else {
     const names = [...new Set(tied.map((g) => nameOf(state, g.id)))]

@@ -24,18 +24,18 @@ export function Layout() {
           {inMatch ? (
             <Logo />
           ) : (
-            <Link to="/" aria-label="Kompisduellen, till startsidan" className="group">
+            <Link to="/" aria-label="Kompisduellen, till startsidan" className="group shrink-0 py-1">
               <Logo />
             </Link>
           )}
-          <nav className={cn(inMatch && 'hidden')}>
+          <nav className={cn('min-w-0', inMatch && 'hidden')}>
             {player ? (
               <Link
                 to="/profil"
                 className="flex items-center gap-2 rounded-full border bg-card py-2 pr-4 pl-3 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
               >
                 <Emoji emoji={player.avatar} className="text-xl" />
-                <span className="max-w-32 truncate">{player.name}</span>
+                <span className="max-w-24 truncate sm:max-w-32">{player.name}</span>
               </Link>
             ) : (
               <Link
@@ -57,7 +57,7 @@ export function Layout() {
 
 function Logo() {
   return (
-    <span className="font-heading text-xl font-bold tracking-tight sm:text-2xl">
+    <span className="font-heading text-xl font-bold tracking-tight whitespace-nowrap sm:text-2xl">
       Kompis{' '}
       <span className="inline-block -rotate-3 rounded-full bg-primary px-3 pb-0.5 text-primary-foreground shadow-primary transition-transform group-hover:rotate-0">
         duellen

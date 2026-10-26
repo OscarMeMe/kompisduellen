@@ -38,7 +38,7 @@ export function HomePage() {
             🎉 Gratis · inget konto behövs
           </span>
           <h1 className="text-4xl leading-[1.05] sm:text-5xl lg:text-[3.5rem]">
-            Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
+            Bra sällskap. <span className="text-primary sm:whitespace-nowrap">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             För förfesten, soffhänget och bara en omgång till.
