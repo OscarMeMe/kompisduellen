@@ -70,6 +70,8 @@ export type GameState = {
   autoAdvance: boolean
   // Matchen har bara en spelare: en provomgång som inte räknas i topplistan.
   practice: boolean
+  // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
+  rematchAt: number | null
   matchesPlayed: number
   // Antal spelade matcher per spel, t.ex. { narmast: 2, 'gissa-priset': 1 }.
   gamesPlayed: Record<string, number>
@@ -112,6 +114,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     guessSeconds: rulesFor('gissa-priset').guessSeconds,
     autoAdvance: true,
     practice: false,
+    rematchAt: null,
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
@@ -226,7 +229,7 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
   }
   const count = Object.keys(players).length
   if (!canStart(state.game, count)) return null
-  return { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1 }
+  return { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1, rematchAt: null }
 }
 
 export function isValidGuess(game: string, value: number): boolean {
@@ -339,6 +342,7 @@ export function backToWaiting(state: GameState): GameState {
     matchRounds: [],
     itemId: null,
     practice: false,
+    rematchAt: null,
     cards: null,
   }
 }
@@ -390,6 +394,36 @@ export function hostStart(host: HostState, onlineIds: string[], now: number, ran
   }
   const ready = matchPlayers(host.state, onlineIds)
   return ready ? startCardMatch(ready, rules, now, random) : host
+}
+
+// Tiden för den gemensamma nedräkningen före en revansch.
+export const REMATCH_SECONDS = 3
+
+// Revansch: tillbaka till väntrummet med samma spel och samma inställningar, och en nedräkning som alla ser.
+// Gör ingenting om matchen inte är slut, så ett dubbelklick startar inte två gånger.
+export function hostRematch(host: HostState, now: number): HostState {
+  const state = backToWaiting(host.state)
+  if (state === host.state) return host
+  return { state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000 }, secrets: null }
+}
+
+export function cancelRematch(host: HostState): HostState {
+  if (host.state.rematchAt === null) return host
+  return { ...host, state: { ...host.state, rematchAt: null } }
+}
+
+// Nedräkningen är slut: starta matchen. Går den inte att starta (för få spelare är kvar) avbryts revanschen.
+// Gäller bara om klockan som löpte ut (at) fortfarande är den som gäller, så att en gammal timer aldrig startar något.
+export function hostRematchStart(
+  host: HostState,
+  onlineIds: string[],
+  now: number,
+  at: number,
+  random: Random = Math.random,
+): HostState {
+  if (host.state.phase !== 'waiting' || host.state.rematchAt !== at || now < at) return host
+  const started = hostStart(host, onlineIds, now, random)
+  return started === host ? cancelRematch(host) : started
 }
 
 export function hostDeadline(

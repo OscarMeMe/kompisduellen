@@ -9,11 +9,14 @@ import {
   addGuess,
   addPlayers,
   backToWaiting,
+  cancelRematch,
   everyoneHasGuessed,
   hostAdvance,
   hostDeadline,
   hostMove,
   hostPresence,
+  hostRematch,
+  hostRematchStart,
   hostStart,
   initialState,
   resolveRound,
@@ -295,6 +298,19 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return () => clearTimeout(timer)
   }, [isHost, state.phase, state.deadline, state.round, commit, current, activeIds])
 
+  // Värden: revanschens nedräkning är slut, så matchen startar. Timern gäller bara sin egen klocka (rematchAt),
+  // så en gammal eller avbruten nedräkning startar ingenting (se hostRematchStart).
+  useEffect(() => {
+    const at = state.rematchAt
+    if (!isHost || state.phase !== 'waiting' || at === null) return
+    const delay = Math.max(0, at - Date.now()) + 100
+    const timer = setTimeout(() => {
+      const ids = onlineRef.current.map((p) => p.id)
+      commit(hostRematchStart(current(), ids, Date.now(), at))
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [isHost, state.phase, state.rematchAt, commit, current])
+
   const hostOnline = online.some((p) => p.host)
 
   let status: LobbyStatus = 'connecting'
@@ -343,11 +359,20 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       skipReveal: (round: number) => {
         if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
       },
+      // Tillbaka till väntrummet med samma grupp och kvällens ställning (Byt spel, Bjud in kompisar).
       playAgain: () => {
         if (!isHost) return
-        const next = backToWaiting(stateRef.current)
-        if (next !== stateRef.current) track('spelade_igen', { spel: next.game })
-        commit({ state: next, secrets: null })
+        commit({ state: backToWaiting(stateRef.current), secrets: null })
+      },
+      // Revansch: samma spel och inställningar efter en gemensam nedräkning som alla ser.
+      rematch: () => {
+        if (!isHost) return
+        const next = hostRematch(current(), Date.now())
+        if (next.state !== stateRef.current) track('spelade_igen', { spel: next.state.game })
+        commit(next)
+      },
+      cancelRematch: () => {
+        if (isHost) commit(cancelRematch(current()))
       },
     }),
     [isHost, me, publish, commit, current, activeIds],

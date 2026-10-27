@@ -56,6 +56,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
+  // Värden valde Byt spel på prispallen: väntrummet scrollar då till spelvalet.
+  const [pickGame, setPickGame] = useState(false)
 
   // "Testa själv": starta provomgången så snart värden finns med i lobbyn. Önskemålet tas bort när
   // den startar, och startGame gör ingenting om matchen redan har startat.
@@ -120,6 +122,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           state={state}
           isHost={isHost}
           online={online}
+          clockOffset={clockOffset}
+          scrollToGames={pickGame}
+          onCancelRematch={actions.cancelRematch}
           onSetRounds={actions.setRounds}
           onSetGame={actions.setGame}
           onSetTempo={actions.setTempo}
@@ -167,6 +172,25 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         />
       )
     case 'finished':
-      return <FinishedView game={game} state={state} isHost={isHost} onPlayAgain={actions.playAgain} />
+      return (
+        <FinishedView
+          game={game}
+          state={state}
+          isHost={isHost}
+          onlineCount={online.length}
+          onRematch={() => {
+            setPickGame(false)
+            actions.rematch()
+          }}
+          onToWaitingRoom={() => {
+            setPickGame(false)
+            actions.playAgain()
+          }}
+          onChangeGame={() => {
+            setPickGame(true)
+            actions.playAgain()
+          }}
+        />
+      )
   }
 }
