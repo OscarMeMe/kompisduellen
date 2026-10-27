@@ -7,7 +7,10 @@
     "clue": "Betalades med bitcoin. Gissa vad betalningen var värd då.",
     "priceSek": 320,
     "fact": "Laszlo Hanyecz betalade 10 000 bitcoin den 22 maj 2010, värt runt 41 dollar då men hundratals miljoner i dag.",
-    "source": "https://en.bitcoin.it/wiki/Pizza"
+    "source": "https://en.bitcoin.it/wiki/Pizza",
+    "image": "/prisbilder/bitcoinpizza.webp",
+    "imageCredit": "Foto: Afshin Darian, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Buffalo_slice_and_margherita_slice.jpg"
   },
   {
     "id": "meloner",
@@ -49,7 +52,10 @@
     "clue": "Första gången Nobelprisen delades ut",
     "priceSek": 151000,
     "fact": "Prissumman var 150 782 kronor per kategori när Nobelprisen delades ut för första gången.",
-    "source": "https://www.nobelpeaceprize.org/presse/pressemeldinger/nobel-prize-amount-raised-by-sek-1-million"
+    "source": "https://www.nobelpeaceprize.org/presse/pressemeldinger/nobel-prize-amount-raised-by-sek-1-million",
+    "image": "/prisbilder/nobelpris-1901.webp",
+    "imageCredit": "Foto: Hansbaer, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Nobel-banquet-table.jpg"
   },
   {
     "id": "stadshusplat-1920",
@@ -85,7 +91,9 @@
     "clue": "Genomsnittligt butikspris i Stockholm",
     "priceSek": 0.24,
     "fact": "För en krona fick man fyra liter och fyra öre tillbaka, räknat på Stockholms genomsnittspris.",
-    "source": "https://www.skansen.se/wp-content/uploads/2023/03/Lararhandledning-Stadsliv.pdf"
+    "source": "https://www.skansen.se/wp-content/uploads/2023/03/Lararhandledning-Stadsliv.pdf",
+    "image": "/prisbilder/mjolk-1930.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Mj%C3%B6lkk%C3%B6rning_med_h%C3%A4st_och_vagn_-_SLM_P05-642.tif"
   },
   {
     "id": "volvo-pv444-1944",
@@ -188,7 +196,10 @@
     "clue": "Biljettpris redovisat i en regeringsproposition",
     "priceSek": 27,
     "fact": "Två biobiljetter kostade mer än att hyra en videofilm för ett dygn.",
-    "source": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/proposition/om-vissa-musikfragor-m-m_g503128/html/"
+    "source": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/proposition/om-vissa-musikfragor-m-m_g503128/html/",
+    "image": "/prisbilder/biobiljett-1982.webp",
+    "imageCredit": "Foto: Göran Fredriksson, CC BY 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Biograf_London_1981.jpg"
   },
   {
     "id": "trisslott-1986",
@@ -266,7 +277,9 @@
     "clue": "Auktion hos Crafoord",
     "priceSek": 40000,
     "fact": "Den röda vinylskivan gjordes i 200 exemplar till Stikkan Anderssons femtioårsfest och detta exemplar såldes för 40 041 kronor.",
-    "source": "https://mnytt.se/2022/12/19/sallsynta-abbaskivor-salda-pa-auktion/"
+    "source": "https://mnytt.se/2022/12/19/sallsynta-abbaskivor-salda-pa-auktion/",
+    "image": "/prisbilder/abba-hovas-vittne.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Agnetha_F%C3%A4ltskog_and_Anni-Frid_Lyngstad_in_G%C3%B6teborg_1979.jpg"
   },
   {
     "id": "garbo-koffert",
@@ -299,7 +312,9 @@
     "clue": "Auktion hos Julien's i Los Angeles",
     "priceSek": 6700000,
     "fact": "Exemplaret med nummer 0000001 såldes för 790 000 amerikanska dollar efter att ha förvarats i ett bankvalv i 35 år.",
-    "source": "https://www.guinnessworldrecords.com/world-records/412717-most-expensive-vinyl-record-sold-at-auction"
+    "source": "https://www.guinnessworldrecords.com/world-records/412717-most-expensive-vinyl-record-sold-at-auction",
+    "image": "/prisbilder/ringo-white-album.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:The_Beatles_arrive_at_JFK_Airport.jpg"
   },
   {
     "id": "titanic-trapanel",
@@ -309,7 +324,9 @@
     "clue": "Auktion hos Heritage",
     "priceSek": 7500000,
     "fact": "Filmrekvisitan som väckt debatt om även Jack kunde ha fått plats såldes för 718 750 amerikanska dollar.",
-    "source": "https://www.kqed.org/arts/13954957/titanic-auction-rose-jack-room-on-the-door-mythbusters"
+    "source": "https://www.kqed.org/arts/13954957/titanic-auction-rose-jack-room-on-the-door-mythbusters",
+    "image": "/prisbilder/titanic-trapanel.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:RMS_Titanic_3_(cropped_to_ship).jpg"
   },
   {
     "id": "harry-potter-forstautgava",
@@ -355,7 +372,10 @@
     "clue": "Auktion hos Propstore i Los Angeles",
     "priceSek": 6600000,
     "fact": "Hatten som bars av både Harrison Ford och hans stuntman såldes för 630 000 amerikanska dollar.",
-    "source": "https://en.thevalue.com/articles/propstore-auction-house-los-angeles-august-2024-movie-prop-indiana-jones-hat-fedora-temple-of-doom"
+    "source": "https://en.thevalue.com/articles/propstore-auction-house-los-angeles-august-2024-movie-prop-indiana-jones-hat-fedora-temple-of-doom",
+    "image": "/prisbilder/indiana-jones-hatt.webp",
+    "imageCredit": "Foto: Clément Bucco-Lechat, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Indiana_Jones_fedora_hat.jpg"
   },
   {
     "id": "sjofartstidningen-1905",
@@ -436,7 +456,9 @@
     "clue": "Genomsnittlig svensk timlön enligt Skansens historiska sammanställning",
     "priceSek": 1.28,
     "fact": "En arbetsvecka omfattade 48 timmar och gav i genomsnitt 61,44 kronor.",
-    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf"
+    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf",
+    "image": "/prisbilder/industriarbetarlon-1930.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Spinnsalen_G%C3%A5rda_textilffabriker_1930-t_%C3%85berg.JPG"
   },
   {
     "id": "tvattutrustning-1935",
@@ -799,7 +821,10 @@
     "clue": "Anmälningsavgift för ett provtillfälle",
     "priceSek": 450,
     "fact": "Av avgiften gick 270 kronor till lärosätets genomförande och 180 kronor till bland annat provkonstruktion och rättning.",
-    "source": "https://www.uhr.se/globalassets/_uhr.se/om-uhr/ar-och-bu/uhr-arsredovisning-2016.pdf"
+    "source": "https://www.uhr.se/globalassets/_uhr.se/om-uhr/ar-och-bu/uhr-arsredovisning-2016.pdf",
+    "image": "/prisbilder/hogskoleprovet-2016.webp",
+    "imageCredit": "Foto: Nillerdk, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:DTU_exam_building_101_photo_1.jpg"
   },
   {
     "id": "tv-licens-2018",
@@ -852,7 +877,10 @@
     "clue": "Ett frimärkt inrikes brev som väger högst 50 gram",
     "priceSek": 22,
     "fact": "Portot höjdes med fyra kronor vid årsskiftet, så ett enda frimärke räckte fortfarande men kostade mer.",
-    "source": "https://www.postnord.se/om-oss/nyheter-press-och-artiklar/priser-och-villkor/nya-priser-och-villkor-2025/"
+    "source": "https://www.postnord.se/om-oss/nyheter-press-och-artiklar/priser-och-villkor/nya-priser-och-villkor-2025/",
+    "image": "/prisbilder/brevporto-2025.webp",
+    "imageCredit": "Foto: Bene Riobó, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Caixa_do_correo_Postnord_Roma.jpg"
   },
   {
     "id": "byta-fornamn-2026",
@@ -872,7 +900,9 @@
     "clue": "Viltvårdsavgiften till Naturvårdsverket",
     "priceSek": 400,
     "fact": "Pengarna går till Viltvårdsfonden och bidrar bland annat till forskning om vilt.",
-    "source": "https://www.naturvardsverket.se/jagarregistret"
+    "source": "https://www.naturvardsverket.se/jagarregistret",
+    "image": "/prisbilder/statligt-jaktkort-2026.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:%C3%84lgjakt._J%C3%A4gare_med_hundar_bredvid_jakttrof%C3%A9er._Bodums_socken,_%C3%85ngermanland_-_Nordiska_Museet_-_NMA.0040969.jpg"
   },
   {
     "id": "hyra-ishall-fotskal-2026",
@@ -895,7 +925,10 @@
     "clue": "Wiggebys hämtpris inklusive moms, utan vintertillägg",
     "priceSek": 1500,
     "fact": "Säcken innehöll grus med kornstorleken fyra till tio millimeter och vägde hela 1 500 kilo.",
-    "source": "https://www.wjab.se/prislista.html"
+    "source": "https://www.wjab.se/prislista.html",
+    "image": "/prisbilder/gardsgrus-storsack-2026.webp",
+    "imageCredit": "Foto: Bill Harrison, CC BY-SA 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Gravel_pile..._-_geograph.org.uk_-_5564314.jpg"
   },
   {
     "id": "bidrottning-carnica-2026",
@@ -930,7 +963,10 @@
     "clue": "Avgift hos Transportstyrelsen",
     "priceSek": 6900,
     "fact": "Av avgiften gick 5 500 kronor till Skyltfonden, som finansierar projekt för bättre trafiksäkerhet.",
-    "source": "https://www.transportstyrelsen.se/sv/om-oss/pressrum/nyhetsarkiv/2026/manga-satter-personlig-pragel-pa-bilen/"
+    "source": "https://www.transportstyrelsen.se/sv/om-oss/pressrum/nyhetsarkiv/2026/manga-satter-personlig-pragel-pa-bilen/",
+    "image": "/prisbilder/personlig-registreringsskylt-2026.webp",
+    "imageCredit": "Foto: Matej Grochal, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:License_plate_of_Sweden_NCH13R.jpg"
   },
   {
     "id": "nasplastik-stockholm-2026",
@@ -1003,7 +1039,10 @@
     "clue": "Svenskt annonspris i Dagens Nyheter i augusti",
     "priceSek": 3995,
     "fact": "Annonspriset var 3 995 kronor; modellen med fyra gånger större lagring kostade 5 995 kronor.",
-    "source": "https://mediehistorisktarkiv.se/wp-content/uploads/2020/08/bj%C3%B6rnberg.pdf"
+    "source": "https://mediehistorisktarkiv.se/wp-content/uploads/2020/08/bj%C3%B6rnberg.pdf",
+    "image": "/prisbilder/ipod-fem-gigabyte-2002.webp",
+    "imageCredit": "Foto: Raimond Spekking, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:IPod_classic_80_GB_(A1238,_YMV)-2.jpg"
   },
   {
     "id": "itunes-lat-2005",
@@ -1023,7 +1062,10 @@
     "clue": "S:t Eriks Bryggeris specialutgåva",
     "priceSek": 499,
     "fact": "Chipsen innehöll bland annat goliatmusseron och togs fram tillsammans med landslagskocken Pi Le.",
-    "source": "https://www.mynewsdesk.com/se/galatea/pressreleases/premiaer-foer-vaerldens-dyraste-potatischips-1599518"
+    "source": "https://www.mynewsdesk.com/se/galatea/pressreleases/premiaer-foer-vaerldens-dyraste-potatischips-1599518",
+    "image": "/prisbilder/fem-potatischips-2016.webp",
+    "imageCredit": "Foto: Jay Cross, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Bowl_of_Terra_Chips.jpg"
   },
   {
     "id": "mockatarta-forelasning-2025",
@@ -1043,7 +1085,10 @@
     "clue": "Försäljning av en modell till förmån för Bris",
     "priceSek": 60000,
     "fact": "Legomodellen bestod av omkring 25 000 bitar och vägde cirka 30 kilo.",
-    "source": "https://www.svt.se/nyheter/lokalt/skane/legotorn-ger-klirr-i-kassan"
+    "source": "https://www.svt.se/nyheter/lokalt/skane/legotorn-ger-klirr-i-kassan",
+    "image": "/prisbilder/legomodell-turning-torso-2012.webp",
+    "imageCredit": "Foto: Agentakt, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Turning_Torso_2017.jpg"
   },
   {
     "id": "guldsemla-stockholm-2016",
@@ -1063,7 +1108,10 @@
     "clue": "Erik Hjärtfors skogssouvenir från Åseda",
     "priceSek": 70,
     "fact": "Spillningen lackades tre gånger med båtlack och försågs med en märla och en läderrem.",
-    "source": "https://www.sverigesradio.se/artikel/4140914"
+    "source": "https://www.sverigesradio.se/artikel/4140914",
+    "image": "/prisbilder/algbajs-halsband-2010.webp",
+    "imageCredit": "Foto: Горбунова М.С., CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Moose_droppings.jpg"
   },
   {
     "id": "algost-bjurholm-2003",
@@ -1073,7 +1121,10 @@
     "clue": "Älgfarmen i Bjurholm, enligt Sveriges Radios reportage",
     "priceSek": 3000,
     "fact": "Trots den exklusiva osten berättade älgfarmen att besökarna mest köpte t-shirts.",
-    "source": "https://www.sverigesradio.se/artikel/259949"
+    "source": "https://www.sverigesradio.se/artikel/259949",
+    "image": "/prisbilder/algost-bjurholm-2003.webp",
+    "imageCredit": "Foto: Charles J. Sharp, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Elk_(Alces_alces_alces)_female_Oppdal.jpg"
   },
   {
     "id": "top-secret-pizza-2026",
@@ -1083,7 +1134,10 @@
     "clue": "Menypris hos Piccolo Mondo i Sandviken",
     "priceSek": 130,
     "fact": "Den hemliga pizzan avslöjar sina ingredienser direkt i menyn: skinka, kyckling, banan och curry.",
-    "source": "https://www.piccolomondosandviken.se/"
+    "source": "https://www.piccolomondosandviken.se/",
+    "image": "/prisbilder/top-secret-pizza-2026.webp",
+    "imageCredit": "Foto: Gunnar Creutz, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Pizza_Hawaii_Special_p%C3%A5_Pizzeria_Papillon_i_Sala_1343.jpg"
   },
   {
     "id": "vigselplats-katrinetorp-2026",
