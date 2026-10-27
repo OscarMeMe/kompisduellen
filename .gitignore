@@ -155,3 +155,4 @@ dev-dist
 # Granskningen av Gissa priset (/granska). Bara lokalt, får aldrig laddas upp.
 granskning.json
 inkorg.json
+public/prisbilder-inkorg/

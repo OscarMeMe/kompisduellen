@@ -31,6 +31,16 @@ export type ReviewFiles<T extends { id: string }> = {
   reviews: Reviews
 }
 
+// Bilder till frågor i inkorgen ligger i public/prisbilder-inkorg, som inte följer med i git.
+// När frågan godkänns flyttas bilden till public/prisbilder (se vite-plugin-granska.ts).
+export const INBOX_IMAGE_DIR = '/prisbilder-inkorg/'
+export const IMAGE_DIR = '/prisbilder/'
+
+// Sökvägen som bilden får när frågan godkänns, t.ex. '/prisbilder-inkorg/x.webp' → '/prisbilder/x.webp'.
+export function publishedImage(image: string): string {
+  return image.startsWith(INBOX_IMAGE_DIR) ? IMAGE_DIR + image.slice(INBOX_IMAGE_DIR.length) : image
+}
+
 // Fälten som en fråga måste ha för att kunna visas i spelet.
 const REQUIRED_FIELDS = {
   id: 'string',
@@ -52,10 +62,10 @@ export function missingFields(item: object): string[] {
 }
 
 // Ett omdöme på en fråga. Returnerar filerna som de ska se ut efteråt:
-// - Godkänd i inkorgen: frågan flyttas till slutet av prisdata.json.
+// - Godkänd i inkorgen: frågan flyttas till slutet av prisdata.json, och bilden får sin publicerade sökväg.
 // - Ta bort: frågan tas bort ur filen där den ligger.
 // - Behöver fixas, eller Godkänd på en fråga i spelet: bara omdömet sparas.
-export function applyVerdict<T extends { id: string }>(
+export function applyVerdict<T extends { id: string; image?: string }>(
   files: ReviewFiles<T>,
   id: string,
   source: ItemSource,
@@ -72,7 +82,7 @@ export function applyVerdict<T extends { id: string }>(
     const missing = missingFields(item)
     if (missing.length > 0) throw new Error(`Frågan saknar ${missing.join(', ')} och kan inte godkännas än.`)
     if (items.some((i) => i.id === id)) throw new Error(`Det finns redan en fråga med id "${id}" i prisdata.json.`)
-    items = [...items, item]
+    items = [...items, item.image ? { ...item, image: publishedImage(item.image) } : item]
     inbox = inbox.filter((i) => i !== item)
   } else if (verdict === 'ta-bort') {
     if (source === 'inkorg') inbox = inbox.filter((i) => i !== item)
