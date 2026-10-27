@@ -12,9 +12,13 @@ import {
   hostDeadline,
   hostMove,
   hostPresence,
+  hostRematch,
+  hostRematchStart,
   hostStart,
   initialState,
   nextRound,
+  cancelRematch,
+  REMATCH_SECONDS,
   resolveRound,
   restoreHostState,
   roundOptionsFor,
@@ -22,6 +26,7 @@ import {
   setTempo,
   startGame,
   type GameState,
+  type HostState,
 } from '@/lib/match'
 
 const NOW = 1_000_000
@@ -230,5 +235,82 @@ describe('omladdning hos värden', () => {
     expect(restoreHostState({ state: { phase: 1 } })).toBeNull()
     const playing = { ...initialState('narmast'), phase: 'playing' }
     expect(restoreHostState({ state: playing, secrets: null })).toBeNull()
+  })
+})
+
+describe('revansch', () => {
+  // En avslutad match med två spelare i Gissa priset: a vann.
+  function finished(game = 'gissa-priset', ids = ['a', 'b']): HostState {
+    let state = startGame(lobby(game, ids, { rounds: 1, guessSeconds: 60 }), ids, NOW)
+    state = nextRound(playRound(state, { a: 100, b: 1000 }, 100), NOW)
+    return { state, secrets: null }
+  }
+
+  it('går tillbaka till väntrummet med samma spel och inställningar och startar en nedräkning', () => {
+    const before = finished()
+    const host = hostRematch(before, NOW)
+    expect(host.state.phase).toBe('waiting')
+    expect(host.state.game).toBe('gissa-priset')
+    expect(host.state.rounds).toBe(1)
+    expect(host.state.guessSeconds).toBe(60)
+    expect(host.state.rematchAt).toBe(NOW + REMATCH_SECONDS * 1000)
+    // Spelarna och kvällens ställning följer med, men matchens poäng nollas.
+    expect(Object.keys(host.state.players)).toEqual(['a', 'b'])
+    expect(host.state.leaderboard).toEqual(before.state.leaderboard)
+    expect(host.state.scores).toEqual({ a: 0, b: 0 })
+  })
+
+  it('startar en ny match när nedräkningen är slut, utan att räkna den förra matchen igen', () => {
+    const host = hostRematch(finished(), NOW)
+    const at = host.state.rematchAt!
+    const started = hostRematchStart(host, ['a', 'b'], at, at)
+    expect(started.state.phase).toBe('guessing')
+    expect(started.state.round).toBe(1)
+    expect(started.state.rematchAt).toBeNull()
+    expect(started.state.matchesPlayed).toBe(1)
+    expect(started.state.leaderboard.a).toMatchObject({ wins: 1, played: 1 })
+  })
+
+  it('gör ingenting vid dubbelklick eller medan en match pågår', () => {
+    const host = hostRematch(finished(), NOW)
+    expect(hostRematch(host, NOW + 10)).toBe(host)
+    const running = hostStart({ state: lobby('gissa-priset', ['a', 'b']), secrets: null }, ['a', 'b'], NOW)
+    expect(hostRematch(running, NOW)).toBe(running)
+  })
+
+  it('startar inte före nedräkningens slut och inte två gånger', () => {
+    const host = hostRematch(finished(), NOW)
+    const at = host.state.rematchAt!
+    expect(hostRematchStart(host, ['a', 'b'], at - 1, at)).toBe(host)
+    const started = hostRematchStart(host, ['a', 'b'], at, at)
+    expect(hostRematchStart(started, ['a', 'b'], at + 5, at)).toBe(started)
+  })
+
+  it('avbryts om för få spelare finns kvar', () => {
+    const host = hostRematch(finished('narmast'), NOW)
+    const at = host.state.rematchAt!
+    const result = hostRematchStart(host, ['a'], at, at)
+    expect(result.state.phase).toBe('waiting')
+    expect(result.state.rematchAt).toBeNull()
+  })
+
+  it('låter en gammal timer inte starta något efter att revanschen avbrutits', () => {
+    const host = hostRematch(finished(), NOW)
+    const at = host.state.rematchAt!
+    const cancelled = cancelRematch(host)
+    expect(cancelled.state.rematchAt).toBeNull()
+    expect(hostRematchStart(cancelled, ['a', 'b'], at, at)).toBe(cancelled)
+    expect(cancelRematch(cancelled)).toBe(cancelled)
+  })
+
+  it('kan startas om efter en provomgång med en spelare', () => {
+    let state = startGame(lobby('gissa-priset', ['a'], { rounds: 1 }), ['a'], NOW)
+    state = nextRound(playRound(state, { a: 100 }, 100), NOW)
+    const host = hostRematch({ state, secrets: null }, NOW)
+    const at = host.state.rematchAt!
+    const started = hostRematchStart(host, ['a'], at, at)
+    expect(started.state.phase).toBe('guessing')
+    expect(started.state.practice).toBe(true)
+    expect(started.state.leaderboard).toEqual({})
   })
 })

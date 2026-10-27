@@ -1,17 +1,19 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Check, ChevronDown, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Button } from '@/components/ui/button'
+import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
-import { GAMES, type GameInfo } from '@/lib/games'
+import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
 import {
   canStart,
   guessSecondsFor,
   hasTempoSettings,
   rankLeaderboard,
+  REMATCH_SECONDS,
   roundOptionsFor,
   type GameState,
 } from '@/lib/match'
@@ -26,6 +28,11 @@ type WaitingRoomProps = {
   // Den egna spelaren, som markeras med "Du".
   meId: string
   online: OnlinePlayer[]
+  // Skillnaden mellan min klocka och värdens (för revanschens nedräkning).
+  clockOffset: number
+  // Värden kom hit via Byt spel: inställningarna med spelvalet öppnas direkt.
+  scrollToGames?: boolean
+  onCancelRematch: () => void
   onSetRounds: (rounds: number) => void
   onSetGame: (game: string) => void
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
@@ -39,12 +46,20 @@ export function WaitingRoom({
   isHost,
   meId,
   online,
+  clockOffset,
+  scrollToGames = false,
+  onCancelRematch,
   onSetRounds,
   onSetGame,
   onSetTempo,
   onStart,
 }: WaitingRoomProps) {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Efter Byt spel öppnas inställningarna med spelvalet direkt, och sidan scrollar dit.
+  const [settingsOpen, setSettingsOpen] = useState(scrollToGames && isHost)
+  const settingsRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
+  }, [scrollToGames, isHost])
   const settingsId = useId()
   const rules = rulesFor(state.game)
   // Kortspelen har egen beskrivning och poängförklaring.
@@ -54,6 +69,8 @@ export function WaitingRoom({
   const startable = canStart(state.game, online.length)
   const practice = startable && online.length === 1
   const hostName = online.find((p) => p.host)?.name
+  // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
+  const rematching = state.rematchAt !== null
 
   // En rad som sammanfattar inställningarna: antal rundor och, för spel med tempo, svarstid och vad som händer efter facit.
   const summary = [
@@ -65,6 +82,10 @@ export function WaitingRoom({
 
   return (
     <Wide>
+      {state.rematchAt !== null && (
+        <RematchCountdown at={state.rematchAt} clockOffset={clockOffset} isHost={isHost} onCancel={onCancelRematch} />
+      )}
+
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Spelet">
         <div className="flex items-center gap-3">
@@ -88,7 +109,7 @@ export function WaitingRoom({
 
         {isHost ? (
           <div className="space-y-2">
-            <Button size="lg" className="w-full" onClick={onStart} disabled={!startable}>
+            <Button size="lg" className="w-full" onClick={onStart} disabled={!startable || rematching}>
               {practice ? `Testa ${game.name} själv` : `Starta ${game.name}`}
             </Button>
             {!startable && (
@@ -117,12 +138,19 @@ export function WaitingRoom({
 
       {/* Inställningarna ligger bakom "Ändra inställningar" och visas bara för värden. */}
       {isHost && settingsOpen && (
-        <section id={settingsId} className="space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6" aria-label="Inställningar">
+        <section
+          ref={settingsRef}
+          id={settingsId}
+          className="scroll-mt-4 space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
+          aria-label="Inställningar"
+        >
           <div className="space-y-3">
             <h2 className="text-xl">Välj spel</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {GAMES.filter((g) => g.playable).map((option) => {
                 const selected = option.id === game.id
+                // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
+                const tooFew = online.length < option.minPlayers
                 return (
                   <Button
                     key={option.id}
@@ -140,6 +168,10 @@ export function WaitingRoom({
                     <span className="min-w-0 flex-1">
                       <span className="block font-heading text-base font-bold">{option.name}</span>
                       <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
+                      <span className={cn('mt-1 block text-xs font-semibold', tooFew ? 'text-primary' : 'text-muted-foreground')}>
+                        👥 {playersLabel(option)}
+                        {tooFew && ` · ni är ${online.length} just nu`}
+                      </span>
                     </span>
                     {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}
                   </Button>
@@ -254,5 +286,37 @@ function Choice({ label, hint, options, selected, onSelect }: ChoiceProps) {
         })}
       </div>
     </div>
+  )
+}
+
+// Revansch: alla ser samma nedräkning, och matchen startar av sig själv. Värden kan avbryta.
+function RematchCountdown({
+  at,
+  clockOffset,
+  isHost,
+  onCancel,
+}: {
+  at: number
+  clockOffset: number
+  isHost: boolean
+  onCancel: () => void
+}) {
+  const { secondsLeft } = useCountdown(at, clockOffset, REMATCH_SECONDS)
+  return (
+    <section
+      className="space-y-2 rounded-lg border-2 border-primary bg-coral-soft p-5 text-center shadow-soft animate-pop"
+      aria-live="polite"
+    >
+      <p className="font-heading text-lg font-bold">Revansch!</p>
+      <p className="font-heading text-6xl font-bold text-primary tabular-nums" aria-label={`Startar om ${secondsLeft} sekunder`}>
+        {Math.max(1, secondsLeft)}
+      </p>
+      <p className="text-sm text-muted-foreground">Samma spel och samma inställningar. Gör er redo!</p>
+      {isHost && (
+        <Button variant="outline" onClick={onCancel}>
+          Avbryt
+        </Button>
+      )}
+    </section>
   )
 }
