@@ -115,13 +115,20 @@ export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-// Frågan med svaret i luckan. Svaret får stor bokstav om luckan börjar en mening.
-export function fillPrompt(prompt: string, answer: string): string {
+// Frågan uppdelad runt luckan, så att svaret kan visas annorlunda. Svaret får stor bokstav om luckan
+// börjar en mening. Saknas luckan hamnar svaret sist.
+export function promptParts(prompt: string, answer: string): { before: string; answer: string; after: string } {
   const i = prompt.indexOf(GAP)
-  if (i === -1) return `${prompt} ${capitalize(answer)}`
+  if (i === -1) return { before: `${prompt} `, answer: capitalize(answer), after: '' }
   const before = prompt.slice(0, i)
   const startsSentence = before.trim() === '' || /[.!?]\s*$/.test(before)
-  return before + (startsSentence ? capitalize(answer) : answer) + prompt.slice(i + GAP.length)
+  return { before, answer: startsSentence ? capitalize(answer) : answer, after: prompt.slice(i + GAP.length) }
+}
+
+// Frågan med svaret i luckan.
+export function fillPrompt(prompt: string, answer: string): string {
+  const parts = promptParts(prompt, answer)
+  return parts.before + parts.answer + parts.after
 }
 
 // Texten på ett blankt kort: ett mellanslag mellan orden, ingen punkt på slutet och inte för lång.

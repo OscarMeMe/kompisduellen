@@ -1,4 +1,5 @@
 import type { OnlinePlayer } from '@/hooks/useLobby'
+import type { CardMove, MyHand } from '@/lib/kort'
 import type { GameState } from '@/lib/match'
 import type { Player } from '@/lib/player'
 
@@ -18,5 +19,19 @@ export type RevealViewProps = {
   isHost: boolean
   clockOffset: number
   // Värden går vidare från facit. round = rundan som visades, så att ett dubbelklick inte hoppar över en runda.
+  onNext: (round: number) => void
+}
+
+// Kortspelen har en vy för hela rundan (frågekort, välja kort, domaren väljer, avslöja).
+export type CardViewProps = {
+  state: GameState
+  me: Player
+  online: OnlinePlayer[]
+  isHost: boolean
+  clockOffset: number
+  // Min hand, som bara jag får. null om jag inte har fått några kort (än).
+  hand: MyHand | null
+  onMove: (move: CardMove) => void
+  // Värden går vidare från avslöjandet. round = rundan som visades.
   onNext: (round: number) => void
 }
