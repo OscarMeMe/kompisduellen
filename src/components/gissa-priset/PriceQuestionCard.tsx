@@ -3,15 +3,15 @@ import type { PriceItem } from '@/lib/prisdata'
 // Frågan i Gissa priset: bild eller emoji, frågan med årtalet, namn och ledtråd. Används i spelet och på /granska.
 export function PriceQuestionCard({ item }: { item: PriceItem | undefined }) {
   return (
-    // Bilden visas liggande (2:1) och beskärs med object-cover. På mobilen är den lägre, så att
-    // gissningsrutan syns utan att man scrollar. Utan bild visas emojin och ingen tom bildyta.
+    // Bilden visas liggande (2:1) och beskärs med object-cover. På mobilen är den högst 18 % av skärmhöjden,
+    // så att gissningsrutan syns utan att man scrollar. Utan bild visas emojin och ingen tom bildyta.
     <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
       {item?.image ? (
         <figure className="mx-auto max-w-xl">
           <img
             src={item.image}
             alt={item.name}
-            className="aspect-2/1 max-h-36 w-full rounded-md object-cover sm:max-h-none"
+            className="aspect-2/1 max-h-[18svh] w-full rounded-md object-cover sm:max-h-none"
           />
           {item.imageCredit && (
             <figcaption className="mt-1 text-xs text-muted-foreground">
