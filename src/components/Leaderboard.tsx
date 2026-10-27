@@ -17,7 +17,7 @@ function count(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`
 }
 
-// Lobbyns topplista. Räknar vunna matcher i alla spel så länge lobbyn finns.
+// Kvällens ställning i lobbyn (topplistan). Räknar vunna matcher i alla spel så länge lobbyn finns.
 export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }: LeaderboardProps) {
   if (matchesPlayed === 0 || entries.length === 0) return null
 
@@ -32,7 +32,7 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
           <Trophy className="size-6" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-xl">Topplista</h2>
+          <h2 className="text-xl">Kvällens ställning</h2>
           <p className="text-sm text-muted-foreground">
             {count(matchesPlayed, 'match spelad', 'matcher spelade')} i lobbyn
           </p>
@@ -57,7 +57,7 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
                   {leader && <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder" />}
                 </span>
                 <span className="block text-sm text-muted-foreground">
-                  {count(entry.played, 'match', 'matcher')} spelade
+                  {count(entry.played, 'match spelad', 'matcher spelade')}
                 </span>
               </span>
               {justWon && (

@@ -41,8 +41,8 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
         <div className="space-y-1 rounded-lg border bg-lilac/40 p-4 text-center">
           <p className="font-heading font-bold">Testläge</p>
           <p className="text-sm">
-            Provomgången räknas inte i topplistan. Vill du spela med kompisar? Tryck på Spela igen och dela koden eller
-            länken i lobbyn, och starta när de är med.
+            Provomgången räknas inte i kvällens ställning. Vill du spela med kompisar? Tryck på Bjud in kompisar och
+            dela koden eller länken i lobbyn, och starta när de är med.
           </p>
         </div>
       )}
@@ -95,7 +95,7 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost ? (
           <Button size="lg" className="sm:flex-1" onClick={onPlayAgain}>
-            Spela igen
+            {state.practice ? 'Bjud in kompisar' : 'Till väntrummet'}
           </Button>
         ) : (
           <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm sm:flex-1">

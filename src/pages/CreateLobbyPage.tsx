@@ -28,7 +28,7 @@ export function CreateLobbyPage() {
       {practice ? (
         <PageHeader
           title="Testa själv"
-          description="En provomgång där du spelar ensam. Den räknas inte i topplistan. Efteråt kan du bjuda in kompisar med lobbykoden och spela på riktigt."
+          description="En provomgång där du spelar ensam. Den räknas inte i kvällens ställning. Efteråt kan du bjuda in kompisar med lobbykoden och spela på riktigt."
         />
       ) : (
         <PageHeader title="Skapa lobby" description="Du blir värd och startar spelet när alla är med." />

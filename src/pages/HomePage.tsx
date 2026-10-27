@@ -81,6 +81,7 @@ export function HomePage() {
               <Link to="/ga-med">🔑 Jag har en kod</Link>
             </Button>
           </div>
+          <p className="text-sm font-semibold text-muted-foreground">📱 Alla spelar på sin egen mobil eller dator.</p>
         </div>
 
         {/* Förhandsvisning av en runda i Gissa priset */}
