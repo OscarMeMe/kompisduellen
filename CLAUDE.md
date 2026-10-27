@@ -102,4 +102,5 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - `/granska` finns bara med `npm run dev`. Den visar frågorna med spelets egna kort (`PriceQuestionCard`, `PriceAnswerCard`) och sparar omdömen via `vite-plugin-granska.ts`, som bara körs av dev-servern.
 - Nya frågor läggs i `inkorg.json` i projektroten (en lista med samma fält som `PriceItem`). "Godkänd" flyttar en inkorgsfråga till slutet av `src/lib/prisdata.json`, och "Ta bort" tar bort frågan ur filen där den ligger.
-- Omdömen och kommentarer sparas i `granskning.json`. `inkorg.json` och `granskning.json` står i `.gitignore` och får aldrig committas.
+- Bilder till inkorgsfrågor ligger i `public/prisbilder-inkorg/` (sökvägen `/prisbilder-inkorg/x.webp`). Vid "Godkänd" flyttas bilden till `public/prisbilder/` och sökvägen skrivs om, och "Ta bort" tar bort bilden.
+- Omdömen och kommentarer sparas i `granskning.json`. `inkorg.json`, `granskning.json` och `public/prisbilder-inkorg/` står i `.gitignore` och får aldrig committas.

@@ -2,7 +2,14 @@ import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { applyVerdict, type ItemSource, type ReviewFiles, type Verdict } from './src/lib/granskning.ts'
+import {
+  applyVerdict,
+  INBOX_IMAGE_DIR,
+  publishedImage,
+  type ItemSource,
+  type ReviewFiles,
+  type Verdict,
+} from './src/lib/granskning.ts'
 
 // Läser och skriver frågefilerna åt granskningssidan (/granska). Körs bara av dev-servern
 // (apply: 'serve'), så varken sidan eller filerna följer med när sajten byggs.
@@ -12,8 +19,9 @@ const FILES = {
   inbox: path.resolve(import.meta.dirname, 'inkorg.json'),
   reviews: path.resolve(import.meta.dirname, 'granskning.json'),
 }
+const PUBLIC_DIR = path.resolve(import.meta.dirname, 'public')
 
-type Question = { id: string }
+type Question = { id: string; image?: string }
 
 function readJson<T>(file: string, fallback: T): T {
   if (!fs.existsSync(file)) return fallback
@@ -38,6 +46,21 @@ function writeFiles(before: ReviewFiles<Question>, after: ReviewFiles<Question>)
   if (after.items !== before.items) write(FILES.items, after.items)
   if (after.inbox !== before.inbox) write(FILES.inbox, after.inbox)
   if (after.reviews !== before.reviews) write(FILES.reviews, after.reviews)
+}
+
+// Inkorgsfrågans bild: flyttas till public/prisbilder när frågan godkänns och tas bort med frågan.
+// Görs före JSON-filerna, så att inget ändras om bilden inte går att flytta.
+function handleInboxImage(image: string | undefined, verdict: Verdict) {
+  if (!image?.startsWith(INBOX_IMAGE_DIR)) return
+  const from = path.join(PUBLIC_DIR, image)
+  if (verdict === 'ta-bort') {
+    fs.rmSync(from, { force: true })
+  } else if (verdict === 'godkand') {
+    const to = path.join(PUBLIC_DIR, publishedImage(image))
+    if (!fs.existsSync(from)) throw new Error(`Bilden ${image} saknas.`)
+    if (fs.existsSync(to)) throw new Error(`Det finns redan en bild ${publishedImage(image)}.`)
+    fs.renameSync(from, to)
+  }
 }
 
 async function readBody(req: IncomingMessage): Promise<unknown> {
@@ -70,6 +93,7 @@ export function granskaPlugin(): Plugin {
             }
             const before = readFiles()
             const after = applyVerdict(before, id, source, verdict, comment ?? '', new Date())
+            if (source === 'inkorg') handleInboxImage(before.inbox.find((i) => i.id === id)?.image, verdict)
             writeFiles(before, after)
             send(res, 200, after)
           } else {
