@@ -31,6 +31,16 @@ export const GAMES: GameInfo[] = [
     playable: true,
   },
   {
+    // Arbetsnamn. Namnet visas bara härifrån, så det räcker att byta det här.
+    id: 'kortkaos',
+    name: 'Kortkaos',
+    tagline: 'Fyll luckan med det fräckaste kortet på handen. Domaren väljer vinnaren, och ingen vet vem som spelade vad.',
+    emoji: '🃏',
+    color: 'bg-lilac/40',
+    minPlayers: 3,
+    playable: true,
+  },
+  {
     id: 'vem-skrev',
     name: 'Vem skrev vad?',
     tagline: 'Alla svarar anonymt. Kan du lista ut vem som skrev vad?',

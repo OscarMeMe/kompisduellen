@@ -29,8 +29,17 @@ function PracticeChip() {
 
 // Runda och en tunn stapel som krymper med tiden medan man gissar. Sekunderna står i statusraden
 // under gissningsrutan. Ligger fast högst upp, så att tiden syns även när man scrollar.
-export function RoundTimer({ state, clockOffset }: { state: GameState; clockOffset: number }) {
-  const { progress, urgent } = useCountdown(state.deadline, clockOffset, guessSecondsFor(state))
+// totalSeconds = stegets hela tid, om den inte är svarstiden (t.ex. i kortspelen).
+export function RoundTimer({
+  state,
+  clockOffset,
+  totalSeconds,
+}: {
+  state: GameState
+  clockOffset: number
+  totalSeconds?: number
+}) {
+  const { progress, urgent } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
 
   return (
     <div className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6">

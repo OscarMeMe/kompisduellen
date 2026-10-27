@@ -11,11 +11,13 @@ type RevealFooterProps = {
   onNext: (round: number) => void
   // Texten när det finns fler rundor kvar, t.ex. "Nästa runda startar strax".
   nextLabel: string
+  // Visningens hela tid, om spelet inte har revealSeconds i spelregler.ts (t.ex. kortspelen).
+  totalSeconds?: number
 }
 
 // Efter facit. Automatiskt: nedräkning till nästa runda (eller prispallen) och en knapp så att
 // värden kan hoppa fram. Värden går vidare: facit står kvar tills värden klickar.
-export function RevealFooter({ state, isHost, clockOffset, onNext, nextLabel }: RevealFooterProps) {
+export function RevealFooter({ state, isHost, clockOffset, onNext, nextLabel, totalSeconds }: RevealFooterProps) {
   const isLast = state.round >= state.rounds
   const auto = autoAdvanceFor(state)
 
@@ -34,7 +36,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, nextLabel }: 
         )
       )}
       {auto && state.deadline !== null && (
-        <Countdown deadline={state.deadline} clockOffset={clockOffset} totalSeconds={rulesFor(state.game).revealSeconds} />
+        <Countdown deadline={state.deadline} clockOffset={clockOffset} totalSeconds={totalSeconds ?? rulesFor(state.game).revealSeconds} />
       )}
       {isHost && (
         <Button

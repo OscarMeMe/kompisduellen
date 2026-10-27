@@ -51,6 +51,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
+  - `kortkaos/`: Kortkaos vy för hela rundan (`KortkaosView` med ett steg per fil). Kortspel har en `Play`-vy i `GAME_VIEWS`
+  - `kort/`: spelkort som fler kortspel kan använda (`PromptCard`, `AnswerCard`, `Sentence`, `Hand`)
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
 - `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
@@ -63,6 +65,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `kort.ts`: kortspel med domare (lek, händer, val, anonym visning, rundflödet och undantagen). Återanvändbart: ett nytt kortspel behöver bara egna `CardGameRules`
   - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Kortspelens regler ligger i `CARD_RULES`. Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
+  - `kortkaos.ts`: reglerna för Kortkaos (tider, handens storlek, blanka kortet, Matchens bästa kort). Korten ligger i `kortkaos.json` (`fragor` med luckan `___` och `svar`, skrivna med liten bokstav så att de passar mitt i en mening). Allt innehåll är eget, inget från andra spel. Namnet "Kortkaos" är ett arbetsnamn och står bara i `games.ts`
   - `prisdata.ts`: typen `PriceItem` och `findPriceItem`. Själva sakerna i Gissa priset (pris, fakta, källa och ibland en bild) ligger i `prisdata.json`. Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
@@ -84,7 +87,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Värden väljer spel i väntrummet (fältet `game` i tillståndet). Spelet från startsidan är bara förvalt.
 - Topplistan gäller hela lobbyn oavsett spel och räknar vunna matcher. Delad seger ger alla på förstaplatsen en vinst.
 - Gissa priset har tempo i lobbyn: svarstid (20, 30 eller 60 s) och om facit går vidare automatiskt eller när värden klickar. Värdens timer gäller bara sin egen deadline (`handleDeadline`), och "nästa runda" tar med sig rundan som visades (`advanceFromReveal`), så inget hoppas över.
-- En match med en spelare är en provomgång (`practice`) och räknas inte i topplistan. "Testa själv" (`/skapa?spel=gissa-priset&testa=1`) startar en direkt. Närmast vinner kräver två spelare.
+- En match med en spelare är en provomgång (`practice`) och räknas inte i topplistan. "Testa själv" (`/skapa?spel=gissa-priset&testa=1`) startar en direkt. Närmast vinner kräver två spelare och Kortkaos tre.
 - Lämnar värden (stänger fliken) försvinner lobbyn. Värden sparar tillståndet och kortspelens hemliga data i fliken (sessionStorage, `saveHostLobby`), så laddar värden om sidan fortsätter matchen med topplista och inställningar, och gästerna återansluter. Inget sparas i databasen ännu.
 
 ## Routes
@@ -94,7 +97,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/` | Startsida |
 | `/skapa` | Skapa lobby |
 | `/ga-med` | Gå med (skriv in kod) |
-| `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`) |
+| `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`, `kortkaos`) |
 | `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
