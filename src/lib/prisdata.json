@@ -4,7 +4,7 @@
     "emoji": "🍕",
     "name": "Två pizzor som köptes med bitcoin",
     "year": 2010,
-    "clue": "Betalades med bitcoin. Gissa vad betalningen var värd då.",
+    "clue": "Ett av de första köpen med bitcoin, när nästan ingen hade hört talas om valutan. Gissa vad betalningen var värd då.",
     "priceSek": 320,
     "fact": "Laszlo Hanyecz betalade 10 000 bitcoin den 22 maj 2010, värt runt 41 dollar då men hundratals miljoner i dag.",
     "source": "https://en.bitcoin.it/wiki/Pizza",
@@ -34,7 +34,7 @@
     "fact": "Såldes på eBay i juni 2021 för 99 997 dollar.",
     "source": "https://www.guinnessworldrecords.com/world-records/663245-most-expensive-chicken-nugget-sold-at-online-auction",
     "image": "/prisbilder/among-us-nugget.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Chicken_nuggets_on_a_plate.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Walmart_Marketside_MS_golden_chicken_nuggets_10_pieces.jpg"
   },
   {
     "id": "ostmacka",
@@ -52,15 +52,16 @@
   {
     "id": "nobelpris-1901",
     "emoji": "🏅",
-    "name": "Prissumman för ett helt Nobelpris",
+    "name": "Prispengarna till den som vann ett Nobelpris",
     "year": 1901,
-    "clue": "Första gången Nobelprisen delades ut",
+    "clue": "Första gången Nobelprisen delades ut, räknat per pris",
     "priceSek": 150782,
     "fact": "Prissumman var 150 782 kronor per kategori när Nobelprisen delades ut för första gången.",
+    "question": "Hur stor var prissumman",
     "source": "https://www.nobelpeaceprize.org/presse/pressemeldinger/nobel-prize-amount-raised-by-sek-1-million",
     "image": "/prisbilder/nobelpris-1901.webp",
-    "imageCredit": "Foto: Hansbaer, CC BY-SA 3.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Nobel-banquet-table.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Nobel_Pierre_et_Marie_Curie_1.jpg",
+    "imageNote": "Bilden visar Marie och Pierre Curies Nobeldiplom från 1903"
   },
   {
     "id": "stadshusplat-1920",
@@ -207,7 +208,7 @@
     "emoji": "🎬",
     "name": "En biobiljett i Stockholms innerstad",
     "year": 1982,
-    "clue": "Biljettpris redovisat i en regeringsproposition",
+    "clue": "Vanligt biljettpris när videouthyrningen började konkurrera med biograferna",
     "priceSek": 27,
     "fact": "Två biobiljetter kostade mer än att hyra en videofilm för ett dygn.",
     "source": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/proposition/om-vissa-musikfragor-m-m_g503128/html/",
@@ -414,7 +415,8 @@
     "fact": "Barn betalade bara tio öre för att gå på samma biograf.",
     "source": "https://sagolikasunne.se/gora/aktivitetsguide/teaterbiografen-i-sunne/",
     "image": "/prisbilder/biobiljett-sunne-1915.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Sunne_-_KMB_-_16001000322724.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Arcadia_salong_1927.jpg",
+    "imageNote": "Bilden visar biografen Arcadia i Stockholm 1927"
   },
   {
     "id": "vasaloppet-1923",
@@ -982,9 +984,9 @@
   {
     "id": "bidrottning-carnica-2026",
     "emoji": "🐝",
-    "name": "En parad bidrottning av rasen Carnica",
+    "name": "En befruktad bidrottning av rasen Carnica, att sätta i en bikupa",
     "year": 2026,
-    "clue": "Ordinarie pris hos Biodlarn i Närkes Kil, exklusive porto",
+    "clue": "Beställd från en biodlare i Närke. Porto tillkommer.",
     "priceSek": 740,
     "fact": "Drottningarna skickades bara som rekommenderade brev eftersom vanlig post ansågs ta för lång tid.",
     "source": "https://biodlarn.se/?cat=15",
@@ -1037,7 +1039,7 @@
     "year": 1908,
     "clue": "Kommunalstämmans beslut i oktober",
     "priceSek": 3,
-    "fact": "Hundskatten hade en egen punkt på dagordningen, följd av en separat punkt om hur pengarna skulle användas.",
+    "fact": "Hundskatt var en avgift som kommunen tog ut för varje hund man ägde. I Björnlunda hade den en egen punkt på kommunalstämmans dagordning, följd av en punkt om hur pengarna skulle användas.",
     "source": "https://www.gnesta.se/download/18.c90eaf311f38691ec380001704/1531141079841/Bj%C3%B6rnlunda_kommunalst%C3%A4mma1900-49.pdf",
     "image": "/prisbilder/hundskatt-bjornlunda-1908.webp",
     "imageCredit": "Foto: Bengt Oberger, CC BY-SA 4.0",
@@ -1123,7 +1125,7 @@
   {
     "id": "fem-potatischips-2016",
     "emoji": "🥔",
-    "name": "En presentask med fem exklusiva potatischips",
+    "name": "Fem enstaka potatischips i en presentask",
     "year": 2016,
     "clue": "S:t Eriks Bryggeris specialutgåva",
     "priceSek": 499,
@@ -1214,7 +1216,7 @@
   {
     "id": "vigselplats-katrinetorp-2026",
     "emoji": "💍",
-    "name": "Att hyra en vigselplats utomhus på Katrinetorp",
+    "name": "Att hyra en vigselplats utomhus på Katrinetorp, ett gammalt landeri i Malmö",
     "year": 2026,
     "clue": "Platshyra hos Malmö stad, utan bänkar och el",
     "priceSek": 2000,
