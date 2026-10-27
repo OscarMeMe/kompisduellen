@@ -6,7 +6,7 @@
 // priceSek: priset i kronor. Utländska försäljningar räknas om med ungefärlig växelkurs vid försäljningen.
 //   Gamla svenska vardagspriser anges som de var då, med decimaler vid behov (13 öre = 0.13).
 // fact: max en mening som visas när rätt svar avslöjas.
-// source: var uppgiften kommer ifrån, så att den går att dubbelkolla.
+// source: var uppgiften kommer ifrån, så att den går att dubbelkolla. Visas inte i spelet, bara intern dokumentation.
 //
 // Lägg gärna till fler, men bara sådant som går att belägga med en källa.
 

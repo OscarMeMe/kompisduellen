@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
@@ -111,15 +110,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
 
       {revealed && item && (
         <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-soft animate-in fade-in sm:p-6 sm:text-base">
-          {item.fact}{' '}
-          <a
-            href={item.source}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
-          >
-            Källa <ExternalLink className="size-3.5" />
-          </a>
+          {item.fact}
         </p>
       )}
 
