@@ -11,6 +11,9 @@ const EMOJI: Record<string, EmojiInfo> = {
   '🕵': { file: 'detective', label: 'Detektiv' },
   '🗳': { file: 'ballot-box', label: 'Valurna' },
   '🃏': { file: 'joker', label: 'Jokerkort' },
+  // Bilderna i spelförklaringarna (intro i games.ts)
+  '💸': { file: 'money-with-wings', label: 'Sedlar med vingar' },
+  '🍀': { file: 'four-leaf-clover', label: 'Fyrklöver' },
   // Spelarfigurerna (AVATARS i player.ts)
   '👻': { file: 'ghost', label: 'Spöke' },
   '👽': { file: 'alien', label: 'Utomjording' },

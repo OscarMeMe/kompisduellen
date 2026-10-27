@@ -9,6 +9,9 @@ export type GameInfo = {
   // Minsta antal spelare för en vanlig match. Det finns ingen övre gräns i lobbyn.
   minPlayers: number
   playable: boolean
+  // Förklaringen som visas när man klickar på spelet: en bild (emoji), en rolig mening och kort hur det går till.
+  // Saknas den visas tagline och spelets howTo i stället.
+  intro?: { emoji: string; pitch: string; steps: string[] }
 }
 
 export const GAMES: GameInfo[] = [
@@ -20,6 +23,16 @@ export const GAMES: GameInfo[] = [
     color: 'bg-sun-soft',
     minPlayers: 2,
     playable: true,
+    intro: {
+      emoji: '💸',
+      pitch:
+        'Spelet där det snabbt avslöjas vilka kompisar som är helt verklighetsfrånvända och vilka som faktiskt har fötterna på jorden.',
+      steps: [
+        'Alla ser samma sak: en pryl, en biljett eller något från förr, och vilket år priset gällde.',
+        'Gissa priset i kronor innan tiden tar slut. Gamla priser gäller i dåtidens kronor.',
+        'Ju närmare rätt pris, desto fler poäng. Fullträff ger 100, och flest poäng efter sista rundan vinner.',
+      ],
+    },
   },
   {
     id: 'narmast',
@@ -29,6 +42,15 @@ export const GAMES: GameInfo[] = [
     color: 'bg-coral-soft',
     minPlayers: 2,
     playable: true,
+    intro: {
+      emoji: '🍀',
+      pitch: 'Ren tur förklädd till strategi. Alla har exakt lika stor chans, så ingen har något att skylla på.',
+      steps: [
+        'Alla gissar i hemlighet ett tal mellan 1 och 100.',
+        'När tiden är ute slumpas rätt tal fram.',
+        'Den som var närmast får en poäng. Flest poäng efter sista rundan vinner.',
+      ],
+    },
   },
   {
     // Arbetsnamn. Namnet visas bara härifrån, så det räcker att byta det här.

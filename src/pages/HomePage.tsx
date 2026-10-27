@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
+import { Info } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { formatSek } from '@/lib/belopp'
-import { GAMES, playersLabel } from '@/lib/games'
+import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
 import { pricePoints } from '@/lib/gissa-priset'
 import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
@@ -31,6 +33,13 @@ export function HomePage() {
 
   // "Välj spel/skapa lobby": scrolla till spelen (om det behövs), flytta fokus dit och låt korten lysa upp.
   const [highlightGames, setHighlightGames] = useState(false)
+  // Spelet vars förklaring visas. Spelet ligger kvar medan rutan stängs, så att innehållet inte försvinner i animationen.
+  const [introGame, setIntroGame] = useState<GameInfo | null>(null)
+  const [introOpen, setIntroOpen] = useState(false)
+  function showIntro(game: GameInfo) {
+    setIntroGame(game)
+    setIntroOpen(true)
+  }
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   function pointAtGames() {
     const games = document.getElementById('spel')
@@ -128,13 +137,29 @@ export function HomePage() {
                 highlightGames && 'animate-pop ring-4 ring-primary/40',
               )}
             >
-              <div className="flex items-center gap-3">
-                <Emoji emoji={game.emoji} className="text-4xl" />
-                <h3 className="text-xl leading-tight">{game.name}</h3>
+              {/* Klick på bild, namn eller beskrivning visar en kort förklaring av spelet. Namnet är knappen
+                  för tangentbord och skärmläsare. */}
+              <div className="flex flex-1 cursor-pointer flex-col gap-3" onClick={() => showIntro(game)}>
+                <div className="flex items-center gap-3">
+                  <Emoji emoji={game.emoji} className="text-4xl" />
+                  <h3 className="text-xl leading-tight">
+                    <button
+                      type="button"
+                      className="rounded-md text-left outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
+                    >
+                      {game.name}
+                    </button>
+                  </h3>
+                </div>
+                <p className="leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
-              <p className="flex-1 leading-snug text-muted-foreground">{game.tagline}</p>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-sm font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
+                  <Button variant="link" className="h-auto px-0" onClick={() => showIntro(game)}>
+                    <Info /> Så spelar man
+                  </Button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {rulesFor(game.id).soloPractice && (
                     <Button asChild variant="outline">
@@ -167,6 +192,7 @@ export function HomePage() {
           ))}
         </div>
       </section>
+      <GameIntroDialog game={introGame} open={introOpen} onOpenChange={setIntroOpen} />
 
       {/* Så funkar det, efter spelen så att spellistan syns direkt */}
       <section id="sa-funkar" className="scroll-mt-6 space-y-3">
