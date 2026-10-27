@@ -4,6 +4,37 @@ Så här jobbade jag: ett steg i taget, varje steg på en egen gren (branch) som
 
 Testen gjorde jag i en riktig webbläsare (Playwright) med värd och deltagare i två helt separata sessioner, på mobilstorlek 390 x 844. Alla testspelare heter "TEST-NATT ...". De försvinner av sig själva när webbläsaren stängs, och inget sparas i någon databas.
 
+## Läs det här först
+
+Alla fyra stegen är klara och testade. Allt ligger bara på den här datorn i fyra grenar. Inget är pushat, inget är slaget ihop med main och inget är driftsatt. Jag har inte ändrat databas, Supabase-inställningar, miljövariabler, frågor, ledtrådar eller bilder.
+
+- **Grenarna utgår alla från main**, så var och en kan granskas för sig. De fyra är `natt/1-texter`, `natt/2-ateranslutning`, `natt/3-vantrum` och `natt/4-revansch`.
+- **Rapporten ligger i varje gren** (med de steg som fanns då). Den fullständiga versionen ligger i `natt/4-revansch`.
+- **Alla testspelare hette "TEST-NATT ...".** De finns bara medan webbläsaren är öppen, och inget sparas i någon databas, så det finns inget att städa. Testserverns webbläsare är stängd.
+- Totalt: 81 kontroller i en riktig webbläsare (11 + 17 + 24 + 29, alla godkända) och 98 enhetstester som alla går igenom. Bygge och lint är rena (förutom en gammal, harmlös varning om en knappfil).
+
+### Att slå ihop grenarna (när du vill, i den här ordningen)
+
+1. `natt/2-ateranslutning` går ihop med allt utan problem.
+2. `natt/1-texter` är minst och går ihop med main utan problem.
+3. `natt/3-vantrum` krockar med steg 1 på **en rad** i `WaitingRoom.tsx` (texten om "topplistan"). Behåll steg 3:s version, som redan säger "kvällens ställning".
+4. `natt/4-revansch` krockar med steg 1 i `FinishedView.tsx` (knapparna på prispallen). **Behåll steg 4:s knappar**, och lägg bara tillbaka rubrikerna "Kvällens ställning" och förklaringen om "Bjud in kompisar". Steg 4 krockar också med steg 3 i `WaitingRoom.tsx`. Där ska nedräkningsrutan "Revansch!" och den lilla raden om antal spelare per spel in i steg 3:s nya väntrum, och "Byt spel" ska öppna "Ändra inställningar" i stället för att scrolla.
+5. Rapportfilen krockar mellan alla grenar eftersom alla har sin egen version. Ta bara den från `natt/4-revansch`.
+
+Jag provade sammanslagningarna i en tillfällig gren som jag sedan tog bort, så att du inte ska bli överraskad. Jag löste inte konflikterna själv, eftersom det hade betytt att gissa vad du vill behålla.
+
+### Titta på själv i morgon, på mobilen (det viktigaste först)
+
+1. Skapa en lobby på mobilen. Ser du spelet, antal spelare och startknappen direkt, utan att scrolla? (steg 3)
+2. Gå med från en andra telefon. Står det "Väntar på att ... startar", och syns "Du" på dig? (steg 3)
+3. Spela en match och tryck "Revansch". Startar matchen av sig själv hos båda efter 3, 2, 1? Prova också att trycka snabbt två gånger. (steg 4)
+4. Tryck "Byt spel" och välj ett annat spel. Följer kompisen med utan att skriva koden igen? (steg 4)
+5. Lås telefonen eller stäng fliken en stund mitt i en match och öppna länken igen. Får du "Fortsätt som ..." och är poängen kvar? (steg 2)
+6. Skanna QR-koden i väntrummet med en annan telefon. Den är lite mindre än förut. (steg 3)
+
+### Inte testat (jag kunde inte i en datormiljö)
+Riktig mobil med touch och tangentbord som öppnas, ljud, två fysiska enheter på olika nät, och Kortkaos spelat med tre personer.
+
 ## Översikt
 
 | Steg | Gren | Status |
