@@ -11,6 +11,13 @@ import items from './prisdata.json'
 //   Gamla svenska vardagspriser anges som de var då, med decimaler vid behov (13 öre = 0.13).
 // fact: max en mening som visas när rätt svar avslöjas.
 // source: var uppgiften kommer ifrån, så att den går att dubbelkolla. Visas inte i spelet, bara intern dokumentation.
+// question: valfri fråga i stället för "Vad kostade det", för det som inte köps (t.ex. "Hur stor var prissumman").
+//   Årtalet läggs till efter: "Hur stor var prissumman år 1901?"
+// image: valfri bild i public/prisbilder (webp, max 800 px bred). Visas liggande 2:1. Utan bild visas emojin.
+//   Bara bilder från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels.
+// imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det.
+// imageSource: bildens sida, där licensen går att kontrollera.
+// imageNote: valfri rad under bilden när den inte visar just saken, t.ex. "Bilden visar en annan vas från Höganäs".
 //
 // Lägg gärna till fler, men bara sådant som går att belägga med en källa.
 // Frågorna från och med nobelpris-1901 togs fram med ChatGPT och stickprovades mot källorna (oktober 2026).
@@ -23,10 +30,12 @@ export type PriceItem = {
   clue: string
   priceSek: number
   fact: string
+  question?: string
   source: string
   image?: string
   imageCredit?: string
   imageSource?: string
+  imageNote?: string
 }
 
 export const PRICE_ITEMS: PriceItem[] = items

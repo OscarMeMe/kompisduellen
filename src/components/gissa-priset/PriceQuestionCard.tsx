@@ -13,15 +13,18 @@ export function PriceQuestionCard({ item }: { item: PriceItem | undefined }) {
             alt={item.name}
             className="aspect-2/1 max-h-[18svh] w-full rounded-md object-cover sm:max-h-none"
           />
-          {item.imageCredit && (
+          {(item.imageNote || item.imageCredit) && (
             <figcaption className="mt-1 text-xs text-muted-foreground">
-              {item.imageSource ? (
-                <a href={item.imageSource} target="_blank" rel="noreferrer" className="hover:underline">
-                  {item.imageCredit}
-                </a>
-              ) : (
-                item.imageCredit
-              )}
+              {item.imageNote}
+              {item.imageNote && item.imageCredit && ' · '}
+              {item.imageCredit &&
+                (item.imageSource ? (
+                  <a href={item.imageSource} target="_blank" rel="noreferrer" className="hover:underline">
+                    {item.imageCredit}
+                  </a>
+                ) : (
+                  item.imageCredit
+                ))}
             </figcaption>
           )}
         </figure>
@@ -29,7 +32,8 @@ export function PriceQuestionCard({ item }: { item: PriceItem | undefined }) {
         <span className="block text-5xl sm:text-7xl">{item?.emoji ?? '🏷️'}</span>
       )}
       <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3 sm:text-base">
-        Vad kostade det{item && <> år <span className="font-bold text-primary">{item.year}</span></>}?
+        {item?.question ?? 'Vad kostade det'}
+        {item && <> år <span className="font-bold text-primary">{item.year}</span></>}?
       </p>
       <h1 className="mx-auto mt-1 max-w-xl text-xl text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
       {item?.clue && (
