@@ -151,3 +151,7 @@ vite.config.ts.timestamp-*
 
 # vite-plugin-pwa dev output
 dev-dist
+
+# Granskningen av Gissa priset (/granska). Bara lokalt, får aldrig laddas upp.
+granskning.json
+inkorg.json
