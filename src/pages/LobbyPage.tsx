@@ -3,9 +3,10 @@ import { Link, useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
+import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
 import { Narrow } from '@/components/lobby/LobbyLayout'
-import type { GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
+import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
 import { WaitingRoom } from '@/components/lobby/WaitingRoom'
 import { GuessingView } from '@/components/narmast/GuessingView'
 import { RevealView } from '@/components/narmast/RevealView'
@@ -16,12 +17,17 @@ import { useLobby } from '@/hooks/useLobby'
 import { findGame, GAMES } from '@/lib/games'
 import { clearPracticeRequest, hasPracticeRequest, hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
 
-// Vyerna för att gissa och visa svaret i varje spel. Väntrum och prispall är gemensamma.
-const GAME_VIEWS: Record<string, { Guessing: ComponentType<GuessingViewProps>; Reveal: ComponentType<RevealViewProps> }> =
-  {
-    narmast: { Guessing: GuessingView, Reveal: RevealView },
-    'gissa-priset': { Guessing: PriceGuessingView, Reveal: PriceRevealView },
-  }
+// Vyerna i varje spel. Gissningsspelen har en vy för att gissa och en för att visa svaret, kortspelen
+// en vy för hela rundan. Väntrum och prispall är gemensamma.
+type GameViews =
+  | { Guessing: ComponentType<GuessingViewProps>; Reveal: ComponentType<RevealViewProps> }
+  | { Play: ComponentType<CardViewProps> }
+
+const GAME_VIEWS: Record<string, GameViews> = {
+  narmast: { Guessing: GuessingView, Reveal: RevealView },
+  'gissa-priset': { Guessing: PriceGuessingView, Reveal: PriceRevealView },
+  kortkaos: { Play: KortkaosView },
+}
 
 export function LobbyPage() {
   const params = useParams()
@@ -46,7 +52,7 @@ export function LobbyPage() {
 function Lobby({ code, me }: { code: string; me: Player }) {
   const hosted = hostedGame(code)
   const isHost = hosted !== null
-  const { status, state, online, clockOffset, actions } = useLobby(code, me, isHost, hosted ?? undefined)
+  const { status, state, online, clockOffset, hand, actions } = useLobby(code, me, isHost, hosted ?? undefined)
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
@@ -63,7 +69,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
 
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
   const { setInMatch } = useLayout()
-  const inMatch = status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal')
+  const inMatch =
+    status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal' || state.phase === 'playing')
   useEffect(() => {
     setInMatch(inMatch)
     return () => setInMatch(false)
@@ -119,7 +126,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onStart={actions.start}
         />
       )
+    case 'playing':
+      if (!('Play' in views)) return null
+      return (
+        <views.Play
+          // Ny vy för varje frågekort, så att val och utkast börjar om (även när rundan görs om).
+          key={`${state.round}-${state.cards?.prompt}`}
+          state={state}
+          me={me}
+          online={online}
+          isHost={isHost}
+          clockOffset={clockOffset}
+          hand={hand}
+          onMove={actions.move}
+          onNext={actions.skipReveal}
+        />
+      )
     case 'guessing':
+      if (!('Guessing' in views)) return null
       return (
         <views.Guessing
           key={state.round}
@@ -131,6 +155,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         />
       )
     case 'reveal':
+      if (!('Reveal' in views)) return null
       return (
         <views.Reveal
           key={state.round}
