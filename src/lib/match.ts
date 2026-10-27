@@ -428,3 +428,14 @@ export function hostMove(
 export function hostPresence(host: HostState, activeIds: string[], now: number, random: Random = Math.random): HostState {
   return withCards(host, (cards, rules) => cardPresence(cards, rules, activeIds, now, random))
 }
+
+// Värdens sparade lobby efter en omladdning (se saveHostLobby). Fält som inte fanns när den sparades
+// får sina startvärden. null om datan är trasig, eller om ett kortspel saknar sin hemliga data.
+export function restoreHostState(saved: unknown): HostState | null {
+  if (!saved || typeof saved !== 'object') return null
+  const { state, secrets } = saved as Partial<HostState>
+  if (!state || typeof state.phase !== 'string' || typeof state.game !== 'string') return null
+  const restored: GameState = { ...initialState(state.game), ...state }
+  if (restored.phase === 'playing' && !secrets) return null
+  return { state: restored, secrets: secrets ?? null }
+}

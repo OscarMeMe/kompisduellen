@@ -16,6 +16,7 @@ import {
   initialState,
   nextRound,
   resolveRound,
+  restoreHostState,
   roundOptionsFor,
   setGame,
   setTempo,
@@ -213,5 +214,21 @@ describe('värdens funktioner för gissningsspelen', () => {
     expect(initialState('narmast').rounds).toBe(5)
     expect(roundOptionsFor('gissa-priset')).toEqual([3, 5, 10])
     expect(setGame(lobby('narmast', ['a'], { rounds: 10 }), 'gissa-priset').rounds).toBe(10)
+  })
+})
+
+describe('omladdning hos värden', () => {
+  it('fortsätter med sparat tillstånd och fyller i fält som saknas', () => {
+    const state = startGame(lobby('gissa-priset', ['a', 'b']), ['a', 'b'], NOW)
+    const saved = JSON.parse(JSON.stringify({ state, secrets: null }))
+    delete saved.state.cards
+    expect(restoreHostState(saved)).toEqual({ state, secrets: null })
+  })
+
+  it('börjar om när datan är trasig eller ett kortspel saknar sin hemliga data', () => {
+    expect(restoreHostState(null)).toBeNull()
+    expect(restoreHostState({ state: { phase: 1 } })).toBeNull()
+    const playing = { ...initialState('narmast'), phase: 'playing' }
+    expect(restoreHostState({ state: playing, secrets: null })).toBeNull()
   })
 })
