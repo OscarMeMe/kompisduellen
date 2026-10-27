@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
+import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import type { RevealViewProps } from '@/components/lobby/types'
-import { formatExactSek, formatSek } from '@/lib/belopp'
+import { formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
@@ -48,27 +49,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
       <RoundBadge state={state} />
 
       {/* Priset och poängen först, sedan resultatlistan och sist faktatexten, så att det viktigaste syns direkt på mobilen. */}
-      <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>
-          <span className="min-w-0 text-left">
-            <span className="block font-bold text-balance">{item?.name}</span>
-            {item && <span className="block text-sm font-semibold text-primary">År {item.year}</span>}
-          </span>
-        </div>
-        <p className="mt-3 text-sm font-semibold text-muted-foreground sm:mt-4">Rätt pris</p>
-        <p
-          className={cn(
-            'font-heading text-4xl font-bold text-balance transition-all duration-500 sm:text-6xl',
-            revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
-          )}
-        >
-          {formatSek(result.target)}
-        </p>
-        {/* Poängen räknas mot priset i hela kronor, men det exakta priset står under. */}
-        {revealed && item && item.priceSek !== result.target && (
-          <p className="text-sm font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
-        )}
+      <PriceAnswerCard item={item} target={result.target} revealed={revealed}>
         {revealed && (
           <p className="mt-2 text-lg font-bold sm:mt-4">
             {myPoints === undefined
@@ -78,7 +59,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
                 : `Du fick ${myPoints} poäng`}
           </p>
         )}
-      </div>
+      </PriceAnswerCard>
 
       {revealed && (
         <ul className="space-y-2">
@@ -108,11 +89,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         </ul>
       )}
 
-      {revealed && item && (
-        <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-soft animate-in fade-in sm:p-6 sm:text-base">
-          {item.fact}
-        </p>
-      )}
+      {revealed && item && <PriceFact item={item} />}
 
       <RevealFooter
         state={state}

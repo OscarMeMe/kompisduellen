@@ -62,12 +62,13 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `match.ts`: matchflödet som är gemensamt för alla spel (rundor, gissningar, poäng, topplistan). Rena funktioner
   - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
-  - `prisdata.ts`: sakerna i Gissa priset (pris, fakta, källa och ibland en bild). Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
+  - `prisdata.ts`: typen `PriceItem` och `findPriceItem`. Själva sakerna i Gissa priset (pris, fakta, källa och ibland en bild) ligger i `prisdata.json`. Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
   - `hojdpunkter.ts`: höjdpunkterna efter en match (fullträff, längst ifrån, avgjorde i sista rundan)
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
+  - `granskning.ts`: reglerna för granskningssidan (omdömen, flytt från inkorgen, export). Rena funktioner
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
@@ -95,3 +96,10 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
 | `/profil` | Profil |
+| `/granska` | Granskning av frågorna i Gissa priset. Bara i utvecklingsläge (`npm run dev`), byggs aldrig in i sajten |
+
+## Granskning av Gissa priset
+
+- `/granska` finns bara med `npm run dev`. Den visar frågorna med spelets egna kort (`PriceQuestionCard`, `PriceAnswerCard`) och sparar omdömen via `vite-plugin-granska.ts`, som bara körs av dev-servern.
+- Nya frågor läggs i `inkorg.json` i projektroten (en lista med samma fält som `PriceItem`). "Godkänd" flyttar en inkorgsfråga till slutet av `src/lib/prisdata.json`, och "Ta bort" tar bort frågan ur filen där den ligger.
+- Omdömen och kommentarer sparas i `granskning.json`. `inkorg.json` och `granskning.json` står i `.gitignore` och får aldrig committas.

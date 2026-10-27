@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { CreateLobbyPage } from '@/pages/CreateLobbyPage'
@@ -8,6 +9,12 @@ import { LobbyPage } from '@/pages/LobbyPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { ResultsPage } from '@/pages/ResultsPage'
+
+// Granskningen av Gissa priset finns bara i utvecklingsläge. I produktionsbygget blir villkoret false,
+// så sidan och dess kod byggs aldrig in i sajten.
+const ReviewPage = import.meta.env.DEV
+  ? lazy(() => import('@/pages/ReviewPage').then((m) => ({ default: m.ReviewPage })))
+  : null
 
 export default function App() {
   return (
@@ -20,6 +27,16 @@ export default function App() {
         <Route path="spel/:code" element={<GamePage />} />
         <Route path="resultat/:code" element={<ResultsPage />} />
         <Route path="profil" element={<ProfilePage />} />
+        {ReviewPage && (
+          <Route
+            path="granska"
+            element={
+              <Suspense>
+                <ReviewPage />
+              </Suspense>
+            }
+          />
+        )}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
