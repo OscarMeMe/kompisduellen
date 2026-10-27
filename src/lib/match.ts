@@ -1,14 +1,30 @@
-// Matchflödet för gissningsspelen, plus lobbyns topplista.
-// Alla spel går till på samma sätt: alla gissar ett tal på tid, sedan avslöjas svaret.
-// Det som skiljer spelen åt (tider, giltiga gissningar och poäng) finns i spelregler.ts.
+// Matchflödet för alla spel, plus lobbyns topplista.
+// Gissningsspelen går till på samma sätt: alla gissar ett tal på tid, sedan avslöjas svaret.
+// Det som skiljer dem åt (tider, giltiga gissningar och poäng) finns i spelregler.ts.
+// Kortspelen (t.ex. Kortkaos) har fasen 'playing' och följer rundflödet i kort.ts. Värden har då
+// också hemlig data (CardSecrets) som aldrig skickas ut, så värdens funktioner tar och ger HostState.
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
 import { findGame } from '@/lib/games'
-import { rulesFor } from '@/lib/spelregler'
+import {
+  advanceCardReveal,
+  cardDeadline,
+  cardMove,
+  cardPresence,
+  startCardMatch,
+  type CardGameRules,
+  type CardHost,
+  type CardMove,
+  type CardSecrets,
+  type CardTable,
+} from '@/lib/kort'
+import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 
+// Antal rundor att välja mellan i gissningsspelen. Kortspelen har egna (roundOptionsFor).
 export const ROUND_OPTIONS = [3, 5, 10] as const
+const DEFAULT_ROUNDS = 5
 
-export type Phase = 'waiting' | 'guessing' | 'reveal' | 'finished'
+export type Phase = 'waiting' | 'guessing' | 'reveal' | 'playing' | 'finished'
 
 export type PlayerInfo = {
   name: string
@@ -58,6 +74,14 @@ export type GameState = {
   // Antal spelade matcher per spel, t.ex. { narmast: 2, 'gissa-priset': 1 }.
   gamesPlayed: Record<string, number>
   leaderboard: Record<string, LeaderboardEntry>
+  // Kortspelen: det alla får se av rundan. null i gissningsspelen.
+  cards: CardTable | null
+}
+
+// Värdens tillstånd: det som skickas ut till alla, och kortspelens hemliga data.
+export type HostState = {
+  state: GameState
+  secrets: CardSecrets | null
 }
 
 export type RankedPlayer = PlayerInfo & {
@@ -75,7 +99,7 @@ export function initialState(game = 'gissa-priset'): GameState {
   return {
     game,
     phase: 'waiting',
-    rounds: 5,
+    rounds: defaultRoundsFor(game),
     round: 0,
     deadline: null,
     guesses: {},
@@ -91,7 +115,16 @@ export function initialState(game = 'gissa-priset'): GameState {
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
+    cards: null,
   }
+}
+
+export function roundOptionsFor(game: string): readonly number[] {
+  return cardRulesFor(game)?.roundOptions ?? ROUND_OPTIONS
+}
+
+export function defaultRoundsFor(game: string): number {
+  return cardRulesFor(game)?.defaultRounds ?? DEFAULT_ROUNDS
 }
 
 // Har spelet tempoinställningar (svarstid och vem som går vidare efter facit)?
@@ -129,10 +162,12 @@ export function setRounds(state: GameState, rounds: number): GameState {
   return { ...state, rounds }
 }
 
-// Byter spel i väntrummet. Antal rundor, tempo och topplistan följer med.
+// Byter spel i väntrummet. Tempo och topplistan följer med, och antalet rundor om det nya spelet har
+// samma val att välja mellan. Annars blir det spelets förval.
 export function setGame(state: GameState, game: string): GameState {
   if (state.phase !== 'waiting' || state.game === game) return state
-  return { ...state, game }
+  const sameOptions = roundOptionsFor(game).join() === roundOptionsFor(state.game).join()
+  return { ...state, game, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
 }
 
 // Värdens tempoval i väntrummet. Svarstider som spelet inte erbjuder ignoreras.
@@ -174,8 +209,13 @@ export function canStart(game: string, playerCount: number): boolean {
 }
 
 export function startGame(state: GameState, onlineIds: string[], now: number): GameState {
-  if (state.phase !== 'waiting') return state
-  // Ny match: bara de som är med just nu, alla börjar på noll.
+  const ready = matchPlayers(state, onlineIds)
+  return ready ? startRound(ready, 1, now) : state
+}
+
+// Ny match: bara de som är med just nu, alla börjar på noll. null om matchen inte kan starta.
+function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
+  if (state.phase !== 'waiting') return null
   const players: Record<string, PlayerInfo> = {}
   const scores: Record<string, number> = {}
   for (const id of onlineIds) {
@@ -185,12 +225,8 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
     }
   }
   const count = Object.keys(players).length
-  if (!canStart(state.game, count)) return state
-  return startRound(
-    { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1 },
-    1,
-    now,
-  )
+  if (!canStart(state.game, count)) return null
+  return { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1 }
 }
 
 export function isValidGuess(game: string, value: number): boolean {
@@ -303,6 +339,7 @@ export function backToWaiting(state: GameState): GameState {
     matchRounds: [],
     itemId: null,
     practice: false,
+    cards: null,
   }
 }
 
@@ -328,4 +365,66 @@ export function rankLeaderboard(state: GameState): RankedEntry[] {
     ...entry,
     place: 1 + list.filter((other) => other.wins > entry.wins).length,
   }))
+}
+
+// Värdens funktioner för alla spel. Gissningsspelen går vidare till funktionerna ovan precis som
+// förut. Kortspelen följer kort.ts. activeIds = spelarna som är med (online eller nyss tappat nätet).
+
+type Random = () => number
+
+// Kör ett steg i ett kortspel. Tar matchen slut läggs den in i topplistan och hemligheterna släpps.
+function withCards(host: HostState, step: (host: CardHost, rules: CardGameRules) => CardHost): HostState {
+  const rules = cardRulesFor(host.state.game)
+  if (!rules || !host.secrets || host.state.phase !== 'playing') return host
+  const next = step({ state: host.state, secrets: host.secrets }, rules)
+  if (next.state === host.state && next.secrets === host.secrets) return host
+  if (next.state.phase === 'finished') return { state: finishMatch(next.state), secrets: null }
+  return next
+}
+
+export function hostStart(host: HostState, onlineIds: string[], now: number, random: Random = Math.random): HostState {
+  const rules = cardRulesFor(host.state.game)
+  if (!rules) {
+    const state = startGame(host.state, onlineIds, now)
+    return state === host.state ? host : { state, secrets: null }
+  }
+  const ready = matchPlayers(host.state, onlineIds)
+  return ready ? startCardMatch(ready, rules, now, random) : host
+}
+
+export function hostDeadline(
+  host: HostState,
+  now: number,
+  deadline: number,
+  activeIds: string[],
+  random: Random = Math.random,
+): HostState {
+  if (host.state.phase === 'playing') {
+    return withCards(host, (cards, rules) => cardDeadline(cards, rules, now, deadline, activeIds, random))
+  }
+  const state = handleDeadline(host.state, now, deadline)
+  return state === host.state ? host : { ...host, state }
+}
+
+export function hostAdvance(host: HostState, now: number, round: number, activeIds: string[]): HostState {
+  if (host.state.phase === 'playing') {
+    return withCards(host, (cards, rules) => advanceCardReveal(cards, rules, now, round, activeIds))
+  }
+  const state = advanceFromReveal(host.state, now, round)
+  return state === host.state ? host : { ...host, state }
+}
+
+export function hostMove(
+  host: HostState,
+  playerId: string,
+  move: CardMove,
+  activeIds: string[],
+  now: number,
+  random: Random = Math.random,
+): HostState {
+  return withCards(host, (cards, rules) => cardMove(cards, rules, playerId, move, activeIds, now, random))
+}
+
+export function hostPresence(host: HostState, activeIds: string[], now: number, random: Random = Math.random): HostState {
+  return withCards(host, (cards, rules) => cardPresence(cards, rules, activeIds, now, random))
 }

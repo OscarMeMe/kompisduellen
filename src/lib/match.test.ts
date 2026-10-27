@@ -8,9 +8,15 @@ import {
   everyoneHasGuessed,
   guessSecondsFor,
   handleDeadline,
+  hostAdvance,
+  hostDeadline,
+  hostMove,
+  hostPresence,
+  hostStart,
   initialState,
   nextRound,
   resolveRound,
+  roundOptionsFor,
   setGame,
   setTempo,
   startGame,
@@ -184,5 +190,28 @@ describe('start och testläge', () => {
     expect(state.matchRounds[1].guesses).toEqual({ a: 5 })
     const fresh = startGame(backToWaiting(nextRound(state, NOW)), ['a', 'b'], NOW)
     expect(fresh.matchRounds).toEqual([])
+  })
+})
+
+describe('värdens funktioner för gissningsspelen', () => {
+  it('startar och avslutar rundor precis som förut, utan hemlig data', () => {
+    const state = lobby('narmast', ['a', 'b'])
+    const host = hostStart({ state, secrets: null }, ['a', 'b'], NOW)
+    expect(host).toEqual({ state: startGame(state, ['a', 'b'], NOW), secrets: null })
+    const resolved = hostDeadline(host, host.state.deadline!, host.state.deadline!, ['a', 'b'])
+    expect(resolved.state.phase).toBe('reveal')
+    expect(hostAdvance(resolved, NOW, 1, ['a', 'b']).state.round).toBe(2)
+  })
+
+  it('ignorerar kortdrag och närvaro i ett gissningsspel', () => {
+    const host = hostStart({ state: lobby('narmast', ['a', 'b']), secrets: null }, ['a', 'b'], NOW)
+    expect(hostMove(host, 'a', { type: 'done' }, ['a', 'b'], NOW)).toBe(host)
+    expect(hostPresence(host, ['a'], NOW)).toBe(host)
+  })
+
+  it('behåller 3, 5 och 10 rundor med 5 som förval', () => {
+    expect(initialState('narmast').rounds).toBe(5)
+    expect(roundOptionsFor('gissa-priset')).toEqual([3, 5, 10])
+    expect(setGame(lobby('narmast', ['a'], { rounds: 10 }), 'gissa-priset').rounds).toBe(10)
   })
 })
