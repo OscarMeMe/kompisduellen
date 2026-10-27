@@ -19,13 +19,16 @@ export type PriceItem = {
   priceSek: number
   fact: string
   source: string
+  image?: string
+  imageCredit?: string
+  imageSource?: string
 }
 
 export const PRICE_ITEMS: PriceItem[] = [
   {
     id: 'bitcoinpizza',
     emoji: '🍕',
-    name: 'Två pizzor som köptes med bitcoin år 2010',
+    name: 'Två pizzor som köptes med bitcoin',
     year: 2010,
     clue: 'Betalades med bitcoin. Gissa vad betalningen var värd då.',
     priceSek: 320,
@@ -41,6 +44,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 440_000,
     fact: 'Ropades in på en auktion i Sapporo i maj 2019 för 5 miljoner yen.',
     source: 'https://www.dailysabah.com/life/2019/05/24/2-japanese-melons-sell-for-record-45500',
+    image: '/prisbilder/meloner.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Half_cut_of_Yubari_melon.JPG',
   },
   {
     id: 'among-us-nugget',
@@ -112,6 +117,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4_800,
     fact: 'Volvo satte samma pris som för sin allra första bil 1927, trots att PV444 hade både självbärande kaross och laminerad vindruta.',
     source: 'https://www.volvocars.com/se/cars/legacy-models/pv444/',
+    image: '/prisbilder/volvo-pv444-1944.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:WOV24_07_-_Volvo_PV444.jpg',
   },
   {
     id: 'barnbidrag-1948',
@@ -162,6 +169,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 0.50,
     fact: 'För en enda krona kunde man köpa två Piggelin när glassen var ny.',
     source: 'https://www.allas.se/noje/glassnostalgi-vet-du-vilken-glass-som-fyller-50-i-ar/8361528',
+    image: '/prisbilder/piggelin-1972.webp',
+    imageCredit: 'Foto: Catasa, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Piggelin.JPG',
   },
   {
     id: 'bigmac-1973',
@@ -172,6 +182,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4.75,
     fact: 'Restaurangen skalade och skar själv potatisen till pommes frites i källaren.',
     source: 'https://www.mcdonalds.com/se/sv-se/om-oss/var-historia.html',
+    image: '/prisbilder/bigmac-1973.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Big_Mac_hamburger.jpg',
   },
   {
     id: 'ikea-lack-1979',
@@ -212,6 +224,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 30_000,
     fact: 'Den vägde runt 600 gram och batteriet räckte till ungefär en halvtimmes samtal.',
     source: 'https://www.ericsson.com/en/about-us/history/changing-the-world/world-leadership/hotline',
+    image: '/prisbilder/ericsson-hotline-1989.webp',
+    imageCredit: 'Foto: Anton Merlina Bonnafous, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:NMT450-Ericsson-Hotline-NH97.jpg',
   },
   {
     id: 'triss-tv-vinst-1994',
@@ -332,6 +347,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 6_600_000,
     fact: 'Henry Ford-museet betalade 905 000 amerikanska dollar för datorn, som fortfarande fungerade.',
     source: 'https://www.rte.ie/news/2014/1023/654258-apple-bonhams/',
+    image: '/prisbilder/apple-ett-auktion.webp',
+    imageCredit: 'Foto: Maksym Kozlenko, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:2019-08-04_Apple_I_computer.jpg',
   },
   {
     id: 'indiana-jones-hatt',
@@ -372,6 +390,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5,
     fact: 'Premiäråret hade deltagandet varit gratis, men redan nästa år infördes en startavgift.',
     source: 'https://www.svt.se/nyheter/lokalt/dalarna/prislappen-for-vasaloppet-valdigt-dyrt-for-att-gora-nagot-halsosamt',
+    image: '/prisbilder/vasaloppet-1923.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Mora-Nisse_Vasaloppet_1953_001.jpg',
   },
   {
     id: 'kaffe-stockholm-1930',
@@ -452,6 +472,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_200,
     fact: 'Tidningen beskrev Vespan som dyr och uppgav att den vägde 72 kilo.',
     source: 'https://www.aef.se/Amatortidningar/Teknik_for_alla/1950/TfA_1950-11.pdf',
+    image: '/prisbilder/vespa-1950.webp',
+    imageCredit: 'Foto: Al*from*Lig, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Vespa_125_del_1950.jpg',
   },
   {
     id: 'getingen-scooter-1950',
@@ -462,16 +485,6 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 1_950,
     fact: 'Getingen presenterades som Sveriges första seriebyggda scooter och var billigare än den italienska Vespan.',
     source: 'https://www.aef.se/Amatortidningar/Teknik_for_alla/1950/TfA_1950-11.pdf',
-  },
-  {
-    id: 'ikea-lovet-1955',
-    emoji: '🍃',
-    name: 'Ikeas lövformade soffbord Lövet',
-    year: 1955,
-    clue: 'Ursprungligt pris enligt Ikea Museum',
-    priceSek: 45,
-    fact: 'Bordet hade jakaranda i skivan och mässingsskodda fötter, men kunde ändå packas platt.',
-    source: 'https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/lovet-soffbord-1956/',
   },
   {
     id: 'tv-apparat-1956',
@@ -492,6 +505,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 12_600,
     fact: 'De första kundleveranserna började i månadsskiftet februari–mars, och bilen fanns då bara med fyra dörrar.',
     source: 'https://news.cision.com/se/volvo-car-sverige/r/volvo-skonhet-med-mytologisk-status-fyller-50-ar%2Cc4197219',
+    image: '/prisbilder/volvo-amazon-1957.webp',
+    imageCredit: 'Foto: Berthold Werner, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Volvo_Amazon_BW_2016-09-03_13-33-04.jpg',
   },
   {
     id: 'beatles-karlstad-1963',
@@ -514,16 +530,6 @@ export const PRICE_ITEMS: PriceItem[] = [
     source: 'https://www.riksdagen.se/sv/dokument-och-lagar/dokument/utlatande/andra-lagutskottets-utlatande-nr-15-ar-1961_er10l2u15/html/',
   },
   {
-    id: 'ikea-poem-1976',
-    emoji: '🪑',
-    name: 'Ikeas fåtölj Poem',
-    year: 1976,
-    clue: 'Ursprungligt pris när fåtöljen lanserades',
-    priceSek: 490,
-    fact: 'Den japanske formgivaren Noboru Nakamuras fåtölj blev föregångaren till Poäng.',
-    source: 'https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/poem-fatolj-1976/',
-  },
-  {
     id: 'ikea-klippan-1979',
     emoji: '🛋️',
     name: 'Ikeas soffa Klippan',
@@ -542,6 +548,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 1_300,
     fact: 'För 1 295 kronor fick man två hörlursuttag och en orange knapp för att prata genom hörlurarna.',
     source: 'https://www.tekniskamuseet.se/digital-museum/teks0047220/',
+    image: '/prisbilder/sony-walkman-1980.webp',
+    imageCredit: 'Foto: Anna Gerdén, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Walkman_TPS-L2.jpg',
   },
   {
     id: 'springsteen-ullevi-1985',
@@ -564,16 +573,6 @@ export const PRICE_ITEMS: PriceItem[] = [
     source: 'https://www.svd.se/a/9fe6d96d-6026-3ed4-91ae-568a75108fee/i-karamellkungens-rike',
   },
   {
-    id: 'atari-lynx-1990',
-    emoji: '🕹️',
-    name: 'En Atari Lynx med California Games',
-    year: 1990,
-    clue: 'Annonserat svenskt kampanjpris i maj',
-    priceSek: 1_790,
-    fact: 'Priset sänktes till 1 789 kronor redan ungefär en månad efter den svenska lanseringen.',
-    source: 'https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/',
-  },
-  {
     id: 'game-boy-1990',
     emoji: '🎮',
     name: 'En Nintendo Game Boy',
@@ -582,16 +581,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 795,
     fact: 'Game Boy kostade ungefär hälften så mycket som konkurrenten Atari Lynx under hösten.',
     source: 'https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/',
-  },
-  {
-    id: 'ikea-antilop-1991',
-    emoji: '👶',
-    name: 'Ikeas barnstol Antilop',
-    year: 1991,
-    clue: 'Ursprungligt pris enligt Ikea Museum',
-    priceSek: 99,
-    fact: 'Stolens löstagbara ben gjorde den lätt att transportera.',
-    source: 'https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/antilop-barnstol-1991/',
+    image: '/prisbilder/game-boy-1990.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Game-Boy-Original.jpg',
   },
   {
     id: 'bingolott-1991',
@@ -632,6 +623,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5_000,
     fact: 'Från lanseringspriset 4 995 kronor föll priset till 2 495 kronor redan i augusti.',
     source: 'https://www.aftonbladet.se/nojesbladet/spela/a/m6rb00/priset-pa-xbox-halverat-sedan-i-mars',
+    image: '/prisbilder/xbox-2002.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Xbox-console.jpg',
   },
   {
     id: 'nintendo-wii-2006',
@@ -642,6 +635,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_300,
     fact: 'De första hundra köparna betalade 2 295 kronor, och mannen först i kön hade väntat över en vecka.',
     source: 'https://www.gamereactor.se/wiipremiar-i-stockholm-9221/',
+    image: '/prisbilder/nintendo-wii-2006.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Wii-console.jpg',
   },
   {
     id: 'x2000-stockholm-malmo-2007',
@@ -652,6 +647,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 95,
     fact: 'SJ marknadsförde en halv miljon billiga X2000-biljetter i vårkampanjen.',
     source: 'https://www.mynewsdesk.com/se/sj/pressreleases/sj-rear-ut-en-halv-miljon-x-2000-biljetter-stockholm-malmoe-foer-95-kronor-330704',
+    image: '/prisbilder/x2000-stockholm-malmo-2007.webp',
+    imageCredit: 'Foto: Kabelleger / David Gubler, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:SJ_X2000_P%C3%A5lsboda_-_Hallsberg.jpg',
   },
   {
     id: 'spotify-premium-2008',
@@ -692,6 +690,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4_700,
     fact: 'Den billigaste modellen kostade 4 695 kronor när Ipad började säljas officiellt i Sverige.',
     source: 'https://www.macworld.se/article/1567193/har-ar-de-svenska-priserna-pa-ipad.html',
+    image: '/prisbilder/ipad-2010.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:IPad-WiFi-1stGen.jpg',
   },
   {
     id: 'netflix-2012',
@@ -794,16 +794,6 @@ export const PRICE_ITEMS: PriceItem[] = [
     source: 'https://www.statskontoret.se/contentassets/76ef92bbac76494b8f2175fe10bf8f4b/2023-49-fordjupad-analys-av-polismyndighetens-avgiftsbelagda-verksamhet.pdf',
   },
   {
-    id: 'sommarjobb-uppsala-2023',
-    emoji: '🧹',
-    name: 'En niondeklassares timlön på kommunalt sommarjobb',
-    year: 2023,
-    clue: 'Uppsala kommun, ungefärlig lön inklusive semesterersättning efter nian',
-    priceSek: 76,
-    fact: 'Lönen höjdes med ungefär 25 procent, men ändå sökte färre ungdomar än under pandemiåren.',
-    source: 'https://www.svt.se/nyheter/lokalt/uppsala/kommunen-chockhojde-lonen-farre-ungdomar-sokte-sommarjobb--mhqfe6',
-  },
-  {
     id: 'semla-to-go-2024',
     emoji: '🥯',
     name: 'En avlång Semla To Go',
@@ -812,16 +802,6 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 29,
     fact: 'Semlan fick en avlång form för att bli enklare att äta på språng.',
     source: 'https://www.mynewsdesk.com/se/7-eleven/pressreleases/infoer-fettisdagen-7-eleven-lanserar-semla-to-go-3298254',
-  },
-  {
-    id: 'tekniska-museet-2024',
-    emoji: '🤖',
-    name: 'En entrébiljett till Tekniska museet',
-    year: 2024,
-    clue: 'Sänkt vardagspris under hösten, utanför lov och helger',
-    priceSek: 100,
-    fact: 'Museet sänkte vardagspriset under sitt hundraårsjubileum för att göra besöken mer tillgängliga.',
-    source: 'https://www.mynewsdesk.com/se/tekniskamuseet/pressreleases/tekniska-museet-gaar-mot-stroemmen-saenker-entrepriset-till-100-kronor-3347877',
   },
   {
     id: 'brevporto-2025',
@@ -916,7 +896,7 @@ export const PRICE_ITEMS: PriceItem[] = [
   {
     id: 'hundskatt-bjornlunda-1908',
     emoji: '🐕',
-    name: 'Den beslutade hundskatten per hund i Björnlunda',
+    name: 'Hundskatten per hund i Björnlunda',
     year: 1908,
     clue: 'Kommunalstämmans beslut i oktober',
     priceSek: 3,
@@ -946,7 +926,7 @@ export const PRICE_ITEMS: PriceItem[] = [
   {
     id: 'tvattmaskin-mora-1942',
     emoji: '🧺',
-    name: 'Familjen Börjes elektriska tvättmaskin i Mora',
+    name: 'En elektrisk tvättmaskin till en familj i Mora',
     year: 1942,
     clue: 'Familjens köp beskrivet av nioårige Börje för Nordiska museet',
     priceSek: 525,

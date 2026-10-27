@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
+import { track } from '@/lib/statistik'
 import { supabase } from '@/lib/supabase'
 import type { Player } from '@/lib/player'
 import {
@@ -50,10 +51,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const channelRef = useRef<RealtimeChannel | null>(null)
   const stateRef = useRef<GameState>(state)
   const onlineRef = useRef<OnlinePlayer[]>([])
+  // När matchen startade (ms), för statistiken.
+  const matchStartRef = useRef(0)
+  // Övriga spelare: har vi räknat att vi gick med i lobbyn?
+  const joinTrackedRef = useRef(false)
 
   // Värden: uppdatera lokalt och skicka ut till alla.
   const publish = useCallback((next: GameState) => {
-    if (next === stateRef.current) return
+    const prev = stateRef.current
+    if (next === prev) return
+    trackMatch(prev, next, matchStartRef)
     stateRef.current = next
     setState(next)
     void channelRef.current?.send({
@@ -112,6 +119,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       stateRef.current = next
       setState(next)
       setReceived(true)
+      if (!joinTrackedRef.current) {
+        joinTrackedRef.current = true
+        track('lobby_gick_med', { spel: next.game })
+      }
       setClockOffset(Date.now() - sentAt)
     })
 
@@ -186,7 +197,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (isHost) publish(setRounds(stateRef.current, rounds))
       },
       setGame: (game: string) => {
-        if (isHost && findGame(game)?.playable) publish(setGame(stateRef.current, game))
+        if (!isHost || !findGame(game)?.playable) return
+        const from = stateRef.current.game
+        const next = setGame(stateRef.current, game)
+        if (next.game !== from) track('bytte_spel', { fran_spel: from, till_spel: next.game })
+        publish(next)
       },
       setTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => {
         if (isHost) publish(setTempo(stateRef.current, tempo))
@@ -209,11 +224,30 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (isHost) publish(advanceFromReveal(stateRef.current, Date.now(), round))
       },
       playAgain: () => {
-        if (isHost) publish(backToWaiting(stateRef.current))
+        if (!isHost) return
+        const next = backToWaiting(stateRef.current)
+        if (next !== stateRef.current) track('spelade_igen', { spel: next.game })
+        publish(next)
       },
     }),
     [isHost, me, publish],
   )
 
   return { status, state, online, clockOffset, actions }
+}
+
+// Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.
+function trackMatch(prev: GameState, next: GameState, matchStart: { current: number }) {
+  const props = {
+    spel: next.game,
+    antal_spelare: Object.keys(next.players).length,
+    antal_rundor: next.rounds,
+  }
+  if (prev.phase === 'waiting' && next.phase === 'guessing') {
+    matchStart.current = Date.now()
+    track('match_startad', props)
+  } else if (prev.phase !== 'finished' && next.phase === 'finished') {
+    const seconds = matchStart.current ? Math.round((Date.now() - matchStart.current) / 1000) : 0
+    track('match_avslutad', { ...props, langd_sekunder: seconds })
+  }
 }
