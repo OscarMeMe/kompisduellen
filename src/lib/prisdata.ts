@@ -91,6 +91,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 25,
     fact: 'Givarens namn och plåtens nummer skrevs in i Kopparboken, och insamlingen bekostade över 3 000 plåtar.',
     source: 'https://stockholmskallan.stockholm.se/post/34600',
+    image: '/prisbilder/stadshusplat-1920.webp',
+    imageCredit: 'Foto: Frankie Fouganthin, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Stockholm_City_Hall_tower_in_2020.jpg',
   },
   {
     id: 'radiolicens-1925',
@@ -198,6 +201,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 78,
     fact: 'Ingvar Kamprad ville pressa priset till 75 kronor, men det första försäljningspriset blev tre kronor högre.',
     source: 'https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/lack-sidobord-1979/',
+    image: '/prisbilder/ikea-lack-1979.webp',
+    imageCredit: 'Foto: Juhan Sonin, CC BY 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:IKEA_Lack.jpg',
   },
   {
     id: 'biobiljett-1982',
@@ -251,6 +257,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5_500,
     fact: 'Paketet kostade 5 495 kronor och inkluderade 600 megabyte mobildata.',
     source: 'https://www.mobil.se/nyheter/telias-kontantkort-ger-iphone-utan-bindningstid/120450',
+    image: '/prisbilder/iphone-kontantkort-2008.webp',
+    imageCredit: 'Foto: Yutaka Tsutano, CC BY 2.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:IPhone_and_iPhone_3G_(Yutaka_Tsutano).jpg',
   },
   {
     id: 'volvo-zlatan-2014',
@@ -261,6 +270,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 520_000,
     fact: 'Bara 150 exemplar tillverkades, med bland annat dekaler föreställande Zlatans namnteckning.',
     source: 'https://www.mynewsdesk.com/se/kvdbil/pressreleases/zlatanbilen-paa-auktion-1000478',
+    image: '/prisbilder/volvo-zlatan-2014.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:%2714_Volvo_XC70_(MIAS_%2714).jpg',
   },
   {
     id: 'ikea-cavelli-2022',
@@ -301,6 +312,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5_400_000,
     fact: 'Den svenskbyggda gitarren från tv-showen 1968 såldes för 625 000 amerikanska dollar inklusive provision.',
     source: 'https://www.guitarplayer.com/news/elvis-presleys-comeback-special-hagstrom-viking-ii-sells-for-dollar625000-at-auction',
+    image: '/prisbilder/elvis-hagstrom.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Halvakustisk_guitar_-_Hagstr%C3%B8m_Viking.JPG',
   },
   {
     id: 'ringo-white-album',
@@ -341,6 +354,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_300_000,
     fact: 'Sandalerna från Apples tidiga år såldes tillsammans med en NFT för 218 750 amerikanska dollar.',
     source: 'https://www.wgbh.org/news/national/2022-11-15/steve-jobs-worn-out-birkenstocks-sell-for-218-000-at-auction',
+    image: '/prisbilder/steve-jobs-sandaler.webp',
+    imageCredit: 'Foto: Elmschrat, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Birkenstock_Arizona.jpg',
   },
   {
     id: 'apple-ett-auktion',
@@ -416,6 +432,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2.23,
     fact: 'Äggen prissattes per tjog, alltså tjugo stycken.',
     source: 'https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf',
+    image: '/prisbilder/tjugo-agg-1930.webp',
+    imageCredit: 'Foto: Salma kyari, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Local_hen_eggs.jpg',
   },
   {
     id: 'bjorkved-stockholm-1930',
@@ -509,6 +528,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 1_630,
     fact: 'Avbetalningsköpare betalade i undersökningarna ungefär 150–200 kronor mer än kontantköpare.',
     source: 'https://www.ifn.se/media/wdgpeobu/1967-tv-%C3%A4gandets-utveckling-i-sverige-1956-65-webb.pdf',
+    image: '/prisbilder/tv-apparat-1956.webp',
+    imageCredit: 'Foto: John Atherton, CC BY-SA 2.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Television_set_from_the_early_1950s_crop.jpg',
   },
   {
     id: 'volvo-amazon-1957',
@@ -532,6 +554,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 12,
     fact: 'Biljetterna kostade mellan 12 och 20 kronor, och Beatles spelade i ungefär 25 minuter.',
     source: 'https://www.gp.se/livsstil/varldens-gang/ja-jag-sag-beatles-i-karlstad.bfdbf8e0-da88-4330-ae21-be64a1d1ed65',
+    image: '/prisbilder/beatles-karlstad-1963.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:The_Beatles_i_H%C3%B6torgscity_1963.jpg',
   },
   {
     id: 'studiebidrag-1964',
@@ -562,6 +586,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 890,
     fact: 'Den avtagbara klädseln skulle kunna få plats i en vanlig tvättmaskin.',
     source: 'https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/klippan-bladhult-soffa-1980/',
+    image: '/prisbilder/ikea-klippan-1979.webp',
+    imageCredit: 'Foto: MasterMarte, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Klippansofa.jpg',
   },
   {
     id: 'sony-walkman-1980',
@@ -585,6 +612,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 140,
     fact: 'Förköpsavgiften tillkom ovanpå biljettens grundpris.',
     source: 'https://bloggar.aftonbladet.se/wimp-bloggen/2012/03/hotorget-stockholm-en-historisk-bruce-springsteen-plats/',
+    image: '/prisbilder/springsteen-ullevi-1985.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Bruce_Springsteen_Born_in_the_U.S.A._Tour_photo_by_Rocky_Widner.jpg',
   },
   {
     id: 'losgodis-1985',
@@ -595,6 +624,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 7.9,
     fact: 'Ett kilo av samma godis skulle ha kostat 79 kronor.',
     source: 'https://www.svd.se/a/9fe6d96d-6026-3ed4-91ae-568a75108fee/i-karamellkungens-rike',
+    image: '/prisbilder/losgodis-1985.webp',
+    imageCredit: 'Foto: Tiia Monto, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Loose_candy.jpg',
   },
   {
     id: 'atari-lynx-1990',
@@ -647,6 +679,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5,
     fact: 'Korvpriset låg sedan kvar på samma nivå i 27 år.',
     source: 'https://www.tv4.se/artikel/4PQpCVMwXGSryXfEiiHaz2/korvprischocken-ikea-hoejer-priset',
+    image: '/prisbilder/ikea-korv-1995.webp',
+    imageCredit: 'Foto: AleWi, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Korv_med_br%C3%B6d_innan_bingolotto-s%C3%A4ndning.jpg',
   },
   {
     id: 'ikea-famnig-1998',
@@ -756,6 +791,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 70,
     fact: 'Räkmackan innehöll 140 gram räkor och var dyrare än teatercaféets tunnbrödsrulle.',
     source: 'https://www.evarydberg.se/wp-content/uploads/Meny2014-2.pdf',
+    image: '/prisbilder/rakmacka-fredriksdal-2014.webp',
+    imageCredit: 'Foto: Nord68, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:R%C3%A4kmacka_20130616.jpg',
   },
   {
     id: 'ahlgrens-bilar-fredriksdal-2014',
@@ -766,6 +804,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 23,
     fact: 'Godispåsen kostade lika mycket som en grillad korv med bröd på samma meny.',
     source: 'https://www.evarydberg.se/wp-content/uploads/Meny2014-2.pdf',
+    image: '/prisbilder/ahlgrens-bilar-fredriksdal-2014.webp',
+    imageCredit: 'Foto: Lokal_Profil, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Ahlgrens_bilar.jpg',
   },
   {
     id: 'kexchoklad-fredriksdal-2014',
@@ -776,6 +817,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 12,
     fact: 'Två Kexchoklad kostade nästan lika mycket som en halvliters Coca-Cola i teatercaféet.',
     source: 'https://www.evarydberg.se/wp-content/uploads/Meny2014-2.pdf',
+    image: '/prisbilder/kexchoklad-fredriksdal-2014.webp',
+    imageCredit: 'Foto: Lokal_Profil, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Kexchoklad,_1.jpg',
   },
   {
     id: 'teaterfilt-2014',
@@ -826,6 +870,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 110,
     fact: 'Barn under 110 centimeter gick in gratis, men åkattraktionerna ingick inte i entrépriset.',
     source: 'https://www.svt.se/nyheter/lokalt/vast/farre-besokare-i-somras-anda-hojer-liseberg-priserna',
+    image: '/prisbilder/liseberg-entre-2019.webp',
+    imageCredit: 'Foto: Ksordal, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Liseberg-IMG_5728.jpg',
   },
   {
     id: 'nationellt-id-kort-2022',
@@ -926,6 +973,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 740,
     fact: 'Drottningarna skickades bara som rekommenderade brev eftersom vanlig post ansågs ta för lång tid.',
     source: 'https://biodlarn.se/?cat=15',
+    image: '/prisbilder/bidrottning-carnica-2026.webp',
+    imageCredit: 'Foto: Levi Asay, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Apis_Mellifera_Carnica_Queen_Bee_in_the_hive.jpg',
   },
   {
     id: 'hoppborg-clown-2026',
@@ -936,6 +986,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 1_400,
     fact: 'Hoppborgen mäter 4,5 gånger fyra meter; en släpvagn kunde hyras till för ytterligare 200 kronor.',
     source: 'https://www.kalashyra.se/hoppborg',
+    image: '/prisbilder/hoppborg-clown-2026.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Bouncy.castle.arp.jpg',
   },
   {
     id: 'personlig-registreringsskylt-2026',
@@ -1106,6 +1158,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_000,
     fact: 'Bänkar och el kostade extra, och eget tält eller egna möbler fick inte tas med.',
     source: 'https://malmo.se/Uppleva-och-gora/Natur-och-parker/Katrinetorp-landeri/Lokaler-for-moten-och-konferenser.html',
+    image: '/prisbilder/vigselplats-katrinetorp-2026.webp',
+    imageCredit: 'Foto: Jorchr, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Katrinetorp,_Malm%C3%B6.jpg',
   },
   {
     id: 'vedugnsbakning-satila-2025',
