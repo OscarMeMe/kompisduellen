@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Check, Copy, Share2 } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import type { GameInfo } from '@/lib/games'
 import { copyInvite, inviteLink, shareInvite, shareMessage, type ShareResult } from '@/lib/inbjudan'
@@ -11,7 +10,7 @@ type InviteCardProps = {
   game: GameInfo
 }
 
-// Inbjudan till lobbyn: stor kod, QR-kod och knappar för att dela eller kopiera länken.
+// Inbjudan till lobbyn: kod, QR-kod och knappar för att dela eller kopiera länken.
 // Länken /lobby/KOD för med sig koden, så gästen slipper skriva den. QR-koden ritas här i appen
 // (qrcode.react), så länken skickas aldrig till någon extern tjänst.
 export function InviteCard({ code, game }: InviteCardProps) {
@@ -41,30 +40,31 @@ export function InviteCard({ code, game }: InviteCardProps) {
   }
 
   return (
-    <div className="flex min-w-0 flex-col items-center gap-4 rounded-lg border bg-card p-5 text-center shadow-soft sm:p-6">
-      <p className="text-sm font-semibold text-muted-foreground">
-        <Emoji emoji={game.emoji} className="text-base" /> {game.name} · Lobbykod
-      </p>
-      <p
-        className="font-heading text-6xl font-bold tracking-[0.2em] text-primary tabular-nums sm:text-7xl"
-        aria-label={`Lobbykod ${code.split('').join(' ')}`}
-      >
-        {code}
-      </p>
-      {/* marginSize ger den tysta vita zonen på 4 moduler runt koden som kameror behöver. */}
-      <div className="rounded-md border bg-white p-1">
-        <QRCodeSVG
-          value={link}
-          size={176}
-          marginSize={4}
-          level="M"
-          fgColor="#2b303b"
-          title={`QR-kod till lobby ${code}`}
-        />
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5">
+      {/* Kod och QR bredvid varandra, så att kortet tar lite plats på en mobil. */}
+      <div className="flex items-center gap-4">
+        {/* marginSize ger den tysta vita zonen på 4 moduler runt koden som kameror behöver. */}
+        <div className="shrink-0 rounded-md border bg-white p-1">
+          <QRCodeSVG
+            value={link}
+            size={128}
+            marginSize={4}
+            level="M"
+            fgColor="#2b303b"
+            title={`QR-kod till lobby ${code}`}
+          />
+        </div>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">Lobbykod</p>
+          <p
+            className="font-heading text-4xl font-bold tracking-[0.15em] text-primary tabular-nums min-[420px]:text-5xl sm:text-6xl"
+            aria-label={`Lobbykod ${code.split('').join(' ')}`}
+          >
+            {code}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Skanna, öppna länken eller skriv koden på sidan.</p>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Skanna QR-koden, öppna länken eller gå till sidan och skriv koden.
-      </p>
       {/* Texten får radbrytas, så att knapparna ryms även på en 320 px bred skärm. */}
       <div className="grid w-full gap-2 sm:grid-cols-2">
         <Button size="lg" className="h-auto min-h-13 whitespace-normal" onClick={shareLink}>
@@ -76,8 +76,8 @@ export function InviteCard({ code, game }: InviteCardProps) {
           Kopiera inbjudningslänk
         </Button>
       </div>
-      {/* Återkoppling som även skärmläsare får höra. */}
-      <p role="status" aria-live="polite" className="min-h-5 text-sm font-semibold text-accent-foreground">
+      {/* Återkoppling som även skärmläsare får höra. Tar ingen plats förrän något visas. */}
+      <p role="status" aria-live="polite" className="text-center text-sm font-semibold text-accent-foreground empty:hidden">
         {message}
       </p>
     </div>

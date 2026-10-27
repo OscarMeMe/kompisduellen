@@ -8,23 +8,39 @@ import { Button } from '@/components/ui/button'
 import type { GameInfo } from '@/lib/games'
 import { matchHighlights } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
-import { matchWinners, rankLeaderboard, rankPlayers, type GameState } from '@/lib/match'
+import { canStart, matchWinners, rankLeaderboard, rankPlayers, type GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 type FinishedViewProps = {
   game: GameInfo
   state: GameState
   isHost: boolean
-  onPlayAgain: () => void
+  // Hur många som är online just nu. En revansch kräver spelets minsta antal spelare.
+  onlineCount: number
+  // Revansch (och Testa igen efter ett solotest): samma spel och inställningar efter en nedräkning.
+  onRematch: () => void
+  // Tillbaka till väntrummet med samma grupp, t.ex. för att bjuda in kompisar efter ett solotest.
+  onToWaitingRoom: () => void
+  // Till väntrummet med spelvalet i bild.
+  onChangeGame: () => void
 }
 
-export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewProps) {
+export function FinishedView({
+  game,
+  state,
+  isHost,
+  onlineCount,
+  onRematch,
+  onToWaitingRoom,
+  onChangeGame,
+}: FinishedViewProps) {
   const ranked = rankPlayers(state)
   const highlights = matchHighlights(state)
   const best = state.cards ? bestCard(state.cards, matchWinners(state)) : null
   const bestPlayer = best ? state.players[best.player] : undefined
   // Kortspelen slutar i förtid om för få spelare är kvar.
   const endedEarly = state.round < state.rounds
+  const canRematch = canStart(state.game, onlineCount)
 
   return (
     <Wide>
@@ -41,8 +57,8 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
         <div className="space-y-1 rounded-lg border bg-lilac/40 p-4 text-center">
           <p className="font-heading font-bold">Testläge</p>
           <p className="text-sm">
-            Provomgången räknas inte i topplistan. Vill du spela med kompisar? Tryck på Spela igen och dela koden eller
-            länken i lobbyn, och starta när de är med.
+            Provomgången räknas inte i kvällens ställning. Vill du spela med kompisar? Tryck på Bjud in kompisar och
+            dela koden eller länken i lobbyn, och starta när de är med.
           </p>
         </div>
       )}
@@ -92,17 +108,41 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
         lastWinners={state.practice ? [] : matchWinners(state)}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3">
         {isHost ? (
-          <Button size="lg" className="sm:flex-1" onClick={onPlayAgain}>
-            Spela igen
-          </Button>
+          state.practice ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" className="sm:flex-1" onClick={onToWaitingRoom}>
+                Bjud in kompisar
+              </Button>
+              <Button size="lg" variant="outline" className="sm:flex-1" onClick={onRematch}>
+                Testa igen
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button size="lg" className="sm:flex-1" onClick={onRematch} disabled={!canRematch}>
+                  Revansch
+                </Button>
+                <Button size="lg" variant="outline" className="sm:flex-1" onClick={onChangeGame}>
+                  Byt spel
+                </Button>
+              </div>
+              {!canRematch && (
+                <p className="text-center text-sm text-muted-foreground">
+                  Revansch i {game.name} kräver minst {game.minPlayers} spelare, och några har lämnat lobbyn. Byt spel eller
+                  vänta på att de kommer tillbaka.
+                </p>
+              )}
+            </>
+          )
         ) : (
-          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm sm:flex-1">
-            Värden väljer nästa spel
+          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm">
+            Värden väljer nästa steg
           </p>
         )}
-        <Button asChild size="lg" variant="outline" className="sm:flex-1">
+        <Button asChild size="lg" variant="ghost">
           <Link to="/#spel">Tillbaka till alla spel</Link>
         </Button>
       </div>
