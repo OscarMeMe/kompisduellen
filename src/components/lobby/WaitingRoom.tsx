@@ -12,10 +12,10 @@ import {
   guessSecondsFor,
   hasTempoSettings,
   rankLeaderboard,
-  ROUND_OPTIONS,
+  roundOptionsFor,
   type GameState,
 } from '@/lib/match'
-import { rulesFor } from '@/lib/spelregler'
+import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 type WaitingRoomProps = {
@@ -42,6 +42,10 @@ export function WaitingRoom({
   onStart,
 }: WaitingRoomProps) {
   const rules = rulesFor(state.game)
+  // Kortspelen har egen beskrivning och poängförklaring.
+  const cardRules = cardRulesFor(state.game)
+  const howTo = cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
+  const scoringDetails = cardRules ? cardRules.scoringDetails : rules.scoringDetails
   const startable = canStart(state.game, online.length)
   const practice = startable && online.length === 1
 
@@ -104,7 +108,7 @@ export function WaitingRoom({
 
         <Choice
           label="Antal rundor"
-          options={ROUND_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+          options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
           selected={state.rounds}
           disabled={!isHost}
           onSelect={onSetRounds}
@@ -135,12 +139,12 @@ export function WaitingRoom({
         )}
 
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">{rules.howTo(guessSecondsFor(state))}</p>
+          <p className="text-sm text-muted-foreground">{howTo}</p>
           <details className="rounded-md bg-muted px-4 text-sm">
             {/* Hela raden är tryckbar, minst 44 px hög. */}
             <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så räknas poängen</summary>
             <ul className="list-disc space-y-1 pb-3 pl-5 text-muted-foreground">
-              {rules.scoringDetails.map((line) => (
+              {scoringDetails.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
@@ -161,7 +165,7 @@ export function WaitingRoom({
             </Button>
             {!startable && (
               <p className="text-center text-sm text-muted-foreground">
-                Minst {game.minPlayers} spelare behövs. Bjud in en kompis med koden ovan.
+                Minst {game.minPlayers} spelare behövs. Bjud in {game.minPlayers > 2 ? 'fler kompisar' : 'en kompis'} med koden ovan.
               </p>
             )}
           </div>
