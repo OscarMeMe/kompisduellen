@@ -7,6 +7,10 @@
 //   Gamla svenska vardagspriser anges som de var då, med decimaler vid behov (13 öre = 0.13).
 // fact: max en mening som visas när rätt svar avslöjas.
 // source: var uppgiften kommer ifrån, så att den går att dubbelkolla.
+// image: valfri bild av saken i public/prisbilder (webp, max 800 px bred). Utan bild visas emojin.
+//   Bara bilder från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels.
+// imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det.
+// imageSource: bildens sida, där licensen går att kontrollera.
 //
 // Lägg gärna till fler, men bara sådant som går att belägga med en källa.
 
@@ -19,6 +23,9 @@ export type PriceItem = {
   priceSek: number
   fact: string
   source: string
+  image?: string
+  imageCredit?: string
+  imageSource?: string
 }
 
 export const PRICE_ITEMS: PriceItem[] = [
@@ -41,6 +48,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 440_000,
     fact: 'Ropades in på en auktion i Sapporo i maj 2019 för 5 miljoner yen.',
     source: 'https://www.dailysabah.com/life/2019/05/24/2-japanese-melons-sell-for-record-45500',
+    image: '/prisbilder/meloner.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Half_cut_of_Yubari_melon.JPG',
   },
   {
     id: 'among-us-nugget',
@@ -112,6 +121,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4_800,
     fact: 'Volvo satte samma pris som för sin allra första bil 1927, trots att PV444 hade både självbärande kaross och laminerad vindruta.',
     source: 'https://www.volvocars.com/se/cars/legacy-models/pv444/',
+    image: '/prisbilder/volvo-pv444-1944.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:WOV24_07_-_Volvo_PV444.jpg',
   },
   {
     id: 'barnbidrag-1948',
@@ -162,6 +173,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 0.50,
     fact: 'För en enda krona kunde man köpa två Piggelin när glassen var ny.',
     source: 'https://www.allas.se/noje/glassnostalgi-vet-du-vilken-glass-som-fyller-50-i-ar/8361528',
+    image: '/prisbilder/piggelin-1972.webp',
+    imageCredit: 'Foto: Catasa, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Piggelin.JPG',
   },
   {
     id: 'bigmac-1973',
@@ -172,6 +186,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4.75,
     fact: 'Restaurangen skalade och skar själv potatisen till pommes frites i källaren.',
     source: 'https://www.mcdonalds.com/se/sv-se/om-oss/var-historia.html',
+    image: '/prisbilder/bigmac-1973.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Big_Mac_hamburger.jpg',
   },
   {
     id: 'ikea-lack-1979',
@@ -212,6 +228,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 30_000,
     fact: 'Den vägde runt 600 gram och batteriet räckte till ungefär en halvtimmes samtal.',
     source: 'https://www.ericsson.com/en/about-us/history/changing-the-world/world-leadership/hotline',
+    image: '/prisbilder/ericsson-hotline-1989.webp',
+    imageCredit: 'Foto: Anton Merlina Bonnafous, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:NMT450-Ericsson-Hotline-NH97.jpg',
   },
   {
     id: 'triss-tv-vinst-1994',
@@ -332,6 +351,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 6_600_000,
     fact: 'Henry Ford-museet betalade 905 000 amerikanska dollar för datorn, som fortfarande fungerade.',
     source: 'https://www.rte.ie/news/2014/1023/654258-apple-bonhams/',
+    image: '/prisbilder/apple-ett-auktion.webp',
+    imageCredit: 'Foto: Maksym Kozlenko, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:2019-08-04_Apple_I_computer.jpg',
   },
   {
     id: 'indiana-jones-hatt',
@@ -372,6 +394,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5,
     fact: 'Premiäråret hade deltagandet varit gratis, men redan nästa år infördes en startavgift.',
     source: 'https://www.svt.se/nyheter/lokalt/dalarna/prislappen-for-vasaloppet-valdigt-dyrt-for-att-gora-nagot-halsosamt',
+    image: '/prisbilder/vasaloppet-1923.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Mora-Nisse_Vasaloppet_1953_001.jpg',
   },
   {
     id: 'kaffe-stockholm-1930',
@@ -452,6 +476,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_200,
     fact: 'Tidningen beskrev Vespan som dyr och uppgav att den vägde 72 kilo.',
     source: 'https://www.aef.se/Amatortidningar/Teknik_for_alla/1950/TfA_1950-11.pdf',
+    image: '/prisbilder/vespa-1950.webp',
+    imageCredit: 'Foto: Al*from*Lig, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Vespa_125_del_1950.jpg',
   },
   {
     id: 'getingen-scooter-1950',
@@ -482,6 +509,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 12_600,
     fact: 'De första kundleveranserna började i månadsskiftet februari–mars, och bilen fanns då bara med fyra dörrar.',
     source: 'https://news.cision.com/se/volvo-car-sverige/r/volvo-skonhet-med-mytologisk-status-fyller-50-ar%2Cc4197219',
+    image: '/prisbilder/volvo-amazon-1957.webp',
+    imageCredit: 'Foto: Berthold Werner, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Volvo_Amazon_BW_2016-09-03_13-33-04.jpg',
   },
   {
     id: 'beatles-karlstad-1963',
@@ -522,6 +552,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 1_300,
     fact: 'För 1 295 kronor fick man två hörlursuttag och en orange knapp för att prata genom hörlurarna.',
     source: 'https://www.tekniskamuseet.se/digital-museum/teks0047220/',
+    image: '/prisbilder/sony-walkman-1980.webp',
+    imageCredit: 'Foto: Anna Gerdén, CC BY-SA 3.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Walkman_TPS-L2.jpg',
   },
   {
     id: 'springsteen-ullevi-1985',
@@ -552,6 +585,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 795,
     fact: 'Game Boy kostade ungefär hälften så mycket som konkurrenten Atari Lynx under hösten.',
     source: 'https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/',
+    image: '/prisbilder/game-boy-1990.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Game-Boy-Original.jpg',
   },
   {
     id: 'bingolott-1991',
@@ -592,6 +627,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 5_000,
     fact: 'Från lanseringspriset 4 995 kronor föll priset till 2 495 kronor redan i augusti.',
     source: 'https://www.aftonbladet.se/nojesbladet/spela/a/m6rb00/priset-pa-xbox-halverat-sedan-i-mars',
+    image: '/prisbilder/xbox-2002.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Xbox-console.jpg',
   },
   {
     id: 'nintendo-wii-2006',
@@ -602,6 +639,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 2_300,
     fact: 'De första hundra köparna betalade 2 295 kronor, och mannen först i kön hade väntat över en vecka.',
     source: 'https://www.gamereactor.se/wiipremiar-i-stockholm-9221/',
+    image: '/prisbilder/nintendo-wii-2006.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Wii-console.jpg',
   },
   {
     id: 'x2000-stockholm-malmo-2007',
@@ -612,6 +651,9 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 95,
     fact: 'SJ marknadsförde en halv miljon billiga X2000-biljetter i vårkampanjen.',
     source: 'https://www.mynewsdesk.com/se/sj/pressreleases/sj-rear-ut-en-halv-miljon-x-2000-biljetter-stockholm-malmoe-foer-95-kronor-330704',
+    image: '/prisbilder/x2000-stockholm-malmo-2007.webp',
+    imageCredit: 'Foto: Kabelleger / David Gubler, CC BY-SA 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:SJ_X2000_P%C3%A5lsboda_-_Hallsberg.jpg',
   },
   {
     id: 'spotify-premium-2008',
@@ -652,6 +694,8 @@ export const PRICE_ITEMS: PriceItem[] = [
     priceSek: 4_700,
     fact: 'Den billigaste modellen kostade 4 695 kronor när Ipad började säljas officiellt i Sverige.',
     source: 'https://www.macworld.se/article/1567193/har-ar-de-svenska-priserna-pa-ipad.html',
+    image: '/prisbilder/ipad-2010.webp',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:IPad-WiFi-1stGen.jpg',
   },
   {
     id: 'netflix-2012',
