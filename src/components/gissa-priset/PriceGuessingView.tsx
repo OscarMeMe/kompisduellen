@@ -60,7 +60,9 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3">Vad kostade det?</p>
+        <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3 sm:text-base">
+          Vad kostade det{item && <> år <span className="font-bold text-primary">{item.year}</span></>}?
+        </p>
         <h1 className="mx-auto mt-1 max-w-xl text-xl text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
         {item?.clue && (
           <p className="mx-auto mt-2 w-fit max-w-xl rounded-md bg-sky-soft px-4 py-1.5 text-sm font-semibold sm:mt-3">
