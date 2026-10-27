@@ -5,6 +5,7 @@ import { PlayerSetup } from '@/components/PlayerSetup'
 import { findGame, GAMES } from '@/lib/games'
 import { generateLobbyCode, markAsHost, requestPractice } from '@/lib/player'
 import { rulesFor } from '@/lib/spelregler'
+import { track } from '@/lib/statistik'
 
 export function CreateLobbyPage() {
   const [params] = useSearchParams()
@@ -38,6 +39,7 @@ export function CreateLobbyPage() {
           const code = generateLobbyCode()
           markAsHost(code, game.id)
           if (practice) requestPractice(code)
+          track('lobby_skapad', { spel: game.id })
           navigate(`/lobby/${code}`)
         }}
       />
