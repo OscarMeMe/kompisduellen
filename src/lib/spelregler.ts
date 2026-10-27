@@ -5,6 +5,7 @@
 
 import { priceRules } from '@/lib/gissa-priset'
 import type { CardGameRules } from '@/lib/kort'
+import { kortkaosRules } from '@/lib/kortkaos'
 import { narmastRules } from '@/lib/narmast'
 
 export type RoundOutcome = {
@@ -51,7 +52,9 @@ export function rulesFor(game: string): GameRules {
   return RULES[game] ?? narmastRules
 }
 
-const CARD_RULES: Record<string, CardGameRules> = {}
+const CARD_RULES: Record<string, CardGameRules> = {
+  kortkaos: kortkaosRules,
+}
 
 // Reglerna för ett kortspel, eller undefined om spelet är ett gissningsspel.
 export function cardRulesFor(game: string): CardGameRules | undefined {
