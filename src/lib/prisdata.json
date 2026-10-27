@@ -61,8 +61,8 @@
     "fact": "Givarens namn och plåtens nummer skrevs in i Kopparboken, och insamlingen bekostade över 3 000 plåtar.",
     "source": "https://stockholmskallan.stockholm.se/post/34600",
     "image": "/prisbilder/stadshusplat-1920.webp",
-    "imageCredit": "Foto: Frankie Fouganthin, CC BY-SA 4.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Stockholm_City_Hall_tower_in_2020.jpg"
+    "imageCredit": "Foto: Arild Vågen, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Stockholms_stadshus_February_2015.jpg"
   },
   {
     "id": "radiolicens-1925",
@@ -72,7 +72,10 @@
     "clue": "Årsavgiften för en vanlig radiomottagare",
     "priceSek": 12,
     "fact": "Redan året därpå sänktes avgiften till tio kronor, en nivå som sedan stod sig i ett kvarts sekel.",
-    "source": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/proposition/kungl-majts-proposition-nr-75_ec3075/html/"
+    "source": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/proposition/kungl-majts-proposition-nr-75_ec3075/html/",
+    "image": "/prisbilder/radiolicens-1925.webp",
+    "imageCredit": "Foto: Joe Haupt, CC BY-SA 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Vintage_1920s-Era_Crystal_Radio_With_Grewol_Detector_And_ICA_Radio_Tuner_(15401164517).jpg"
   },
   {
     "id": "mjolk-1930",
@@ -114,7 +117,10 @@
     "clue": "Premiärturen med svenska Aero",
     "priceSek": 1100,
     "fact": "Resan kostade 1 095 kronor och krävde fyra mellanlandningar samt en övernattning i Marseille.",
-    "source": "https://www.tv4.se/artikel/4yAl3RN2zpadT7HDA8g7Mo/70-ar-sedan-foersta-charterresan-fran-sverige-fyra-mellanlandningar"
+    "source": "https://www.tv4.se/artikel/4yAl3RN2zpadT7HDA8g7Mo/70-ar-sedan-foersta-charterresan-fran-sverige-fyra-mellanlandningar",
+    "image": "/prisbilder/mallorca-charter-1955.webp",
+    "imageCredit": "Foto: Otto Domes, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Beach_of_Palma_de_Mallorca.jpg"
   },
   {
     "id": "glass-88an-1964",
@@ -134,7 +140,10 @@
     "clue": "Introduktionspriset när kortet infördes i oktober",
     "priceSek": 50,
     "fact": "Det nya kortet gav ett gemensamt månadspris för hela trafikområdet och behöll samma pris till augusti 1975.",
-    "source": "https://runeberg.org/stkomkal/1976/0647.html"
+    "source": "https://runeberg.org/stkomkal/1976/0647.html",
+    "image": "/prisbilder/sl-manadskort-1971.webp",
+    "imageCredit": "Foto: SL C6, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:SL_C6_2701_vid_Ropsten.jpg"
   },
   {
     "id": "piggelin-1972",
@@ -169,10 +178,7 @@
     "clue": "Priset när bordet kom in i sortimentet",
     "priceSek": 78,
     "fact": "Ingvar Kamprad ville pressa priset till 75 kronor, men det första försäljningspriset blev tre kronor högre.",
-    "source": "https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/lack-sidobord-1979/",
-    "image": "/prisbilder/ikea-lack-1979.webp",
-    "imageCredit": "Foto: Juhan Sonin, CC BY 3.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:IKEA_Lack.jpg"
+    "source": "https://ikeamuseum.com/sv/utforska/historien-bakom-produkterna/lack-sidobord-1979/"
   },
   {
     "id": "biobiljett-1982",
@@ -282,7 +288,8 @@
     "fact": "Den svenskbyggda gitarren från tv-showen 1968 såldes för 625 000 amerikanska dollar inklusive provision.",
     "source": "https://www.guitarplayer.com/news/elvis-presleys-comeback-special-hagstrom-viking-ii-sells-for-dollar625000-at-auction",
     "image": "/prisbilder/elvis-hagstrom.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Halvakustisk_guitar_-_Hagstr%C3%B8m_Viking.JPG"
+    "imageCredit": "Foto: THOR, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Hagstrom_Guitar_Duo.jpg"
   },
   {
     "id": "ringo-white-album",
@@ -380,7 +387,8 @@
     "fact": "Premiäråret hade deltagandet varit gratis, men redan nästa år infördes en startavgift.",
     "source": "https://www.svt.se/nyheter/lokalt/dalarna/prislappen-for-vasaloppet-valdigt-dyrt-for-att-gora-nagot-halsosamt",
     "image": "/prisbilder/vasaloppet-1923.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Mora-Nisse_Vasaloppet_1953_001.jpg"
+    "imageCredit": "Foto: Andy Eick, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Vasaloppet_1965_3.jpg"
   },
   {
     "id": "kaffe-stockholm-1930",
@@ -390,7 +398,10 @@
     "clue": "Genomsnittligt butikspris enligt Skansens historiska prislista",
     "priceSek": 2.44,
     "fact": "Ett kilo kaffe kostade nästan två timmars lön för en genomsnittlig industriarbetare.",
-    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf"
+    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf",
+    "image": "/prisbilder/kaffe-stockholm-1930.webp",
+    "imageCredit": "Foto: Daniel Schwen, CC BY 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Coffee_Beans_macro_1.jpg"
   },
   {
     "id": "tjugo-agg-1930",
@@ -402,8 +413,7 @@
     "fact": "Äggen prissattes per tjog, alltså tjugo stycken.",
     "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf",
     "image": "/prisbilder/tjugo-agg-1930.webp",
-    "imageCredit": "Foto: Salma kyari, CC BY-SA 4.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Local_hen_eggs.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:6-Pack-Chicken-Eggs.jpg"
   },
   {
     "id": "bjorkved-stockholm-1930",
@@ -413,7 +423,10 @@
     "clue": "Genomsnittspris i Skansens sammanställning av vardagsvaror",
     "priceSek": 13.7,
     "fact": "Vedlasset kostade ungefär elva genomsnittliga industriarbetartimlöner.",
-    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf"
+    "source": "https://skansen.se/wp-content/uploads/2025/05/Lararhandledning-Stadsliv-2025.pdf",
+    "image": "/prisbilder/bjorkved-stockholm-1930.webp",
+    "imageCredit": "Foto: Dmitry Makeev, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Firewood_in_Russia.jpg"
   },
   {
     "id": "industriarbetarlon-1930",
@@ -488,8 +501,8 @@
     "fact": "Avbetalningsköpare betalade i undersökningarna ungefär 150–200 kronor mer än kontantköpare.",
     "source": "https://www.ifn.se/media/wdgpeobu/1967-tv-%C3%A4gandets-utveckling-i-sverige-1956-65-webb.pdf",
     "image": "/prisbilder/tv-apparat-1956.webp",
-    "imageCredit": "Foto: John Atherton, CC BY-SA 2.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Television_set_from_the_early_1950s_crop.jpg"
+    "imageCredit": "Foto: DogsRNice, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:1950s_RCA_Victor_at_the_Ohio_History_Center_June_2022.jpg"
   },
   {
     "id": "volvo-amazon-1957",
@@ -514,7 +527,7 @@
     "fact": "Biljetterna kostade mellan 12 och 20 kronor, och Beatles spelade i ungefär 25 minuter.",
     "source": "https://www.gp.se/livsstil/varldens-gang/ja-jag-sag-beatles-i-karlstad.bfdbf8e0-da88-4330-ae21-be64a1d1ed65",
     "image": "/prisbilder/beatles-karlstad-1963.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:The_Beatles_i_H%C3%B6torgscity_1963.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Beatles_Trenter_1963_(band_crop).jpg"
   },
   {
     "id": "studiebidrag-1964",
@@ -587,7 +600,8 @@
     "fact": "Game Boy kostade ungefär hälften så mycket som konkurrenten Atari Lynx under hösten.",
     "source": "https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/",
     "image": "/prisbilder/game-boy-1990.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Game-Boy-Original.jpg"
+    "imageCredit": "Foto: Raimond Spekking, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg"
   },
   {
     "id": "bingolott-1991",
@@ -687,7 +701,10 @@
     "clue": "Studenterbjudande på 7-Eleven",
     "priceSek": 20,
     "fact": "Paketets ordinarie pris var 47 kronor, men studenter fick både fika och uppkoppling billigare.",
-    "source": "https://news.cision.com/se/7-eleven/r/nu-far-en-miljon-studenter-rabatt-pa-7-eleven%2Cc417301"
+    "source": "https://news.cision.com/se/7-eleven/r/nu-far-en-miljon-studenter-rabatt-pa-7-eleven%2Cc417301",
+    "image": "/prisbilder/studentfika-7eleven-2009.webp",
+    "imageCredit": "Foto: Håkan Dahlström, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Cinnamon_bun_(5140212988).jpg"
   },
   {
     "id": "ipad-2010",
@@ -699,7 +716,8 @@
     "fact": "Den billigaste modellen kostade 4 695 kronor när Ipad började säljas officiellt i Sverige.",
     "source": "https://www.macworld.se/article/1567193/har-ar-de-svenska-priserna-pa-ipad.html",
     "image": "/prisbilder/ipad-2010.webp",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:IPad-WiFi-1stGen.jpg"
+    "imageCredit": "Foto: matt buchanan, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Apple_iPad_Event03.jpg"
   },
   {
     "id": "netflix-2012",
@@ -768,7 +786,10 @@
     "clue": "Riksgenomsnitt i OnlinePizzas svenska prisundersökning",
     "priceSek": 66.9,
     "fact": "Undersökningen satte snittpriset till 66,92 kronor, med Stockholm dyrast och Malmö billigast bland de jämförda städerna.",
-    "source": "https://www.mynewsdesk.com/se/foodora-punkt-se/pressreleases/saa-saag-pizzapriserna-ut-under-2015-se-listan-stad-foer-stad-1305994"
+    "source": "https://www.mynewsdesk.com/se/foodora-punkt-se/pressreleases/saa-saag-pizzapriserna-ut-under-2015-se-listan-stad-foer-stad-1305994",
+    "image": "/prisbilder/vesuvio-2015.webp",
+    "imageCredit": "Foto: PaulGorduiz106, CC BY-SA 4.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Henyo%27s_Pizza_Ham_%26_Cheese_(03-08-2021).jpg"
   },
   {
     "id": "hogskoleprovet-2016",
@@ -861,7 +882,10 @@
     "clue": "Träningstaxa hos Fotskäls HC i Marks ishall",
     "priceSek": 950,
     "fact": "Match, läger och cup hade en högre timtaxa än vanlig träning.",
-    "source": "https://www.fotskalhc.com/sida/78293/boka-istid"
+    "source": "https://www.fotskalhc.com/sida/78293/boka-istid",
+    "image": "/prisbilder/hyra-ishall-fotskal-2026.webp",
+    "imageCredit": "Foto: Jmfurz, CC BY 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Skedsmo_Ishall_Innvendig.jpg"
   },
   {
     "id": "gardsgrus-storsack-2026",
@@ -946,7 +970,10 @@
     "clue": "Avgift dokumenterad i Kalmar kommunarkiv",
     "priceSek": 5,
     "fact": "Kommunarkivets årskrönika anger fem kronor för en färd med ambulansvagnen.",
-    "source": "https://kalmar.se/kommun-och-politik/diarium-och-arkiv/kommunarkiv/guldkorn-ur-kalmar-kommunarkiv.html"
+    "source": "https://kalmar.se/kommun-och-politik/diarium-och-arkiv/kommunarkiv/guldkorn-ur-kalmar-kommunarkiv.html",
+    "image": "/prisbilder/ambulansvagn-kalmar-1922.webp",
+    "imageCredit": "Foto: Ian S, CC BY-SA 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Horse_Drawn_Ambulance_-_geograph.org.uk_-_4089505.jpg"
   },
   {
     "id": "tvattmaskin-mora-1942",
@@ -1079,6 +1106,9 @@
     "clue": "Septemberkurs på Hernströmsgården hos Sätila hembygdsförening",
     "priceSek": 500,
     "fact": "Kursen riktade sig till nybörjare som ville prova att baka bröd på gammalt vis.",
-    "source": "https://filer.hembygd.se/satila/uploads/files/2025/02/01/Program%202025%20S%C3%A4tila%20hembygdsf%C3%B6rening%20onlineversion.pdf"
+    "source": "https://filer.hembygd.se/satila/uploads/files/2025/02/01/Program%202025%20S%C3%A4tila%20hembygdsf%C3%B6rening%20onlineversion.pdf",
+    "image": "/prisbilder/vedugnsbakning-satila-2025.webp",
+    "imageCredit": "Foto: Fanny Schertzer, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Bread_oven,_Conand.jpg"
   }
 ]
