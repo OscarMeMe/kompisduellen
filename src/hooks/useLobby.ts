@@ -1,23 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
+import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import { supabase } from '@/lib/supabase'
-import type { Player } from '@/lib/player'
+import { loadHostLobby, saveHostLobby, type Player } from '@/lib/player'
 import {
   addGuess,
   addPlayers,
-  advanceFromReveal,
   backToWaiting,
   everyoneHasGuessed,
-  handleDeadline,
+  hostAdvance,
+  hostDeadline,
+  hostMove,
+  hostPresence,
+  hostStart,
   initialState,
   resolveRound,
+  restoreHostState,
   setGame,
   setRounds,
   setTempo,
-  startGame,
   type GameState,
+  type HostState,
   type PlayerInfo,
 } from '@/lib/match'
 
@@ -25,7 +30,11 @@ import {
 // - Alla i lobbyn ansluter till samma Supabase Realtime-kanal (lobby:KOD). Inga databastabeller behövs.
 // - Presence visar vilka som är online just nu.
 // - Värden (den som skapade lobbyn) äger spelets tillstånd och skickar ut det till alla med broadcast.
-// - Övriga spelare skickar bara sina gissningar till värden.
+// - Övriga spelare skickar bara sina gissningar (guess) eller kortdrag (move) till värden.
+// - Kortspelen: värden har hemlig data (leken, allas händer och vem som spelade vad) som aldrig skickas
+//   med tillståndet. Varje spelare får sin egen hand i ett eget meddelande (hand), som andra flikar
+//   slänger. Det räcker för ett kompisspel, men den som läser nätverkstrafiken kan se andras händer.
+// - Värden sparar allt i fliken (sessionStorage), så att matchen fortsätter om värden laddar om sidan.
 
 export type OnlinePlayer = Player & {
   host: boolean
@@ -35,10 +44,18 @@ export type OnlinePlayer = Player & {
 export type LobbyStatus = 'connecting' | 'ready' | 'no-host' | 'error'
 
 const NO_HOST_GRACE_MS = 4000
+// Så länge räknas en spelare som tappat nätet (eller laddar om) fortfarande som med i ett kortspel,
+// så att domaren inte byts och matchen inte tar slut i onödan.
+const AWAY_GRACE_MS = 10_000
 
 // game används bara av värden. Övriga får spelet från värdens tillstånd.
 export function useLobby(code: string, me: Player | null, isHost: boolean, game?: string) {
-  const [state, setState] = useState<GameState>(() => initialState(game))
+  // Värden: fortsätt där vi var om sidan laddades om.
+  const [restored] = useState(() => {
+    const host = isHost ? restoreHostState(loadHostLobby(code)) : null
+    return host && { ...host, at: Date.now() }
+  })
+  const [state, setState] = useState<GameState>(() => restored?.state ?? initialState(game))
   // Övriga spelare: har vi fått något tillstånd från värden än?
   const [received, setReceived] = useState(false)
   const [online, setOnline] = useState<OnlinePlayer[]>([])
@@ -47,27 +64,87 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [graceOver, setGraceOver] = useState(false)
   // Skillnaden mellan min klocka och värdens klocka (ms). Används för nedräkningen.
   const [clockOffset, setClockOffset] = useState(0)
+  // Kortspelen: min egen hand, som värden skickar bara till mig.
+  const [hand, setHand] = useState<MyHand | null>(null)
 
   const channelRef = useRef<RealtimeChannel | null>(null)
   const stateRef = useRef<GameState>(state)
   const onlineRef = useRef<OnlinePlayer[]>([])
+  // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
+  const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
+  const sentHandsRef = useRef<Record<string, string>>({})
+  // Värden: när spelare som inte längre är online sågs senast. Efter en omladdning räknas alla i
+  // matchen som nyss sedda, så att de hinner ansluta igen.
+  const lastSeenRef = useRef<Record<string, number>>(
+    Object.fromEntries(Object.keys(restored?.state.players ?? {}).map((id) => [id, restored!.at])),
+  )
   // När matchen startade (ms), för statistiken.
   const matchStartRef = useRef(0)
   // Övriga spelare: har vi räknat att vi gick med i lobbyn?
   const joinTrackedRef = useRef(false)
 
+  const save = useCallback(() => {
+    saveHostLobby(code, { state: stateRef.current, secrets: secretsRef.current } satisfies HostState)
+  }, [code])
+
   // Värden: uppdatera lokalt och skicka ut till alla.
-  const publish = useCallback((next: GameState) => {
-    const prev = stateRef.current
-    if (next === prev) return
-    trackMatch(prev, next, matchStartRef)
-    stateRef.current = next
-    setState(next)
-    void channelRef.current?.send({
-      type: 'broadcast',
-      event: 'state',
-      payload: { state: next, sentAt: Date.now() },
-    })
+  const publish = useCallback(
+    (next: GameState) => {
+      const prev = stateRef.current
+      if (next === prev) return
+      trackMatch(prev, next, matchStartRef)
+      stateRef.current = next
+      setState(next)
+      save()
+      void channelRef.current?.send({
+        type: 'broadcast',
+        event: 'state',
+        payload: { state: next, sentAt: Date.now() },
+      })
+    },
+    [save],
+  )
+
+  // Värden: skicka varje spelares hand till spelaren, men bara när den har ändrats.
+  const sendHands = useCallback(() => {
+    const secrets = secretsRef.current
+    if (!secrets) {
+      sentHandsRef.current = {}
+      return
+    }
+    for (const id of Object.keys(secrets.hands)) {
+      const view = myHand(secrets, id)
+      const json = JSON.stringify(view)
+      if (sentHandsRef.current[id] === json) continue
+      sentHandsRef.current[id] = json
+      void channelRef.current?.send({ type: 'broadcast', event: 'hand', payload: { to: id, hand: view } })
+    }
+  }, [])
+
+  // Värden: ta emot ett nytt tillstånd med hemlig data, skicka ut det och de händer som ändrats.
+  const commit = useCallback(
+    (next: HostState) => {
+      const secretsChanged = next.secrets !== secretsRef.current
+      secretsRef.current = next.secrets
+      publish(next.state)
+      if (secretsChanged) {
+        save()
+        sendHands()
+      }
+    },
+    [publish, save, sendHands],
+  )
+
+  const current = useCallback((): HostState => ({ state: stateRef.current, secrets: secretsRef.current }), [])
+
+  // Spelare som är med: online nu, eller borta kortare tid än AWAY_GRACE_MS.
+  const activeIds = useCallback((): string[] => {
+    const now = Date.now()
+    const ids = new Set(onlineRef.current.map((p) => p.id))
+    for (const [id, seen] of Object.entries(lastSeenRef.current)) {
+      if (now - seen < AWAY_GRACE_MS) ids.add(id)
+    }
+    return [...ids]
   }, [])
 
   // Värden: avsluta rundan direkt om alla som är online har gissat.
@@ -92,6 +169,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
     })
     channelRef.current = channel
+    // Värden: kollar närvaron igen när någon som gått varit borta för länge.
+    let awayTimer: ReturnType<typeof setTimeout> | undefined
 
     channel.on('presence', { event: 'sync' }, () => {
       const raw = channel.presenceState<OnlinePlayer>()
@@ -100,6 +179,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         .filter((meta) => Boolean(meta?.id))
         .map(({ id, name, avatar, host, joinedAt }) => ({ id, name, avatar, host, joinedAt }))
         .sort((a, b) => a.joinedAt - b.joinedAt)
+      const now = Date.now()
+      for (const p of onlineRef.current) {
+        if (!players.some((other) => other.id === p.id)) lastSeenRef.current[p.id] = now
+      }
+      for (const p of players) delete lastSeenRef.current[p.id]
       onlineRef.current = players
       setOnline(players)
 
@@ -109,7 +193,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         // Nya spelare får vara med direkt i väntrummet. Under en match kommer de in med noll poäng.
         let next = addPlayers(stateRef.current, infos)
         next = resolveIfEveryoneGuessed(next)
-        publish(next)
+        commit(hostPresence({ state: next, secrets: secretsRef.current }, activeIds(), now))
+
+        clearTimeout(awayTimer)
+        if (Object.keys(lastSeenRef.current).length > 0) {
+          awayTimer = setTimeout(() => commit(hostPresence(current(), activeIds(), Date.now())), AWAY_GRACE_MS + 300)
+        }
       }
     })
 
@@ -126,6 +215,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setClockOffset(Date.now() - sentAt)
     })
 
+    // Min hand i ett kortspel. Meddelanden till andra spelare slängs direkt.
+    channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
+      const { to, hand: next } = payload as { to: string; hand: MyHand | null }
+      if (to === me.id) setHand(next)
+    })
+
     channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
       if (!isHost) return
       const { id, value } = payload as { id: string; value: number }
@@ -134,14 +229,25 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       publish(next)
     })
 
-    channel.on('broadcast', { event: 'hello' }, () => {
-      // Någon har precis anslutit: skicka det aktuella läget till alla.
+    channel.on('broadcast', { event: 'move' }, ({ payload }) => {
+      if (!isHost) return
+      const { id, move } = payload as { id: string; move: CardMove }
+      commit(hostMove(current(), id, move, activeIds(), Date.now()))
+    })
+
+    channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
+      // Någon har precis anslutit: skicka det aktuella läget till alla, och spelarens hand igen.
       if (!isHost) return
       void channel.send({
         type: 'broadcast',
         event: 'state',
         payload: { state: stateRef.current, sentAt: Date.now() },
       })
+      const id = (payload as { id?: string } | undefined)?.id
+      if (id) {
+        delete sentHandsRef.current[id]
+        sendHands()
+      }
     })
 
     channel.subscribe(async (status) => {
@@ -154,8 +260,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           host: isHost,
           joinedAt: Date.now(),
         } satisfies OnlinePlayer)
-        if (!isHost) {
-          void channel.send({ type: 'broadcast', event: 'hello', payload: {} })
+        if (isHost) {
+          // Efter en omladdning: skicka allas händer igen.
+          sentHandsRef.current = {}
+          sendHands()
+        } else {
+          void channel.send({ type: 'broadcast', event: 'hello', payload: { id: me.id } })
         }
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         setFailed(true)
@@ -166,23 +276,24 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
     return () => {
       clearTimeout(graceTimer)
+      clearTimeout(awayTimer)
       channelRef.current = null
       setConnected(false)
       void supabase.removeChannel(channel)
     }
-  }, [code, me, isHost, publish, resolveIfEveryoneGuessed])
+  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed])
 
-  // Värden: tidtagning för gissning och visning av svaret. Timern gäller bara sin egen deadline,
-  // så den gör ingenting om rundan redan avslutats eller värden hoppat fram (se handleDeadline).
+  // Värden: tidtagning för varje steg i rundan. Timern gäller bara sin egen deadline, så den gör
+  // ingenting om rundan redan gått vidare eller värden hoppat fram (se handleDeadline).
   useEffect(() => {
     const deadline = state.deadline
     if (!isHost || deadline === null) return
-    if (state.phase !== 'guessing' && state.phase !== 'reveal') return
+    if (state.phase !== 'guessing' && state.phase !== 'reveal' && state.phase !== 'playing') return
 
     const delay = Math.max(0, deadline - Date.now()) + 300
-    const timer = setTimeout(() => publish(handleDeadline(stateRef.current, Date.now(), deadline)), delay)
+    const timer = setTimeout(() => commit(hostDeadline(current(), Date.now(), deadline, activeIds())), delay)
     return () => clearTimeout(timer)
-  }, [isHost, state.phase, state.deadline, state.round, publish])
+  }, [isHost, state.phase, state.deadline, state.round, commit, current, activeIds])
 
   const hostOnline = online.some((p) => p.host)
 
@@ -209,7 +320,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       start: () => {
         if (!isHost) return
         const ids = onlineRef.current.map((p) => p.id)
-        publish(startGame(stateRef.current, ids, Date.now()))
+        commit(hostStart(current(), ids, Date.now()))
       },
       guess: (value: number) => {
         if (!me) return
@@ -219,21 +330,31 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           payload: { id: me.id, value },
         })
       },
+      // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare.
+      move: (move: CardMove) => {
+        if (!me) return
+        void channelRef.current?.send({
+          type: 'broadcast',
+          event: 'move',
+          payload: { id: me.id, move },
+        })
+      },
       // round = rundan som visades när värden klickade. Ett dubbelklick hoppar inte över en runda.
       skipReveal: (round: number) => {
-        if (isHost) publish(advanceFromReveal(stateRef.current, Date.now(), round))
+        if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
       },
       playAgain: () => {
         if (!isHost) return
         const next = backToWaiting(stateRef.current)
         if (next !== stateRef.current) track('spelade_igen', { spel: next.game })
-        publish(next)
+        commit({ state: next, secrets: null })
       },
     }),
-    [isHost, me, publish],
+    [isHost, me, publish, commit, current, activeIds],
   )
 
-  return { status, state, online, clockOffset, actions }
+  // Handen gäller bara medan ett kortspel pågår.
+  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, actions }
 }
 
 // Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.
@@ -243,7 +364,7 @@ function trackMatch(prev: GameState, next: GameState, matchStart: { current: num
     antal_spelare: Object.keys(next.players).length,
     antal_rundor: next.rounds,
   }
-  if (prev.phase === 'waiting' && next.phase === 'guessing') {
+  if (prev.phase === 'waiting' && (next.phase === 'guessing' || next.phase === 'playing')) {
     matchStart.current = Date.now()
     track('match_startad', props)
   } else if (prev.phase !== 'finished' && next.phase === 'finished') {

@@ -1,8 +1,10 @@
-// Reglerna för varje spelbart spel. Matchflödet i match.ts är detsamma för alla spel,
+// Reglerna för varje spelbart spel. Matchflödet i match.ts är detsamma för alla gissningsspel,
 // och det som skiljer (tider, giltiga gissningar och poäng) hämtas härifrån.
+// Kortspelen har egna regler (CardGameRules i kort.ts) i CARD_RULES.
 // Lägg till ett nytt spel här och i GAMES (games.ts).
 
 import { priceRules } from '@/lib/gissa-priset'
+import type { CardGameRules } from '@/lib/kort'
 import { narmastRules } from '@/lib/narmast'
 
 export type RoundOutcome = {
@@ -47,4 +49,11 @@ const RULES: Record<string, GameRules> = {
 
 export function rulesFor(game: string): GameRules {
   return RULES[game] ?? narmastRules
+}
+
+const CARD_RULES: Record<string, CardGameRules> = {}
+
+// Reglerna för ett kortspel, eller undefined om spelet är ett gissningsspel.
+export function cardRulesFor(game: string): CardGameRules | undefined {
+  return CARD_RULES[game]
 }

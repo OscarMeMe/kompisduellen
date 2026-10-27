@@ -59,8 +59,9 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
   - `player.ts`: gästspelare (namn + figur i localStorage, spelar-id i sessionStorage), lobbykoder, värdflagga (sessionStorage)
-  - `match.ts`: matchflödet som är gemensamt för alla spel (rundor, gissningar, poäng, topplistan). Rena funktioner
-  - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
+  - `match.ts`: matchflödet som är gemensamt för alla spel (rundor, gissningar, poäng, topplistan). Rena funktioner. Värdens funktioner (`hostStart`, `hostDeadline`, `hostMove` …) tar och ger `HostState`, alltså tillståndet plus kortspelens hemliga data
+  - `kort.ts`: kortspel med domare (lek, händer, val, anonym visning, rundflödet och undantagen). Återanvändbart: ett nytt kortspel behöver bara egna `CardGameRules`
+  - `spelregler.ts`: reglerna per spel (tider, giltiga gissningar, poäng). Kortspelens regler ligger i `CARD_RULES`. Nytt spel = nya regler här, vyer i `GAME_VIEWS` och en rad i `games.ts`
   - `narmast.ts` och `gissa-priset.ts`: reglerna för respektive spel (`pricePoints` ligger i `gissa-priset.ts`)
   - `prisdata.ts`: typen `PriceItem` och `findPriceItem`. Själva sakerna i Gissa priset (pris, fakta, källa och ibland en bild) ligger i `prisdata.json`. Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
@@ -76,13 +77,15 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - Alla i en lobby ansluter till Realtime-kanalen `lobby:KOD`.
 - Den som skapade lobbyn är värd och äger spelets tillstånd. Värden skickar ut hela tillståndet (`state`) till alla.
-- Övriga skickar bara sina gissningar (`guess`) till värden. Nya spelare skickar `hello` för att få aktuellt läge.
+- Övriga skickar bara sina gissningar (`guess`) eller kortdrag (`move`) till värden. Nya spelare skickar `hello` (med sitt id) för att få aktuellt läge.
+- Kortspelen har hemlig data (leken, allas händer, vem som spelade vad) som bara värden har och som aldrig skickas med `state`. Varje spelare får sin hand i ett eget meddelande (`hand`) som andra flikar slänger. Vem som spelade vilket kort syns först när rundan avslöjas. Den som läser nätverkstrafiken kan se andras händer, och det räcker för ett kompisspel.
+- I kortspelen räknas en spelare som tappat nätet som kvar i 10 sekunder, så att domaren inte byts och matchen inte slutar i onödan.
 - Spelar-id och värdflaggan sparas per flik (sessionStorage), så varje flik är en egen spelare. Det går att testa med flera spelare i flera flikar.
 - Värden väljer spel i väntrummet (fältet `game` i tillståndet). Spelet från startsidan är bara förvalt.
 - Topplistan gäller hela lobbyn oavsett spel och räknar vunna matcher. Delad seger ger alla på förstaplatsen en vinst.
 - Gissa priset har tempo i lobbyn: svarstid (20, 30 eller 60 s) och om facit går vidare automatiskt eller när värden klickar. Värdens timer gäller bara sin egen deadline (`handleDeadline`), och "nästa runda" tar med sig rundan som visades (`advanceFromReveal`), så inget hoppas över.
 - En match med en spelare är en provomgång (`practice`) och räknas inte i topplistan. "Testa själv" (`/skapa?spel=gissa-priset&testa=1`) startar en direkt. Närmast vinner kräver två spelare.
-- Lämnar värden försvinner lobbyn. Laddar värden om sidan finns lobbykoden kvar och gästerna återansluter, men match, topplista och inställningar börjar om. Inget sparas i databasen ännu.
+- Lämnar värden (stänger fliken) försvinner lobbyn. Värden sparar tillståndet och kortspelens hemliga data i fliken (sessionStorage, `saveHostLobby`), så laddar värden om sidan fortsätter matchen med topplista och inställningar, och gästerna återansluter. Inget sparas i databasen ännu.
 
 ## Routes
 

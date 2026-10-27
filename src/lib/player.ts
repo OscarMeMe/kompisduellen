@@ -104,3 +104,19 @@ export function clearPracticeRequest(code: string) {
     // Blockerad lagring: då fanns inget sparat heller.
   }
 }
+
+// Värden sparar lobbyns tillstånd (och kortspelens hemliga data) i fliken efter varje ändring, så
+// att matchen kan fortsätta om värden laddar om sidan. Stängs fliken är lobbyn borta som förut.
+export function saveHostLobby(code: string, data: unknown) {
+  safeSet('session', `kd-lobby:${code}`, JSON.stringify(data))
+}
+
+export function loadHostLobby(code: string): unknown {
+  const raw = safeGet('session', `kd-lobby:${code}`)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
