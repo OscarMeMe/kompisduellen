@@ -140,6 +140,8 @@ function BlankCardForm({ initial, onUse, onCancel }: BlankCardFormProps) {
         onChange={(e) => setText(e.target.value)}
         placeholder="t.ex. grannens hemliga bastu"
         autoComplete="off"
+        // Svaret hamnar oftast mitt i en mening, så ingen automatisk stor bokstav.
+        autoCapitalize="none"
         autoFocus={hasFinePointer()}
       />
       <p className="text-sm text-muted-foreground">

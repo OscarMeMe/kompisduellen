@@ -32,7 +32,8 @@ export function FinishedView({ game, state, isHost, onPlayAgain }: FinishedViewP
         <p className="text-5xl">🏆</p>
         <h1 className="mt-2 text-4xl">{state.practice ? 'Provomgången är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
-          {game.name} · {state.round} {state.round === 1 ? 'runda' : 'rundor'} spelade
+          {game.name} ·{' '}
+          {endedEarly ? `slutade i runda ${state.round} av ${state.rounds}` : `${state.rounds} rundor spelade`}
         </p>
       </div>
 
