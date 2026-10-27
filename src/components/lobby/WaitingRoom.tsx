@@ -153,7 +153,7 @@ export function WaitingRoom({
 
         {practice && (
           <p className="rounded-md bg-lilac/40 px-4 py-3 text-sm">
-            <strong>Testläge:</strong> du är ensam i lobbyn, så det blir en provomgång som inte räknas i topplistan.
+            <strong>Testläge:</strong> du är ensam i lobbyn, så det blir en provomgång som inte räknas i kvällens ställning.
             Vill du spela med kompisar? Dela koden eller länken ovan och starta när de är med.
           </p>
         )}
