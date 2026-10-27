@@ -119,6 +119,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           game={game}
           state={state}
           isHost={isHost}
+          meId={me.id}
           online={online}
           onSetRounds={actions.setRounds}
           onSetGame={actions.setGame}
