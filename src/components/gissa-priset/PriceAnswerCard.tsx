@@ -19,8 +19,9 @@ export function PriceAnswerCard({
   return (
     <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
       <div className="flex items-center justify-center gap-3">
-        <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>
-        <span className="min-w-0 text-left">
+        {/* Emojin bara när saken saknar bild. Bredvid ett foto ser den malplacerad ut. */}
+        {!item?.image && <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>}
+        <span className={cn('min-w-0', item?.image ? 'text-center' : 'text-left')}>
           <span className="block font-bold text-balance">{item?.name}</span>
           {item && <span className="block text-sm font-semibold text-primary">År {item.year}</span>}
         </span>
