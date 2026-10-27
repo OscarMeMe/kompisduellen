@@ -44,6 +44,92 @@ function playerId(): string {
   return memoryId
 }
 
+// Identitet per lobby. Spelar-id:t ligger bara i fliken (sessionStorage), så en ny flik eller en omstartad
+// webbläsare blir annars en ny spelare. Därför sparas också vilket id man hade i varje lobby i localStorage,
+// så att man kan välja att fortsätta som samma spelare (och behålla poängen). Namnet är aldrig identiteten.
+const LOBBY_IDENTITY_PREFIX = 'kd-lobby-id:'
+// Lobbyer finns bara så länge värden är kvar, så gamla identiteter rensas bort.
+const LOBBY_IDENTITY_MAX_AGE_MS = 12 * 60 * 60 * 1000
+
+type SavedIdentity = Player & { at: number }
+
+// Tolkar en sparad identitet. null om den är trasig eller för gammal.
+export function parseLobbyIdentity(raw: string | null, now: number): Player | null {
+  if (!raw) return null
+  try {
+    const saved = JSON.parse(raw) as Partial<SavedIdentity>
+    if (!saved.id || !saved.name || !saved.avatar || typeof saved.at !== 'number') return null
+    if (now - saved.at > LOBBY_IDENTITY_MAX_AGE_MS) return null
+    return { id: saved.id, name: saved.name, avatar: saved.avatar }
+  } catch {
+    return null
+  }
+}
+
+export function loadLobbyIdentity(code: string): Player | null {
+  return parseLobbyIdentity(safeGet('local', LOBBY_IDENTITY_PREFIX + code), Date.now())
+}
+
+// Sparar vem jag är i lobbyn. Har någon annan identitet redan sparats (t.ex. i en annan flik) behålls den,
+// så att "Fortsätt som" fortsätter peka på den första spelaren.
+export function rememberLobbyIdentity(code: string, player: Player) {
+  const saved = loadLobbyIdentity(code)
+  if (saved && saved.id !== player.id) return
+  safeSet('local', LOBBY_IDENTITY_PREFIX + code, JSON.stringify({ ...player, at: Date.now() } satisfies SavedIdentity))
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(LOBBY_IDENTITY_PREFIX) && !parseLobbyIdentity(localStorage.getItem(key), Date.now())) {
+        localStorage.removeItem(key)
+      }
+    }
+  } catch {
+    // Blockerad lagring: då finns inget att rensa.
+  }
+}
+
+export function forgetLobbyIdentity(code: string) {
+  try {
+    localStorage.removeItem(LOBBY_IDENTITY_PREFIX + code)
+  } catch {
+    // Blockerad lagring: då fanns inget sparat heller.
+  }
+}
+
+// Har den här fliken redan valt vem den är i lobbyn? Då frågar vi inte igen vid omladdning.
+export function hasJoinedInThisTab(code: string): boolean {
+  return safeGet('session', `kd-joined:${code}`) === '1'
+}
+
+// Fliken minns också vem den är i lobbyn. Namnet i webbläsaren (localStorage) delas av alla flikar, så utan
+// det kunde en andra person i samma webbläsare döpa om den första vid omladdning.
+export function markJoinedInThisTab(code: string, player?: Player) {
+  safeSet('session', `kd-joined:${code}`, '1')
+  if (player) safeSet('session', `kd-me:${code}`, JSON.stringify(player))
+}
+
+export function loadPlayerInThisTab(code: string): Player | null {
+  try {
+    const saved = JSON.parse(safeGet('session', `kd-me:${code}`) ?? 'null') as Partial<Player> | null
+    return saved?.id && saved.name && saved.avatar ? { id: saved.id, name: saved.name, avatar: saved.avatar } : null
+  } catch {
+    return null
+  }
+}
+
+// "Fortsätt som": fliken tar över en tidigare spelares id.
+export function adoptPlayer(player: Player): Player {
+  memoryId = player.id
+  safeSet('session', PLAYER_ID_KEY, player.id)
+  return player
+}
+
+// "Gå med som en annan spelare": fliken får ett nytt id.
+export function startNewIdentity() {
+  memoryId = crypto.randomUUID()
+  safeSet('session', PLAYER_ID_KEY, memoryId)
+}
+
 export function loadPlayer(): Player | null {
   const raw = safeGet('local', PROFILE_KEY)
   if (!raw) return null
@@ -100,6 +186,16 @@ export function hasPracticeRequest(code: string): boolean {
 export function clearPracticeRequest(code: string) {
   try {
     sessionStorage.removeItem(`kd-test:${code}`)
+  } catch {
+    // Blockerad lagring: då fanns inget sparat heller.
+  }
+}
+
+// En flik som kopierats från värdens flik ärver värdrollen. Den här fliken ska vara en vanlig spelare.
+export function leaveHostRole(code: string) {
+  try {
+    sessionStorage.removeItem(`kd-host:${code}`)
+    sessionStorage.removeItem(`kd-lobby:${code}`)
   } catch {
     // Blockerad lagring: då fanns inget sparat heller.
   }

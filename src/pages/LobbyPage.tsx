@@ -1,6 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link, useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
@@ -14,8 +15,25 @@ import { PlayerSetup } from '@/components/PlayerSetup'
 import { Button } from '@/components/ui/button'
 import { useLayout } from '@/hooks/useLayout'
 import { useLobby } from '@/hooks/useLobby'
+import { useOneTab } from '@/hooks/useOneTab'
 import { findGame, GAMES } from '@/lib/games'
-import { clearPracticeRequest, hasPracticeRequest, hostedGame, loadPlayer, normalizeCode, type Player } from '@/lib/player'
+import {
+  adoptPlayer,
+  clearPracticeRequest,
+  forgetLobbyIdentity,
+  hasJoinedInThisTab,
+  hasPracticeRequest,
+  hostedGame,
+  leaveHostRole,
+  loadLobbyIdentity,
+  loadPlayer,
+  loadPlayerInThisTab,
+  markJoinedInThisTab,
+  normalizeCode,
+  rememberLobbyIdentity,
+  startNewIdentity,
+  type Player,
+} from '@/lib/player'
 
 // Vyerna i varje spel. Gissningsspelen har en vy för att gissa och en för att visa svaret, kortspelen
 // en vy för hela rundan. Väntrum och prispall är gemensamma.
@@ -32,7 +50,50 @@ const GAME_VIEWS: Record<string, GameViews> = {
 export function LobbyPage() {
   const params = useParams()
   const code = normalizeCode(params.code ?? '')
-  const [me, setMe] = useState<Player | null>(() => loadPlayer())
+  // Fliken minns vem den är i den här lobbyn. Annars gäller namnet och figuren som webbläsaren har sparat.
+  const [me, setMe] = useState<Player | null>(() => loadPlayerInThisTab(code) ?? loadPlayer())
+  // Spelaren som den här webbläsaren hade i lobbyn förut (t.ex. i en annan flik). Om den här fliken inte redan
+  // har valt vem den är får man välja: fortsätta som den spelaren eller gå med som en annan.
+  const [earlier] = useState(() => {
+    if (hostedGame(code) !== null || hasJoinedInThisTab(code)) return null
+    const saved = loadLobbyIdentity(code)
+    return saved && saved.id !== loadPlayer()?.id ? saved : null
+  })
+  const [choosing, setChoosing] = useState(earlier !== null)
+
+  function continueAs(player: Player) {
+    markJoinedInThisTab(code)
+    setMe(adoptPlayer(player))
+    setChoosing(false)
+  }
+
+  // Samma person med ett annat namn, eller en annan person på samma webbläsare.
+  function joinAsAnother() {
+    markJoinedInThisTab(code)
+    setMe(null)
+    setChoosing(false)
+  }
+
+  if (choosing && earlier) {
+    return (
+      <Narrow>
+        <div className="rounded-lg border bg-card p-5 text-center shadow-soft">
+          <p className="text-sm font-semibold text-muted-foreground">Du har varit med i lobby</p>
+          <p className="font-heading text-4xl font-bold tracking-[0.3em] text-primary">{code}</p>
+          <p className="mt-3 flex items-center justify-center gap-2 font-bold">
+            <Emoji emoji={earlier.avatar} className="text-2xl" />
+            <span className="truncate">{earlier.name}</span>
+          </p>
+        </div>
+        <Button size="lg" onClick={() => continueAs(earlier)}>
+          Fortsätt som {earlier.name}
+        </Button>
+        <Button size="lg" variant="outline" onClick={joinAsAnother}>
+          Gå med som en annan spelare
+        </Button>
+      </Narrow>
+    )
+  }
 
   if (!me) {
     return (
@@ -42,6 +103,61 @@ export function LobbyPage() {
           <p className="font-heading text-4xl font-bold tracking-[0.3em] text-primary">{code}</p>
         </div>
         <PlayerSetup submitLabel="Gå med i lobbyn" onDone={setMe} />
+      </Narrow>
+    )
+  }
+
+  return <OnePlayerOneTab code={code} me={me} onJoinAsAnother={() => setMe(null)} />
+}
+
+// En spelare i en flik åt gången. Är samma spelare redan med i en annan flik visas ett besked, så att det
+// aldrig blir två flikar som svarar åt samma spelare (se useOneTab).
+function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Player; onJoinAsAnother: () => void }) {
+  const { status, retry } = useOneTab(code, me.id)
+
+  useEffect(() => {
+    if (status !== 'ok') return
+    markJoinedInThisTab(code, me)
+    rememberLobbyIdentity(code, me)
+  }, [status, code, me])
+
+  if (status === 'checking') {
+    return (
+      <Narrow>
+        <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
+          <Loader2 className="size-10 animate-spin text-primary" />
+          <p>Ansluter till lobby {code}…</p>
+        </div>
+      </Narrow>
+    )
+  }
+
+  if (status === 'taken') {
+    return (
+      <Narrow>
+        <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
+          <p className="text-5xl">🪟</p>
+          <h1 className="text-2xl">Du är redan med i den här lobbyn</h1>
+          <p className="text-muted-foreground">
+            {me.name} är med i en annan flik. Använd den fliken, eller stäng den och försök igen här. Är det en annan
+            person kan du gå med som en annan spelare.
+          </p>
+        </div>
+        <Button size="lg" onClick={retry}>
+          Försök igen
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={() => {
+            // En kopierad värdflik ärver värdrollen. Den här fliken ska bli en vanlig spelare.
+            leaveHostRole(code)
+            startNewIdentity()
+            onJoinAsAnother()
+          }}
+        >
+          Gå med som en annan spelare
+        </Button>
       </Narrow>
     )
   }
@@ -88,6 +204,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   }
 
   if (status === 'no-host' || status === 'error') {
+    // Lobbyn finns inte längre, så det går inte heller att fortsätta som tidigare spelare.
+    if (status === 'no-host') forgetLobbyIdentity(code)
     return (
       <Narrow>
         <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
@@ -98,7 +216,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           <p className="text-muted-foreground">
             {status === 'error'
               ? 'Kontrollera din internetanslutning och försök igen.'
-              : 'Kolla att koden stämmer. Lobbyn finns bara så länge värden är kvar.'}
+              : 'Kolla att koden stämmer. Lobbyn finns bara så länge värden är kvar. Har värden stängt sidan går det inte att fortsätta som tidigare spelare.'}
           </p>
         </div>
         <Button asChild size="lg">
