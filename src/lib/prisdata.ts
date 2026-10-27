@@ -6,11 +6,7 @@
 // priceSek: priset i kronor. Utländska försäljningar räknas om med ungefärlig växelkurs vid försäljningen.
 //   Gamla svenska vardagspriser anges som de var då, med decimaler vid behov (13 öre = 0.13).
 // fact: max en mening som visas när rätt svar avslöjas.
-// source: var uppgiften kommer ifrån, så att den går att dubbelkolla.
-// image: valfri bild av saken i public/prisbilder (webp, max 800 px bred). Utan bild visas emojin.
-//   Bara bilder från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels.
-// imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det.
-// imageSource: bildens sida, där licensen går att kontrollera.
+// source: var uppgiften kommer ifrån, så att den går att dubbelkolla. Visas inte i spelet, bara intern dokumentation.
 //
 // Lägg gärna till fler, men bara sådant som går att belägga med en källa.
 
