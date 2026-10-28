@@ -96,7 +96,6 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         isHost={isHost}
         clockOffset={clockOffset}
         onNext={onNext}
-        nextLabel="Nästa sak kommer strax"
       />
     </Wide>
   )
