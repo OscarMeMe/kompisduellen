@@ -14,6 +14,11 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Använd shadcn/ui-komponenter och Tailwind-klasser, inte egen CSS.
 - Kör `npm run build` innan du säger att något är klart.
 
+## Texter och ton
+
+- Använd aldrig tankstreck (– eller —) som paus i synliga texter. Skriv korta meningar på naturlig, vardaglig svenska.
+- Bindestreck i ord (t.ex. "QR-kod") och intervall (t.ex. "1–12 spelare") är okej.
+
 ## Teknik
 
 - Vite + React + TypeScript
