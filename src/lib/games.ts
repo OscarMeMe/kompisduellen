@@ -56,7 +56,7 @@ export const GAMES: GameInfo[] = [
     minPlayers: 2,
     maxPlayers: 12,
     length: 'Snabbis',
-    feel: 'Snabbt',
+    feel: 'Ren tur',
     playable: true,
     intro: {
       emoji: '🍀',
