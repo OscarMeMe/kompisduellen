@@ -5,6 +5,7 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { Choice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
+import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
@@ -146,6 +147,7 @@ export function WaitingRoom({
               </li>
             ))}
           </ul>
+          <ReactionBar className="pt-1" />
         </section>
       </div>
 

@@ -7,6 +7,7 @@ import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
 import { Narrow } from '@/components/lobby/LobbyLayout'
+import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
 import { WaitingRoom } from '@/components/lobby/WaitingRoom'
 import { GuessingView } from '@/components/narmast/GuessingView'
@@ -168,7 +169,7 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
 function Lobby({ code, me }: { code: string; me: Player }) {
   const hosted = hostedGame(code)
   const isHost = hosted !== null
-  const { status, state, online, clockOffset, hand, actions } = useLobby(code, me, isHost, hosted ?? undefined)
+  const { status, state, online, clockOffset, hand, floating, actions } = useLobby(code, me, isHost, hosted ?? undefined)
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
@@ -231,7 +232,15 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     )
   }
 
-  switch (state.phase) {
+  return (
+    <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
+      {phaseView()}
+      <ReactionFloaters />
+    </ReactionsProvider>
+  )
+
+  function phaseView() {
+    switch (state.phase) {
     case 'waiting':
       return (
         <WaitingRoom
@@ -313,5 +322,6 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           }}
         />
       )
+  }
   }
 }
