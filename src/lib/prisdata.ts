@@ -19,6 +19,11 @@ import items from './prisdata.json'
 // imageSource: bildens sida, där licensen går att kontrollera.
 // imageNote: valfri rad under bilden när den inte visar just saken, t.ex. "Bilden visar en annan vas från Höganäs".
 //
+// exempel: true på en enda fråga gör den till exempelrundan på startsidan. Välj en fråga där bilden tydligt visar
+//   just saken som frågas om.
+// exempelLedtrad: valfri ledtråd som bara exempelrundan visar, t.ex. med årtalet ('Svenskt butikspris hösten 1990').
+//   Saknas den visas clue. Spelets egen ledtråd påverkas inte.
+//
 // Lägg gärna till fler, men bara sådant som går att belägga med en källa.
 // Frågorna från och med nobelpris-1901 togs fram med ChatGPT och stickprovades mot källorna (oktober 2026).
 
@@ -36,10 +41,17 @@ export type PriceItem = {
   imageCredit?: string
   imageSource?: string
   imageNote?: string
+  exempel?: boolean
+  exempelLedtrad?: string
 }
 
 export const PRICE_ITEMS: PriceItem[] = items
 
 export function findPriceItem(id: string | null | undefined): PriceItem | undefined {
   return PRICE_ITEMS.find((item) => item.id === id)
+}
+
+// Frågan som startsidans exempelrunda visar: den som är markerad med exempel: true.
+export function findExampleItem(): PriceItem | undefined {
+  return PRICE_ITEMS.find((item) => item.exempel === true)
 }

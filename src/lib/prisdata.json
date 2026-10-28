@@ -650,6 +650,8 @@
   },
   {
     "id": "game-boy-1990",
+    "exempel": true,
+    "exempelLedtrad": "Svenskt butikspris hösten 1990",
     "emoji": "🎮",
     "name": "En Nintendo Game Boy",
     "year": 1990,

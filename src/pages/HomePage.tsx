@@ -50,7 +50,7 @@ export function HomePage() {
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
-      <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:gap-12">
+      <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
         <div className="space-y-6 text-center md:text-left">
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
@@ -69,7 +69,7 @@ export function HomePage() {
                 <ArrowDown aria-hidden />
               </Button>
               {/* Det befintliga provläget i Gissa priset: en provrunda på egen hand. */}
-              <Button asChild size="lg" variant="outline">
+              <Button asChild size="lg" variant="outline" className="hover:bg-card hover:border-foreground/30">
                 <Link to="/skapa?spel=gissa-priset&testa=1">
                   <Play aria-hidden />
                   Testa själv
