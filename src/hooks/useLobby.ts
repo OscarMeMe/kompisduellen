@@ -29,6 +29,7 @@ import {
   type GameState,
   type HostState,
   type PlayerInfo,
+  type RematchSettings,
 } from '@/lib/match'
 
 // Hur lobbyn fungerar:
@@ -374,9 +375,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         commit({ state: backToWaiting(stateRef.current), secrets: null })
       },
       // Revansch: samma spel och inställningar efter en gemensam nedräkning som alla ser.
-      rematch: () => {
+      rematch: (settings?: RematchSettings) => {
         if (!isHost) return
-        const next = hostRematch(current(), Date.now())
+        const next = hostRematch(current(), Date.now(), settings)
         if (next.state !== stateRef.current) track('spelade_igen', { spel: next.state.game })
         commit(next)
       },

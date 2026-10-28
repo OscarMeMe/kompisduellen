@@ -1,14 +1,27 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import { Sentence } from '@/components/kort/PlayingCard'
 import { Leaderboard } from '@/components/Leaderboard'
+import { Choice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
 import type { GameInfo } from '@/lib/games'
 import { matchHighlights } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
-import { canStart, matchWinners, rankLeaderboard, rankPlayers, type GameState } from '@/lib/match'
+import {
+  canStart,
+  guessSecondsFor,
+  hasTempoSettings,
+  matchWinners,
+  rankLeaderboard,
+  rankPlayers,
+  roundOptionsFor,
+  type GameState,
+  type RematchSettings,
+} from '@/lib/match'
+import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 type FinishedViewProps = {
@@ -18,7 +31,8 @@ type FinishedViewProps = {
   // Hur många som är online just nu. En revansch kräver spelets minsta antal spelare.
   onlineCount: number
   // Revansch (och Testa igen efter ett solotest): samma spel och inställningar efter en nedräkning.
-  onRematch: () => void
+  // settings = valen på resultatsidan som gäller nästa match.
+  onRematch: (settings: RematchSettings) => void
   // Tillbaka till väntrummet med samma grupp, t.ex. för att bjuda in kompisar efter ett solotest.
   onToWaitingRoom: () => void
   // Till väntrummet med spelvalet i bild.
@@ -41,6 +55,15 @@ export function FinishedView({
   // Kortspelen slutar i förtid om för få spelare är kvar.
   const endedEarly = state.round < state.rounds
   const canRematch = canStart(state.game, onlineCount)
+
+  // Snabbval inför nästa match. De skickas med när värden trycker Revansch.
+  const tempo = hasTempoSettings(state.game)
+  const [rounds, setRounds] = useState(state.rounds)
+  const [guessSeconds, setGuessSeconds] = useState(guessSecondsFor(state))
+  const [autoAdvance, setAutoAdvance] = useState(state.autoAdvance)
+  const [editing, setEditing] = useState(false)
+  const rematch = () => onRematch({ rounds, ...(tempo ? { guessSeconds, autoAdvance } : {}) })
+  const settingsSummary = tempo ? `${rounds} rundor · ${guessSeconds} s` : `${rounds} rundor`
 
   return (
     <Wide>
@@ -115,14 +138,14 @@ export function FinishedView({
               <Button size="lg" className="sm:flex-1" onClick={onToWaitingRoom}>
                 Bjud in kompisar
               </Button>
-              <Button size="lg" variant="outline" className="sm:flex-1" onClick={onRematch}>
+              <Button size="lg" variant="outline" className="sm:flex-1" onClick={rematch}>
                 Testa igen
               </Button>
             </div>
           ) : (
             <>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="sm:flex-1" onClick={onRematch} disabled={!canRematch}>
+                <Button size="lg" className="sm:flex-1" onClick={rematch} disabled={!canRematch}>
                   Revansch
                 </Button>
                 <Button size="lg" variant="outline" className="sm:flex-1" onClick={onChangeGame}>
@@ -141,6 +164,50 @@ export function FinishedView({
           <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm">
             Värden väljer nästa steg
           </p>
+        )}
+        {isHost && (
+          <div className="space-y-3">
+            <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+              <span>{settingsSummary} ·</span>
+              <Button
+                variant="link"
+                className="h-11 px-2 text-sm"
+                aria-expanded={editing}
+                onClick={() => setEditing((open) => !open)}
+              >
+                {editing ? 'dölj' : 'ändra'}
+              </Button>
+            </p>
+            {editing && (
+              <div className="space-y-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
+                <Choice
+                  label="Antal rundor"
+                  options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
+                  selected={rounds}
+                  onSelect={setRounds}
+                />
+                {tempo && (
+                  <>
+                    <Choice
+                      label="Svarstid"
+                      options={(rulesFor(state.game).guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
+                      selected={guessSeconds}
+                      onSelect={setGuessSeconds}
+                    />
+                    <Choice
+                      label="Efter facit"
+                      options={[
+                        { value: 1, label: 'Automatiskt' },
+                        { value: 0, label: 'Värden går vidare' },
+                      ]}
+                      selected={autoAdvance ? 1 : 0}
+                      onSelect={(value) => setAutoAdvance(value === 1)}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
         <Button asChild size="lg" variant="ghost">
           <Link to="/#spel">Tillbaka till alla spel</Link>

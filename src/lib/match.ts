@@ -431,9 +431,16 @@ export const REMATCH_SECONDS = 3
 
 // Revansch: tillbaka till väntrummet med samma spel och samma inställningar, och en nedräkning som alla ser.
 // Gör ingenting om matchen inte är slut, så ett dubbelklick startar inte två gånger.
-export function hostRematch(host: HostState, now: number): HostState {
-  const state = backToWaiting(host.state)
+// Värden kan ändra inställningarna på resultatsidan. De gäller den nya matchen och ogiltiga val ignoreras.
+export type RematchSettings = { rounds?: number; guessSeconds?: number; autoAdvance?: boolean }
+
+export function hostRematch(host: HostState, now: number, settings: RematchSettings = {}): HostState {
+  let state = backToWaiting(host.state)
   if (state === host.state) return host
+  if (settings.rounds !== undefined && roundOptionsFor(state.game).includes(settings.rounds)) {
+    state = setRounds(state, settings.rounds)
+  }
+  state = setTempo(state, settings)
   return { state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000 }, secrets: null }
 }
 

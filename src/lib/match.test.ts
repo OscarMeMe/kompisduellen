@@ -373,3 +373,34 @@ describe('paus efter facit', () => {
     expect(pauseReveal(manual, NOW, 1, 'Värd')).toBe(manual)
   })
 })
+
+describe('snabbval vid revansch', () => {
+  function finished(): HostState {
+    let state = startGame(lobby('gissa-priset', ['a', 'b'], { rounds: 3, guessSeconds: 30 }), ['a', 'b'], NOW)
+    state = { ...state, round: 3 }
+    state = nextRound(playRound(state, { a: 100, b: 1000 }, 100), NOW)
+    return { state, secrets: null }
+  }
+
+  it('nästa match använder valen på resultatsidan', () => {
+    const host = hostRematch(finished(), NOW, { rounds: 10, guessSeconds: 60, autoAdvance: false })
+    expect(host.state.rounds).toBe(10)
+    expect(host.state.guessSeconds).toBe(60)
+    expect(host.state.autoAdvance).toBe(false)
+    expect(host.state.rematchAt).toBe(NOW + REMATCH_SECONDS * 1000)
+  })
+
+  it('utan val gäller samma inställningar som förut, och ogiltiga val ignoreras', () => {
+    expect(hostRematch(finished(), NOW).state).toMatchObject({ rounds: 3, guessSeconds: 30, autoAdvance: true })
+    expect(hostRematch(finished(), NOW, { rounds: 7, guessSeconds: 45 }).state).toMatchObject({ rounds: 3, guessSeconds: 30 })
+  })
+
+  it('startar matchen med de nya valen', () => {
+    const host = hostRematch(finished(), NOW, { rounds: 10, guessSeconds: 20 })
+    const at = host.state.rematchAt!
+    const started = hostRematchStart(host, ['a', 'b'], at, at)
+    expect(started.state.phase).toBe('guessing')
+    expect(started.state.rounds).toBe(10)
+    expect(started.state.deadline).toBe(at + 20_000)
+  })
+})
