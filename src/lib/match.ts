@@ -24,6 +24,9 @@ import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 export const ROUND_OPTIONS = [3, 5, 10] as const
 const DEFAULT_ROUNDS = 5
 
+// Så många rundor har en provomgång med en spelare (Testa själv).
+export const PRACTICE_ROUNDS = 1
+
 export type Phase = 'waiting' | 'guessing' | 'reveal' | 'playing' | 'finished'
 
 export type PlayerInfo = {
@@ -53,6 +56,8 @@ export type GameState = {
   game: string // id från GAMES. Värden kan byta spel i väntrummet inför varje match.
   phase: Phase
   rounds: number
+  // Lobbyns valda antal rundor medan en provomgång (som bara har PRACTICE_ROUNDS) pågår, så att det kommer tillbaka.
+  savedRounds: number | null
   round: number
   // Tidpunkt (värdens klocka, ms) då gissningen eller visningen tar slut.
   // null under facit när värden går vidare själv.
@@ -108,6 +113,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     game,
     phase: 'waiting',
     rounds: defaultRoundsFor(game),
+    savedRounds: null,
     round: 0,
     deadline: null,
     pause: null,
@@ -239,7 +245,11 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
   }
   const count = Object.keys(players).length
   if (!canStart(state.game, count)) return null
-  return { ...state, scores, players, lastResult: null, matchRounds: [], practice: count === 1, rematchAt: null }
+  const practice = count === 1
+  // En provomgång är kort. Lobbyns inställning sparas och kommer tillbaka i väntrummet.
+  const rounds = practice ? PRACTICE_ROUNDS : (state.savedRounds ?? state.rounds)
+  const savedRounds = practice ? (state.savedRounds ?? state.rounds) : null
+  return { ...state, rounds, savedRounds, scores, players, lastResult: null, matchRounds: [], practice, rematchAt: null }
 }
 
 export function isValidGuess(game: string, value: number): boolean {
@@ -362,6 +372,8 @@ export function backToWaiting(state: GameState): GameState {
   return {
     ...state,
     phase: 'waiting',
+    rounds: state.savedRounds ?? state.rounds,
+    savedRounds: null,
     round: 0,
     deadline: null,
     pause: null,

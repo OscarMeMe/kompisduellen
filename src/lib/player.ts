@@ -148,6 +148,19 @@ export function savePlayer(name: string, avatar: string): Player {
   return { id: playerId(), ...profile }
 }
 
+// Förvalt namn och figur för den som testar direkt utan att ha skrivit något (Testa själv).
+export function defaultGuest(random: () => number = Math.random): { name: string; avatar: string } {
+  return { name: 'Gäst', avatar: AVATARS[Math.floor(random() * AVATARS.length)] }
+}
+
+// Spelaren som är sparad i webbläsaren, eller en förvald gäst som sparas så att den går att ändra senare.
+export function loadOrCreateGuest(): Player {
+  const saved = loadPlayer()
+  if (saved) return saved
+  const guest = defaultGuest()
+  return savePlayer(guest.name, guest.avatar)
+}
+
 // Bokstäver som är lätta att läsa högt och svåra att blanda ihop (inga I, O, Q osv.).
 const CODE_LETTERS = 'ABCDEFGHJKLMNPRSTUVWXYZ'
 

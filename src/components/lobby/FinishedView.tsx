@@ -62,17 +62,18 @@ export function FinishedView({
   const [guessSeconds, setGuessSeconds] = useState(guessSecondsFor(state))
   const [autoAdvance, setAutoAdvance] = useState(state.autoAdvance)
   const [editing, setEditing] = useState(false)
-  const rematch = () => onRematch({ rounds, ...(tempo ? { guessSeconds, autoAdvance } : {}) })
+  // En provomgång har inga snabbval: lobbyns inställningar ligger kvar tills ni spelar på riktigt.
+  const rematch = () => onRematch(state.practice ? {} : { rounds, ...(tempo ? { guessSeconds, autoAdvance } : {}) })
   const settingsSummary = tempo ? `${rounds} rundor · ${guessSeconds} s` : `${rounds} rundor`
 
   return (
     <Wide>
       <div className="text-center">
         <p className="text-5xl">🏆</p>
-        <h1 className="mt-2 text-4xl">{state.practice ? 'Provomgången är klar!' : 'Matchen är slut!'}</h1>
+        <h1 className="mt-2 text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
           {game.name} ·{' '}
-          {endedEarly ? `slutade i runda ${state.round} av ${state.rounds}` : `${state.rounds} rundor spelade`}
+          {endedEarly ? `slutade i runda ${state.round} av ${state.rounds}` : state.rounds === 1 ? '1 runda spelad' : `${state.rounds} rundor spelade`}
         </p>
       </div>
 
@@ -80,8 +81,8 @@ export function FinishedView({
         <div className="space-y-1 rounded-lg border bg-lilac/40 p-4 text-center">
           <p className="font-heading font-bold">Testläge</p>
           <p className="text-sm">
-            Provomgången räknas inte i kvällens ställning. Vill du spela med kompisar? Tryck på Bjud in kompisar och
-            dela koden eller länken i lobbyn, och starta när de är med.
+            Provrundan räknas inte i kvällens ställning. Vill du spela med kompisar? Tryck på Bjud in kompisar, dela
+            koden eller länken i lobbyn och starta när de är med.
           </p>
         </div>
       )}
@@ -92,7 +93,14 @@ export function FinishedView({
         </p>
       )}
 
-      <Podium players={ranked} />
+      {state.practice ? (
+        <div className="space-y-1 rounded-lg border bg-mint-soft p-5 text-center shadow-soft animate-pop">
+          <Emoji emoji={ranked[0]?.avatar ?? '🏆'} className="text-5xl" />
+          <p className="font-heading text-3xl font-bold">{ranked[0]?.score ?? 0} poäng</p>
+        </div>
+      ) : (
+        <Podium players={ranked} />
+      )}
 
       {/* Valen kommer direkt efter prispallen. På mobil ligger knapparna fast i nederkant (utan att täcka innehållet,
           eftersom sidan har en tom yta längst ner), så att värden alltid når Revansch. */}
@@ -110,7 +118,7 @@ export function FinishedView({
                 Bjud in kompisar
               </Button>
               <Button size="lg" variant="outline" onClick={rematch}>
-                Testa igen
+                Testa mer
               </Button>
             </div>
           ) : (
@@ -138,7 +146,7 @@ export function FinishedView({
         )}
       </div>
 
-      {isHost && (
+      {isHost && !state.practice && (
         <div className="space-y-3">
           <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
             <span>{settingsSummary} ·</span>
