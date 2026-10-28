@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronDown, Crown, Loader2 } from 'lucide-react'
+import { useEffect, useId, useRef } from 'react'
+import { Check, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
@@ -30,7 +30,7 @@ type WaitingRoomProps = {
   online: OnlinePlayer[]
   // Skillnaden mellan min klocka och värdens (för revanschens nedräkning).
   clockOffset: number
-  // Värden kom hit via Byt spel: inställningarna med spelvalet öppnas direkt.
+  // Värden kom hit via Byt spel: sidan scrollar till inställningarna med spelvalet.
   scrollToGames?: boolean
   onCancelRematch: () => void
   onSetRounds: (rounds: number) => void
@@ -54,31 +54,34 @@ export function WaitingRoom({
   onSetTempo,
   onStart,
 }: WaitingRoomProps) {
-  // Efter Byt spel öppnas inställningarna med spelvalet direkt, och sidan scrollar dit.
-  const [settingsOpen, setSettingsOpen] = useState(scrollToGames && isHost)
+  // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
   const settingsRef = useRef<HTMLElement>(null)
   useEffect(() => {
     if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
   }, [scrollToGames, isHost])
-  const settingsId = useId()
   const rules = rulesFor(state.game)
   // Kortspelen har egen beskrivning och poängförklaring.
   const cardRules = cardRulesFor(state.game)
   const howTo = cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
   const scoringDetails = cardRules ? cardRules.scoringDetails : rules.scoringDetails
-  const startable = canStart(state.game, online.length)
-  const practice = startable && online.length === 1
+  // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
+  const enoughPlayers = online.length >= game.minPlayers
+  const canPractice = canStart(state.game, 1) && online.length === 1
   const hostName = online.find((p) => p.host)?.name
   // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
   const rematching = state.rematchAt !== null
 
-  // En rad som sammanfattar inställningarna: antal rundor och, för spel med tempo, svarstid och vad som händer efter facit.
-  const summary = [
-    `${state.rounds} rundor`,
+  // Det som deltagarna ser i stället för valen: spel, antal rundor och, för spel med tempo, svarstid och facit.
+  const summary: [string, string][] = [
+    ['Spel', game.name],
+    ['Antal rundor', String(state.rounds)],
     ...(hasTempoSettings(state.game)
-      ? [`${guessSecondsFor(state)} s svarstid`, state.autoAdvance ? 'automatiskt vidare' : 'värden går vidare']
+      ? ([
+          ['Svarstid', `${guessSecondsFor(state)} s`],
+          ['Efter facit', state.autoAdvance ? 'Automatiskt' : 'Värden går vidare'],
+        ] as [string, string][])
       : []),
-  ].join(' · ')
+  ]
 
   return (
     <Wide>
@@ -94,39 +97,28 @@ export function WaitingRoom({
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl leading-tight">{game.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              👥 {online.length} i lobbyn · {summary}
-            </p>
+            <p className="text-sm text-muted-foreground">👥 {online.length} i lobbyn</p>
           </div>
         </div>
 
-        {practice && (
-          <p className="rounded-md bg-lilac/40 px-3 py-2 text-sm">
-            <strong>Testläge:</strong> du är ensam, så det blir en provomgång som inte räknas i kvällens ställning. Dela
-            koden nedan om du vill spela med kompisar.
-          </p>
-        )}
-
         {isHost ? (
           <div className="space-y-2">
-            <Button size="lg" className="w-full" onClick={onStart} disabled={!startable || rematching}>
-              {practice ? `Testa ${game.name} själv` : `Starta ${game.name}`}
+            <Button size="lg" className="w-full" onClick={onStart} disabled={!enoughPlayers || rematching}>
+              {enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
-            {!startable && (
+            {!enoughPlayers && (
               <p className="text-center text-sm text-muted-foreground">
                 Minst {game.minPlayers} spelare behövs. Bjud in {game.minPlayers > 2 ? 'fler kompisar' : 'en kompis'} med koden nedan.
               </p>
             )}
-            <Button
-              variant="ghost"
-              className="w-full"
-              aria-expanded={settingsOpen}
-              aria-controls={settingsId}
-              onClick={() => setSettingsOpen((open) => !open)}
-            >
-              Ändra inställningar
-              <ChevronDown className={cn('transition-transform', settingsOpen && 'rotate-180')} aria-hidden />
-            </Button>
+            {canPractice && (
+              <>
+                <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>
+                  Testa själv
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">En provomgång som inte räknas i ställningen.</p>
+              </>
+            )}
           </div>
         ) : (
           <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft px-3 py-3 text-center font-semibold">
@@ -135,81 +127,6 @@ export function WaitingRoom({
           </p>
         )}
       </section>
-
-      {/* Inställningarna ligger bakom "Ändra inställningar" och visas bara för värden. */}
-      {isHost && settingsOpen && (
-        <section
-          ref={settingsRef}
-          id={settingsId}
-          className="scroll-mt-4 space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
-          aria-label="Inställningar"
-        >
-          <div className="space-y-3">
-            <h2 className="text-xl">Välj spel</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {GAMES.filter((g) => g.playable).map((option) => {
-                const selected = option.id === game.id
-                // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
-                const tooFew = online.length < option.minPlayers
-                return (
-                  <Button
-                    key={option.id}
-                    variant="outline"
-                    aria-pressed={selected}
-                    onClick={() => onSetGame(option.id)}
-                    className={cn(
-                      'h-auto justify-start gap-3 rounded-lg border-2 p-4 text-left whitespace-normal',
-                      selected ? 'border-primary bg-coral-soft' : 'bg-card',
-                    )}
-                  >
-                    <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-md text-2xl', option.color)}>
-                      <Emoji emoji={option.emoji} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-heading text-base font-bold">{option.name}</span>
-                      <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
-                      <span className={cn('mt-1 block text-xs font-semibold', tooFew ? 'text-primary' : 'text-muted-foreground')}>
-                        👥 {playersLabel(option)}
-                        {tooFew && ` · ni är ${online.length} just nu`}
-                      </span>
-                    </span>
-                    {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}
-                  </Button>
-                )
-              })}
-            </div>
-          </div>
-
-          <Choice
-            label="Antal rundor"
-            options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
-            selected={state.rounds}
-            onSelect={onSetRounds}
-          />
-
-          {/* Tempo för spel som har det (Gissa priset). Gäller hela lobbyn. */}
-          {hasTempoSettings(state.game) && (
-            <>
-              <Choice
-                label="Svarstid"
-                options={(rules.guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
-                selected={guessSecondsFor(state)}
-                onSelect={(guessSeconds) => onSetTempo({ guessSeconds })}
-              />
-              <Choice
-                label="Efter facit"
-                hint={state.autoAdvance ? undefined : 'Facit står kvar tills värden går vidare.'}
-                options={[
-                  { value: 1, label: 'Automatiskt' },
-                  { value: 0, label: 'Värden går vidare' },
-                ]}
-                selected={state.autoAdvance ? 1 : 0}
-                onSelect={(value) => onSetTempo({ autoAdvance: value === 1 })}
-              />
-            </>
-          )}
-        </section>
-      )}
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <InviteCard code={code} game={game} />
@@ -231,6 +148,94 @@ export function WaitingRoom({
         </section>
       </div>
 
+      {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. */}
+      <section
+        ref={settingsRef}
+        className="scroll-mt-4 space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
+        aria-label="Inställningar"
+      >
+        <h2 className="text-xl">Inställningar</h2>
+        {isHost ? (
+          <>
+            <div className="space-y-3">
+              <p className="font-bold">Spel</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {GAMES.filter((g) => g.playable).map((option) => {
+                  const selected = option.id === game.id
+                  // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
+                  const tooFew = online.length < option.minPlayers
+                  return (
+                    <Button
+                      key={option.id}
+                      variant="outline"
+                      aria-pressed={selected}
+                      onClick={() => onSetGame(option.id)}
+                      className={cn(
+                        'h-auto justify-start gap-3 rounded-lg border-2 p-4 text-left whitespace-normal',
+                        selected ? 'border-primary bg-coral-soft' : 'bg-card',
+                      )}
+                    >
+                      <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-md text-2xl', option.color)}>
+                        <Emoji emoji={option.emoji} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-heading text-base font-bold">{option.name}</span>
+                        <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
+                        <span className={cn('mt-1 block text-xs font-semibold', tooFew ? 'text-primary' : 'text-muted-foreground')}>
+                          👥 {playersLabel(option)}
+                          {tooFew && ` · ni är ${online.length} just nu`}
+                        </span>
+                      </span>
+                      {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <Choice
+              label="Antal rundor"
+              options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
+              selected={state.rounds}
+              onSelect={onSetRounds}
+            />
+
+            {/* Tempo för spel som har det (Gissa priset). Gäller hela lobbyn. */}
+            {hasTempoSettings(state.game) && (
+              <>
+                <Choice
+                  label="Svarstid"
+                  options={(rules.guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
+                  selected={guessSecondsFor(state)}
+                  onSelect={(guessSeconds) => onSetTempo({ guessSeconds })}
+                />
+                <Choice
+                  label="Efter facit"
+                  hint={state.autoAdvance ? undefined : 'Facit står kvar tills värden går vidare.'}
+                  options={[
+                    { value: 1, label: 'Automatiskt' },
+                    { value: 0, label: 'Värden går vidare' },
+                  ]}
+                  selected={state.autoAdvance ? 1 : 0}
+                  onSelect={(value) => onSetTempo({ autoAdvance: value === 1 })}
+                />
+              </>
+            )}
+          </>
+        ) : (
+          <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">
+            {summary.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="font-bold">{label}</dt>
+                <dd className="text-muted-foreground">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
+
+      <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
+
       <details className="rounded-lg border bg-card px-4 text-sm shadow-soft-sm">
         {/* Hela raden är tryckbar, minst 44 px hög. */}
         <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så spelas det</summary>
@@ -243,8 +248,6 @@ export function WaitingRoom({
           </ul>
         </div>
       </details>
-
-      <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
     </Wide>
   )
 }
