@@ -20,7 +20,7 @@ function percentOff(guess: number, price: number): string {
   return diff > 0 ? `${diff} % för högt` : `${Math.abs(diff)} % för lågt`
 }
 
-export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: RevealViewProps) {
+export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
   const item = findPriceItem(result?.itemId)
   const [revealed, setRevealed] = useState(false)
@@ -96,6 +96,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext }: Reve
         isHost={isHost}
         clockOffset={clockOffset}
         onNext={onNext}
+        onPause={onPause}
+        onResume={onResume}
       />
     </Wide>
   )

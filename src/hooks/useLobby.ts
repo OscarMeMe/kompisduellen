@@ -19,7 +19,9 @@ import {
   hostRematchStart,
   hostStart,
   initialState,
+  pauseReveal,
   resolveRound,
+  resumeReveal,
   restoreHostState,
   setGame,
   setRounds,
@@ -358,6 +360,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       // round = rundan som visades när värden klickade. Ett dubbelklick hoppar inte över en runda.
       skipReveal: (round: number) => {
         if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
+      },
+      // Värden pausar och fortsätter nedräkningen efter facit. round = rundan som visades.
+      pauseReveal: (round: number) => {
+        if (isHost && me) publish(pauseReveal(stateRef.current, Date.now(), round, me.name))
+      },
+      resumeReveal: (round: number) => {
+        if (isHost) publish(resumeReveal(stateRef.current, Date.now(), round))
       },
       // Tillbaka till väntrummet med samma grupp och kvällens ställning (Byt spel, Bjud in kompisar).
       playAgain: () => {

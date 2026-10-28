@@ -55,6 +55,8 @@ export type GameState = {
   // Tidpunkt (värdens klocka, ms) då gissningen eller visningen tar slut.
   // null under facit när värden går vidare själv.
   deadline: number | null
+  // Värden har pausat facit: namnet och hur lång tid som var kvar (ms). null = inte pausat.
+  pause: { by: string; msLeft: number } | null
   guesses: Record<string, number>
   scores: Record<string, number>
   players: Record<string, PlayerInfo>
@@ -104,6 +106,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     rounds: defaultRoundsFor(game),
     round: 0,
     deadline: null,
+    pause: null,
     guesses: {},
     scores: {},
     players: {},
@@ -156,6 +159,7 @@ function startRound(state: GameState, round: number, now: number): GameState {
     phase: 'guessing',
     round,
     deadline: now + guessSecondsFor(state) * 1000,
+    pause: null,
     guesses: {},
   }
 }
@@ -268,6 +272,7 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
     phase: 'reveal',
     // Går värden vidare själv står facit kvar utan klocka.
     deadline: autoAdvanceFor(state) ? now + rules.revealSeconds * 1000 : null,
+    pause: null,
     scores,
     lastResult: result,
     matchRounds: [...state.matchRounds, result],
@@ -277,7 +282,7 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
 export function nextRound(state: GameState, now: number): GameState {
   if (state.phase !== 'reveal') return state
   if (state.round >= state.rounds) {
-    return finishMatch({ ...state, phase: 'finished', deadline: null })
+    return finishMatch({ ...state, phase: 'finished', deadline: null, pause: null })
   }
   return startRound(state, state.round + 1, now)
 }
@@ -296,6 +301,19 @@ export function handleDeadline(state: GameState, now: number, deadline: number):
 export function advanceFromReveal(state: GameState, now: number, round: number): GameState {
   if (state.phase !== 'reveal' || state.round !== round) return state
   return nextRound(state, now)
+}
+
+// Värden pausar nedräkningen efter facit. round är rundan som visades, så att ett dubbeltryck eller ett
+// tryck i en gammal vy aldrig pausar fel runda. Går bara när en nedräkning löper (inte redan pausad).
+export function pauseReveal(state: GameState, now: number, round: number, by: string): GameState {
+  if (state.phase !== 'reveal' || state.round !== round || state.deadline === null || state.pause) return state
+  return { ...state, deadline: null, pause: { by, msLeft: Math.max(0, state.deadline - now) } }
+}
+
+// Värden fortsätter: nedräkningen går vidare med den tid som var kvar.
+export function resumeReveal(state: GameState, now: number, round: number): GameState {
+  if (state.phase !== 'reveal' || state.round !== round || !state.pause) return state
+  return { ...state, deadline: now + state.pause.msLeft, pause: null }
 }
 
 // Den eller de med flest poäng i matchen. Delad seger ger alla på förstaplatsen en vinst.
@@ -336,6 +354,7 @@ export function backToWaiting(state: GameState): GameState {
     phase: 'waiting',
     round: 0,
     deadline: null,
+    pause: null,
     guesses: {},
     scores,
     lastResult: null,

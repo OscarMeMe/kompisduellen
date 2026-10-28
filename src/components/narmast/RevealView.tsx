@@ -6,7 +6,7 @@ import type { RevealViewProps } from '@/components/lobby/types'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 import { cn } from '@/lib/utils'
 
-export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealViewProps) {
+export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
   const [shownTarget, setShownTarget] = useState<number | null>(null)
 
@@ -99,6 +99,8 @@ export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealVie
         isHost={isHost}
         clockOffset={clockOffset}
         onNext={onNext}
+        onPause={onPause}
+        onResume={onResume}
       />
     </Wide>
   )

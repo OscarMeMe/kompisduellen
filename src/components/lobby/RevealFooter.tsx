@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, Pause, Play } from 'lucide-react'
 import { useCountdown } from '@/hooks/useCountdown'
 import { Button } from '@/components/ui/button'
 import { autoAdvanceFor, type GameState } from '@/lib/match'
@@ -9,24 +9,36 @@ type RevealFooterProps = {
   isHost: boolean
   clockOffset: number
   onNext: (round: number) => void
+  // Pausa och fortsätta nedräkningen (bara gissningsspelen). Utan dem visas inga pausknappar.
+  onPause?: (round: number) => void
+  onResume?: (round: number) => void
   // Visningens hela tid, om spelet inte har revealSeconds i spelregler.ts (t.ex. kortspelen).
   totalSeconds?: number
 }
 
 // Efter facit. Automatiskt: nedräkning till nästa runda (eller prispallen) och en knapp så att
 // värden kan hoppa fram. Värden går vidare: facit står kvar tills värden klickar.
-export function RevealFooter({ state, isHost, clockOffset, onNext, totalSeconds }: RevealFooterProps) {
+export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onResume, totalSeconds }: RevealFooterProps) {
   const isLast = state.round >= state.rounds
   const auto = autoAdvanceFor(state)
   const total = totalSeconds ?? rulesFor(state.game).revealSeconds
-  const { secondsLeft, progress } = useCountdown(state.deadline, clockOffset, total)
+  const counted = useCountdown(state.deadline, clockOffset, total)
+  // Pausad: nedräkningen står still på tiden som var kvar.
+  const paused = state.pause
+  const secondsLeft = paused ? Math.ceil(paused.msLeft / 1000) : counted.secondsLeft
+  const progress = paused ? Math.min(1, paused.msLeft / (total * 1000)) : counted.progress
+  const canPause = auto && isHost && onPause !== undefined && onResume !== undefined
 
   return (
     <div className="space-y-3 rounded-lg border bg-card p-5 shadow-soft">
-      {auto && state.deadline !== null && (
+      {auto && (state.deadline !== null || paused) && (
         <div className="space-y-2">
           <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
-            {isLast ? `Resultatet visas om ${secondsLeft} s` : `Runda ${state.round + 1} börjar om ${secondsLeft} s`}
+            {paused
+              ? `${isHost ? 'Du har' : `${paused.by} har`} pausat · ${secondsLeft} s kvar`
+              : isLast
+                ? `Resultatet visas om ${secondsLeft} s`
+                : `Runda ${state.round + 1} börjar om ${secondsLeft} s`}
           </p>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
@@ -43,14 +55,27 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, totalSeconds 
         </p>
       )}
       {isHost && (
-        <Button
-          variant={auto ? 'outline' : 'default'}
-          size="lg"
-          className="w-full"
-          onClick={() => onNext(state.round)}
-        >
-          {auto ? (isLast ? 'Visa resultatet nu' : 'Nästa runda nu') : isLast ? 'Visa resultatet' : 'Nästa runda'}
-        </Button>
+        <div className="flex gap-2">
+          {canPause && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="flex-1"
+              onClick={() => (paused ? onResume(state.round) : onPause(state.round))}
+            >
+              {paused ? <Play aria-hidden /> : <Pause aria-hidden />}
+              {paused ? 'Fortsätt' : 'Pausa'}
+            </Button>
+          )}
+          <Button
+            variant={auto ? 'outline' : 'default'}
+            size="lg"
+            className="flex-1"
+            onClick={() => onNext(state.round)}
+          >
+            {auto ? (isLast ? 'Resultatet nu' : 'Nästa nu') : isLast ? 'Visa resultatet' : 'Nästa runda'}
+          </Button>
+        </div>
       )}
     </div>
   )

@@ -20,6 +20,9 @@ export type RevealViewProps = {
   clockOffset: number
   // Värden går vidare från facit. round = rundan som visades, så att ett dubbelklick inte hoppar över en runda.
   onNext: (round: number) => void
+  // Värden pausar och fortsätter nedräkningen efter facit.
+  onPause: (round: number) => void
+  onResume: (round: number) => void
 }
 
 // Kortspelen har en vy för hela rundan (frågekort, välja kort, domaren väljer, avslöja).
