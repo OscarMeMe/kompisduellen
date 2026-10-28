@@ -137,7 +137,6 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
     return (
       <Narrow>
         <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
-          <p className="text-5xl">🪟</p>
           <h1 className="text-2xl">Du är redan med i den här lobbyn</h1>
           <p className="text-muted-foreground">
             {me.name} är med i en annan flik. Använd den fliken, eller stäng den och försök igen här. Är det en annan
@@ -212,7 +211,6 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     return (
       <Narrow>
         <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
-          <p className="text-5xl">🤷</p>
           <h1 className="text-2xl">
             {status === 'error' ? 'Kunde inte ansluta' : `Ingen lobby med koden ${code}`}
           </h1>

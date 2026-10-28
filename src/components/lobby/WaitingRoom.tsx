@@ -105,9 +105,6 @@ export function WaitingRoom({
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Spelet">
         <div className="flex items-center gap-3">
-          <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
-            <Emoji emoji={game.emoji} />
-          </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl leading-tight">{game.name}</h1>
             <p className="text-sm text-muted-foreground">👥 {online.length} i lobbyn</p>

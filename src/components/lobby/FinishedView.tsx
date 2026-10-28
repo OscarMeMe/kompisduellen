@@ -69,8 +69,7 @@ export function FinishedView({
   return (
     <Wide>
       <div className="text-center">
-        <p className="text-5xl">🏆</p>
-        <h1 className="mt-2 text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
+        <h1 className="text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
           {game.name} ·{' '}
           {endedEarly ? `slutade i runda ${state.round} av ${state.rounds}` : state.rounds === 1 ? '1 runda spelad' : `${state.rounds} rundor spelade`}
@@ -209,9 +208,6 @@ export function FinishedView({
         <ul className={cn('grid gap-3', highlights.length > 1 && 'sm:grid-cols-2')} aria-label="Matchens höjdpunkter">
           {highlights.map((highlight) => (
             <li key={highlight.id} className="flex gap-3 rounded-lg border bg-sun-soft p-4 shadow-soft-sm animate-pop">
-              <span className="text-2xl leading-none" aria-hidden>
-                {highlight.emoji}
-              </span>
               <span className="min-w-0">
                 <span className="block font-heading font-bold">{highlight.title}</span>
                 <span className="block text-sm break-words text-muted-foreground">{highlight.text}</span>

@@ -55,7 +55,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
             {myPoints === undefined
               ? 'Du hann inte gissa den här gången'
               : myPoints === 100
-                ? 'Pricken mitt i! +100 poäng 🎉'
+                ? 'Pricken mitt i! +100 poäng'
                 : `Du fick ${myPoints} poäng`}
           </p>
         )}
