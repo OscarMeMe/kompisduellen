@@ -5,6 +5,8 @@ import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort
 import { track } from '@/lib/statistik'
 import { supabase } from '@/lib/supabase'
 import { loadHostLobby, saveHostLobby, type Player } from '@/lib/player'
+import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
+import type { FloatingReaction } from '@/components/lobby/Reactions'
 import {
   addGuess,
   addPlayers,
@@ -73,10 +75,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [clockOffset, setClockOffset] = useState(0)
   // Kortspelen: min egen hand, som värden skickar bara till mig.
   const [hand, setHand] = useState<MyHand | null>(null)
+  // Reaktioner som syns på skärmen just nu.
+  const [floating, setFloating] = useState<FloatingReaction[]>([])
 
   const channelRef = useRef<RealtimeChannel | null>(null)
   const stateRef = useRef<GameState>(state)
   const onlineRef = useRef<OnlinePlayer[]>([])
+  // Reaktioner: när jag skickade senast, och vad som släppts igenom från varje spelare (se reaktioner.ts).
+  const lastReactionRef = useRef<number | null>(null)
+  const reactionHistoryRef = useRef<Record<string, number[]>>({})
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
   const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
   const sentHandsRef = useRef<Record<string, string>>({})
@@ -228,6 +235,28 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       if (to === me.id) setHand(next)
     })
 
+    // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.
+    channel.on('broadcast', { event: 'reaction' }, ({ payload }) => {
+      const { id, reaction } = (payload ?? {}) as { id?: string; reaction?: string }
+      const def = findReaction(reaction)
+      if (!id || !def) return
+      const who = onlineRef.current.find((p) => p.id === id) ?? stateRef.current.players[id]
+      if (!who) return
+      const now = Date.now()
+      const history = acceptReaction(reactionHistoryRef.current[id] ?? [], now)
+      if (!history) return
+      reactionHistoryRef.current[id] = history
+      const item: FloatingReaction = {
+        key: `${id}-${now}-${Math.random()}`,
+        name: who.name,
+        avatar: who.avatar,
+        emoji: def.emoji,
+        left: 15 + Math.random() * 70,
+      }
+      setFloating((list) => [...list.slice(-7), item])
+      setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)
+    })
+
     channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
       if (!isHost) return
       const { id, value } = payload as { id: string; value: number }
@@ -369,6 +398,14 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       skipReveal: (round: number) => {
         if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
       },
+      // En liten reaktion till alla i lobbyn. Knapparna väntar en stund efter varje tryck.
+      react: (reactionId: string) => {
+        if (!me || !findReaction(reactionId)) return
+        const now = Date.now()
+        if (!canSendReaction(lastReactionRef.current, now)) return
+        lastReactionRef.current = now
+        void channelRef.current?.send({ type: 'broadcast', event: 'reaction', payload: { id: me.id, reaction: reactionId } })
+      },
       // Värden pausar och fortsätter nedräkningen efter facit. round = rundan som visades.
       pauseReveal: (round: number) => {
         if (isHost && me) publish(pauseReveal(stateRef.current, Date.now(), round, me.name))
@@ -396,7 +433,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   )
 
   // Handen gäller bara medan ett kortspel pågår.
-  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, actions }
+  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, floating, actions }
 }
 
 // Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.

@@ -1,4 +1,5 @@
 import { Loader2, Pause, Play } from 'lucide-react'
+import { ReactionBar } from '@/components/lobby/Reactions'
 import { useCountdown } from '@/hooks/useCountdown'
 import { Button } from '@/components/ui/button'
 import { autoAdvanceFor, type GameState } from '@/lib/match'
@@ -76,6 +77,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onRe
           </Button>
         </div>
       )}
+      <ReactionBar />
     </div>
   )
 }
