@@ -150,14 +150,17 @@ export function HomePage() {
                   </h3>
                 </div>
                 <p className="leading-snug text-muted-foreground">{game.tagline}</p>
+                {/* Spelarantal, ungefärlig tid och känsla, så att man väljer rätt spel utan att öppna förklaringen. */}
+                <ul className="flex flex-wrap gap-1.5 text-xs font-semibold" aria-label="Om spelet">
+                  <li className="rounded-full bg-card/70 px-2.5 py-1">👥 {playersLabel(game)}</li>
+                  {game.duration && <li className="rounded-full bg-card/70 px-2.5 py-1">⏱ ca {game.duration}</li>}
+                  {game.feel && <li className="rounded-full bg-card/70 px-2.5 py-1">🎲 {game.feel}</li>}
+                </ul>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <p className="text-sm font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
-                  <Button variant="link" className="h-auto px-0" onClick={() => showIntro(game)}>
-                    <Info /> Så spelar man
-                  </Button>
-                </div>
+                <Button variant="link" className="h-auto px-0" onClick={() => showIntro(game)}>
+                  <Info /> Så spelar man
+                </Button>
                 <div className="flex flex-wrap gap-2">
                   {rulesFor(game.id).soloPractice && (
                     <Button asChild variant="outline">

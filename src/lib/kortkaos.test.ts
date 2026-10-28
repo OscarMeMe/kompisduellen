@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { GAMES } from '@/lib/games'
 import { GAP, myHand } from '@/lib/kort'
 import kort from '@/lib/kortkaos.json'
 import { bestCard, kortkaosRules, sentence } from '@/lib/kortkaos'
@@ -6,6 +7,7 @@ import {
   addPlayers,
   backToWaiting,
   canStart,
+  hostAdvance,
   hostDeadline,
   hostMove,
   hostPresence,
@@ -127,5 +129,30 @@ describe('matchens bästa kort', () => {
   it('tar den första vid delad seger och hoppar över lottade vinster', () => {
     expect(bestCard(table, ['a', 'b', 'c'])?.text).toBe('första')
     expect(bestCard({ ...table, wins: table.wins.slice(0, 1) }, ['a'])).toBeNull()
+  })
+})
+
+describe('antal spelare', () => {
+  // Kortleken har 150 svarskort. Samma kort kommer aldrig tillbaka i en match, så den som har för många spelare
+  // får färre kort på handen mot slutet.
+  function smallestHand(players: number, rounds: number): number {
+    const ids = Array.from({ length: players }, (_, i) => `p${i}`)
+    let host = hostStart(lobby(ids, rounds), ids, NOW, () => 0)
+    let smallest = Infinity
+    for (let round = 1; round <= rounds && host.state.phase === 'playing'; round++) {
+      smallest = Math.min(smallest, ...ids.map((id) => host.secrets!.hands[id].length))
+      host = playRound(host, ids)
+      host = hostAdvance(host, NOW, round, ids)
+    }
+    return smallest
+  }
+
+  it('kortleken räcker till det största antalet spelare på spelkortet, oavsett antal rundor', () => {
+    const max = GAMES.find((game) => game.id === 'kortkaos')!.maxPlayers!
+    for (const rounds of roundOptionsFor('kortkaos')) {
+      expect(smallestHand(max, rounds)).toBe(kortkaosRules.handSize)
+    }
+    // Med 12 spelare och 10 rundor tar korten slut mot slutet.
+    expect(smallestHand(12, 10)).toBeLessThan(kortkaosRules.handSize)
   })
 })
