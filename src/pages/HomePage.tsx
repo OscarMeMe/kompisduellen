@@ -2,13 +2,12 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ArrowDown, Check, Info, Play } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { ExempelRunda } from '@/components/ExempelRunda'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatSek } from '@/lib/belopp'
 import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
-import { pricePoints } from '@/lib/gissa-priset'
 import { checkLobby, felText } from '@/lib/lobbykoll'
 import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
@@ -18,14 +17,6 @@ const STEPS = [
   { title: 'Dela koden', text: 'Fyra bokstäver. Skicka i Discord eller säg den högt.', color: 'bg-sun-soft' },
   { title: 'Spela!', text: 'Alla svarar på sin egen skärm. Flest poäng vinner.', color: 'bg-mint-soft' },
 ]
-
-// En runda i Gissa priset med en riktig sak ur prisdata.ts. Poängen räknas som i spelet.
-const PREVIEW_ITEM = { name: 'Ikeas hjärtformade kudde med armar', year: 1998, priceSek: 79 }
-const PREVIEW_ROWS = [
-  { name: 'Oscar', avatar: '🧙', guess: 75 },
-  { name: 'Michaela', avatar: '👽', guess: 120 },
-  { name: 'Andreas', avatar: '🤖', guess: 30 },
-].map((row, index) => ({ ...row, points: pricePoints(row.guess, PREVIEW_ITEM.priceSek), win: index === 0 }))
 
 // Gå med med en kod direkt från startsidan. Versaler och högst fyra bokstäver, Enter fungerar. Knappen är dov tills
 // koden är komplett. Koden kontrolleras innan man går med, så att en felaktig eller avslutad kod ger ett kort besked
@@ -120,7 +111,7 @@ export function HomePage() {
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
-      <section className="grid items-center gap-6 md:grid-cols-[1.3fr_1fr] md:gap-10">
+      <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:gap-12">
         <div className="space-y-6 text-center md:text-left">
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
@@ -156,39 +147,8 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Förhandsvisning av en runda i Gissa priset */}
-        <div className="mx-auto w-full max-w-[17rem] rotate-2 rounded-lg border bg-card p-3 shadow-soft sm:max-w-sm sm:p-4 transition-transform hover:rotate-0">
-          <div className="flex items-center justify-between">
-            <p className="font-heading text-sm font-bold">Gissa priset</p>
-            <span className="rounded-full bg-sky-soft px-3 py-1 text-xs font-semibold">Runda 3 av 5</span>
-          </div>
-          <div className="mt-2.5 rounded-lg bg-sun-soft py-2.5 text-center">
-            <p className="px-4 text-sm font-semibold">
-              {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
-            </p>
-            <p className="mt-1 font-heading text-4xl font-bold tabular-nums sm:text-5xl">{formatSek(PREVIEW_ITEM.priceSek)}</p>
-            <p className="text-sm text-muted-foreground">Rätt pris</p>
-          </div>
-          <ol className="mt-2 space-y-1">
-            {PREVIEW_ROWS.map((row, index) => (
-              <li
-                key={row.name}
-                className={cn('flex items-center gap-3 rounded-lg px-4 py-1.5', row.win ? 'bg-mint-soft' : 'bg-muted')}
-              >
-                <span className="w-3 text-sm font-semibold text-muted-foreground">{index + 1}</span>
-                <Emoji emoji={row.avatar} className="text-xl" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-heading font-bold">{row.name}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    Gissade {formatSek(row.guess)}
-                    {row.win && '. Närmast!'}
-                  </span>
-                </span>
-                <span className="font-heading text-lg font-bold tabular-nums">+{row.points}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        {/* En liten spelbar exempelrunda, helt lokal. */}
+        <ExempelRunda onPlay={pointAtGames} />
       </section>
 
       {/* Alla spel */}
