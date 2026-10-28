@@ -49,28 +49,32 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
   }
 
   return (
-    <section aria-label="Exempelrunda" className="mx-auto w-full max-w-md rounded-lg border bg-card p-4 shadow-soft">
-      <div className="flex items-center justify-between gap-2">
-        <span className="rounded-full bg-sky-soft px-3 py-0.5 text-sm font-bold">Exempelrunda</span>
-        <span className="font-heading text-sm font-bold text-muted-foreground">Gissa priset</span>
-      </div>
-
-      <div className="mt-3 flex gap-3">
-        {item.image && (
-          <figure className="w-28 shrink-0 sm:w-32">
-            <img src={item.image} alt="" className="aspect-4/3 w-full rounded-md object-cover" />
-            {item.imageCredit && (
-              <figcaption className="mt-1 text-[11px] leading-tight text-muted-foreground">{item.imageCredit}</figcaption>
-            )}
-          </figure>
-        )}
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-muted-foreground">
-            {item.question ?? 'Vad kostade det'} år <span className="font-bold text-primary">{item.year}</span>?
-          </p>
-          <h2 className="text-lg leading-tight text-balance sm:text-xl">{item.name}</h2>
-          <p className="mt-1 text-sm leading-snug text-muted-foreground">{item.clue}</p>
+    <section
+      aria-label="Exempelrunda"
+      className="mx-auto flex w-full max-w-md flex-col rounded-lg border bg-card p-4 shadow-soft md:h-full md:max-w-none"
+    >
+      {/* Bilden överst. På bred skärm tar den all höjd som blir över, och hela föremålet visas (ingen uppklippt del). */}
+      <figure className="flex min-h-0 flex-col md:flex-1">
+        <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-28 md:flex-1">
+          {item.image && <img src={item.image} alt="" className="absolute inset-0 size-full object-contain" />}
+          <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">
+            Exempelrunda
+          </span>
+          <span className="absolute top-2 right-2 rounded-full bg-card px-3 py-0.5 font-heading text-sm font-bold text-muted-foreground shadow-soft-sm">
+            Gissa priset
+          </span>
         </div>
+        {item.imageCredit && (
+          <figcaption className="mt-1 truncate text-[11px] leading-tight text-muted-foreground/80">{item.imageCredit}</figcaption>
+        )}
+      </figure>
+
+      <div className="mt-3">
+        <p className="text-sm font-semibold text-muted-foreground">
+          {item.question ?? 'Vad kostade det'} år <span className="font-bold text-primary">{item.year}</span>?
+        </p>
+        <h2 className="text-xl leading-tight text-balance">{item.name}</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">{item.exempelLedtrad ?? item.clue}</p>
       </div>
 
       {guess === null ? (

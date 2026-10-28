@@ -70,7 +70,13 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
             large && 'h-20! flex-none text-center text-4xl tracking-[0.4em] placeholder:text-lg',
           )}
         />
-        <Button type="submit" size="lg" variant={complete ? 'default' : 'outline'} disabled={checking}>
+        <Button
+          type="submit"
+          size="lg"
+          variant={complete ? 'default' : 'outline'}
+          className={complete ? undefined : 'hover:bg-card hover:border-foreground/30'}
+          disabled={checking}
+        >
           Gå med
         </Button>
       </div>

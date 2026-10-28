@@ -32,5 +32,7 @@ describe('exempelfrågan på startsidan', () => {
     expect(example?.imageSource).toMatch(/^https:\/\//)
     // Bilden ska visa just saken, så ingen anteckning om att den visar något annat.
     expect(example?.imageNote).toBeUndefined()
+    // Exempelrundans ledtråd får inte avslöja priset.
+    expect(example?.exempelLedtrad ?? '').not.toContain(String(example?.priceSek))
   })
 })
