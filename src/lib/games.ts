@@ -10,6 +10,12 @@ export type GameInfo = {
   color: string // Tailwind-klass för kortets pastellfärg
   // Minsta antal spelare för en vanlig match. Det finns ingen övre gräns i lobbyn.
   minPlayers: number
+  // Största antal spelare som är prövat. Saknas det finns ingen känd gräns, och då visas bara minsta antalet.
+  maxPlayers?: number
+  // Ungefärlig tid för en match med förvalda inställningar, t.ex. "3–4 min" (se spelkorten på startsidan).
+  duration?: string
+  // Hur det känns att spela, i några ord.
+  feel?: string
   playable: boolean
   // Förklaringen som visas när man klickar på spelet: en bild (emoji), en rolig mening och kort hur det går till.
   // Saknas den visas tagline och spelets howTo i stället.
@@ -25,6 +31,9 @@ export const GAMES: GameInfo[] = [
     emoji: '🏷️',
     color: 'bg-sun-soft',
     minPlayers: 2,
+    maxPlayers: 12,
+    duration: '2–4 min',
+    feel: 'Tävlingsinriktat och lagom knepigt',
     playable: true,
     intro: {
       emoji: '💸',
@@ -45,6 +54,9 @@ export const GAMES: GameInfo[] = [
     emoji: '🎯',
     color: 'bg-coral-soft',
     minPlayers: 2,
+    maxPlayers: 12,
+    duration: '1–2 min',
+    feel: 'Snabbt och ren tur',
     playable: true,
     intro: {
       emoji: '🍀',
@@ -65,6 +77,9 @@ export const GAMES: GameInfo[] = [
     emoji: '🃏',
     color: 'bg-lilac/40',
     minPlayers: 3,
+    maxPlayers: 9,
+    duration: '8–14 min',
+    feel: 'Pratigt och fräckt',
     playable: true,
   },
   {
@@ -91,7 +106,7 @@ export function findGame(id: string | null | undefined): GameInfo | undefined {
   return GAMES.find((game) => game.id === id)
 }
 
-// "2+ spelare". Lobbyn har ingen övre gräns, så bara det minsta antalet visas.
+// "2–12 spelare" när det finns ett prövat största antal, annars "2+ spelare". Lobbyn har ingen hård gräns.
 export function playersLabel(game: GameInfo): string {
-  return `${game.minPlayers}+ spelare`
+  return game.maxPlayers ? `${game.minPlayers}–${game.maxPlayers} spelare` : `${game.minPlayers}+ spelare`
 }
