@@ -1,13 +1,14 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { ArrowDown, Check, Info, Play } from 'lucide-react'
+import { ArrowDown, Check, Play } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { SpelKort } from '@/components/SpelKort'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
+import { GAMES, type GameInfo } from '@/lib/games'
 import { checkLobby, felText } from '@/lib/lobbykoll'
 import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
@@ -152,62 +153,23 @@ export function HomePage() {
       </section>
 
       {/* Alla spel */}
-      <section id="spel" tabIndex={-1} aria-label="Spel" className="scroll-mt-6 space-y-3 outline-none">
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <h2 className="text-3xl">Spel</h2>
+      <section id="spel" tabIndex={-1} aria-labelledby="spel-rubrik" className="scroll-mt-6 space-y-4 outline-none">
+        <div className="space-y-1">
+          <h2 id="spel-rubrik" className="text-3xl">
+            Vad ska ni spela?
+          </h2>
+          <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
         </div>
-        {/* Spelbara spel först, i vita kort med samma uppbyggnad och höjd. Kommande spel på en egen rad, mindre och nedtonade. */}
+        {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.filter((game) => game.playable).map((game) => (
-            // Hela kortet är klickbart och visar förklaringen. Namnet är knappen för tangentbord och skärmläsare,
-            // och knapparna längst ner tar sina egna klick.
-            <div
+            <SpelKort
               key={game.id}
-              onClick={() => showIntro(game)}
-              className={cn(
-                'flex h-full cursor-pointer flex-col gap-2.5 rounded-lg border bg-card p-4 shadow-soft transition-transform hover:-translate-y-1',
-                highlightGames && 'animate-pop ring-4 ring-primary/40',
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
-                  <Emoji emoji={game.emoji} />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="text-xl leading-tight">
-                    <button
-                      type="button"
-                      className="rounded-md text-left outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
-                    >
-                      {game.name}
-                    </button>
-                  </h3>
-                  {/* Spelarantal från spelets regler och hur lång en match känns (diffust, inga minuter). */}
-                  <p className="text-sm font-semibold text-muted-foreground">
-                    {[playersLabel(game), game.length].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-              </div>
-              <p className="line-clamp-2 leading-snug text-muted-foreground">{game.tagline}</p>
-              {game.feel && (
-                <p className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">{game.feel}</p>
-              )}
-              <div className="mt-auto flex items-center justify-between gap-2">
-                <Button
-                  variant="link"
-                  className="h-11 px-0 text-muted-foreground"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    showIntro(game)
-                  }}
-                >
-                  <Info /> Så spelar man
-                </Button>
-                <Button asChild onClick={(event) => event.stopPropagation()}>
-                  <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
-                </Button>
-              </div>
-            </div>
+              game={game}
+              recommended={game.id === 'gissa-priset'}
+              highlight={highlightGames}
+              onShowRules={() => showIntro(game)}
+            />
           ))}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

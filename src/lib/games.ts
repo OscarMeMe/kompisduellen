@@ -12,8 +12,6 @@ export type GameInfo = {
   minPlayers: number
   // Största antal spelare som är prövat. Saknas det finns ingen känd gräns, och då visas bara minsta antalet.
   maxPlayers?: number
-  // Hur lång en match känns, i några ord (diffust med flit, inte en tid i minuter). Visas under titeln på spelkortet.
-  length?: string
   // Hur det känns att spela, i några ord.
   feel?: string
   playable: boolean
@@ -32,8 +30,7 @@ export const GAMES: GameInfo[] = [
     color: 'bg-sun-soft',
     minPlayers: 2,
     maxPlayers: 12,
-    length: 'Lagom lång',
-    feel: 'Lagom knepigt',
+    feel: 'Klurigt',
     playable: true,
     intro: {
       emoji: '💸',
@@ -55,8 +52,7 @@ export const GAMES: GameInfo[] = [
     color: 'bg-coral-soft',
     minPlayers: 2,
     maxPlayers: 12,
-    length: 'Snabbis',
-    feel: 'Ren tur',
+    feel: 'Slumpigt',
     playable: true,
     intro: {
       emoji: '🍀',
@@ -72,13 +68,12 @@ export const GAMES: GameInfo[] = [
     // Arbetsnamn. Namnet visas bara härifrån, så det räcker att byta det här.
     id: 'kortkaos',
     name: 'Kortkaos',
-    tagline: 'Fyll luckan med det fräckaste kortet på handen.',
+    tagline: 'Fyll luckan med det fräckaste kortet på handen. Domaren väljer sin favorit.',
     quickRule: 'Lägg kortet som passar bäst i luckan. Domaren väljer sin favorit.',
     emoji: '🃏',
     color: 'bg-lilac/40',
     minPlayers: 3,
     maxPlayers: 9,
-    length: 'Tar en stund',
     feel: 'Pratigt',
     playable: true,
   },

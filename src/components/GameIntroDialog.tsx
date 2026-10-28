@@ -55,7 +55,7 @@ export function GameIntroDialog({
             </Button>
           )}
           <Button asChild size="lg">
-            <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
+            <Link to={`/skapa?spel=${game.id}`}>Skapa lobby</Link>
           </Button>
         </div>
       </DialogContent>
