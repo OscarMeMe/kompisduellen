@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react'
+import { useCallback, useState, type MouseEvent } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import type { LayoutContext } from '@/hooks/useLayout'
@@ -9,7 +9,7 @@ export function Layout() {
   const [inMatch, setInMatch] = useState(false)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
-  const setLeaveGuard = (guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard)
+  const setLeaveGuard = useCallback((guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard), [])
   function guarded(to: string) {
     return (event: MouseEvent) => {
       if (!leaveGuard) return
