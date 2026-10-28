@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
 import { AmountInput } from '@/components/gissa-priset/AmountInput'
 import { PriceQuestionCard } from '@/components/gissa-priset/PriceQuestionCard'
+import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
@@ -32,22 +33,24 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
 
       <PriceQuestionCard item={item} />
 
-      <div className="rounded-lg border bg-card p-4 shadow-soft sm:p-8">
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} hideLine />
+
+      <AnswerDock state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked}>
         {!inGame ? (
-          <p className="py-6 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
+          <p className="py-3 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
-          <div className="space-y-2 py-4 text-center">
-            <Lock className="mx-auto size-8 text-primary" />
+          <div className="space-y-1 py-1 text-center sm:space-y-2 sm:py-4">
+            <Lock className="mx-auto size-6 text-primary sm:size-8" />
             <p className="text-muted-foreground">Din gissning</p>
-            <p className="font-heading text-4xl font-bold break-all text-primary sm:text-5xl">{formatSek(locked)}</p>
+            <p className="font-heading text-3xl font-bold break-all text-primary sm:text-5xl">{formatSek(locked)}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-4">
             <AmountInput text={text} onTextChange={setText} inputRef={inputRef} />
             <p
               className={cn(
-                'min-h-7 text-center text-lg font-bold break-words',
+                'min-h-6 text-center text-base font-bold break-words sm:min-h-7 sm:text-lg',
                 valid ? 'text-primary' : 'text-sm font-normal text-muted-foreground',
               )}
             >
@@ -69,9 +72,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             </Button>
           </form>
         )}
-      </div>
-
-      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} />
+      </AnswerDock>
     </Wide>
   )
 }
