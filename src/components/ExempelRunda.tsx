@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatSek, isValidPrice, parseTypedNumber } from '@/lib/belopp'
+import { formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
 import { pricePoints } from '@/lib/gissa-priset'
 import { findExampleItem } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
@@ -26,12 +26,14 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
   if (!item) return null
+  // Som i spelet räknas priset från en krona i hela kronor, och det exakta priset står under.
+  const target = roundSek(item.priceSek)
 
   function reveal(event: FormEvent) {
     event.preventDefault()
     const value = parseTypedNumber(text)
     if (!isValidPrice(value)) {
-      setError('Skriv ett belopp i kronor, till exempel 100.')
+      setError('Skriv ett belopp i kronor, till exempel 10.')
       inputRef.current?.focus()
       return
     }
@@ -94,7 +96,7 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
                 }}
                 inputMode="decimal"
                 autoComplete="off"
-                placeholder="T.ex. 100"
+                placeholder="T.ex. 10"
                 aria-invalid={error !== null}
                 aria-describedby={error ? errorId : undefined}
                 className="pr-12 font-heading text-lg font-bold"
@@ -119,11 +121,14 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
             className="rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
           >
             <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
-            <p className="font-heading text-3xl font-bold tabular-nums">{formatSek(item.priceSek)}</p>
+            <p className="font-heading text-3xl font-bold tabular-nums">{formatSek(target)}</p>
+            {item.priceSek !== target && (
+              <p className="text-xs font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
+            )}
             <p className="text-sm font-semibold">
-              Du gissade {formatSek(guess)}. {differenceText(guess, item.priceSek)}.
+              Du gissade {formatSek(guess)}. {differenceText(guess, target)}.
             </p>
-            <p className="text-sm text-muted-foreground">Det ger {pricePoints(guess, item.priceSek)} av 100 poäng.</p>
+            <p className="text-sm text-muted-foreground">Det ger {pricePoints(guess, target)} av 100 poäng.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button size="lg" className="sm:flex-1" onClick={onPlay}>
