@@ -9,6 +9,7 @@ Testspelare heter alltid `TEST-NATT-...`. Den här rapporten ligger på branchen
 |---|---|---|
 | `natt2/1-mobil` | Punkt 5: Mobilens svarsyta | klar |
 | `natt2/2-forsta-start` | Punkt 8: Gemensam första start | klar |
+| `natt2/3-snabbprov` | Punkt 4: Kortare snabbprov | klar |
 
 ## Hoppade över
 
@@ -55,3 +56,24 @@ Skärmdumpar: `n1-mobil.png`, `n1-tangentbord.png`.
 **Testa själv på mobilen:** starta en match med en kompis och kolla att båda ser "Nu kör vi!" och regeln innan första frågan, och att tiden inte börjar rulla för tidigt.
 
 Skärmdump: `n2-nedrakning.png`.
+
+## Steg 3: Kortare snabbprov (`natt2/3-snabbprov`)
+
+**Ändrat**
+- "Testa själv" (från startsidan och spelrutan, `/skapa?spel=gissa-priset&testa=1`) går nu direkt in i en provrunda: inget formulär för namn och figur. Finns ingen sparad spelare i webbläsaren blir man "Gäst" med en slumpad figur (sparas, och går att ändra i Profil). Har man ett sparat namn används det.
+- En provomgång (en ensam spelare) har nu **1 runda** i stället för lobbyns 5 (`PRACTICE_ROUNDS` i `match.ts`). Lobbyns val av antal rundor sparas (`savedRounds`) och kommer tillbaka när man går till väntrummet, så Revansch/riktig match använder fortfarande det värden valt.
+- Gäller också nuvarande "Testa själv"-knappen i väntrummet (den ändrades inte, den startar bara samma provrunda).
+- Provrundan slutar med: "Provrundan är klar!", ett enkelt resultatkort med poängen i stället för en prispall för en spelare, och knapparna **Bjud in kompisar** (till samma lobby med samma kod) och **Testa mer** (ny provrunda). Rubriken säger "1 runda spelad". Snabbvalen för rundor visas inte i provrundan.
+- Texten under "Testa själv" i väntrummet: "En snabb provrunda som inte räknas i ställningen."
+
+**Testat**
+- Playwright, mobil 390x844 och bred skärm: sparad testspelare (`TEST-NATT-Solo`) går direkt in i provrunda på ca 1 s, Runda 1/1, slutar efter en runda, Testa mer ger en ny runda, Bjud in kompisar går till samma lobby (samma kod, 5 rundor kvar), en kompis (`TEST-NATT-Gäst`) kan gå med och starta en riktig match med 5 rundor, och Testa själv i väntrummet är också en runda. Alla OK.
+- 4 nya enhetstester (125 totalt) och build: gröna.
+- **Avvikelse från regeln om testnamn:** första körningen av mitt test använde fel lagringsnyckel, så en lokal testspelare med namnet "Gäst" skapades i en tillfällig webbläsare och en lobby med den spelaren fanns en kort stund i Supabase Realtime (inga databasändringar, försvann när testet stängdes). Jag rättade testet så att det sparar `TEST-NATT-Solo` i förväg. Själva förvalda gästnamnet testas bara som enhetstest (`defaultGuest`).
+
+**Inte gjort / att tänka på**
+- Det förvalda namnet "Gäst" sparas i webbläsaren. Den som sedan skapar en vanlig lobby ser "Gäst" ifyllt och kan skriva över det.
+
+**Testa själv på mobilen:** öppna startsidan i ett privat fönster (inget sparat namn), tryck "Testa själv" på Gissa priset och kolla att du hamnar direkt i frågan, att det är en runda, och att "Bjud in kompisar" tar dig till väntrummet med koden.
+
+Skärmdump: `n3-klar-mobil.png`.
