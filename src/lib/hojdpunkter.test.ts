@@ -73,7 +73,8 @@ describe('matchens höjdpunkter', () => {
         { guesses: { oscar: 100, mia: 150 }, price: 100 },
       ],
     )
-    expect(matchHighlights(state)[0].text).toBe('Oscar delade ledningen inför sista rundan och drog ifrån på slutet.')
+    const decided = validHighlights(state).find((h) => h.id === 'sista-rundan')
+    expect(decided?.text).toBe('Oscar delade ledningen inför sista rundan och drog ifrån på slutet.')
   })
 
   it('visar inget avgörande om ledaren bara behöll ledningen eller om det blev delad seger', () => {
@@ -99,7 +100,7 @@ describe('matchens höjdpunkter', () => {
     const state = playMatch(
       ['oscar', 'mia'],
       [
-        { guesses: { oscar: 100, mia: 5000 }, price: 100 }, // Oscar 100, Mia 15
+        { guesses: { oscar: 100, mia: 150 }, price: 100 }, // Oscar 100, Mia 40
         { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Oscar 0, Mia 100: Mia vänder
       ],
     )
@@ -178,10 +179,10 @@ describe('fler insikter', () => {
     const state = playMatch(
       ['oscar', 'mia'],
       [
-        { guesses: { oscar: 100, mia: 5000 }, price: 100 }, // Oscar 100, Mia 15
-        { guesses: { oscar: 100, mia: 5000 }, price: 100 }, // Oscar 200, Mia 30
-        { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Mia 130
-        { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Mia 230 mot Oscar 200
+        { guesses: { oscar: 150, mia: 5000 }, price: 100 }, // Oscar 40, Mia 0
+        { guesses: { oscar: 150, mia: 5000 }, price: 100 }, // Oscar 80, Mia 0
+        { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Mia 100
+        { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Mia 200 mot Oscar 80
       ],
     )
     expect(find(state, 'comeback')?.text).toBe('Mia låg sist efter runda 1 men vände och tog hem segern!')
@@ -242,8 +243,8 @@ describe('fler insikter', () => {
 
   it('slumpar två ur potten, samma för alla men olika mellan matcher', () => {
     const rounds = (shift: number): Round[] => [
-      { guesses: { oscar: 100, mia: 5000 + shift }, price: 100 },
-      { guesses: { oscar: 100, mia: 5000 + shift }, price: 100 },
+      { guesses: { oscar: 150, mia: 5000 + shift }, price: 100 },
+      { guesses: { oscar: 150, mia: 5000 + shift }, price: 100 },
       { guesses: { oscar: 10_000, mia: 100 }, price: 100 },
       { guesses: { oscar: 10_000, mia: 100 }, price: 100 },
     ]
