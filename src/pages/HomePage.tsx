@@ -1,16 +1,13 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router'
 import { ArrowDown, Check, Play } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { GAMES, type GameInfo } from '@/lib/games'
-import { checkLobby, felText } from '@/lib/lobbykoll'
-import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
@@ -18,65 +15,6 @@ const STEPS = [
   { title: 'Dela koden', text: 'Skicka den till kompisarna.', color: 'bg-sun-soft' },
   { title: 'Låt duellen börja', text: 'Alla spelar på sin egen skärm.', color: 'bg-mint-soft' },
 ]
-
-// Gå med med en kod direkt från startsidan. Versaler och högst fyra bokstäver, Enter fungerar. Knappen är dov tills
-// koden är komplett. Koden kontrolleras innan man går med, så att en felaktig eller avslutad kod ger ett kort besked
-// precis under fältet.
-function JoinCode() {
-  const navigate = useNavigate()
-  const fieldId = useId()
-  const errorId = useId()
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [checking, setChecking] = useState(false)
-  const complete = code.length === 4
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (checking) return
-    if (!complete) {
-      setError('Koden har fyra bokstäver.')
-      return
-    }
-    setChecking(true)
-    const result = await checkLobby(code)
-    setChecking(false)
-    if (result === 'finns') navigate(`/lobby/${code}`)
-    else setError(felText(code, result))
-  }
-
-  return (
-    <form onSubmit={submit} className="mx-auto w-full max-w-sm space-y-2 md:mx-0" noValidate>
-      <Label htmlFor={fieldId} className="text-base font-bold">
-        Har du fått en kod?
-      </Label>
-      <div className="flex gap-2">
-        <Input
-          id={fieldId}
-          value={code}
-          onChange={(event) => {
-            setCode(normalizeCode(event.target.value))
-            setError(null)
-          }}
-          aria-invalid={error !== null}
-          aria-describedby={error ? errorId : undefined}
-          placeholder="T.ex. BHKX"
-          maxLength={4}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          className="min-w-0 flex-1 font-heading font-bold tracking-widest uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case"
-        />
-        <Button type="submit" size="lg" variant={complete ? 'default' : 'outline'} disabled={checking}>
-          Gå med
-        </Button>
-      </div>
-      <p id={errorId} role="alert" className="text-sm font-semibold text-primary empty:hidden">
-        {error}
-      </p>
-    </form>
-  )
-}
 
 export function HomePage() {
   const { hash } = useLocation()
@@ -144,7 +82,7 @@ export function HomePage() {
             </p>
           </div>
           <div className="border-t pt-5">
-            <JoinCode />
+            <GaMedKod className="mx-auto max-w-sm md:mx-0" />
           </div>
         </div>
 
