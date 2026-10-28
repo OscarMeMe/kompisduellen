@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseLobbyIdentity } from '@/lib/player'
+import { AVATARS, defaultGuest, parseLobbyIdentity } from '@/lib/player'
 
 const NOW = 1_000_000_000_000
 const HOUR = 60 * 60 * 1000
@@ -22,5 +22,12 @@ describe('parseLobbyIdentity', () => {
     expect(parseLobbyIdentity('{inte json', NOW)).toBeNull()
     expect(parseLobbyIdentity(saved({ id: '' }), NOW)).toBeNull()
     expect(parseLobbyIdentity(saved({ at: 'igår' }), NOW)).toBeNull()
+  })
+})
+
+describe('defaultGuest', () => {
+  it('ger namnet Gäst och en figur som går att välja', () => {
+    expect(defaultGuest(() => 0)).toEqual({ name: 'Gäst', avatar: AVATARS[0] })
+    expect(defaultGuest(() => 0.999).avatar).toBe(AVATARS[AVATARS.length - 1])
   })
 })
