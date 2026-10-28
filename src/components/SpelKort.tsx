@@ -34,7 +34,7 @@ const PREVIEWS: Record<string, ReactNode> = {
         <p className="font-heading text-sm font-bold">____</p>
       </div>
       <div className="rotate-6 rounded-md border bg-card px-3 py-3 whitespace-nowrap shadow-soft-sm">
-        <p className="font-heading text-sm leading-tight font-bold">Pannkakor</p>
+        <p className="font-heading text-sm leading-tight font-bold">Farsans strumpor</p>
       </div>
     </div>
   ),
