@@ -12,8 +12,6 @@ export type GameInfo = {
   minPlayers: number
   // Största antal spelare som är prövat. Saknas det finns ingen känd gräns, och då visas bara minsta antalet.
   maxPlayers?: number
-  // Ungefärlig tid för en match med förvalda inställningar, t.ex. "3–4 min" (se spelkorten på startsidan).
-  duration?: string
   // Hur det känns att spela, i några ord.
   feel?: string
   playable: boolean
@@ -32,8 +30,7 @@ export const GAMES: GameInfo[] = [
     color: 'bg-sun-soft',
     minPlayers: 2,
     maxPlayers: 12,
-    duration: '2–4 min',
-    feel: 'Tävlingsinriktat och lagom knepigt',
+    feel: 'Lagom knepigt',
     playable: true,
     intro: {
       emoji: '💸',
@@ -49,14 +46,13 @@ export const GAMES: GameInfo[] = [
   {
     id: 'narmast',
     name: 'Närmast vinner',
-    tagline: 'Ett snabbt turspel: gissa ett tal mellan 1 och 100. Talet slumpas, så det handlar om tur.',
+    tagline: 'Gissa ett tal mellan 1 och 100. Närmast vinner.',
     quickRule: 'Gissa ett tal mellan 1 och 100. Närmast det dolda talet vinner rundan.',
     emoji: '🎯',
     color: 'bg-coral-soft',
     minPlayers: 2,
     maxPlayers: 12,
-    duration: '1–2 min',
-    feel: 'Snabbt och ren tur',
+    feel: 'Snabbt',
     playable: true,
     intro: {
       emoji: '🍀',
@@ -72,14 +68,13 @@ export const GAMES: GameInfo[] = [
     // Arbetsnamn. Namnet visas bara härifrån, så det räcker att byta det här.
     id: 'kortkaos',
     name: 'Kortkaos',
-    tagline: 'Fyll luckan med det fräckaste kortet på handen. Domaren väljer vinnaren, och ingen vet vem som spelade vad.',
+    tagline: 'Fyll luckan med det fräckaste kortet på handen.',
     quickRule: 'Lägg kortet som passar bäst i luckan. Domaren väljer sin favorit.',
     emoji: '🃏',
     color: 'bg-lilac/40',
     minPlayers: 3,
     maxPlayers: 9,
-    duration: '8–14 min',
-    feel: 'Pratigt och fräckt',
+    feel: 'Pratigt',
     playable: true,
   },
   {
