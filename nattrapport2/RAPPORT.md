@@ -8,6 +8,7 @@ Testspelare heter alltid `TEST-NATT-...`. Den här rapporten ligger på branchen
 | Branch | Steg | Status |
 |---|---|---|
 | `natt2/1-mobil` | Punkt 5: Mobilens svarsyta | klar |
+| `natt2/2-forsta-start` | Punkt 8: Gemensam första start | klar |
 
 ## Hoppade över
 
@@ -36,3 +37,21 @@ Testspelare heter alltid `TEST-NATT-...`. Den här rapporten ligger på branchen
 **Testa själv på mobilen:** tryck i gissningsrutan i Gissa priset och kolla att "Lås in gissning" och tiden ligger direkt ovanför tangentbordet, på både iPhone och Android. Skrolla frågan upp och ner medan tangentbordet är öppet.
 
 Skärmdumpar: `n1-mobil.png`, `n1-tangentbord.png`.
+
+## Steg 2: Gemensam första start (`natt2/2-forsta-start`)
+
+**Ändrat**
+- När värden trycker "Starta" med flera spelare i lobbyn kommer nu samma gemensamma nedräkning som vid revansch: "Nu kör vi!", en kort regelmening (en per spel, fältet `quickRule` i `games.ts`) och stora siffror 3, 2, 1. Svarstiden för runda 1 börjar först efter nedräkningen.
+- Återanvänder revanschens nedräkning (`rematchAt`, samma timer och avbryt-knapp). Nytt fält `countdownKind` ('first' eller 'rematch') styr rubriken och texten. Ny funktion `hostCountdownStart` i `match.ts`.
+- Dubbelklick på Starta ger en nedräkning. Går någon ur så att för få är kvar avbryts starten (som vid revansch). Värden kan avbryta.
+- Solotestet ("Testa själv") startar fortfarande direkt utan nedräkning, eftersom ingen annan väntar.
+- Regelmeningar: Gissa priset "Gissa priset i kronor. Närmast rätt pris ger flest poäng." Närmast vinner "Gissa ett tal mellan 1 och 100. Närmast det dolda talet vinner rundan." Kortkaos "Lägg kortet som passar bäst i luckan. Domaren väljer sin favorit."
+
+**Testat**
+- Värd + deltagare i separata sessioner, mobil 390x844 och bred skärm: båda ser nedräkningen och regeln, rundan startar efter ca 3,5 s, 30 s kvar vid start, dubbelklick ger en match, solotestet startar på under 1 s. Alla OK.
+- 4 nya enhetstester (125 totalt) och build: gröna.
+- Kortkaos testades inte i webbläsaren (kräver 3 spelare). Det använder samma startväg, men nedräkningen är inte sedd där.
+
+**Testa själv på mobilen:** starta en match med en kompis och kolla att båda ser "Nu kör vi!" och regeln innan första frågan, och att tiden inte börjar rulla för tidigt.
+
+Skärmdump: `n2-nedrakning.png`.
