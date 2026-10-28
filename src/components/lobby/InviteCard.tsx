@@ -54,10 +54,11 @@ export function InviteCard({ code, game }: InviteCardProps) {
             title={`QR-kod till lobby ${code}`}
           />
         </div>
-        <div className="min-w-0 flex-1 text-center">
+        {/* Container: koden skalas efter bredden på rutan, så att den aldrig går utanför. */}
+        <div className="@container min-w-0 flex-1 text-center">
           <p className="text-sm font-semibold text-muted-foreground">Lobbykod</p>
           <p
-            className="font-heading text-4xl font-bold tracking-[0.15em] text-primary tabular-nums min-[420px]:text-5xl sm:text-6xl"
+            className="font-heading text-[clamp(1.5rem,24cqw,3.75rem)] font-bold tracking-[0.1em] text-primary tabular-nums"
             aria-label={`Lobbykod ${code.split('').join(' ')}`}
           >
             {code}
@@ -65,15 +66,14 @@ export function InviteCard({ code, game }: InviteCardProps) {
           <p className="mt-1 text-xs text-muted-foreground">Skanna, öppna länken eller skriv koden på sidan.</p>
         </div>
       </div>
-      {/* Texten får radbrytas, så att knapparna ryms även på en 320 px bred skärm. */}
-      <div className="grid w-full gap-2 sm:grid-cols-2">
-        <Button size="lg" className="h-auto min-h-13 whitespace-normal" onClick={shareLink}>
+      <div className="grid w-full grid-cols-2 gap-2">
+        <Button size="lg" className="whitespace-nowrap" onClick={shareLink}>
           <Share2 />
           Dela
         </Button>
-        <Button variant="outline" size="lg" className="h-auto min-h-13 whitespace-normal" onClick={copyLink}>
+        <Button variant="outline" size="lg" className="whitespace-nowrap" onClick={copyLink}>
           {message === 'Länken är kopierad' ? <Check /> : <Copy />}
-          Kopiera inbjudningslänk
+          Kopiera länk
         </Button>
       </div>
       {/* Återkoppling som även skärmläsare får höra. Tar ingen plats förrän något visas. */}
