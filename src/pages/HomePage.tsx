@@ -1,17 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { Info } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { formatSek } from '@/lib/belopp'
 import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
 import { pricePoints } from '@/lib/gissa-priset'
-import { durationLabel } from '@/lib/speltid'
+import { checkLobby, felText } from '@/lib/lobbykoll'
+import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
-  { title: 'Skapa en lobby', text: 'Välj spel och skriv ditt namn. Inget konto behövs.', color: 'bg-coral-soft' },
+  { title: 'Skapa en lobby', text: 'Välj spel och skriv ditt namn.', color: 'bg-coral-soft' },
   { title: 'Dela koden', text: 'Fyra bokstäver. Skicka i Discord eller säg den högt.', color: 'bg-sun-soft' },
   { title: 'Spela!', text: 'Alla svarar på sin egen skärm. Flest poäng vinner.', color: 'bg-mint-soft' },
 ]
@@ -23,6 +25,58 @@ const PREVIEW_ROWS = [
   { name: 'Michaela', avatar: '👽', guess: 120 },
   { name: 'Andreas', avatar: '🤖', guess: 30 },
 ].map((row, index) => ({ ...row, points: pricePoints(row.guess, PREVIEW_ITEM.priceSek), win: index === 0 }))
+
+// Gå med med en kod direkt från startsidan. Versaler och högst fyra bokstäver, Enter fungerar. Knappen är dov tills
+// koden är komplett. Koden kontrolleras innan man går med, så att en felaktig eller avslutad kod ger ett kort besked.
+function JoinCode() {
+  const navigate = useNavigate()
+  const [code, setCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
+  const complete = code.length === 4
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (checking) return
+    if (!complete) {
+      setError('Koden har fyra bokstäver.')
+      return
+    }
+    setChecking(true)
+    const result = await checkLobby(code)
+    setChecking(false)
+    if (result === 'finns') navigate(`/lobby/${code}`)
+    else setError(felText(code, result))
+  }
+
+  return (
+    <form onSubmit={submit} className="w-full max-w-xs space-y-2 sm:w-auto" noValidate>
+      <div className="flex gap-2">
+        <Input
+          value={code}
+          onChange={(event) => {
+            setCode(normalizeCode(event.target.value))
+            setError(null)
+          }}
+          aria-label="Lobbykod"
+          aria-invalid={error !== null}
+          placeholder="Kod, t.ex. BHKX"
+          maxLength={4}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          className="w-40 min-w-0 flex-1 font-heading font-bold tracking-widest uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case"
+        />
+        <Button type="submit" size="lg" variant={complete ? 'default' : 'outline'} disabled={checking}>
+          Gå med
+        </Button>
+      </div>
+      <p role="alert" className="min-h-0 text-sm font-semibold text-primary empty:hidden">
+        {error}
+      </p>
+    </form>
+  )
+}
 
 export function HomePage() {
   const { hash } = useLocation()
@@ -68,15 +122,13 @@ export function HomePage() {
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder. Inget konto behövs.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row md:justify-start">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start md:justify-start">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames}>
-              Välj spel/skapa lobby
+            <Button size="lg" className="w-full sm:w-auto" onClick={pointAtGames}>
+              Skapa lobby
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/ga-med">Jag har en kod</Link>
-            </Button>
+            <JoinCode />
           </div>
           <p className="text-sm font-semibold text-muted-foreground">Alla spelar på sin egen mobil eller dator.</p>
         </div>
@@ -124,20 +176,21 @@ export function HomePage() {
         {/* Spelbara spel först, i vita kort med samma uppbyggnad och höjd. Kommande spel på en egen rad, mindre och nedtonade. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.filter((game) => game.playable).map((game) => (
+            // Hela kortet är klickbart och visar förklaringen. Namnet är knappen för tangentbord och skärmläsare,
+            // och knapparna längst ner tar sina egna klick.
             <div
               key={game.id}
+              onClick={() => showIntro(game)}
               className={cn(
-                'flex h-full flex-col gap-3 rounded-lg border bg-card p-5 shadow-soft transition-transform hover:-translate-y-1',
+                'flex h-full cursor-pointer flex-col gap-2.5 rounded-lg border bg-card p-4 shadow-soft transition-transform hover:-translate-y-1',
                 highlightGames && 'animate-pop ring-4 ring-primary/40',
               )}
             >
-              {/* Klick på ikon, namn eller beskrivning visar en kort förklaring av spelet. Namnet är knappen
-                  för tangentbord och skärmläsare. */}
-              <div className="flex cursor-pointer flex-col gap-3" onClick={() => showIntro(game)}>
-                <div className="flex items-center gap-3">
-                  <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
-                    <Emoji emoji={game.emoji} />
-                  </span>
+              <div className="flex items-center gap-3">
+                <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
+                  <Emoji emoji={game.emoji} />
+                </span>
+                <div className="min-w-0">
                   <h3 className="text-xl leading-tight">
                     <button
                       type="button"
@@ -146,20 +199,28 @@ export function HomePage() {
                       {game.name}
                     </button>
                   </h3>
+                  {/* Spelarantal från spelets regler och hur lång en match känns (diffust, inga minuter). */}
+                  <p className="text-sm font-semibold text-muted-foreground">
+                    {[playersLabel(game), game.length].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
-                <p className="line-clamp-2 min-h-11 leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
-              {/* Spelarantal från spelets regler, ungefärlig tid räknad från rundor och tider, och känsla. */}
-              <ul className="flex flex-wrap gap-1.5 text-xs font-semibold" aria-label="Om spelet">
-                <li className="rounded-full bg-muted px-2.5 py-1">👥 {playersLabel(game)}</li>
-                <li className="rounded-full bg-muted px-2.5 py-1">⏱ {durationLabel(game.id)}</li>
-                {game.feel && <li className="rounded-full bg-muted px-2.5 py-1">{game.feel}</li>}
-              </ul>
-              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                <Button variant="link" className="h-11 px-0 text-muted-foreground" onClick={() => showIntro(game)}>
+              <p className="line-clamp-2 leading-snug text-muted-foreground">{game.tagline}</p>
+              {game.feel && (
+                <p className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">{game.feel}</p>
+              )}
+              <div className="mt-auto flex items-center justify-between gap-2">
+                <Button
+                  variant="link"
+                  className="h-11 px-0 text-muted-foreground"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    showIntro(game)
+                  }}
+                >
                   <Info /> Så spelar man
                 </Button>
-                <Button asChild>
+                <Button asChild onClick={(event) => event.stopPropagation()}>
                   <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
                 </Button>
               </div>

@@ -12,6 +12,8 @@ export type GameInfo = {
   minPlayers: number
   // Största antal spelare som är prövat. Saknas det finns ingen känd gräns, och då visas bara minsta antalet.
   maxPlayers?: number
+  // Hur lång en match känns, i några ord (diffust med flit, inte en tid i minuter). Visas under titeln på spelkortet.
+  length?: string
   // Hur det känns att spela, i några ord.
   feel?: string
   playable: boolean
@@ -30,6 +32,7 @@ export const GAMES: GameInfo[] = [
     color: 'bg-sun-soft',
     minPlayers: 2,
     maxPlayers: 12,
+    length: 'Lagom lång',
     feel: 'Lagom knepigt',
     playable: true,
     intro: {
@@ -52,7 +55,8 @@ export const GAMES: GameInfo[] = [
     color: 'bg-coral-soft',
     minPlayers: 2,
     maxPlayers: 12,
-    feel: 'Snabbt',
+    length: 'Snabbis',
+    feel: 'Ren tur',
     playable: true,
     intro: {
       emoji: '🍀',
@@ -74,6 +78,7 @@ export const GAMES: GameInfo[] = [
     color: 'bg-lilac/40',
     minPlayers: 3,
     maxPlayers: 9,
+    length: 'Tar en stund',
     feel: 'Pratigt',
     playable: true,
   },
