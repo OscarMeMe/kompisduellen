@@ -1,11 +1,12 @@
 import { useEffect, useState, type ComponentType } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
+import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
@@ -185,8 +186,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     actions.start()
   }, [isHost, status, state.phase, meInLobby, actions, code])
 
+  // Lämnar värden försvinner lobbyn för alla. Finns andra med frågar vi först, oavsett om värden klickar på
+  // "Tillbaka till alla spel" eller på loggan. Deltagare lämnar bara sig själva och får ingen fråga.
+  const navigate = useNavigate()
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  const othersPresent = online.length > 1
+  const askBeforeLeaving = isHost && othersPresent
+  function requestLeave(to: string) {
+    if (askBeforeLeaving) setLeaveTo(to)
+    else void navigate(to)
+  }
+
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
-  const { setInMatch } = useLayout()
+  const { setInMatch, setLeaveGuard } = useLayout()
+  useEffect(() => {
+    if (!askBeforeLeaving) return
+    setLeaveGuard((to) => setLeaveTo(to))
+    return () => setLeaveGuard(null)
+  }, [askBeforeLeaving, setLeaveGuard])
   const inMatch =
     status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal' || state.phase === 'playing')
   useEffect(() => {
@@ -234,6 +251,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
       {phaseView()}
       <ReactionFloaters />
+      <LeaveLobbyDialog open={leaveTo !== null} onStay={() => setLeaveTo(null)} onLeave={() => void navigate(leaveTo ?? '/')} />
     </ReactionsProvider>
   )
 
@@ -317,8 +335,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           }}
           onChangeGame={() => {
             setPickGame(true)
-            actions.playAgain()
+            actions.changeGame()
           }}
+          onLeave={() => requestLeave('/#spel')}
         />
       )
   }

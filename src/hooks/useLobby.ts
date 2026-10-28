@@ -11,6 +11,7 @@ import {
   addGuess,
   addPlayers,
   backToWaiting,
+  changeGame,
   cancelRematch,
   everyoneHasGuessed,
   hostAdvance,
@@ -417,6 +418,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       playAgain: () => {
         if (!isHost) return
         commit({ state: backToWaiting(stateRef.current), secrets: null })
+      },
+      // Byt spel: samma lobby, grupp och ställning, och de andra ser att värden väljer nästa spel.
+      changeGame: () => {
+        if (!isHost) return
+        commit({ state: changeGame(stateRef.current), secrets: null })
       },
       // Revansch: samma spel och inställningar efter en gemensam nedräkning som alla ser.
       rematch: (settings?: RematchSettings) => {

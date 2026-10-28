@@ -86,6 +86,8 @@ export type GameState = {
   practice: boolean
   // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
   rematchAt: number | null
+  // Värden har tryckt Byt spel och väljer nästa spel. De andra ser det tills värden väljer eller startar.
+  choosingGame: boolean
   // Vad nedräkningen gäller: matchens första start eller en revansch.
   countdownKind: CountdownKind
   matchesPlayed: number
@@ -135,6 +137,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     practice: false,
     rematchAt: null,
     countdownKind: 'rematch',
+    choosingGame: false,
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
@@ -190,9 +193,10 @@ export function setRounds(state: GameState, rounds: number): GameState {
 // Byter spel i väntrummet. Tempo och topplistan följer med, och antalet rundor om det nya spelet har
 // samma val att välja mellan. Annars blir det spelets förval.
 export function setGame(state: GameState, game: string): GameState {
-  if (state.phase !== 'waiting' || state.game === game) return state
+  if (state.phase !== 'waiting') return state
+  if (state.game === game) return state.choosingGame ? { ...state, choosingGame: false } : state
   const sameOptions = roundOptionsFor(game).join() === roundOptionsFor(state.game).join()
-  return { ...state, game, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
+  return { ...state, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
 }
 
 // Värdens tempoval i väntrummet. Svarstider som spelet inte erbjuder ignoreras.
@@ -255,7 +259,18 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
   // En provomgång är kort. Lobbyns inställning sparas och kommer tillbaka i väntrummet.
   const rounds = practice ? PRACTICE_ROUNDS : (state.savedRounds ?? state.rounds)
   const savedRounds = practice ? (state.savedRounds ?? state.rounds) : null
-  return { ...state, rounds, savedRounds, scores, players, lastResult: null, matchRounds: [], practice, rematchAt: null }
+  return {
+    ...state,
+    rounds,
+    savedRounds,
+    scores,
+    players,
+    lastResult: null,
+    matchRounds: [],
+    practice,
+    rematchAt: null,
+    choosingGame: false,
+  }
 }
 
 export function isValidGuess(game: string, value: number): boolean {
@@ -371,6 +386,13 @@ function finishMatch(state: GameState): GameState {
   }
 }
 
+// Byt spel efter en match: tillbaka till väntrummet i samma lobby med spelvalet i bild. Gör ingenting om matchen
+// inte är slut, så att ett dubbeltryck inte gör något extra.
+export function changeGame(state: GameState): GameState {
+  const waiting = backToWaiting(state)
+  return waiting === state ? state : { ...waiting, choosingGame: true }
+}
+
 export function backToWaiting(state: GameState): GameState {
   if (state.phase !== 'finished') return state
   const scores: Record<string, number> = {}
@@ -391,6 +413,7 @@ export function backToWaiting(state: GameState): GameState {
     itemId: null,
     practice: false,
     rematchAt: null,
+    choosingGame: false,
     cards: null,
   }
 }
@@ -468,7 +491,10 @@ export function hostCountdownStart(host: HostState, onlineIds: string[], now: nu
   const { state } = host
   if (state.phase !== 'waiting' || state.rematchAt !== null) return host
   if (!canStart(state.game, onlineIds.filter((id) => state.players[id]).length)) return host
-  return { ...host, state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000, countdownKind: 'first' } }
+  return {
+    ...host,
+    state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000, countdownKind: 'first', choosingGame: false },
+  }
 }
 
 export function cancelRematch(host: HostState): HostState {

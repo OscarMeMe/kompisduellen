@@ -72,6 +72,8 @@ export function WaitingRoom({
   const scoringDetails = cardRules ? cardRules.scoringDetails : rules.scoringDetails
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
   const enoughPlayers = online.length >= game.minPlayers
+  // För få spelare för spelet som är valt, t.ex. Kortkaos med två. Syns för alla, så att ingen undrar varför det väntar.
+  const tooFewText = `${game.name} kräver minst ${game.minPlayers} spelare. Ni är ${online.length} just nu.`
   const canPractice = canStart(state.game, 1) && online.length === 1
   const hostName = online.find((p) => p.host)?.name
   // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
@@ -117,9 +119,13 @@ export function WaitingRoom({
               {enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
             {!enoughPlayers && (
-              <p className="text-center text-sm text-muted-foreground">
-                Minst {game.minPlayers} spelare behövs. Bjud in {game.minPlayers > 2 ? 'fler kompisar' : 'en kompis'} med koden nedan.
+              <p className="rounded-md bg-coral-soft px-3 py-2 text-center text-sm font-semibold" role="status">
+                {tooFewText} Bjud in {game.minPlayers - online.length > 1 ? 'fler kompisar' : 'en kompis till'} med koden nedan, eller välj ett annat spel
+                under Inställningar.
               </p>
+            )}
+            {state.choosingGame && enoughPlayers && (
+              <p className="text-center text-sm text-muted-foreground">Välj nästa spel under Inställningar.</p>
             )}
             {canPractice && (
               <>
@@ -131,10 +137,19 @@ export function WaitingRoom({
             )}
           </div>
         ) : (
-          <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft px-3 py-3 text-center font-semibold">
-            <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
-            Väntar på att {hostName ?? 'värden'} startar {game.name}…
-          </p>
+          <div className="space-y-2">
+            <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft px-3 py-3 text-center font-semibold">
+              <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+              {state.choosingGame
+                ? `${hostName ?? 'Värden'} väljer nästa spel…`
+                : `Väntar på att ${hostName ?? 'värden'} startar ${game.name}…`}
+            </p>
+            {!enoughPlayers && (
+              <p className="text-center text-sm font-semibold text-muted-foreground" role="status">
+                {tooFewText}
+              </p>
+            )}
+          </div>
         )}
       </section>
 

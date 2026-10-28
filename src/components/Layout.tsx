@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import type { LayoutContext } from '@/hooks/useLayout'
@@ -7,6 +7,16 @@ import { cn } from '@/lib/utils'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
+  const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
+  // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
+  const setLeaveGuard = (guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard)
+  function guarded(to: string) {
+    return (event: MouseEvent) => {
+      if (!leaveGuard) return
+      event.preventDefault()
+      leaveGuard(to)
+    }
+  }
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   useLocation()
   const player = loadPlayer()
@@ -24,7 +34,7 @@ export function Layout() {
           {inMatch ? (
             <Logo />
           ) : (
-            <Link to="/" aria-label="Kompisduellen, till startsidan" className="group shrink-0 py-1">
+            <Link to="/" aria-label="Kompisduellen, till startsidan" className="group shrink-0 py-1" onClick={guarded('/')}>
               <Logo />
             </Link>
           )}
@@ -32,6 +42,7 @@ export function Layout() {
             {player ? (
               <Link
                 to="/profil"
+                onClick={guarded('/profil')}
                 className="flex items-center gap-2 rounded-full border bg-card py-2 pr-4 pl-3 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
               >
                 <Emoji emoji={player.avatar} className="text-xl" />
@@ -40,6 +51,7 @@ export function Layout() {
             ) : (
               <Link
                 to="/ga-med"
+                onClick={guarded('/ga-med')}
                 className="flex items-center rounded-full border bg-card px-4 py-2.5 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
               >
                 Gå med
@@ -49,7 +61,7 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
-        <Outlet context={{ setInMatch } satisfies LayoutContext} />
+        <Outlet context={{ setInMatch, setLeaveGuard } satisfies LayoutContext} />
       </main>
     </div>
   )

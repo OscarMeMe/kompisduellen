@@ -5,6 +5,7 @@ import {
   advanceFromReveal,
   backToWaiting,
   canStart,
+  changeGame,
   everyoneHasGuessed,
   guessSecondsFor,
   handleDeadline,
@@ -470,5 +471,58 @@ describe('första starten med nedräkning', () => {
   it('värden kan avbryta', () => {
     const waiting: HostState = { state: lobby('gissa-priset', ['a', 'b']), secrets: null }
     expect(cancelRematch(hostCountdownStart(waiting, ['a', 'b'], NOW)).state.rematchAt).toBeNull()
+  })
+})
+
+describe('byt spel efter en match', () => {
+  function finished(): GameState {
+    let state = startGame(lobby('gissa-priset', ['a', 'b', 'c'], { rounds: 1 }), ['a', 'b', 'c'], NOW)
+    state = nextRound(playRound(state, { a: 100, b: 500, c: 900 }, 100), NOW)
+    return state
+  }
+
+  it('går till väntrummet i samma lobby med spelare och ställning kvar, och markerar att värden väljer spel', () => {
+    const before = finished()
+    const next = changeGame(before)
+    expect(next.phase).toBe('waiting')
+    expect(next.choosingGame).toBe(true)
+    expect(Object.keys(next.players)).toEqual(['a', 'b', 'c'])
+    expect(next.leaderboard).toEqual(before.leaderboard)
+    expect(next.matchesPlayed).toBe(1)
+    expect(next.gamesPlayed).toEqual({ 'gissa-priset': 1 })
+  })
+
+  it('dubbeltryck gör ingenting extra', () => {
+    const once = changeGame(finished())
+    expect(changeGame(once)).toBe(once)
+  })
+
+  it('markeringen försvinner när värden väljer spel, även samma spel, och när nedräkningen startar', () => {
+    const choosing = changeGame(finished())
+    expect(setGame(choosing, 'narmast').choosingGame).toBe(false)
+    expect(setGame(choosing, 'gissa-priset').choosingGame).toBe(false)
+    const counting = hostCountdownStart({ state: choosing, secrets: null }, ['a', 'b', 'c'], NOW)
+    expect(counting.state.choosingGame).toBe(false)
+  })
+
+  it('kvällens ställning räknar matcher från alla spel', () => {
+    let state = changeGame(finished())
+    state = setGame(state, 'narmast')
+    state = startGame(state, ['a', 'b', 'c'], NOW)
+    state = nextRound(playRound({ ...state, rounds: 1 }, { a: 10, b: 50, c: 90 }, 12), NOW)
+    expect(state.matchesPlayed).toBe(2)
+    expect(state.gamesPlayed).toEqual({ 'gissa-priset': 1, narmast: 1 })
+    // Tre spelare i lobbyn, ingen dubblett.
+    expect(Object.keys(state.leaderboard)).toHaveLength(3)
+  })
+
+  it('för få spelare för det nya spelet går att välja men kan inte startas', () => {
+    const two = changeGame(
+      nextRound(playRound(startGame(lobby('gissa-priset', ['a', 'b'], { rounds: 1 }), ['a', 'b'], NOW), { a: 100, b: 500 }, 100), NOW),
+    )
+    const kortkaos = setGame(two, 'kortkaos')
+    expect(kortkaos.game).toBe('kortkaos')
+    expect(canStart('kortkaos', 2)).toBe(false)
+    expect(hostCountdownStart({ state: kortkaos, secrets: null }, ['a', 'b'], NOW).state.rematchAt).toBeNull()
   })
 })
