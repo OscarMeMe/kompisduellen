@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { PlayerSetup } from '@/components/PlayerSetup'
-import { findGame, GAMES } from '@/lib/games'
+import { findGame, GAMES, playersLabel } from '@/lib/games'
 import { generateLobbyCode, loadOrCreateGuest, markAsHost, requestPractice } from '@/lib/player'
 import { rulesFor } from '@/lib/spelregler'
 import { track } from '@/lib/statistik'
@@ -39,24 +39,23 @@ export function CreateLobbyPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">
-      <div className="flex items-center gap-4 rounded-lg border bg-card p-5 shadow-soft">
-        <div>
-          <p className="text-sm font-semibold text-muted-foreground">
-            Du skapar en lobby för
-          </p>
-          <p className="font-heading text-xl font-bold">{game.name}</p>
-        </div>
-      </div>
       <PageHeader title="Skapa lobby" description="Du blir värd och startar spelet när alla är med." />
-      <PlayerSetup
-        submitLabel="Skapa lobby"
-        onDone={() => {
-          const code = generateLobbyCode()
-          markAsHost(code, game.id)
-          track('lobby_skapad', { spel: game.id })
-          navigate(`/lobby/${code}`)
-        }}
-      />
+      <div className="rounded-lg border bg-card p-4 shadow-soft">
+        <p className="text-sm font-semibold text-muted-foreground">Du skapar en lobby för</p>
+        <p className="font-heading text-xl font-bold">{game.name}</p>
+        <p className="text-sm text-muted-foreground">{[playersLabel(game), game.feel].filter(Boolean).join(' · ')}</p>
+      </div>
+      <div className="rounded-lg border bg-card p-5 shadow-soft">
+        <PlayerSetup
+          submitLabel="Skapa lobby"
+          onDone={() => {
+            const code = generateLobbyCode()
+            markAsHost(code, game.id)
+            track('lobby_skapad', { spel: game.id })
+            navigate(`/lobby/${code}`)
+          }}
+        />
+      </div>
     </div>
   )
 }

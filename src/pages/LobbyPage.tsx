@@ -104,7 +104,9 @@ export function LobbyPage() {
           <p className="text-sm font-semibold text-muted-foreground">Du går med i lobby</p>
           <p className="font-heading text-4xl font-bold tracking-[0.3em] text-primary">{code}</p>
         </div>
-        <PlayerSetup submitLabel="Gå med i lobbyn" onDone={setMe} />
+        <div className="rounded-lg border bg-card p-5 shadow-soft">
+          <PlayerSetup submitLabel="Gå med i lobbyn" onDone={setMe} />
+        </div>
       </Narrow>
     )
   }
