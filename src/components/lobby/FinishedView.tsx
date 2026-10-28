@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import { Sentence } from '@/components/kort/PlayingCard'
 import { Leaderboard } from '@/components/Leaderboard'
@@ -37,6 +36,8 @@ type FinishedViewProps = {
   onToWaitingRoom: () => void
   // Till väntrummet med spelvalet i bild.
   onChangeGame: () => void
+  // Tillbaka till alla spel. Värden får en fråga först, eftersom lobbyn avslutas för alla.
+  onLeave: () => void
 }
 
 export function FinishedView({
@@ -47,6 +48,7 @@ export function FinishedView({
   onRematch,
   onToWaitingRoom,
   onChangeGame,
+  onLeave,
 }: FinishedViewProps) {
   const ranked = rankPlayers(state)
   const highlights = matchHighlights(state)
@@ -224,8 +226,8 @@ export function FinishedView({
         lastWinners={state.practice ? [] : matchWinners(state)}
       />
 
-      <Button asChild size="lg" variant="ghost">
-        <Link to="/#spel">Tillbaka till alla spel</Link>
+      <Button size="lg" variant="ghost" onClick={onLeave}>
+        Tillbaka till alla spel
       </Button>
       {/* Plats för den fasta knappraden på mobil. */}
       {isHost && <div className="h-24 sm:hidden" aria-hidden />}

@@ -4,13 +4,15 @@ import { findGame } from '@/lib/games'
 import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import { supabase } from '@/lib/supabase'
-import { loadHostLobby, saveHostLobby, type Player } from '@/lib/player'
+import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
+import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
 import type { FloatingReaction } from '@/components/lobby/Reactions'
 import {
   addGuess,
   addPlayers,
   backToWaiting,
+  changeGame,
   cancelRematch,
   everyoneHasGuessed,
   hostAdvance,
@@ -58,7 +60,10 @@ const NO_HOST_GRACE_MS = 4000
 const AWAY_GRACE_MS = 10_000
 
 // game används bara av värden. Övriga får spelet från värdens tillstånd.
-export function useLobby(code: string, me: Player | null, isHost: boolean, game?: string) {
+// onPromote / onDemote: sidan byter roll när jag tar över som värd eller lämnar över till en annan värd.
+export type HostRoleHandlers = { onPromote: () => void; onDemote: () => void }
+
+export function useLobby(code: string, me: Player | null, isHost: boolean, game?: string, roles?: HostRoleHandlers) {
   // Värden: fortsätt där vi var om sidan laddades om.
   const [restored] = useState(() => {
     const host = isHost ? restoreHostState(loadHostLobby(code)) : null
@@ -67,6 +72,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [state, setState] = useState<GameState>(() => restored?.state ?? initialState(game))
   // Övriga spelare: har vi fått något tillstånd från värden än?
   const [received, setReceived] = useState(false)
+  const receivedRef = useRef(false)
   const [online, setOnline] = useState<OnlinePlayer[]>([])
   const [connected, setConnected] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -83,6 +89,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const onlineRef = useRef<OnlinePlayer[]>([])
   // Reaktioner: när jag skickade senast, och vad som släppts igenom från varje spelare (se reaktioner.ts).
   const lastReactionRef = useRef<number | null>(null)
+  // Värdbyte: skillnaden mellan min och förra värdens klocka, och att jag precis tagit över (tillståndet skickas ut när jag anslutit som värd).
+  const clockOffsetRef = useRef(0)
+  const takeoverRef = useRef<{ offset: number } | null>(null)
+  // När jag tog över som värd. Den avgående värden syns en kort stund till, och då ska jag inte vika mig för den.
+  const promotedAtRef = useRef(0)
+  const rolesRef = useRef(roles)
+  rolesRef.current = roles
   const reactionHistoryRef = useRef<Record<string, number[]>>({})
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
   const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
@@ -175,6 +188,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
   useEffect(() => {
     if (!me || !code) return
+    const myId = me.id
 
     const channel = supabase.channel(`lobby:${code}`, {
       config: {
@@ -185,6 +199,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     channelRef.current = channel
     // Värden: kollar närvaron igen när någon som gått varit borta för länge.
     let awayTimer: ReturnType<typeof setTimeout> | undefined
+    // Värdbyte: tiden tills jag tar över om värden är borta.
+    let takeoverTimer: ReturnType<typeof setTimeout> | undefined
+    const stateReceived = () => receivedRef.current
 
     channel.on('presence', { event: 'sync' }, () => {
       const raw = channel.presenceState<OnlinePlayer>()
@@ -200,6 +217,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       for (const p of players) delete lastSeenRef.current[p.id]
       onlineRef.current = players
       setOnline(players)
+
+      // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
+      const mine = players.find((p) => p.id === me.id)
+      if (isHost && mine && Date.now() - promotedAtRef.current > TAKEOVER_SETTLE_MS && shouldYieldHost(mine, players)) {
+        leaveHostRole(code)
+        rolesRef.current?.onDemote()
+        return
+      }
+
+      watchHost()
 
       if (isHost) {
         const infos: Record<string, PlayerInfo> = {}
@@ -222,10 +249,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       stateRef.current = next
       setState(next)
       setReceived(true)
+      receivedRef.current = true
       if (!joinTrackedRef.current) {
         joinTrackedRef.current = true
         track('lobby_gick_med', { spel: next.game })
       }
+      clockOffsetRef.current = Date.now() - sentAt
       setClockOffset(Date.now() - sentAt)
     })
 
@@ -271,6 +300,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       commit(hostMove(current(), id, move, activeIds(), Date.now()))
     })
 
+    // Värden lämnar med Lämna och pekar ut vem som tar över, så att lobbyn byter värd direkt.
+    channel.on('broadcast', { event: 'handover' }, ({ payload }) => {
+      if (isHost) return
+      if ((payload as { to?: string } | undefined)?.to === me.id) promote()
+    })
+
     channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
       // Någon har precis anslutit: skicka det aktuella läget till alla, och spelarens hand igen.
       if (!isHost) return
@@ -286,6 +321,27 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       }
     })
 
+    // Jag tar över som värd: spara rollen i fliken och gå med i kanalen på nytt som värd. Tillståndet skickas ut
+    // så snart jag är ansluten (se nedan).
+    function promote() {
+      if (isHost || takeoverRef.current) return
+      takeoverRef.current = { offset: clockOffsetRef.current }
+      promotedAtRef.current = Date.now()
+      markAsHost(code, stateRef.current.game)
+      rolesRef.current?.onPromote()
+    }
+
+    // Värden är borta (stängd flik, tappat nät). Är jag den som varit med längst tar jag över efter en stund, så att
+    // en omladdning hinner komma tillbaka först.
+    function watchHost() {
+      clearTimeout(takeoverTimer)
+      if (isHost || !stateReceived() || onlineRef.current.some((p) => p.host)) return
+      if (pickSuccessor(onlineRef.current)?.id !== myId) return
+      takeoverTimer = setTimeout(() => {
+        if (!onlineRef.current.some((p) => p.host) && pickSuccessor(onlineRef.current)?.id === myId) promote()
+      }, TAKEOVER_MS)
+    }
+
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setConnected(true)
@@ -300,6 +356,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           // Efter en omladdning: skicka allas händer igen.
           sentHandsRef.current = {}
           sendHands()
+          // Jag tog precis över: skicka ut tillståndet med klockorna omräknade till min klocka.
+          const takeover = takeoverRef.current
+          if (takeover) {
+            takeoverRef.current = null
+            publish(takeOverState(stateRef.current, takeover.offset))
+          }
         } else {
           void channel.send({ type: 'broadcast', event: 'hello', payload: { id: me.id } })
         }
@@ -313,6 +375,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return () => {
       clearTimeout(graceTimer)
       clearTimeout(awayTimer)
+      clearTimeout(takeoverTimer)
       channelRef.current = null
       setConnected(false)
       void supabase.removeChannel(channel)
@@ -345,10 +408,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   }, [isHost, state.phase, state.rematchAt, commit, current])
 
   const hostOnline = online.some((p) => p.host)
+  // Jag har ett tillstånd men värden är borta: någon tar över strax.
+  const hostMissing = !isHost && connected && received && !hostOnline
 
   let status: LobbyStatus = 'connecting'
   if (failed) status = 'error'
   else if (connected && (isHost || (hostOnline && received))) status = 'ready'
+  else if (hostMissing) status = 'ready'
+  // Kopplingen byts (t.ex. när jag tar över som värd): vyn ligger kvar så länge jag har ett tillstånd, så att inget nollställs.
+  else if (!connected && received) status = 'ready'
   else if (connected && graceOver && !hostOnline) status = 'no-host'
 
   const actions = useMemo(
@@ -418,6 +486,18 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (!isHost) return
         commit({ state: backToWaiting(stateRef.current), secrets: null })
       },
+      // Värden lämnar: peka ut den som tar över, så att lobbyn finns kvar. Väntar tills meddelandet skickats.
+      handOver: async () => {
+        if (!isHost || !me) return
+        const successor = pickSuccessor(onlineRef.current, me.id)
+        if (!successor) return
+        await channelRef.current?.send({ type: 'broadcast', event: 'handover', payload: { to: successor.id } })
+      },
+      // Byt spel: samma lobby, grupp och ställning, och de andra ser att värden väljer nästa spel.
+      changeGame: () => {
+        if (!isHost) return
+        commit({ state: changeGame(stateRef.current), secrets: null })
+      },
       // Revansch: samma spel och inställningar efter en gemensam nedräkning som alla ser.
       rematch: (settings?: RematchSettings) => {
         if (!isHost) return
@@ -433,7 +513,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   )
 
   // Handen gäller bara medan ett kortspel pågår.
-  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, floating, actions }
+  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, floating, hostMissing, actions }
 }
 
 // Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.

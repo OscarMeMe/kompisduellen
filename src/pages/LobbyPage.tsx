@@ -1,11 +1,12 @@
 import { useEffect, useState, type ComponentType } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
+import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
@@ -166,9 +167,15 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
 }
 
 function Lobby({ code, me }: { code: string; me: Player }) {
-  const hosted = hostedGame(code)
-  const isHost = hosted !== null
-  const { status, state, online, clockOffset, hand, floating, actions } = useLobby(code, me, isHost, hosted ?? undefined)
+  // Rollen kan byta under lobbyns gång: lämnar värden tar en annan över (se vardbyte.ts).
+  const [isHost, setIsHost] = useState(() => hostedGame(code) !== null)
+  const { status, state, online, clockOffset, hand, floating, hostMissing, actions } = useLobby(
+    code,
+    me,
+    isHost,
+    hostedGame(code) ?? undefined,
+    { onPromote: () => setIsHost(true), onDemote: () => setIsHost(false) },
+  )
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
@@ -185,8 +192,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     actions.start()
   }, [isHost, status, state.phase, meInLobby, actions, code])
 
+  // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. Finns andra med frågar vi först, oavsett om
+  // värden klickar på "Tillbaka till alla spel" eller på loggan. Deltagare lämnar bara sig själva och får ingen fråga.
+  const navigate = useNavigate()
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  const othersPresent = online.length > 1
+  const askBeforeLeaving = isHost && othersPresent
+  function requestLeave(to: string) {
+    if (askBeforeLeaving) setLeaveTo(to)
+    else void navigate(to)
+  }
+
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
-  const { setInMatch } = useLayout()
+  const { setInMatch, setLeaveGuard } = useLayout()
+  useEffect(() => {
+    if (!askBeforeLeaving) return
+    setLeaveGuard((to) => setLeaveTo(to))
+    return () => setLeaveGuard(null)
+  }, [askBeforeLeaving, setLeaveGuard])
   const inMatch =
     status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal' || state.phase === 'playing')
   useEffect(() => {
@@ -234,6 +257,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
       {phaseView()}
       <ReactionFloaters />
+      {hostMissing && (
+        <p
+          role="status"
+          className="fixed inset-x-4 top-2 z-40 mx-auto w-fit max-w-full rounded-full bg-sun px-4 py-2 text-center text-sm font-semibold shadow-soft"
+        >
+          Värden försvann. En ny värd tar över strax…
+        </p>
+      )}
+      <LeaveLobbyDialog
+        open={leaveTo !== null}
+        nextHost={online.find((p) => !p.host && p.id !== me.id)?.name}
+        onStay={() => setLeaveTo(null)}
+        onLeave={async () => {
+          // Lämna över till nästa spelare först, så att lobbyn byter värd direkt och inte försvinner.
+          await actions.handOver()
+          void navigate(leaveTo ?? '/')
+        }}
+      />
     </ReactionsProvider>
   )
 
@@ -317,8 +358,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           }}
           onChangeGame={() => {
             setPickGame(true)
-            actions.playAgain()
+            actions.changeGame()
           }}
+          onLeave={() => requestLeave('/#spel')}
         />
       )
   }
