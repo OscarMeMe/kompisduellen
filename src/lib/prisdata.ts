@@ -4,20 +4,23 @@ import items from './prisdata.json'
 // Frågorna ligger i prisdata.json (samma fält som PriceItem nedan). Nya frågor granskas på /granska
 // i utvecklingsläge och hamnar här när de godkänns.
 //
-// name: vad saken är (visas medan man gissar).
+// fraga: hela frågan med årtalet, t.ex. "Vad kostade Ikeas kudde Famnig 1998?". Visas som stor rubrik medan man gissar.
+// name: vad saken är. Visas i facit och i höjdpunkterna efter matchen.
 // year: året då försäljningen skedde eller priset gällde (visas alltid medan man gissar).
-// clue: kort ledtråd med sammanhang (visas medan man gissar). Upprepa inte årtalet. Får inte avslöja priset.
+// clue: kort ledtråd med sammanhang. Visas under frågan som "Ledtråd: …" medan man gissar. Upprepa inte årtalet. Får inte avslöja priset.
 // priceSek: priset i kronor. Utländska försäljningar räknas om med ungefärlig växelkurs vid försäljningen.
 //   Gamla svenska vardagspriser anges som de var då, med decimaler vid behov (13 öre = 0.13).
 // fact: max en mening som visas när rätt svar avslöjas.
 // source: var uppgiften kommer ifrån, så att den går att dubbelkolla. Visas inte i spelet, bara intern dokumentation.
-// question: valfri fråga i stället för "Vad kostade det", för det som inte köps (t.ex. "Hur stor var prissumman").
+// question: äldre fält. Valfri frågeinledning i stället för "Vad kostade det", för det som inte köps (t.ex. "Hur stor var prissumman").
 //   Årtalet läggs till efter: "Hur stor var prissumman år 1901?"
 // image: valfri bild i public/prisbilder (webp, max 800 px bred). Visas liggande 2:1. Utan bild visas emojin.
 //   Bara bilder från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels.
 // imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det.
 // imageSource: bildens sida, där licensen går att kontrollera.
 // imageNote: valfri rad under bilden när den inte visar just saken, t.ex. "Bilden visar en annan vas från Höganäs".
+//
+// dold: true döljer frågan i spelet (den slumpas aldrig fram) utan att den tas bort. Den syns kvar i datan och på /granska.
 //
 // exempel: true på en enda fråga gör den till exempelrundan på startsidan. Välj en fråga där bilden tydligt visar
 //   just saken som frågas om.
@@ -32,6 +35,8 @@ export type PriceItem = {
   emoji: string
   name: string
   year: number
+  // Hela frågan. Saknas den (t.ex. för en ny fråga i inkorgen) byggs den av name, question och year (se questionText).
+  fraga?: string
   clue: string
   priceSek: number
   fact: string
@@ -42,16 +47,27 @@ export type PriceItem = {
   imageSource?: string
   imageNote?: string
   exempel?: boolean
+  dold?: boolean
   exempelLedtrad?: string
 }
 
-export const PRICE_ITEMS: PriceItem[] = items
+// Alla frågor i datan, även dolda.
+export const ALL_PRICE_ITEMS: PriceItem[] = items
+
+// Frågorna som kan dyka upp i spelet: alla utom de dolda.
+export const PRICE_ITEMS: PriceItem[] = items.filter((item) => !item.dold)
 
 export function findPriceItem(id: string | null | undefined): PriceItem | undefined {
-  return PRICE_ITEMS.find((item) => item.id === id)
+  // Även dolda frågor hittas, så att en match som redan visar en sådan fråga inte tappar den.
+  return ALL_PRICE_ITEMS.find((item) => item.id === id)
 }
 
 // Frågan som startsidans exempelrunda visar: den som är markerad med exempel: true.
 export function findExampleItem(): PriceItem | undefined {
   return PRICE_ITEMS.find((item) => item.exempel === true)
+}
+
+// Frågan som visas som rubrik. Utan fraga byggs den av saken, frågeinledningen och året.
+export function questionText(item: PriceItem): string {
+  return item.fraga ?? `${item.name}: ${item.question ?? 'Vad kostade det'} år ${item.year}?`
 }

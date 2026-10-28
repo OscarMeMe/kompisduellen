@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
 import { pricePoints } from '@/lib/gissa-priset'
-import { findExampleItem } from '@/lib/prisdata'
+import { findExampleItem, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 
 type ExempelRundaProps = {
@@ -72,11 +72,8 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
       </figure>
 
       <div className="mt-3">
-        <p className="text-sm font-semibold text-muted-foreground">
-          {item.question ?? 'Vad kostade det'} år <span className="font-bold text-primary">{item.year}</span>?
-        </p>
-        <h2 className="text-xl leading-tight text-balance">{item.name}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{item.exempelLedtrad ?? item.clue}</p>
+        <h2 className="text-xl leading-snug text-balance">{questionText(item)}</h2>
+        <p className="mt-1 text-sm text-muted-foreground italic">Ledtråd: {item.exempelLedtrad ?? item.clue}</p>
       </div>
 
       {guess === null ? (
