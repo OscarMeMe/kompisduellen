@@ -24,6 +24,9 @@ import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 export const ROUND_OPTIONS = [3, 5, 10] as const
 const DEFAULT_ROUNDS = 5
 
+// Nedräkningen före en match: första starten (alla får se regeln) eller en revansch.
+export type CountdownKind = 'first' | 'rematch'
+
 export type Phase = 'waiting' | 'guessing' | 'reveal' | 'playing' | 'finished'
 
 export type PlayerInfo = {
@@ -78,6 +81,8 @@ export type GameState = {
   practice: boolean
   // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
   rematchAt: number | null
+  // Vad nedräkningen gäller: matchens första start eller en revansch.
+  countdownKind: CountdownKind
   matchesPlayed: number
   // Antal spelade matcher per spel, t.ex. { narmast: 2, 'gissa-priset': 1 }.
   gamesPlayed: Record<string, number>
@@ -123,6 +128,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     autoAdvance: true,
     practice: false,
     rematchAt: null,
+    countdownKind: 'rematch',
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
@@ -441,7 +447,16 @@ export function hostRematch(host: HostState, now: number, settings: RematchSetti
     state = setRounds(state, settings.rounds)
   }
   state = setTempo(state, settings)
-  return { state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000 }, secrets: null }
+  return { state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000, countdownKind: 'rematch' }, secrets: null }
+}
+
+// Första starten: värden trycker Starta och alla ser en gemensam nedräkning med en kort regel innan rundan börjar.
+// Gör ingenting om en nedräkning redan pågår (dubbelklick) eller om för få är med.
+export function hostCountdownStart(host: HostState, onlineIds: string[], now: number): HostState {
+  const { state } = host
+  if (state.phase !== 'waiting' || state.rematchAt !== null) return host
+  if (!canStart(state.game, onlineIds.filter((id) => state.players[id]).length)) return host
+  return { ...host, state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000, countdownKind: 'first' } }
 }
 
 export function cancelRematch(host: HostState): HostState {
