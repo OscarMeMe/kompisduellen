@@ -299,9 +299,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           state={state}
           isHost={isHost}
           onlineCount={online.length}
-          onRematch={() => {
+          onRematch={(settings) => {
             setPickGame(false)
-            actions.rematch()
+            actions.rematch(settings)
           }}
           onToWaitingRoom={() => {
             setPickGame(false)
