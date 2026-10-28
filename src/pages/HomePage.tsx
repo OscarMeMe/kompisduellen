@@ -17,7 +17,7 @@ const STEPS = [
 ]
 
 // En runda i Gissa priset med en riktig sak ur prisdata.ts. Poängen räknas som i spelet.
-const PREVIEW_ITEM = { emoji: '❤️', name: 'Ikeas hjärtformade kudde med armar', year: 1998, priceSek: 79 }
+const PREVIEW_ITEM = { name: 'Ikeas hjärtformade kudde med armar', year: 1998, priceSek: 79 }
 const PREVIEW_ROWS = [
   { name: 'Oscar', avatar: '🧙', guess: 75 },
   { name: 'Michaela', avatar: '👽', guess: 120 },
@@ -72,26 +72,24 @@ export function HomePage() {
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
             <Button size="lg" onClick={pointAtGames}>
-              ✨ Välj spel/skapa lobby
+              Välj spel/skapa lobby
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/ga-med">🔑 Jag har en kod</Link>
+              <Link to="/ga-med">Jag har en kod</Link>
             </Button>
           </div>
-          <p className="text-sm font-semibold text-muted-foreground">📱 Alla spelar på sin egen mobil eller dator.</p>
+          <p className="text-sm font-semibold text-muted-foreground">Alla spelar på sin egen mobil eller dator.</p>
         </div>
 
         {/* Förhandsvisning av en runda i Gissa priset */}
         <div className="mx-auto w-full max-w-[17rem] rotate-2 rounded-lg border bg-card p-3 shadow-soft sm:max-w-sm sm:p-4 transition-transform hover:rotate-0">
           <div className="flex items-center justify-between">
-            <p className="font-heading text-sm font-bold">
-              <Emoji emoji="🏷️" /> Gissa priset
-            </p>
+            <p className="font-heading text-sm font-bold">Gissa priset</p>
             <span className="rounded-full bg-sky-soft px-3 py-1 text-xs font-semibold">Runda 3 av 5</span>
           </div>
           <div className="mt-2.5 rounded-lg bg-sun-soft py-2.5 text-center">
             <p className="px-4 text-sm font-semibold">
-              {PREVIEW_ITEM.emoji} {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
+              {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
             </p>
             <p className="mt-1 font-heading text-4xl font-bold tabular-nums sm:text-5xl">{formatSek(PREVIEW_ITEM.priceSek)}</p>
             <p className="text-sm text-muted-foreground">Rätt pris</p>
@@ -122,7 +120,6 @@ export function HomePage() {
       <section id="spel" tabIndex={-1} aria-label="Spel" className="scroll-mt-6 space-y-3 outline-none">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-3xl">Spel</h2>
-          <p className="text-muted-foreground">Fler spel är på väg.</p>
         </div>
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -154,7 +151,7 @@ export function HomePage() {
                 <ul className="flex flex-wrap gap-1.5 text-xs font-semibold" aria-label="Om spelet">
                   <li className="rounded-full bg-card/70 px-2.5 py-1">👥 {playersLabel(game)}</li>
                   {game.duration && <li className="rounded-full bg-card/70 px-2.5 py-1">⏱ ca {game.duration}</li>}
-                  {game.feel && <li className="rounded-full bg-card/70 px-2.5 py-1">🎲 {game.feel}</li>}
+                  {game.feel && <li className="rounded-full bg-card/70 px-2.5 py-1">{game.feel}</li>}
                 </ul>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -199,7 +196,6 @@ export function HomePage() {
       <section id="sa-funkar" className="scroll-mt-6 space-y-3">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-3xl">Så funkar det</h2>
-          <p className="text-muted-foreground">Igång på under en minut.</p>
         </div>
         <ol className="grid gap-3 sm:grid-cols-3">
           {STEPS.map((step, index) => (

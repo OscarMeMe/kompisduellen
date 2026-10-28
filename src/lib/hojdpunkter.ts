@@ -19,7 +19,6 @@ export type Highlight = {
     | 'stabilast'
     | 'sista-sekunden'
     | 'blixten'
-  emoji: string
   title: string
   text: string
 }
@@ -53,7 +52,6 @@ function decidedInLastRound(state: GameState): Highlight | null {
   const name = nameOf(state, winner)
   return {
     id: 'sista-rundan',
-    emoji: '⚡',
     title: 'Avgjorde i sista rundan',
     text:
       winnerBefore < bestOther
@@ -88,7 +86,7 @@ function bullseyes(state: GameState): Highlight | null {
         ? `${nameOf(state, ids[0])} prickade rätt ${hits.length} gånger!`
         : `${joinNames(ids.map((id) => nameOf(state, id)))} prickade rätt. ${hits.length} fullträffar i matchen!`
   }
-  return { id: 'fulltraff', emoji: '🎯', title: 'Matchens fullträff', text }
+  return { id: 'fulltraff', title: 'Matchens fullträff', text }
 }
 
 // Den inskickade gissning som var längst ifrån rätt svar, om den var tillräckligt långt ifrån.
@@ -123,7 +121,7 @@ function furthestMiss(state: GameState): Highlight | null {
     const names = [...new Set(tied.map((g) => nameOf(state, g.id)))]
     text = `${joinNames(names)} delar på den här: lika långt ifrån rätt svar.`
   }
-  return { id: 'langst-ifran', emoji: '🚀', title: 'Längst från verkligheten', text }
+  return { id: 'langst-ifran', title: 'Längst från verkligheten', text }
 }
 
 // Två eller flera gissade exakt samma i en runda.
@@ -138,7 +136,6 @@ function mindReaders(state: GameState): Highlight | null {
     const item = rules.itemName(round.itemId)
     return {
       id: 'tankelasare',
-      emoji: '🧠',
       title: 'Tankeläsare',
       text: `${joinNames(who.map((id) => nameOf(state, id)))} gissade exakt samma sak: ${rules.formatValue(guess)}${item ? ` på ”${item}”` : ''}. Läser ni varandras tankar?`,
     }
@@ -175,7 +172,6 @@ function lowestMostOften(state: GameState): Highlight | null {
   if (!leader) return null
   return {
     id: 'snalast',
-    emoji: '🪙',
     title: 'Snålast',
     text: `${nameOf(state, leader.id)} gissade lägst i ${leader.count} av ${rounds} rundor. Plånboken sitter hårt!`,
   }
@@ -186,7 +182,6 @@ function highestMostOften(state: GameState): Highlight | null {
   if (!leader) return null
   return {
     id: 'slosaren',
-    emoji: '💸',
     title: 'Slösaren',
     text: `${nameOf(state, leader.id)} gissade högst i ${leader.count} av ${rounds} rundor. Pengar är till för att slängas!`,
   }
@@ -210,7 +205,6 @@ function comeback(state: GameState): Highlight | null {
     if (ids.every((id) => id === winner || total(id, round) > mine)) {
       return {
         id: 'comeback',
-        emoji: '🔥',
         title: 'Comeback',
         text: `${nameOf(state, winner)} låg sist efter runda ${round} men vände och tog hem segern!`,
       }
@@ -237,7 +231,6 @@ function steadiest(state: GameState): Highlight | null {
   const [best] = spreads
   return {
     id: 'stabilast',
-    emoji: '🪨',
     title: 'Stabilast',
     text: `${nameOf(state, best.id)} höll jämnast nivå: ${best.low}–${best.high} poäng varje runda. Stabil som en klippa!`,
   }
@@ -261,7 +254,6 @@ function latestAnswerer(state: GameState): Highlight | null {
   if (!leader) return null
   return {
     id: 'sista-sekunden',
-    emoji: '⏳',
     title: 'Sista sekunden',
     text: `${nameOf(state, leader.id)} svarade sist i ${leader.count} av ${rounds.length} rundor. Nervkittlande!`,
   }
@@ -286,7 +278,6 @@ function fastestAnswerer(state: GameState): Highlight | null {
   const seconds = (averages[0].average / 1000).toLocaleString('sv-SE', { maximumFractionDigits: 1 })
   return {
     id: 'blixten',
-    emoji: '⚡',
     title: 'Blixten',
     text: `${nameOf(state, averages[0].id)} svarade snabbast: ${seconds} s i snitt. Snabbare än sin egen skugga!`,
   }

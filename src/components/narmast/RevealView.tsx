@@ -57,9 +57,9 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
         {!rolling && (
           <p className="mt-2 text-lg font-bold">
             {result.winners.length === 0
-              ? 'Ingen hann gissa den här gången 😅'
+              ? 'Ingen hann gissa den här gången'
               : iWon
-                ? 'Du var närmast! +1 poäng 🎉'
+                ? 'Du var närmast! +1 poäng'
                 : result.winners.length > 1
                   ? 'Delad seger!'
                   : `${state.players[result.winners[0]]?.name ?? 'Någon'} var närmast!`}

@@ -29,9 +29,6 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
     <>
       {table.skipped || !winning ? (
         <div className="space-y-2 rounded-lg border bg-card p-6 text-center shadow-soft animate-pop">
-          <p className="text-4xl" aria-hidden>
-            🤷
-          </p>
           <h1 className="text-2xl">Ingen poäng den här rundan</h1>
           <p className="text-muted-foreground">För få kort kom in, även på det nya frågekortet.</p>
         </div>
@@ -39,7 +36,7 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
         <div className="space-y-4 rounded-lg border bg-mint-soft p-6 shadow-soft animate-pop sm:p-8">
           {table.judgeAsleep && (
             <p className="inline-flex rounded-full bg-card px-3 py-1 text-sm font-semibold">
-              Domaren somnade 😴 Vinnaren lottades
+              Domaren somnade. Vinnaren lottades
             </p>
           )}
           <p className="font-heading text-2xl leading-snug font-bold break-words sm:text-3xl">
@@ -48,7 +45,7 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
           {winner && (
             <p className="flex items-center gap-2 text-lg font-bold">
               <Emoji emoji={winner.avatar} className="text-3xl" />
-              {winnerId === me.id ? 'Ditt kort vann! +1 poäng 🎉' : `${winner.name} spelade kortet · +1 poäng`}
+              {winnerId === me.id ? 'Ditt kort vann! +1 poäng' : `${winner.name} spelade kortet · +1 poäng`}
             </p>
           )}
         </div>
