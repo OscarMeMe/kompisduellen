@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { Info } from 'lucide-react'
+import { ArrowDown, Check, Info, Play } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { formatSek } from '@/lib/belopp'
 import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
 import { pricePoints } from '@/lib/gissa-priset'
@@ -27,9 +28,12 @@ const PREVIEW_ROWS = [
 ].map((row, index) => ({ ...row, points: pricePoints(row.guess, PREVIEW_ITEM.priceSek), win: index === 0 }))
 
 // Gå med med en kod direkt från startsidan. Versaler och högst fyra bokstäver, Enter fungerar. Knappen är dov tills
-// koden är komplett. Koden kontrolleras innan man går med, så att en felaktig eller avslutad kod ger ett kort besked.
+// koden är komplett. Koden kontrolleras innan man går med, så att en felaktig eller avslutad kod ger ett kort besked
+// precis under fältet.
 function JoinCode() {
   const navigate = useNavigate()
+  const fieldId = useId()
+  const errorId = useId()
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
@@ -50,28 +54,32 @@ function JoinCode() {
   }
 
   return (
-    <form onSubmit={submit} className="w-full max-w-xs space-y-2 sm:w-auto" noValidate>
+    <form onSubmit={submit} className="mx-auto w-full max-w-sm space-y-2 md:mx-0" noValidate>
+      <Label htmlFor={fieldId} className="text-base font-bold">
+        Har du fått en kod?
+      </Label>
       <div className="flex gap-2">
         <Input
+          id={fieldId}
           value={code}
           onChange={(event) => {
             setCode(normalizeCode(event.target.value))
             setError(null)
           }}
-          aria-label="Lobbykod"
           aria-invalid={error !== null}
-          placeholder="Kod, t.ex. BHKX"
+          aria-describedby={error ? errorId : undefined}
+          placeholder="T.ex. BHKX"
           maxLength={4}
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          className="w-40 min-w-0 flex-1 font-heading font-bold tracking-widest uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case"
+          className="min-w-0 flex-1 font-heading font-bold tracking-widest uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case"
         />
         <Button type="submit" size="lg" variant={complete ? 'default' : 'outline'} disabled={checking}>
           Gå med
         </Button>
       </div>
-      <p role="alert" className="min-h-0 text-sm font-semibold text-primary empty:hidden">
+      <p id={errorId} role="alert" className="text-sm font-semibold text-primary empty:hidden">
         {error}
       </p>
     </form>
@@ -113,24 +121,39 @@ export function HomePage() {
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
       <section className="grid items-center gap-6 md:grid-cols-[1.3fr_1fr] md:gap-10">
-        <div className="space-y-5 text-center md:text-left">
+        <div className="space-y-6 text-center md:text-left">
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
           <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
             Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder. Inget konto behövs.
+            Samla kompisarna, välj ett spel och dela koden. Alla spelar på sin egen mobil eller dator.
           </p>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start md:justify-start">
-            {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
-                även när allt redan syns på skärmen. */}
-            <Button size="lg" className="w-full sm:w-auto" onClick={pointAtGames}>
-              Skapa lobby
-            </Button>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
+              {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
+                  även när allt redan syns på skärmen. */}
+              <Button size="lg" onClick={pointAtGames}>
+                Välj spel
+                <ArrowDown aria-hidden />
+              </Button>
+              {/* Det befintliga provläget i Gissa priset: en provrunda på egen hand. */}
+              <Button asChild size="lg" variant="outline">
+                <Link to="/skapa?spel=gissa-priset&testa=1">
+                  <Play aria-hidden />
+                  Testa själv
+                </Link>
+              </Button>
+            </div>
+            <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-muted-foreground md:justify-start">
+              <Check className="size-4 text-primary" aria-hidden />
+              Inget konto behövs
+            </p>
+          </div>
+          <div className="border-t pt-5">
             <JoinCode />
           </div>
-          <p className="text-sm font-semibold text-muted-foreground">Alla spelar på sin egen mobil eller dator.</p>
         </div>
 
         {/* Förhandsvisning av en runda i Gissa priset */}
