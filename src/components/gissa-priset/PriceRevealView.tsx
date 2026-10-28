@@ -6,19 +6,8 @@ import { RevealFooter } from '@/components/lobby/RevealFooter'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
+import { differenceText } from '@/lib/skillnad'
 import { cn } from '@/lib/utils'
-
-// Nära priset visas procent. Långt ifrån visas "gånger", eftersom t.ex. "100 % för lågt"
-// ser ut som noll kronor och "2 400 % för högt" är svårt att greppa.
-function percentOff(guess: number, price: number): string {
-  const ratio = guess / price
-  const times = (n: number) => n.toLocaleString('sv-SE', { maximumFractionDigits: n < 10 ? 1 : 0 })
-  if (ratio >= 2) return `${times(ratio)} gånger för högt`
-  if (ratio <= 0.5) return `${times(1 / ratio)} gånger för lågt`
-  const diff = Math.round((ratio - 1) * 100)
-  if (diff === 0) return guess === price ? 'Exakt rätt!' : 'Nästan exakt'
-  return diff > 0 ? `${diff} % för högt` : `${Math.abs(diff)} % för lågt`
-}
 
 export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
@@ -77,7 +66,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.guess === undefined
                     ? 'Ingen gissning'
-                    : `${formatSek(row.guess)} · ${percentOff(row.guess, result.target)}`}
+                    : `${formatSek(row.guess)} · ${differenceText(row.guess, result.target)}`}
                 </span>
               </span>
               <span className="shrink-0 text-right whitespace-nowrap">
