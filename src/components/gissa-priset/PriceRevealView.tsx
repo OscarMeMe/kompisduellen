@@ -51,7 +51,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
       {/* Priset och poängen först, sedan resultatlistan och sist faktatexten, så att det viktigaste syns direkt på mobilen. */}
       <PriceAnswerCard item={item} target={result.target} revealed={revealed}>
         {revealed && (
-          <p className="mt-2 text-lg font-bold sm:mt-4">
+          <p className="mt-3 inline-block rounded-full bg-mint-soft px-5 py-2 font-heading text-xl font-bold sm:mt-5 sm:text-3xl">
             {myPoints === undefined
               ? 'Du hann inte gissa den här gången'
               : myPoints === 100

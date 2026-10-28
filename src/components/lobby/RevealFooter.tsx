@@ -30,7 +30,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onRe
   const canPause = auto && isHost && onPause !== undefined && onResume !== undefined
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-5 shadow-soft">
+    <div className="space-y-2 rounded-lg border bg-card p-3 shadow-soft-sm">
       {auto && (state.deadline !== null || paused) && (
         <div className="space-y-2">
           <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
@@ -59,8 +59,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onRe
           {canPause && (
             <Button
               variant="outline"
-              size="lg"
-              className="flex-1"
+              className="h-11 flex-1"
               onClick={() => (paused ? onResume(state.round) : onPause(state.round))}
             >
               {paused ? <Play aria-hidden /> : <Pause aria-hidden />}
@@ -69,8 +68,8 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onRe
           )}
           <Button
             variant={auto ? 'outline' : 'default'}
-            size="lg"
-            className="flex-1"
+            size={auto ? 'default' : 'lg'}
+            className={auto ? 'h-11 flex-1' : 'flex-1'}
             onClick={() => onNext(state.round)}
           >
             {auto ? (isLast ? 'Resultatet nu' : 'Nästa nu') : isLast ? 'Visa resultatet' : 'Nästa runda'}

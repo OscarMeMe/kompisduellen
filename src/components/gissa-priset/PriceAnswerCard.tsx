@@ -22,14 +22,14 @@ export function PriceAnswerCard({
         {/* Emojin bara när saken saknar bild. Bredvid ett foto ser den malplacerad ut. */}
         {!item?.image && <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>}
         <span className={cn('min-w-0', item?.image ? 'text-center' : 'text-left')}>
-          <span className="block font-bold text-balance">{item?.name}</span>
-          {item && <span className="block text-sm font-semibold text-primary">År {item.year}</span>}
+          <span className="block text-sm font-semibold text-balance sm:text-base">{item?.name}</span>
+          {item && <span className="block text-xs font-semibold text-primary sm:text-sm">År {item.year}</span>}
         </span>
       </div>
       <p className="mt-3 text-sm font-semibold text-muted-foreground sm:mt-4">Rätt pris</p>
       <p
         className={cn(
-          'font-heading text-4xl font-bold text-balance transition-all duration-500 sm:text-6xl',
+          'font-heading text-5xl font-bold text-balance transition-all duration-500 sm:text-7xl',
           revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
         )}
       >
@@ -47,8 +47,6 @@ export function PriceAnswerCard({
 // Bakgrunden till priset, som visas efter svaret.
 export function PriceFact({ item }: { item: PriceItem }) {
   return (
-    <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground shadow-soft animate-in fade-in sm:p-6 sm:text-base">
-      {item.fact}
-    </p>
+    <p className="px-2 text-center text-xs text-muted-foreground animate-in fade-in sm:text-sm">{item.fact}</p>
   )
 }
