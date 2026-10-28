@@ -111,7 +111,7 @@ export function HomePage() {
                   <span className="block truncate font-heading font-bold">{row.name}</span>
                   <span className="block text-xs text-muted-foreground">
                     Gissade {formatSek(row.guess)}
-                    {row.win && ' – närmast!'}
+                    {row.win && '. Närmast!'}
                   </span>
                 </span>
                 <span className="font-heading text-lg font-bold tabular-nums">+{row.points}</span>

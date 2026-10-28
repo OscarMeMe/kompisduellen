@@ -18,7 +18,7 @@ export const GAMES: GameInfo[] = [
   {
     id: 'gissa-priset',
     name: 'Gissa priset',
-    tagline: 'Vad kostar det – eller vad kostade det förr?',
+    tagline: 'Vad kostar det i dag? Och vad kostade det förr?',
     emoji: '🏷️',
     color: 'bg-sun-soft',
     minPlayers: 2,
