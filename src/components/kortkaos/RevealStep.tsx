@@ -86,7 +86,6 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
         isHost={isHost}
         clockOffset={clockOffset}
         onNext={onNext}
-        nextLabel="Nästa runda startar strax"
         totalSeconds={kortkaosRules.seconds.reveal}
       />
     </>

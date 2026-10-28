@@ -99,7 +99,6 @@ export function RevealView({ state, me, isHost, clockOffset, onNext }: RevealVie
         isHost={isHost}
         clockOffset={clockOffset}
         onNext={onNext}
-        nextLabel="Nästa runda startar strax"
       />
     </Wide>
   )
