@@ -53,7 +53,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `ExempelRunda` och `SpelKort` på startsidan)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
   - `kortkaos/`: Kortkaos vy för hela rundan (`KortkaosView` med ett steg per fil). Kortspel har en `Play`-vy i `GAME_VIEWS`
@@ -78,6 +78,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
   - `lobbykoll.ts`: kollar om en kod leder till en lobby som lever (lyssnar på närvaron i kanalen `lobby:KOD` utan att synas där). Används av kodfältet på startsidan. Utan värd inom 1,5 sekunder är lobbyn avslutad
+  - `skillnad.ts`: hur långt ifrån rätt pris en gissning var, i ord (`differenceText`). Används i facit och i startsidans exempelrunda
   - `vardbyte.ts`: vem som tar över som värd, vem som viker sig vid två värdar och tillståndet vid övertagande. Rena funktioner
   - `granskning.ts`: reglerna för granskningssidan (omdömen, flytt från inkorgen, export). Rena funktioner
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt

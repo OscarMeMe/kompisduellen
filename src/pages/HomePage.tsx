@@ -14,9 +14,9 @@ import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
-  { title: 'Skapa en lobby', text: 'Välj spel och skriv ditt namn.', color: 'bg-coral-soft' },
-  { title: 'Dela koden', text: 'Fyra bokstäver. Skicka i Discord eller säg den högt.', color: 'bg-sun-soft' },
-  { title: 'Spela!', text: 'Alla svarar på sin egen skärm. Flest poäng vinner.', color: 'bg-mint-soft' },
+  { title: 'Välj ett spel', text: 'Skapa en lobby med ditt namn.', color: 'bg-coral-soft' },
+  { title: 'Dela koden', text: 'Skicka den till kompisarna.', color: 'bg-sun-soft' },
+  { title: 'Låt duellen börja', text: 'Alla spelar på sin egen skärm.', color: 'bg-mint-soft' },
 ]
 
 // Gå med med en kod direkt från startsidan. Versaler och högst fyra bokstäver, Enter fungerar. Knappen är dov tills
@@ -172,9 +172,42 @@ export function HomePage() {
             />
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      </section>
+      <GameIntroDialog game={introGame} open={introOpen} onOpenChange={setIntroOpen} />
+
+      {/* Så fungerar det, efter spelen så att spellistan syns direkt */}
+      <section id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-6 space-y-4">
+        <h2 id="sa-funkar-rubrik" className="text-3xl">
+          Så fungerar det
+        </h2>
+        <ol className="grid gap-4 sm:grid-cols-3">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="flex items-start gap-3">
+              <span
+                className={cn(
+                  'flex size-10 shrink-0 items-center justify-center rounded-full font-heading text-lg font-bold',
+                  step.color,
+                )}
+              >
+                {index + 1}
+              </span>
+              <div>
+                <h3 className="text-lg leading-tight">{step.title}</h3>
+                <p className="mt-0.5 text-muted-foreground">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Kommande spel, diskret och utan knappar */}
+      <section aria-labelledby="kommande-rubrik" className="space-y-3 border-t pt-6">
+        <h2 id="kommande-rubrik" className="text-xl">
+          Fler dueller är på väg.
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.filter((game) => !game.playable).map((game) => (
-            <div key={game.id} className="flex items-center gap-3 rounded-lg border bg-card/60 p-3 opacity-80">
+            <li key={game.id} className="flex items-center gap-3 rounded-lg border bg-card/60 p-3 opacity-80">
               <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-md text-xl', game.color)}>
                 <Emoji emoji={game.emoji} />
               </span>
@@ -187,30 +220,9 @@ export function HomePage() {
                 </div>
                 <p className="text-sm leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      <GameIntroDialog game={introGame} open={introOpen} onOpenChange={setIntroOpen} />
-
-      {/* Så funkar det, efter spelen så att spellistan syns direkt */}
-      <section id="sa-funkar" className="scroll-mt-6 space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <h2 className="text-3xl">Så funkar det</h2>
-        </div>
-        <ol className="grid gap-3 sm:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <li key={step.title} className={cn('flex items-start gap-3 rounded-lg px-4 py-3', step.color)}>
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-card font-heading text-sm font-bold shadow-soft-sm">
-                {index + 1}
-              </span>
-              <div>
-                <h3 className="text-lg leading-tight">{step.title}</h3>
-                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{step.text}</p>
-              </div>
             </li>
           ))}
-        </ol>
+        </ul>
       </section>
     </div>
   )
