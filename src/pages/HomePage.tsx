@@ -60,16 +60,13 @@ export function HomePage() {
       {/* Hero */}
       <section className="grid items-center gap-6 md:grid-cols-[1.3fr_1fr] md:gap-10">
         <div className="space-y-5 text-center md:text-left">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint-soft px-3 py-1 text-xs font-semibold text-accent-foreground">
-            🎉 Gratis · inget konto behövs
-          </span>
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
           <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
             Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder.
+            Partyspel där vänskapen sätts på prov. Skapa en lobby på några sekunder. Inget konto behövs.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row md:justify-start">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
@@ -85,7 +82,7 @@ export function HomePage() {
         </div>
 
         {/* Förhandsvisning av en runda i Gissa priset */}
-        <div className="mx-auto w-full max-w-sm rotate-2 rounded-lg border bg-card p-4 shadow-soft transition-transform hover:rotate-0">
+        <div className="mx-auto w-full max-w-[17rem] rotate-2 rounded-lg border bg-card p-3 shadow-soft sm:max-w-sm sm:p-4 transition-transform hover:rotate-0">
           <div className="flex items-center justify-between">
             <p className="font-heading text-sm font-bold">
               <Emoji emoji="🏷️" /> Gissa priset
@@ -96,7 +93,7 @@ export function HomePage() {
             <p className="px-4 text-sm font-semibold">
               {PREVIEW_ITEM.emoji} {PREVIEW_ITEM.name}, {PREVIEW_ITEM.year}
             </p>
-            <p className="mt-1 font-heading text-5xl font-bold tabular-nums">{formatSek(PREVIEW_ITEM.priceSek)}</p>
+            <p className="mt-1 font-heading text-4xl font-bold tabular-nums sm:text-5xl">{formatSek(PREVIEW_ITEM.priceSek)}</p>
             <p className="text-sm text-muted-foreground">Rätt pris</p>
           </div>
           <ol className="mt-2 space-y-1">
