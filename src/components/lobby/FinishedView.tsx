@@ -94,6 +94,95 @@ export function FinishedView({
 
       <Podium players={ranked} />
 
+      {/* Valen kommer direkt efter prispallen. På mobil ligger knapparna fast i nederkant (utan att täcka innehållet,
+          eftersom sidan har en tom yta längst ner), så att värden alltid når Revansch. */}
+      <div
+        className={cn(
+          'flex flex-col gap-2',
+          isHost &&
+            'max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:border-t max-sm:bg-background/95 max-sm:p-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-sm',
+        )}
+      >
+        {isHost ? (
+          state.practice ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button size="lg" onClick={onToWaitingRoom}>
+                Bjud in kompisar
+              </Button>
+              <Button size="lg" variant="outline" onClick={rematch}>
+                Testa igen
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Button size="lg" onClick={rematch} disabled={!canRematch}>
+                  Revansch
+                </Button>
+                <Button size="lg" variant="outline" onClick={onChangeGame}>
+                  Byt spel
+                </Button>
+              </div>
+              {!canRematch && (
+                <p className="text-center text-xs text-muted-foreground sm:text-sm">
+                  Revansch i {game.name} kräver minst {game.minPlayers} spelare, och några har lämnat lobbyn. Byt spel eller
+                  vänta på att de kommer tillbaka.
+                </p>
+              )}
+            </>
+          )
+        ) : (
+          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm">
+            Värden väljer nästa steg
+          </p>
+        )}
+      </div>
+
+      {isHost && (
+        <div className="space-y-3">
+          <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+            <span>{settingsSummary} ·</span>
+            <Button
+              variant="link"
+              className="h-11 px-2 text-sm"
+              aria-expanded={editing}
+              onClick={() => setEditing((open) => !open)}
+            >
+              {editing ? 'dölj' : 'ändra'}
+            </Button>
+          </p>
+          {editing && (
+            <div className="space-y-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
+              <Choice
+                label="Antal rundor"
+                options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
+                selected={rounds}
+                onSelect={setRounds}
+              />
+              {tempo && (
+                <>
+                  <Choice
+                    label="Svarstid"
+                    options={(rulesFor(state.game).guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
+                    selected={guessSeconds}
+                    onSelect={setGuessSeconds}
+                  />
+                  <Choice
+                    label="Efter facit"
+                    options={[
+                      { value: 1, label: 'Automatiskt' },
+                      { value: 0, label: 'Värden går vidare' },
+                    ]}
+                    selected={autoAdvance ? 1 : 0}
+                    onSelect={(value) => setAutoAdvance(value === 1)}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {best && (
         <section className="space-y-3 rounded-lg bg-foreground p-6 text-background shadow-soft animate-pop sm:p-8">
           <h2 className="text-sm tracking-wide uppercase opacity-70">Matchens bästa kort</h2>
@@ -109,7 +198,7 @@ export function FinishedView({
       )}
 
       {highlights.length > 0 && (
-        <ul className={cn("grid gap-3", highlights.length > 1 && "sm:grid-cols-2")} aria-label="Matchens höjdpunkter">
+        <ul className={cn('grid gap-3', highlights.length > 1 && 'sm:grid-cols-2')} aria-label="Matchens höjdpunkter">
           {highlights.map((highlight) => (
             <li key={highlight.id} className="flex gap-3 rounded-lg border bg-sun-soft p-4 shadow-soft-sm animate-pop">
               <span className="text-2xl leading-none" aria-hidden>
@@ -131,88 +220,11 @@ export function FinishedView({
         lastWinners={state.practice ? [] : matchWinners(state)}
       />
 
-      <div className="flex flex-col gap-3">
-        {isHost ? (
-          state.practice ? (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="sm:flex-1" onClick={onToWaitingRoom}>
-                Bjud in kompisar
-              </Button>
-              <Button size="lg" variant="outline" className="sm:flex-1" onClick={rematch}>
-                Testa igen
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="sm:flex-1" onClick={rematch} disabled={!canRematch}>
-                  Revansch
-                </Button>
-                <Button size="lg" variant="outline" className="sm:flex-1" onClick={onChangeGame}>
-                  Byt spel
-                </Button>
-              </div>
-              {!canRematch && (
-                <p className="text-center text-sm text-muted-foreground">
-                  Revansch i {game.name} kräver minst {game.minPlayers} spelare, och några har lämnat lobbyn. Byt spel eller
-                  vänta på att de kommer tillbaka.
-                </p>
-              )}
-            </>
-          )
-        ) : (
-          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm">
-            Värden väljer nästa steg
-          </p>
-        )}
-        {isHost && (
-          <div className="space-y-3">
-            <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-              <span>{settingsSummary} ·</span>
-              <Button
-                variant="link"
-                className="h-11 px-2 text-sm"
-                aria-expanded={editing}
-                onClick={() => setEditing((open) => !open)}
-              >
-                {editing ? 'dölj' : 'ändra'}
-              </Button>
-            </p>
-            {editing && (
-              <div className="space-y-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
-                <Choice
-                  label="Antal rundor"
-                  options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
-                  selected={rounds}
-                  onSelect={setRounds}
-                />
-                {tempo && (
-                  <>
-                    <Choice
-                      label="Svarstid"
-                      options={(rulesFor(state.game).guessSecondsOptions ?? []).map((s) => ({ value: s, label: `${s} s` }))}
-                      selected={guessSeconds}
-                      onSelect={setGuessSeconds}
-                    />
-                    <Choice
-                      label="Efter facit"
-                      options={[
-                        { value: 1, label: 'Automatiskt' },
-                        { value: 0, label: 'Värden går vidare' },
-                      ]}
-                      selected={autoAdvance ? 1 : 0}
-                      onSelect={(value) => setAutoAdvance(value === 1)}
-                    />
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        <Button asChild size="lg" variant="ghost">
-          <Link to="/#spel">Tillbaka till alla spel</Link>
-        </Button>
-      </div>
+      <Button asChild size="lg" variant="ghost">
+        <Link to="/#spel">Tillbaka till alla spel</Link>
+      </Button>
+      {/* Plats för den fasta knappraden på mobil. */}
+      {isHost && <div className="h-24 sm:hidden" aria-hidden />}
     </Wide>
   )
 }
