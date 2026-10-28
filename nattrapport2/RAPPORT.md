@@ -10,6 +10,7 @@ Testspelare heter alltid `TEST-NATT-...`. Den här rapporten ligger på branchen
 | `natt2/1-mobil` | Punkt 5: Mobilens svarsyta | klar |
 | `natt2/2-forsta-start` | Punkt 8: Gemensam första start | klar |
 | `natt2/3-snabbprov` | Punkt 4: Kortare snabbprov | klar |
+| `natt2/4-spelkort` | Punkt 7: Tydligare spelkort | klar |
 
 ## Hoppade över
 
@@ -77,3 +78,26 @@ Skärmdump: `n2-nedrakning.png`.
 **Testa själv på mobilen:** öppna startsidan i ett privat fönster (inget sparat namn), tryck "Testa själv" på Gissa priset och kolla att du hamnar direkt i frågan, att det är en runda, och att "Bjud in kompisar" tar dig till väntrummet med koden.
 
 Skärmdump: `n3-klar-mobil.png`.
+
+## Steg 4: Tydligare spelkort (`natt2/4-spelkort`)
+
+**Ändrat**
+- Spelkorten på startsidan visar nu tre små etiketter: spelarantal, ungefärlig matchtid och spelkänsla. Raden "👥 2+ spelare" under kortet är flyttad upp till etiketterna.
+  - Gissa priset: 2–12 spelare · ca 2–4 min · Tävlingsinriktat och lagom knepigt
+  - Närmast vinner: 2–12 spelare · ca 1–2 min · Snabbt och ren tur
+  - Kortkaos: 3–9 spelare · ca 8–14 min · Pratigt och fräckt
+- Nya fält i `games.ts`: `maxPlayers`, `duration`, `feel`. `playersLabel` visar intervall när det finns ett prövat största antal (syns även i väntrummets spelval). Utan `maxPlayers` visas "N+ spelare" som förut.
+
+**Hur siffrorna är tagna (det som faktiskt verifierats)**
+- **Spelare, Gissa priset och Närmast vinner:** körde en hel match med 12 spelare var (12 separata webbläsarsessioner, `TEST-NATT-01` till `-12`, mobilbredd). Alla 12 såg lobbyn, alla svarade, matchen gick till slut och alla såg slutet. Över 12 är inte prövat, därför står 12.
+- **Spelare, Kortkaos:** inte spelat i webbläsaren (kräver tre spelare och mycket klickande). Gränsen 9 kommer från ett nytt enhetstest: kortleken (150 svarskort, 7 per hand) räcker till 9 spelare i alla rundval (5, 8, 10). Med fler får spelarna färre kort mot slutet. Minst 3 spelare är spelets egen regel.
+- **Matchtid, uppmätt:** Gissa priset, 5 rundor, 12 spelare som svarar direkt: 64 s. Närmast vinner, samma: 33 s. Övre gräns räknad från spelets tider: Gissa priset 5 x (30 s svar + 12 s facit) = 3,5 min, Närmast 5 x (15 + 6 s) = 1,75 min. Etiketten är ett spann däremellan, avrundat uppåt eftersom folk tänker länge.
+- **Matchtid, Kortkaos:** inte uppmätt, bara räknad från spelets tider (8 rundor, 8 + upp till 40 + 45 + 12 s per runda, alltså upp till ca 14 min, och ca 8 min om det går snabbt). Behöver provspelas.
+- **Spelkänsla** är mina egna korta formuleringar, inget uppmätt.
+
+**Testat**
+- 12-spelartest ovan (båda spelen), build och 122 tester: gröna. Startsidan kollad på 390x844 och 1280x900, ingen horisontell scroll.
+
+**Testa själv:** läs etiketterna på spelkorten (särskilt "Pratigt och fräckt" och tiderna) och säg till om du vill ha andra ord. Spela gärna en Kortkaos-match med minst 4 för att se om 8–14 min stämmer.
+
+Skärmdump: `n4-mobil.png`.
