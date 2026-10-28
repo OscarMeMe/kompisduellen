@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { formatSek } from '@/lib/belopp'
 import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
 import { pricePoints } from '@/lib/gissa-priset'
-import { rulesFor } from '@/lib/spelregler'
+import { durationLabel } from '@/lib/speltid'
 import { cn } from '@/lib/utils'
 
 const STEPS = [
@@ -121,22 +121,23 @@ export function HomePage() {
         <div className="flex flex-wrap items-baseline gap-x-3">
           <h2 className="text-3xl">Spel</h2>
         </div>
-        {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* Spelbara spel först, i vita kort med samma uppbyggnad och höjd. Kommande spel på en egen rad, mindre och nedtonade. */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.filter((game) => game.playable).map((game) => (
             <div
               key={game.id}
               className={cn(
-                'flex flex-col gap-3 rounded-lg border-2 border-primary/25 p-5 shadow-soft transition-transform hover:-translate-y-1',
-                game.color,
+                'flex h-full flex-col gap-3 rounded-lg border bg-card p-5 shadow-soft transition-transform hover:-translate-y-1',
                 highlightGames && 'animate-pop ring-4 ring-primary/40',
               )}
             >
-              {/* Klick på bild, namn eller beskrivning visar en kort förklaring av spelet. Namnet är knappen
+              {/* Klick på ikon, namn eller beskrivning visar en kort förklaring av spelet. Namnet är knappen
                   för tangentbord och skärmläsare. */}
-              <div className="flex flex-1 cursor-pointer flex-col gap-3" onClick={() => showIntro(game)}>
+              <div className="flex cursor-pointer flex-col gap-3" onClick={() => showIntro(game)}>
                 <div className="flex items-center gap-3">
-                  <Emoji emoji={game.emoji} className="text-4xl" />
+                  <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
+                    <Emoji emoji={game.emoji} />
+                  </span>
                   <h3 className="text-xl leading-tight">
                     <button
                       type="button"
@@ -146,45 +147,39 @@ export function HomePage() {
                     </button>
                   </h3>
                 </div>
-                <p className="leading-snug text-muted-foreground">{game.tagline}</p>
-                {/* Spelarantal, ungefärlig tid och känsla, så att man väljer rätt spel utan att öppna förklaringen. */}
-                <ul className="flex flex-wrap gap-1.5 text-xs font-semibold" aria-label="Om spelet">
-                  <li className="rounded-full bg-card/70 px-2.5 py-1">👥 {playersLabel(game)}</li>
-                  {game.duration && <li className="rounded-full bg-card/70 px-2.5 py-1">⏱ ca {game.duration}</li>}
-                  {game.feel && <li className="rounded-full bg-card/70 px-2.5 py-1">{game.feel}</li>}
-                </ul>
+                <p className="line-clamp-2 min-h-11 leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Button variant="link" className="h-auto px-0" onClick={() => showIntro(game)}>
+              {/* Spelarantal från spelets regler, ungefärlig tid räknad från rundor och tider, och känsla. */}
+              <ul className="flex flex-wrap gap-1.5 text-xs font-semibold" aria-label="Om spelet">
+                <li className="rounded-full bg-muted px-2.5 py-1">👥 {playersLabel(game)}</li>
+                <li className="rounded-full bg-muted px-2.5 py-1">⏱ {durationLabel(game.id)}</li>
+                {game.feel && <li className="rounded-full bg-muted px-2.5 py-1">{game.feel}</li>}
+              </ul>
+              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                <Button variant="link" className="h-11 px-0 text-muted-foreground" onClick={() => showIntro(game)}>
                   <Info /> Så spelar man
                 </Button>
-                <div className="flex flex-wrap gap-2">
-                  {rulesFor(game.id).soloPractice && (
-                    <Button asChild variant="outline">
-                      <Link to={`/skapa?spel=${game.id}&testa=1`}>Testa själv</Link>
-                    </Button>
-                  )}
-                  <Button asChild>
-                    <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
-                  </Button>
-                </div>
+                <Button asChild>
+                  <Link to={`/skapa?spel=${game.id}`}>Spela nu</Link>
+                </Button>
               </div>
             </div>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.filter((game) => !game.playable).map((game) => (
-            <div key={game.id} className={cn('flex gap-3 rounded-lg border p-4 opacity-75', game.color)}>
-              <Emoji emoji={game.emoji} className="text-2xl" />
+            <div key={game.id} className="flex items-center gap-3 rounded-lg border bg-card/60 p-3 opacity-80">
+              <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-md text-xl', game.color)}>
+                <Emoji emoji={game.emoji} />
+              </span>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                   <h3 className="text-base leading-tight">{game.name}</h3>
-                  <span className="rounded-full bg-card/80 px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                     Kommer snart
                   </span>
                 </div>
-                <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{game.tagline}</p>
-                <p className="mt-1 text-xs font-semibold text-muted-foreground">👥 {playersLabel(game)}</p>
+                <p className="text-sm leading-snug text-muted-foreground">{game.tagline}</p>
               </div>
             </div>
           ))}
