@@ -17,6 +17,7 @@ import {
   hostDeadline,
   hostMove,
   hostPresence,
+  hostCountdownStart,
   hostRematch,
   hostRematchStart,
   hostStart,
@@ -369,6 +370,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (!isHost) return
         const ids = onlineRef.current.map((p) => p.id)
         commit(hostStart(current(), ids, Date.now()))
+      },
+      // Första starten med nedräkning (Starta när flera är med). Solotestet startar direkt med start.
+      startCountdown: () => {
+        if (!isHost) return
+        const ids = onlineRef.current.map((p) => p.id)
+        commit(hostCountdownStart(current(), ids, Date.now()))
       },
       guess: (value: number) => {
         if (!me) return

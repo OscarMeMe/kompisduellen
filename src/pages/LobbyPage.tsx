@@ -257,6 +257,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onSetGame={actions.setGame}
           onSetTempo={actions.setTempo}
           onStart={actions.start}
+          onStartCountdown={actions.startCountdown}
         />
       )
     case 'playing':

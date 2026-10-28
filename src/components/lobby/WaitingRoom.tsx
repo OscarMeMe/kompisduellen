@@ -17,6 +17,7 @@ import {
   rankLeaderboard,
   REMATCH_SECONDS,
   roundOptionsFor,
+  type CountdownKind,
   type GameState,
 } from '@/lib/match'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
@@ -38,7 +39,9 @@ type WaitingRoomProps = {
   onSetRounds: (rounds: number) => void
   onSetGame: (game: string) => void
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
+  // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
+  onStartCountdown: () => void
 }
 
 export function WaitingRoom({
@@ -55,6 +58,7 @@ export function WaitingRoom({
   onSetGame,
   onSetTempo,
   onStart,
+  onStartCountdown,
 }: WaitingRoomProps) {
   // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
   const settingsRef = useRef<HTMLElement>(null)
@@ -88,7 +92,14 @@ export function WaitingRoom({
   return (
     <Wide>
       {state.rematchAt !== null && (
-        <RematchCountdown at={state.rematchAt} clockOffset={clockOffset} isHost={isHost} onCancel={onCancelRematch} />
+        <RematchCountdown
+          at={state.rematchAt}
+          kind={state.countdownKind}
+          rule={game.quickRule ?? game.tagline}
+          clockOffset={clockOffset}
+          isHost={isHost}
+          onCancel={onCancelRematch}
+        />
       )}
 
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
@@ -105,7 +116,7 @@ export function WaitingRoom({
 
         {isHost ? (
           <div className="space-y-2">
-            <Button size="lg" className="w-full" onClick={onStart} disabled={!enoughPlayers || rematching}>
+            <Button size="lg" className="w-full" onClick={onStartCountdown} disabled={!enoughPlayers || rematching}>
               {enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
             {!enoughPlayers && (
@@ -118,7 +129,7 @@ export function WaitingRoom({
                 <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>
                   Testa själv
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">En provomgång som inte räknas i ställningen.</p>
+                <p className="text-center text-xs text-muted-foreground">En snabb provrunda som inte räknas i ställningen.</p>
               </>
             )}
           </div>
@@ -255,14 +266,19 @@ export function WaitingRoom({
   )
 }
 
-// Revansch: alla ser samma nedräkning, och matchen startar av sig själv. Värden kan avbryta.
+// Nedräkning före en match (första starten eller revansch): alla ser samma tal, och matchen startar av sig själv.
+// Värden kan avbryta.
 function RematchCountdown({
   at,
+  kind,
+  rule,
   clockOffset,
   isHost,
   onCancel,
 }: {
   at: number
+  kind: CountdownKind
+  rule: string
   clockOffset: number
   isHost: boolean
   onCancel: () => void
@@ -273,11 +289,13 @@ function RematchCountdown({
       className="space-y-2 rounded-lg border-2 border-primary bg-coral-soft p-5 text-center shadow-soft animate-pop"
       aria-live="polite"
     >
-      <p className="font-heading text-lg font-bold">Revansch!</p>
+      <p className="font-heading text-lg font-bold">{kind === 'first' ? 'Nu kör vi!' : 'Revansch!'}</p>
       <p className="font-heading text-6xl font-bold text-primary tabular-nums" aria-label={`Startar om ${secondsLeft} sekunder`}>
         {Math.max(1, secondsLeft)}
       </p>
-      <p className="text-sm text-muted-foreground">Samma spel och samma inställningar. Gör er redo!</p>
+      <p className="text-sm text-muted-foreground">
+        {kind === 'first' ? rule : 'Samma spel och samma inställningar. Gör er redo!'}
+      </p>
       {isHost && (
         <Button variant="outline" onClick={onCancel}>
           Avbryt

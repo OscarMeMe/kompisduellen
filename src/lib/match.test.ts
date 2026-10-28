@@ -9,6 +9,7 @@ import {
   guessSecondsFor,
   handleDeadline,
   hostAdvance,
+  hostCountdownStart,
   hostDeadline,
   hostMove,
   hostPresence,
@@ -402,5 +403,72 @@ describe('snabbval vid revansch', () => {
     expect(started.state.phase).toBe('guessing')
     expect(started.state.rounds).toBe(10)
     expect(started.state.deadline).toBe(at + 20_000)
+  })
+})
+
+describe('provrunda', () => {
+  const solo = () => hostStart({ state: lobby('gissa-priset', ['a'], { rounds: 10 }), secrets: null }, ['a'], NOW)
+
+  it('har en runda, och lobbyns antal rundor kommer tillbaka efteråt', () => {
+    const started = solo()
+    expect(started.state.practice).toBe(true)
+    expect(started.state.rounds).toBe(1)
+    let state = nextRound(playRound(started.state, { a: 100 }, 100), NOW)
+    expect(state.phase).toBe('finished')
+    state = backToWaiting(state)
+    expect(state.rounds).toBe(10)
+    expect(state.savedRounds).toBeNull()
+  })
+
+  it('Testa mer ger en ny provrunda utan att tappa lobbyns inställning', () => {
+    const finished = nextRound(playRound(solo().state, { a: 100 }, 100), NOW)
+    const counting = hostRematch({ state: finished, secrets: null }, NOW)
+    expect(counting.state.rounds).toBe(10)
+    const at = counting.state.rematchAt!
+    const again = hostRematchStart(counting, ['a'], at, at)
+    expect(again.state.phase).toBe('guessing')
+    expect(again.state.rounds).toBe(1)
+    expect(again.state.practice).toBe(true)
+  })
+
+  it('en vanlig match med flera spelare använder lobbyns antal rundor', () => {
+    const lobbyState = lobby('gissa-priset', ['a', 'b'], { rounds: 10 })
+    expect(startGame(lobbyState, ['a', 'b'], NOW).rounds).toBe(10)
+  })
+})
+
+describe('första starten med nedräkning', () => {
+  it('startar en nedräkning och sedan matchen när tiden är ute', () => {
+    const waiting: HostState = { state: lobby('gissa-priset', ['a', 'b']), secrets: null }
+    const counting = hostCountdownStart(waiting, ['a', 'b'], NOW)
+    expect(counting.state.phase).toBe('waiting')
+    expect(counting.state.rematchAt).toBe(NOW + REMATCH_SECONDS * 1000)
+    expect(counting.state.countdownKind).toBe('first')
+    const at = counting.state.rematchAt!
+    expect(hostRematchStart(counting, ['a', 'b'], at - 1, at)).toBe(counting)
+    const started = hostRematchStart(counting, ['a', 'b'], at, at)
+    expect(started.state.phase).toBe('guessing')
+    // Svarstiden börjar först efter nedräkningen.
+    expect(started.state.deadline).toBe(at + started.state.guessSeconds * 1000)
+  })
+
+  it('dubbelklick startar inte två nedräkningar', () => {
+    const waiting: HostState = { state: lobby('gissa-priset', ['a', 'b']), secrets: null }
+    const counting = hostCountdownStart(waiting, ['a', 'b'], NOW)
+    expect(hostCountdownStart(counting, ['a', 'b'], NOW + 500)).toBe(counting)
+  })
+
+  it('startar inte med för få spelare, och avbryts om någon lämnar under nedräkningen', () => {
+    const lonely: HostState = { state: lobby('narmast', ['a']), secrets: null }
+    expect(hostCountdownStart(lonely, ['a'], NOW)).toBe(lonely)
+    const waiting: HostState = { state: lobby('narmast', ['a', 'b']), secrets: null }
+    const counting = hostCountdownStart(waiting, ['a', 'b'], NOW)
+    const at = counting.state.rematchAt!
+    expect(hostRematchStart(counting, ['a'], at, at).state.rematchAt).toBeNull()
+  })
+
+  it('värden kan avbryta', () => {
+    const waiting: HostState = { state: lobby('gissa-priset', ['a', 'b']), secrets: null }
+    expect(cancelRematch(hostCountdownStart(waiting, ['a', 'b'], NOW)).state.rematchAt).toBeNull()
   })
 })
