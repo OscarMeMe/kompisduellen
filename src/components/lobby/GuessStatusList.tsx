@@ -14,20 +14,33 @@ type GuessStatusListProps = {
   locked: number | null
 }
 
-// Statusraden under gissningsrutan ("⏱ 12 s kvar · 3/4 har svarat") och vilka i matchen som har gissat.
-// Räknar samma spelare som värden gör när den avgör om alla har svarat: de i matchen som är online.
-export function GuessStatusList({ state, online, clockOffset, meId, locked }: GuessStatusListProps) {
+function useAnswerStatus({ state, online, clockOffset, meId, locked }: GuessStatusListProps) {
   const { secondsLeft } = useCountdown(state.deadline, clockOffset, guessSecondsFor(state))
   const activePlayers = online.filter((p) => state.players[p.id])
   const hasAnswered = (id: string) => state.guesses[id] !== undefined || (id === meId && locked !== null)
   const answered = activePlayers.filter((p) => hasAnswered(p.id)).length
+  return { secondsLeft, activePlayers, hasAnswered, answered }
+}
+
+// Statusraden ("⏱ 12 s kvar · 3/4 har svarat"). Räknar samma spelare som värden gör när den avgör om alla
+// har svarat: de i matchen som är online.
+export function GuessStatusLine(props: GuessStatusListProps) {
+  const { secondsLeft, activePlayers, answered } = useAnswerStatus(props)
+  return (
+    <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
+      {props.state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}
+      {answered}/{activePlayers.length} har svarat
+    </p>
+  )
+}
+
+// Statusraden och vilka i matchen som har gissat. Med hideLine visas bara spelarna (när raden ligger i AnswerDock).
+export function GuessStatusList({ hideLine = false, ...props }: GuessStatusListProps & { hideLine?: boolean }) {
+  const { activePlayers, hasAnswered } = useAnswerStatus(props)
 
   return (
     <div className="space-y-3">
-      <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
-        {state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}
-        {answered}/{activePlayers.length} har svarat
-      </p>
+      {!hideLine && <GuessStatusLine {...props} />}
       <ul className="flex flex-wrap justify-center gap-1.5">
         {activePlayers.map((p) => {
           const done = hasAnswered(p.id)
