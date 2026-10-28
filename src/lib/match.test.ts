@@ -17,6 +17,8 @@ import {
   hostStart,
   initialState,
   nextRound,
+  pauseReveal,
+  resumeReveal,
   cancelRematch,
   REMATCH_SECONDS,
   resolveRound,
@@ -312,5 +314,62 @@ describe('revansch', () => {
     expect(started.state.phase).toBe('guessing')
     expect(started.state.practice).toBe(true)
     expect(started.state.leaderboard).toEqual({})
+  })
+})
+
+describe('paus efter facit', () => {
+  function revealing() {
+    return playRound(startGame(lobby('gissa-priset', ['a', 'b']), ['a', 'b'], NOW), { a: 100, b: 200 }, 100)
+  }
+
+  it('stoppar klockan och sparar tiden som var kvar', () => {
+    const reveal = revealing()
+    const paused = pauseReveal(reveal, NOW + 2000, 1, 'Värd')
+    expect(paused.deadline).toBeNull()
+    expect(paused.pause).toEqual({ by: 'Värd', msLeft: reveal.deadline! - (NOW + 2000) })
+  })
+
+  it('en pausad runda går inte vidare av sig själv', () => {
+    const reveal = revealing()
+    const paused = pauseReveal(reveal, NOW + 1000, 1, 'Värd')
+    expect(handleDeadline(paused, NOW + 60_000, reveal.deadline!)).toBe(paused)
+  })
+
+  it('fortsätter med tiden som var kvar', () => {
+    const paused = pauseReveal(revealing(), NOW + 1000, 1, 'Värd')
+    const resumed = resumeReveal(paused, NOW + 30_000, 1)
+    expect(resumed.pause).toBeNull()
+    expect(resumed.deadline).toBe(NOW + 30_000 + paused.pause!.msLeft)
+  })
+
+  it('dubbeltryck gör ingenting extra', () => {
+    const paused = pauseReveal(revealing(), NOW + 1000, 1, 'Värd')
+    expect(pauseReveal(paused, NOW + 1500, 1, 'Värd')).toBe(paused)
+    const resumed = resumeReveal(paused, NOW + 2000, 1)
+    expect(resumeReveal(resumed, NOW + 2100, 1)).toBe(resumed)
+  })
+
+  it('pausar eller fortsätter inte fel runda', () => {
+    const reveal = revealing()
+    expect(pauseReveal(reveal, NOW, 2, 'Värd')).toBe(reveal)
+    const paused = pauseReveal(reveal, NOW, 1, 'Värd')
+    expect(resumeReveal(paused, NOW, 2)).toBe(paused)
+  })
+
+  it('Nästa nu under paus går vidare en gång och nollställer pausen', () => {
+    const paused = pauseReveal(revealing(), NOW + 1000, 1, 'Värd')
+    const next = advanceFromReveal(paused, NOW + 5000, 1)
+    expect(next.round).toBe(2)
+    expect(next.pause).toBeNull()
+    expect(advanceFromReveal(next, NOW + 5100, 1)).toBe(next)
+  })
+
+  it('går inte att pausa när värden går vidare själv utan klocka', () => {
+    const manual = playRound(
+      startGame(lobby('gissa-priset', ['a', 'b'], { autoAdvance: false }), ['a', 'b'], NOW),
+      { a: 100, b: 200 },
+      100,
+    )
+    expect(pauseReveal(manual, NOW, 1, 'Värd')).toBe(manual)
   })
 })

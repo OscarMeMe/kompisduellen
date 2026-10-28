@@ -288,6 +288,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           isHost={isHost}
           clockOffset={clockOffset}
           onNext={actions.skipReveal}
+          onPause={actions.pauseReveal}
+          onResume={actions.resumeReveal}
         />
       )
     case 'finished':
