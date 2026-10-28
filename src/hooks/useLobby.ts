@@ -229,7 +229,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
       if (!isHost) return
       const { id, value } = payload as { id: string; value: number }
-      let next = addGuess(stateRef.current, id, value)
+      let next = addGuess(stateRef.current, id, value, Date.now())
       next = resolveIfEveryoneGuessed(next)
       publish(next)
     })

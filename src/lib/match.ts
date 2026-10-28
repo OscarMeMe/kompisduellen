@@ -39,6 +39,8 @@ export type RoundResult = {
   points: Record<string, number>
   // Gissa priset: vilken sak rundan gällde.
   itemId: string | null
+  // Hur många millisekunder in i rundan varje spelare svarade. Saknas för svar utan tid (och i äldre sparade matcher).
+  times?: Record<string, number>
 }
 
 // En rad i lobbyns topplista. Gäller hela lobbyn, oavsett spel.
@@ -58,6 +60,8 @@ export type GameState = {
   // Värden har pausat facit: namnet och hur lång tid som var kvar (ms). null = inte pausat.
   pause: { by: string; msLeft: number } | null
   guesses: Record<string, number>
+  // När i rundan (ms efter start) varje gissning kom in.
+  guessTimes: Record<string, number>
   scores: Record<string, number>
   players: Record<string, PlayerInfo>
   lastResult: RoundResult | null
@@ -108,6 +112,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     deadline: null,
     pause: null,
     guesses: {},
+    guessTimes: {},
     scores: {},
     players: {},
     lastResult: null,
@@ -161,6 +166,7 @@ function startRound(state: GameState, round: number, now: number): GameState {
     deadline: now + guessSecondsFor(state) * 1000,
     pause: null,
     guesses: {},
+    guessTimes: {},
   }
 }
 
@@ -240,12 +246,16 @@ export function isValidGuess(game: string, value: number): boolean {
   return rulesFor(game).isValidGuess(value)
 }
 
-export function addGuess(state: GameState, playerId: string, value: number): GameState {
+// now = när gissningen kom in (värdens klocka). Med den sparas också hur snabbt spelaren svarade.
+export function addGuess(state: GameState, playerId: string, value: number, now?: number): GameState {
   if (state.phase !== 'guessing') return state
   if (!isValidGuess(state.game, value)) return state
   if (state.guesses[playerId] !== undefined) return state
   if (!state.players[playerId]) return state
-  return { ...state, guesses: { ...state.guesses, [playerId]: value } }
+  const next = { ...state, guesses: { ...state.guesses, [playerId]: value } }
+  if (now === undefined || state.deadline === null) return next
+  const elapsed = Math.max(0, now - (state.deadline - guessSecondsFor(state) * 1000))
+  return { ...next, guessTimes: { ...state.guessTimes, [playerId]: elapsed } }
 }
 
 export function everyoneHasGuessed(state: GameState, onlineIds: string[]): boolean {
@@ -266,7 +276,7 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
   const scores = { ...state.scores }
   for (const [id, gained] of Object.entries(outcome.points)) scores[id] = (scores[id] ?? 0) + gained
 
-  const result: RoundResult = { ...outcome, guesses: state.guesses, winners, itemId: state.itemId }
+  const result: RoundResult = { ...outcome, guesses: state.guesses, winners, itemId: state.itemId, times: state.guessTimes }
   return {
     ...state,
     phase: 'reveal',
@@ -356,6 +366,7 @@ export function backToWaiting(state: GameState): GameState {
     deadline: null,
     pause: null,
     guesses: {},
+    guessTimes: {},
     scores,
     lastResult: null,
     matchRounds: [],
