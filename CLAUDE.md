@@ -77,6 +77,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `hojdpunkter.ts`: höjdpunkterna efter en match (fullträff, längst ifrån, avgjorde i sista rundan)
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
+  - `lobbykoll.ts`: kollar om en kod leder till en lobby som lever (lyssnar på närvaron i kanalen `lobby:KOD` utan att synas där). Används av kodfältet på startsidan. Utan värd inom 1,5 sekunder är lobbyn avslutad
   - `vardbyte.ts`: vem som tar över som värd, vem som viker sig vid två värdar och tillståndet vid övertagande. Rena funktioner
   - `granskning.ts`: reglerna för granskningssidan (omdömen, flytt från inkorgen, export). Rena funktioner
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
