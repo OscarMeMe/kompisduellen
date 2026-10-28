@@ -11,6 +11,7 @@ Testspelare heter alltid `TEST-NATT-...`. Den här rapporten ligger på branchen
 | `natt2/2-forsta-start` | Punkt 8: Gemensam första start | klar |
 | `natt2/3-snabbprov` | Punkt 4: Kortare snabbprov | klar |
 | `natt2/4-spelkort` | Punkt 7: Tydligare spelkort | klar |
+| `natt2/5-reaktioner` | Punkt 10: Små sociala reaktioner | klar |
 
 ## Hoppade över
 
@@ -101,3 +102,27 @@ Skärmdump: `n3-klar-mobil.png`.
 **Testa själv:** läs etiketterna på spelkorten (särskilt "Pratigt och fräckt" och tiderna) och säg till om du vill ha andra ord. Spela gärna en Kortkaos-match med minst 4 för att se om 8–14 min stämmer.
 
 Skärmdump: `n4-mobil.png`.
+
+## Steg 5: Små sociala reaktioner (`natt2/5-reaktioner`)
+
+**Ändrat**
+- Tre reaktioner: 😂 Skratt, 🔥 Eld, 👏 Applåd. Knapparna (minst 48 px höga) finns i väntrummet (i Spelare-kortet) och i rutan med nedräkning efter facit, för alla spel. De visas bara när minst två är med i lobbyn.
+- En reaktion skickas som ett vanligt meddelande i lobbyns Realtime-kanal (`reaction`), ingenting sparas och ingen databas rörs. Alla ser emojin sväva upp en stund (2,6 s) med avsändarens figur och namn.
+- **Begränsning:** knapparna är låsta 1 s efter varje tryck. Mottagaren släpper dessutom igenom högst 3 reaktioner per spelare på 3 s och slänger okända reaktioner, så en modifierad klient kan inte fylla skärmarna. Högst 8 reaktioner syns samtidigt. Logiken ligger i `reaktioner.ts` med enhetstester.
+- **Ljud:** ett kort "plopp" när en reaktion kommer in (Web Audio, ingen ljudfil). En högtalarknapp bredvid reaktionerna stänger av och sätter på det, och valet sparas i webbläsaren (`kd-ljud`). Ljudet är **på** från början.
+- Reaktionerna är vanliga emoji-tecken, inte Fluent-bilder (jag kan inte hämta nya bildfiler utan nätverk till externa sidor, och projektet hämtar aldrig bilder externt).
+- Nya filer: `lib/reaktioner.ts`, `lib/ljud.ts`, `components/lobby/Reactions.tsx`. `LobbyPage.tsx` omsluter fasvyn i en provider (innehållet i vyerna är oförändrat).
+
+**Testat**
+- Playwright, värd + deltagare i separata sessioner, mobil 390x844 och bred skärm: ensam syns inga knappar, med två syns de för båda, knappen är 56x48 px, värdens 🔥 syns hos deltagaren med värdens namn, knapparna låses direkt efter ett tryck, snabba tryck ger en reaktion, reaktionen försvinner efter några sekunder, ljudet kan stängas av och valet sparas, knapparna finns efter facit och värden ser deltagarens 👏, ingen horisontell scroll. Alla OK (jag rättade två fel i mitt eget test: knapparnas emoji räknades som reaktioner).
+- 5 nya enhetstester (126 totalt), build och lint: gröna.
+
+**Inte testat:** att ljudet faktiskt hörs (headless-webbläsaren har inget ljud, jag testade bara att valet sparas). Reaktioner med Kortkaos och 3+ spelare är inte körda, men de använder samma knappar i samma fotsektion.
+
+**Testa själv på mobilen:** tryck på reaktionerna i väntrummet med en kompis, kolla att emojin dyker upp hos båda, att ljudet hörs (och att högtalarknappen stänger av det), och att det inte känns för mycket om flera trycker samtidigt.
+
+Skärmdump: `n5-facit-mobil.png`.
+
+## Sammanfattning
+
+Alla fem stegen är gjorda och committade, var och en på sin egen branch från main. Ingenting är pushat eller mergat, ingen databas, Supabase-inställning eller miljövariabel är ändrad, och Gissa priset-innehållet är orört. Brancherna rör delvis samma filer (`WaitingRoom.tsx`, `FinishedView.tsx`, `match.ts`, `useLobby.ts`), så om de mergas efter varandra kan det bli smärre konflikter att lösa, särskilt steg 2 + 3 (båda rör `match.ts`) och steg 5 + 1 (inte samma filer, ska gå rent).
