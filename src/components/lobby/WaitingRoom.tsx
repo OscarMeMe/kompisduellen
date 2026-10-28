@@ -128,7 +128,7 @@ export function WaitingRoom({
                 <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>
                   Testa själv
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">En provomgång som inte räknas i ställningen.</p>
+                <p className="text-center text-xs text-muted-foreground">En snabb provrunda som inte räknas i ställningen.</p>
               </>
             )}
           </div>
