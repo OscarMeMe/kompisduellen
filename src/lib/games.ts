@@ -4,6 +4,8 @@ export type GameInfo = {
   id: string
   name: string
   tagline: string
+  // En kort regelmening som visas under nedräkningen innan första rundan.
+  quickRule?: string
   emoji: string
   color: string // Tailwind-klass för kortets pastellfärg
   // Minsta antal spelare för en vanlig match. Det finns ingen övre gräns i lobbyn.
@@ -25,6 +27,7 @@ export const GAMES: GameInfo[] = [
     id: 'gissa-priset',
     name: 'Gissa priset',
     tagline: 'Vad kostar det i dag? Och vad kostade det förr?',
+    quickRule: 'Gissa priset i kronor. Närmast rätt pris ger flest poäng.',
     emoji: '🏷️',
     color: 'bg-sun-soft',
     minPlayers: 2,
@@ -47,6 +50,7 @@ export const GAMES: GameInfo[] = [
     id: 'narmast',
     name: 'Närmast vinner',
     tagline: 'Ett snabbt turspel: gissa ett tal mellan 1 och 100. Talet slumpas, så det handlar om tur.',
+    quickRule: 'Gissa ett tal mellan 1 och 100. Närmast det dolda talet vinner rundan.',
     emoji: '🎯',
     color: 'bg-coral-soft',
     minPlayers: 2,
@@ -69,6 +73,7 @@ export const GAMES: GameInfo[] = [
     id: 'kortkaos',
     name: 'Kortkaos',
     tagline: 'Fyll luckan med det fräckaste kortet på handen. Domaren väljer vinnaren, och ingen vet vem som spelade vad.',
+    quickRule: 'Lägg kortet som passar bäst i luckan. Domaren väljer sin favorit.',
     emoji: '🃏',
     color: 'bg-lilac/40',
     minPlayers: 3,
