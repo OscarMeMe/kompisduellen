@@ -1,6 +1,6 @@
-import type { PriceItem } from '@/lib/prisdata'
+import { questionText, type PriceItem } from '@/lib/prisdata'
 
-// Frågan i Gissa priset: bild eller emoji, frågan med årtalet, namn och ledtråd. Används i spelet och på /granska.
+// Frågan i Gissa priset: bild eller emoji, frågan som stor rubrik och ledtråden i kursiv text under. Används i spelet och på /granska.
 export function PriceQuestionCard({ item }: { item: PriceItem | undefined }) {
   return (
     // Bilden visas liggande (2:1) och beskärs med object-cover. På mobilen är den högst 18 % av skärmhöjden,
@@ -31,15 +31,11 @@ export function PriceQuestionCard({ item }: { item: PriceItem | undefined }) {
       ) : (
         <span className="block text-5xl sm:text-7xl">{item?.emoji ?? '🏷️'}</span>
       )}
-      <p className="mt-2 text-sm font-semibold text-muted-foreground sm:mt-3 sm:text-base">
-        {item?.question ?? 'Vad kostade det'}
-        {item && <> år <span className="font-bold text-primary">{item.year}</span></>}?
-      </p>
-      <h1 className="mx-auto mt-1 max-w-xl text-xl text-balance sm:text-3xl">{item?.name ?? 'Okänd sak'}</h1>
+      <h1 className="mx-auto mt-3 max-w-xl text-xl leading-snug text-balance sm:mt-4 sm:text-3xl">
+        {item ? questionText(item) : 'Vad kostade det?'}
+      </h1>
       {item?.clue && (
-        <p className="mx-auto mt-2 w-fit max-w-xl rounded-md bg-sky-soft px-4 py-1.5 text-sm font-semibold sm:mt-3">
-          {item.clue}
-        </p>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground italic sm:mt-3 sm:text-base">Ledtråd: {item.clue}</p>
       )}
     </div>
   )
