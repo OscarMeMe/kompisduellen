@@ -49,7 +49,7 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
       <Label htmlFor={fieldId} className="text-base font-bold">
         {label}
       </Label>
-      <div className={cn('flex gap-2', large && 'flex-col')}>
+      <div className={cn('flex gap-2', large && 'flex-col gap-3')}>
         <Input
           id={fieldId}
           value={code}
@@ -67,7 +67,7 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
           autoFocus={autoFocus && hasFinePointer()}
           className={cn(
             'min-w-0 flex-1 font-heading font-bold tracking-widest uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case',
-            large && 'h-20 text-center text-4xl tracking-[0.4em] placeholder:text-lg',
+            large && 'h-20! flex-none text-center text-4xl tracking-[0.4em] placeholder:text-lg',
           )}
         />
         <Button type="submit" size="lg" variant={complete ? 'default' : 'outline'} disabled={checking}>

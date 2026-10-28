@@ -53,7 +53,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `ExempelRunda` och `SpelKort` på startsidan)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
   - `kortkaos/`: Kortkaos vy för hela rundan (`KortkaosView` med ett steg per fil). Kortspel har en `Play`-vy i `GAME_VIEWS`
@@ -107,12 +107,12 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | --- | --- |
 | `/` | Startsida |
 | `/skapa` | Skapa lobby |
-| `/ga-med` | Gå med (skriv in kod) |
+| `/ga-med` | Gå med (skriv in kod, kontrolleras mot lobbyn) |
 | `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`, `kortkaos`) |
 | `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
-| `/profil` | Profil |
+| `/profil` | Profil (ändra namn och figur, sparas i webbläsaren) |
 | `/granska` | Granskning av frågorna i Gissa priset. Bara i utvecklingsläge (`npm run dev`), byggs aldrig in i sajten |
 
 ## Granskning av Gissa priset

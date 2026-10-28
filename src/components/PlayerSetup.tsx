@@ -30,7 +30,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="space-y-2">
-        <Label htmlFor="player-name" className="text-sm font-bold">
+        <Label htmlFor="player-name" className="text-base font-bold">
           Vad heter du?
         </Label>
         <Input
@@ -44,8 +44,10 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-bold">Välj en figur</p>
+      <div className="space-y-2" role="group" aria-labelledby="player-avatar-label">
+        <p id="player-avatar-label" className="text-base font-bold">
+          Välj en figur
+        </p>
         <div className="grid grid-cols-6 gap-2">
           {AVATARS.map((option) => (
             <button
@@ -55,7 +57,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
               aria-label={`Välj ${findEmoji(option)?.label ?? option}`}
               aria-pressed={avatar === option}
               className={cn(
-                'grid aspect-square place-items-center rounded-lg text-2xl transition sm:text-3xl',
+                'grid aspect-square min-h-11 place-items-center rounded-lg text-2xl transition outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:text-3xl',
                 avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
