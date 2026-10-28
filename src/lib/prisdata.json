@@ -650,6 +650,7 @@
   },
   {
     "id": "game-boy-1990",
+    "exempel": true,
     "emoji": "🎮",
     "name": "En Nintendo Game Boy",
     "year": 1990,
