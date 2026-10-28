@@ -167,9 +167,15 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
 }
 
 function Lobby({ code, me }: { code: string; me: Player }) {
-  const hosted = hostedGame(code)
-  const isHost = hosted !== null
-  const { status, state, online, clockOffset, hand, floating, actions } = useLobby(code, me, isHost, hosted ?? undefined)
+  // Rollen kan byta under lobbyns gång: lämnar värden tar en annan över (se vardbyte.ts).
+  const [isHost, setIsHost] = useState(() => hostedGame(code) !== null)
+  const { status, state, online, clockOffset, hand, floating, hostMissing, actions } = useLobby(
+    code,
+    me,
+    isHost,
+    hostedGame(code) ?? undefined,
+    { onPromote: () => setIsHost(true), onDemote: () => setIsHost(false) },
+  )
   // Spelet kommer från värdens tillstånd, så att alla ser samma spel.
   const game = findGame(state.game) ?? GAMES[0]
   const views = GAME_VIEWS[state.game] ?? GAME_VIEWS.narmast
@@ -186,8 +192,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     actions.start()
   }, [isHost, status, state.phase, meInLobby, actions, code])
 
-  // Lämnar värden försvinner lobbyn för alla. Finns andra med frågar vi först, oavsett om värden klickar på
-  // "Tillbaka till alla spel" eller på loggan. Deltagare lämnar bara sig själva och får ingen fråga.
+  // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. Finns andra med frågar vi först, oavsett om
+  // värden klickar på "Tillbaka till alla spel" eller på loggan. Deltagare lämnar bara sig själva och får ingen fråga.
   const navigate = useNavigate()
   const [leaveTo, setLeaveTo] = useState<string | null>(null)
   const othersPresent = online.length > 1
@@ -251,7 +257,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
       {phaseView()}
       <ReactionFloaters />
-      <LeaveLobbyDialog open={leaveTo !== null} onStay={() => setLeaveTo(null)} onLeave={() => void navigate(leaveTo ?? '/')} />
+      {hostMissing && (
+        <p
+          role="status"
+          className="fixed inset-x-4 top-2 z-40 mx-auto w-fit max-w-full rounded-full bg-sun px-4 py-2 text-center text-sm font-semibold shadow-soft"
+        >
+          Värden försvann. En ny värd tar över strax…
+        </p>
+      )}
+      <LeaveLobbyDialog
+        open={leaveTo !== null}
+        nextHost={online.find((p) => !p.host && p.id !== me.id)?.name}
+        onStay={() => setLeaveTo(null)}
+        onLeave={async () => {
+          // Lämna över till nästa spelare först, så att lobbyn byter värd direkt och inte försvinner.
+          await actions.handOver()
+          void navigate(leaveTo ?? '/')
+        }}
+      />
     </ReactionsProvider>
   )
 

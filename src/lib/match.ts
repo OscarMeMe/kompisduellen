@@ -88,6 +88,8 @@ export type GameState = {
   rematchAt: number | null
   // Värden har tryckt Byt spel och väljer nästa spel. De andra ser det tills värden väljer eller startar.
   choosingGame: boolean
+  // Ett meddelande till gruppen i väntrummet, t.ex. att en match avbröts när värden lämnade. Försvinner när en match startar.
+  notice: string | null
   // Vad nedräkningen gäller: matchens första start eller en revansch.
   countdownKind: CountdownKind
   matchesPlayed: number
@@ -138,6 +140,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     rematchAt: null,
     countdownKind: 'rematch',
     choosingGame: false,
+    notice: null,
     matchesPlayed: 0,
     gamesPlayed: {},
     leaderboard: {},
@@ -270,6 +273,7 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
     practice,
     rematchAt: null,
     choosingGame: false,
+    notice: null,
   }
 }
 
@@ -414,6 +418,7 @@ export function backToWaiting(state: GameState): GameState {
     practice: false,
     rematchAt: null,
     choosingGame: false,
+    notice: null,
     cards: null,
   }
 }

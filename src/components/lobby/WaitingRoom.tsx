@@ -62,6 +62,12 @@ export function WaitingRoom({
 }: WaitingRoomProps) {
   // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
   const settingsRef = useRef<HTMLElement>(null)
+  // Ett dubbeltryck på Byt spel ska inte också välja ett spel: det andra trycket landar på spelvalet i väntrummet.
+  const arrivedAt = useRef(Date.now())
+  function chooseGame(id: string) {
+    if (state.choosingGame && Date.now() - arrivedAt.current < 700) return
+    onSetGame(id)
+  }
   useEffect(() => {
     if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
   }, [scrollToGames, isHost])
@@ -112,6 +118,12 @@ export function WaitingRoom({
             <p className="text-sm text-muted-foreground">👥 {online.length} i lobbyn</p>
           </div>
         </div>
+
+        {state.notice && (
+          <p className="rounded-md bg-sun-soft px-3 py-2 text-center text-sm font-semibold" role="status">
+            {state.notice}
+          </p>
+        )}
 
         {isHost ? (
           <div className="space-y-2">
@@ -195,7 +207,7 @@ export function WaitingRoom({
                       key={option.id}
                       variant="outline"
                       aria-pressed={selected}
-                      onClick={() => onSetGame(option.id)}
+                      onClick={() => chooseGame(option.id)}
                       className={cn(
                         'h-auto justify-start gap-3 rounded-lg border-2 p-4 text-left whitespace-normal',
                         selected ? 'border-primary bg-coral-soft' : 'bg-card',
