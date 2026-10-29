@@ -67,9 +67,10 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
 
       {!rolling && (
         <ul className="space-y-2" aria-label="Allas gissningar">
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <ResultRow
               key={row.id}
+              index={index}
               name={row.name}
               avatar={row.avatar}
               guess={row.guess === undefined ? undefined : String(row.guess)}

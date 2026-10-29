@@ -16,10 +16,12 @@ export type ResultRowProps = {
   shared: boolean
   // Leder matchen efter rundan.
   leader: boolean
+  // Plats i listan. Raderna dyker upp en i taget, uppifrån och ned.
+  index?: number
 }
 
 // En spelares rad i facit: namn och poäng (rundan och totalt) överst, gissningen stort och hur långt ifrån den var under.
-export function ResultRow({ name, avatar, guess, difference, points, total, winner, shared, leader }: ResultRowProps) {
+export function ResultRow({ name, avatar, guess, difference, points, total, winner, shared, leader, index = 0 }: ResultRowProps) {
   return (
     <li
       className={cn(
@@ -27,6 +29,7 @@ export function ResultRow({ name, avatar, guess, difference, points, total, winn
         winner ? 'bg-mint-soft' : 'bg-card',
         guess === undefined && 'text-muted-foreground',
       )}
+      style={{ animationDelay: `${index * 90}ms` }}
     >
       <div className="flex items-center gap-3">
         <Emoji emoji={avatar} className="text-3xl" />

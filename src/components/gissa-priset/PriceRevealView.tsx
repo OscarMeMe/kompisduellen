@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Konfetti } from '@/components/Konfetti'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
@@ -39,7 +40,9 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
       <RoundBadge state={state} />
 
       {/* Priset och poängen först, sedan faktatexten om saken och sist allas gissningar. */}
-      <PriceAnswerCard item={item} target={result.target} revealed={revealed}>
+      <PriceAnswerCard item={item} target={result.target} revealed={revealed} countUp>
+        {/* Pricken mitt i ger konfetti. */}
+        {revealed && myPoints === 100 && <Konfetti />}
         {revealed && (
           <p className="mt-3 inline-block rounded-full bg-mint-soft px-5 py-2 font-heading text-xl font-bold sm:mt-5 sm:text-3xl">
             {myPoints === undefined
@@ -55,9 +58,10 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
 
       {revealed && (
         <ul className="space-y-2" aria-label="Allas gissningar">
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <ResultRow
               key={row.id}
+              index={index}
               name={row.name}
               avatar={row.avatar}
               guess={row.guess === undefined ? undefined : formatSek(row.guess)}
