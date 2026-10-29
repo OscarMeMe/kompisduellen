@@ -21,6 +21,12 @@ function splitTyped(text: string): { whole: string; decimals: string | undefined
   }
 }
 
+// Det som får stå i en beloppsruta medan man skriver eller klistrar in: siffror, mellanslag och komma eller punkt
+// för ören. Allt annat, som bokstäver och "kr", tas bort direkt.
+export function cleanTypedAmount(text: string): string {
+  return text.replace(/[^\d\s.,]/g, '')
+}
+
 // "1 500" -> 1500, "4,5" -> 5 och "0.24" -> 0.24. Tom ruta ger NaN.
 export function parseTypedNumber(text: string): number {
   const { whole, decimals } = splitTyped(text)

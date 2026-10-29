@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { priceRules } from '@/lib/gissa-priset'
-import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findExampleItem, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
+import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
 
 // Filerna i public/prisbilder, t.ex. '/public/prisbilder/game-boy-1990.webp'.
 const files = Object.keys(import.meta.glob('/public/prisbilder/*'))
@@ -39,9 +39,9 @@ describe('exempelfrågorna på startsidan', () => {
     }
   })
 
-  it('slumpar fram var och en av dem', () => {
-    const picked = new Set([0, 0.4, 0.99].map((r) => findExampleItem(() => r)?.id))
-    expect(picked.size).toBe(3)
+  it('kommer i den ordning som exempel anger (1, 2, 3)', () => {
+    expect(EXAMPLE_ITEMS.map((item) => item.exempel)).toEqual([1, 2, 3])
+    expect(EXAMPLE_ITEMS.map((item) => item.id)).toEqual(['hemgymnastikbok-1902', 'piggelin-1972', 'game-boy-1990'])
   })
 })
 

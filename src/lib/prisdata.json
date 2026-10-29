@@ -191,7 +191,7 @@
     "image": "/prisbilder/piggelin-1972.webp",
     "imageCredit": "Foto: Catasa, CC BY-SA 3.0",
     "imageSource": "https://commons.wikimedia.org/wiki/File:Piggelin.JPG",
-    "exempel": true
+    "exempel": 2
   },
   {
     "id": "bigmac-1973",
@@ -713,7 +713,7 @@
     "image": "/prisbilder/game-boy-1990.webp",
     "imageCredit": "Foto: Raimond Spekking, CC BY-SA 4.0",
     "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg",
-    "exempel": true
+    "exempel": 3
   },
   {
     "id": "bingolott-1991",
@@ -1465,7 +1465,7 @@
   },
   {
     "id": "hemgymnastikbok-1902",
-    "exempel": true,
+    "exempel": 1,
     "emoji": "🤸",
     "name": "En häftad handbok i hemgymnastik",
     "year": 1902,
