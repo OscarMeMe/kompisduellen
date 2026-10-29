@@ -54,7 +54,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 ## Struktur
 
-- `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
+- `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`). Startsidan laddas direkt, övriga sidor först när man går dit (`lazy`), så att startsidan laddar snabbt. Kodfältet hämtar `lobbykoll` (och Supabase) först när man trycker Gå med
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `Konfetti`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, `ResultRow` med en spelares rad i facit (gissningen stort, hur långt ifrån, poäng och totalt), `RoundStanding` efter facit: ungefär var man ligger i ord ("Du flåsar ledaren i nacken"), aldrig exakt placering, plus "Du klättrar!" och matchledaren, aldrig efter sista rundan, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
