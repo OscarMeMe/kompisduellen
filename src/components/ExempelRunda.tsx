@@ -1,4 +1,5 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
+import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -6,6 +7,10 @@ import { formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } f
 import { pricePoints } from '@/lib/gissa-priset'
 import { findExampleItem, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
+import { useCountUp } from '@/hooks/useCountUp'
+
+// Så många poäng ger konfetti i exempelrundan.
+const CONFETTI_POINTS = 85
 
 type ExempelRundaProps = {
   // "Spela med kompisar": tar besökaren till spelvalet.
@@ -115,10 +120,12 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
           <div
             ref={resultRef}
             tabIndex={-1}
-            className="rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
+            className="relative rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
           >
+            {/* Nära rätt pris (minst 85 poäng, ungefär inom 10 procent) ger ett litet konfettiregn. */}
+            {pricePoints(guess, target) >= CONFETTI_POINTS && <Konfetti />}
             <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
-            <p className="font-heading text-3xl font-bold tabular-nums">{formatSek(target)}</p>
+            <CountingPrice target={target} />
             {item.priceSek !== target && (
               <p className="text-xs font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
             )}
@@ -138,5 +145,17 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
         </div>
       )}
     </section>
+  )
+}
+
+// Rätt pris räknas upp till sitt värde på ungefär en sekund. Skärmläsare får det färdiga priset direkt.
+function CountingPrice({ target }: { target: number }) {
+  const value = useCountUp(target, 1000)
+  return (
+    <p className="font-heading text-3xl font-bold tabular-nums">
+      {/* Avrundas som priset (ören under en krona, annars hela kronor), så att det aldrig står 100 öre på vägen. */}
+      <span aria-hidden>{formatSek(roundSek(value))}</span>
+      <span className="sr-only">{formatSek(target)}</span>
+    </p>
   )
 }
