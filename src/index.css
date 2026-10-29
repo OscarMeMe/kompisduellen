@@ -22,6 +22,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-primary-button: var(--primary-button);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
     --color-card-foreground: var(--card-foreground);
@@ -37,6 +38,8 @@
     --color-mint-soft: var(--mint-soft);
     --color-sun-soft: var(--sun-soft);
     --color-sky-soft: var(--sky-soft);
+    /* Kronan för den som leder, t.ex. text-crown */
+    --color-crown: var(--crown);
     /* Knappar och fält är rounded-md (1rem), kort rounded-lg (1.25rem) */
     --radius-sm: calc(var(--radius) - 0.5rem);
     --radius-md: calc(var(--radius) - 0.25rem);
@@ -89,6 +92,8 @@
     --popover-foreground: oklch(0.3 0.025 260);
     --primary: oklch(0.66 0.16 30);
     --primary-foreground: oklch(0.99 0.01 85);
+    /* Korallknapparna (Button): en mörkare korall, så att den vita texten klarar WCAG AA (4,7:1) */
+    --primary-button: oklch(0.57 0.16 30);
     --secondary: oklch(0.93 0.024 78);
     --secondary-foreground: oklch(0.3 0.025 260);
     --muted: oklch(0.93 0.018 78);
@@ -107,6 +112,8 @@
     --mint-soft: oklch(0.955 0.04 165);
     --sun-soft: oklch(0.97 0.05 90);
     --sky-soft: oklch(0.955 0.03 235);
+    /* Guld för kronan. Mörk nog att synas (minst 3:1) mot korten och pastellerna */
+    --crown: oklch(0.62 0.13 68);
 }
 
 .dark {

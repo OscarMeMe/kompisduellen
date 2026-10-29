@@ -178,7 +178,7 @@ export function WaitingRoom({
                 {p.id === meId && (
                   <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Du</span>
                 )}
-                {p.host && <Crown className="size-4 shrink-0 text-amber-500" aria-label="Värd" />}
+                {p.host && <Crown className="size-4 shrink-0 text-crown" aria-label="Värd" />}
               </li>
             ))}
           </ul>

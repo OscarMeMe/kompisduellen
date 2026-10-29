@@ -22,7 +22,7 @@ export function RoundStanding({ state, meId }: { state: GameState; meId: string 
       {/* Leder man själv säger texten till vänster redan det. */}
       {leaderIds.length > 0 && !leaderIds.includes(meId) && (
         <p className="flex items-center gap-1.5 rounded-full bg-sun-soft px-3 py-1 text-sm font-semibold sm:shrink-0">
-          <Crown className="size-4 shrink-0 text-amber-500" aria-hidden />
+          <Crown className="size-4 shrink-0 text-crown" aria-hidden />
           <span className="truncate">{leaderText(state, leaderIds)}</span>
         </p>
       )}

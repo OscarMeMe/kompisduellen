@@ -60,7 +60,7 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 font-bold">
                   <span className="truncate">{entry.name}</span>
-                  {leader && <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder" />}
+                  {leader && <Crown className="size-4 shrink-0 text-crown" aria-label="Leder" />}
                 </span>
                 {justWon && (
                   <span className="mt-0.5 inline-block rounded-full bg-mint px-2 py-0.5 text-xs font-bold whitespace-nowrap text-accent-foreground">
