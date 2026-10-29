@@ -46,16 +46,18 @@ export function GuessStatusList({ hideLine = false, ...props }: GuessStatusListP
           const done = hasAnswered(p.id)
           return (
             <li
-              key={p.id}
+              key={`${p.id}-${done}`}
               className={cn(
                 'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
+                done && 'motion-safe:animate-pop',
                 done ? 'bg-mint-soft text-accent-foreground' : 'bg-card text-muted-foreground',
               )}
             >
               <Emoji emoji={p.avatar} className="text-sm" />
               {p.name}
+              {/* Bocken poppar fram när spelaren har svarat. */}
               {done ? (
-                <Check className="size-3.5" aria-label="Har svarat" />
+                <Check className="size-3.5 motion-safe:animate-pop" aria-label="Har svarat" />
               ) : (
                 <Loader2 className="size-3.5 animate-spin" aria-label="Har inte svarat" />
               )}

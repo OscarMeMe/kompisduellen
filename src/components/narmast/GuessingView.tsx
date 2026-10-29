@@ -29,9 +29,10 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
           <p className="py-8 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
           <div className="space-y-3 py-6 text-center">
-            <Lock className="mx-auto size-8 text-primary" />
+            {/* Låset hoppar till och gissningen poppar fram när den låses in. */}
+            <Lock className="mx-auto size-8 text-primary motion-safe:animate-hop" />
             <p className="text-muted-foreground">Din gissning</p>
-            <p className="font-heading text-7xl font-bold text-primary">{locked}</p>
+            <p className="font-heading text-7xl font-bold text-primary motion-safe:animate-pop">{locked}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
