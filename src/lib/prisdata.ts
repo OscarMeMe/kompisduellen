@@ -22,7 +22,8 @@ import items from './prisdata.json'
 //
 // dold: true döljer frågan i spelet (den slumpas aldrig fram) utan att den tas bort. Den syns kvar i datan och på /granska.
 //
-// exempel: true gör frågan till en av exempelrundorna på startsidan. En av dem slumpas varje gång sidan laddas.
+// exempel: true gör frågan till en av exempelrundorna på startsidan. Besökaren får dem en i taget, med en slumpad
+//   första fråga (exampleOrder).
 //   Exempelfrågorna slumpas aldrig fram i spelet (se GAME_ITEMS).
 //   Välj frågor där bilden tydligt visar just saken som frågas om.
 // exempelLedtrad: valfri ledtråd som bara exempelrundan visar, t.ex. med årtalet ('Svenskt butikspris hösten 1990').
@@ -70,9 +71,10 @@ export const EXAMPLE_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exem
 // på startsidan inte redan kan svaret.
 export const GAME_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel !== true)
 
-// En slumpad exempelfråga till startsidan.
-export function findExampleItem(random: () => number = Math.random): PriceItem | undefined {
-  return EXAMPLE_ITEMS[Math.floor(random() * EXAMPLE_ITEMS.length)]
+// Ordningen för startsidans exempelrunda: en slumpad första fråga, sedan de andra i tur och ordning.
+export function exampleOrder(random: () => number = Math.random): PriceItem[] {
+  const start = Math.floor(random() * EXAMPLE_ITEMS.length)
+  return [...EXAMPLE_ITEMS.slice(start), ...EXAMPLE_ITEMS.slice(0, start)]
 }
 
 // Frågan som visas som rubrik. Utan fraga byggs den av saken, frågeinledningen och året.

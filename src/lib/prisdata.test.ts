@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { priceRules } from '@/lib/gissa-priset'
-import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findExampleItem, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
+import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, exampleOrder, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
 
 // Filerna i public/prisbilder, t.ex. '/public/prisbilder/game-boy-1990.webp'.
 const files = Object.keys(import.meta.glob('/public/prisbilder/*'))
@@ -39,9 +39,13 @@ describe('exempelfrågorna på startsidan', () => {
     }
   })
 
-  it('slumpar fram var och en av dem', () => {
-    const picked = new Set([0, 0.4, 0.99].map((r) => findExampleItem(() => r)?.id))
-    expect(picked.size).toBe(3)
+  it('börjar med en slumpad fråga och tar sedan de andra, utan att någon kommer två gånger', () => {
+    const firsts = new Set([0, 0.4, 0.99].map((r) => exampleOrder(() => r)[0].id))
+    expect(firsts.size).toBe(3)
+    for (const r of [0, 0.4, 0.99]) {
+      const order = exampleOrder(() => r).map((item) => item.id)
+      expect([...order].sort()).toEqual(EXAMPLE_ITEMS.map((item) => item.id).sort())
+    }
   })
 })
 

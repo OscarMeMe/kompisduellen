@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
 import { pricePoints } from '@/lib/gissa-priset'
-import { findExampleItem, questionText } from '@/lib/prisdata'
+import { exampleOrder, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 
 // Så många poäng ger konfetti i exempelrundan.
@@ -19,11 +19,15 @@ type ExempelRundaProps = {
 
 // En liten spelbar exempelrunda på startsidan. Besökaren gissar ett pris och ser facit, helt lokalt: ingen lobby skapas,
 // inget skickas och ingen klocka går. Skild från det fullständiga provläget som "Testa själv" öppnar.
-// Frågan slumpas bland dem som är markerade med exempel: true i prisdata.json. Rutan är kompakt: bilden är liten bredvid frågan,
+// Frågorna är de som är markerade med exempel: true i prisdata.json. Besökaren får dem en i taget (Nästa fråga), med en
+// slumpad första fråga. Efter den sista finns bara Spela med kompisar kvar. Rutan är kompakt: bilden är liten bredvid frågan,
 // och bildkrediten står alltid under bilden.
 export function ExempelRunda({ onPlay }: ExempelRundaProps) {
-  // En av exempelfrågorna slumpas när sidan laddas och ligger kvar, även vid Gissa igen.
-  const [item] = useState(() => findExampleItem())
+  // Ordningen slumpas när sidan laddas: en slumpad första fråga, sedan de andra.
+  const [order] = useState(() => exampleOrder())
+  const [index, setIndex] = useState(0)
+  const item = order[index]
+  const isLast = index >= order.length - 1
   const fieldId = useId()
   const errorId = useId()
   const [text, setText] = useState('')
@@ -49,7 +53,8 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
     requestAnimationFrame(() => resultRef.current?.focus())
   }
 
-  function again() {
+  function next() {
+    setIndex((i) => Math.min(i + 1, order.length - 1))
     setGuess(null)
     setText('')
     setError(null)
@@ -66,7 +71,7 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
         <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-28 md:flex-1">
           {item.image && <img src={item.image} alt="" className="absolute inset-0 size-full object-contain" />}
           <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">
-            Exempelrunda
+            Exempelrunda {index + 1}/{order.length}
           </span>
           <span className="absolute top-2 right-2 rounded-full bg-card px-3 py-0.5 font-heading text-sm font-bold text-muted-foreground shadow-soft-sm">
             Gissa priset
@@ -94,7 +99,8 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
                 ref={inputRef}
                 value={text}
                 onChange={(event) => {
-                  setText(event.target.value)
+                  // Bara siffror, mellanslag och decimaltecken (komma eller punkt, för ören som 0,50).
+                  setText(event.target.value.replace(/[^\d\s.,]/g, ''))
                   setError(null)
                 }}
                 inputMode="decimal"
@@ -141,9 +147,11 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
             <Button size="lg" className="sm:flex-1" onClick={onPlay}>
               Spela med kompisar
             </Button>
-            <Button size="lg" variant="outline" className="sm:flex-1" onClick={again}>
-              Gissa igen
-            </Button>
+            {!isLast && (
+              <Button size="lg" variant="outline" className="sm:flex-1" onClick={next}>
+                Nästa fråga
+              </Button>
+            )}
           </div>
         </div>
       )}
