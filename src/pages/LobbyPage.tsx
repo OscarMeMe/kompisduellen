@@ -17,6 +17,7 @@ import { RevealView } from '@/components/narmast/RevealView'
 import { PlayerSetup } from '@/components/PlayerSetup'
 import { Button } from '@/components/ui/button'
 import { useLayout } from '@/hooks/useLayout'
+import { useWakeLock } from '@/hooks/useWakeLock'
 import { useLobby } from '@/hooks/useLobby'
 import { useOneTab } from '@/hooks/useOneTab'
 import { findGame, GAMES } from '@/lib/games'
@@ -223,6 +224,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     setInMatch(inMatch)
     return () => setInMatch(false)
   }, [inMatch, setInMatch])
+  // Värdens skärm hålls tänd under matchen. En låst telefon stoppar allt, och då står rundorna still för alla.
+  useWakeLock(isHost && inMatch)
   useEffect(() => {
     setLeaveInMatch(leavingPractice)
     return () => setLeaveInMatch(false)
