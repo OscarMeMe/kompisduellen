@@ -72,7 +72,7 @@ export function InviteCard({ code, game }: InviteCardProps) {
           Dela
         </Button>
         <Button variant="outline" size="lg" className="whitespace-nowrap" onClick={copyLink}>
-          {message === 'Länken är kopierad' ? <Check /> : <Copy />}
+          {message === 'Länken är kopierad' ? <Check className="motion-safe:animate-pop" /> : <Copy />}
           Kopiera länk
         </Button>
       </div>
