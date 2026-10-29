@@ -23,7 +23,7 @@ export function Choice({ label, hint, note, options, selected, onSelect }: Choic
         </p>
         {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
       </div>
-      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-1.5 sm:gap-2">
         {options.map((option) => {
           const active = option.value === selected
           return (
@@ -31,7 +31,7 @@ export function Choice({ label, hint, note, options, selected, onSelect }: Choic
               key={option.value}
               variant={active ? 'default' : 'outline'}
               aria-pressed={active}
-              className="h-11 min-w-16 text-base"
+              className="h-11 min-w-16 px-3 text-base sm:px-4"
               onClick={() => onSelect(option.value)}
             >
               {active && <Check aria-hidden />}
@@ -55,7 +55,7 @@ export function Choice({ label, hint, note, options, selected, onSelect }: Choic
 // och i snabbvalen efter matchen.
 export const NEXT_QUESTION_LABEL = 'Nästa fråga'
 export const AUTO_ADVANCE_TEXT = 'Automatiskt'
-export const HOST_ADVANCES_TEXT = 'När värden klickar'
+export const HOST_ADVANCES_TEXT = 'Värden klickar'
 
 export function NextQuestionChoice({ autoAdvance, onSelect }: { autoAdvance: boolean; onSelect: (auto: boolean) => void }) {
   return (
