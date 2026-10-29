@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  cleanTypedAmount,
   formatExactSek,
   formatSek,
   formatTypedNumber,
@@ -108,5 +109,22 @@ describe('visning i kronor', () => {
   it('det exakta priset med två decimaler', () => {
     expect(formatExactSek(2.44)).toBe('2,44 kr')
     expect(plain(formatExactSek(1250))).toBe('1 250,00 kr')
+  })
+})
+
+describe('bara belopp i rutan', () => {
+  it('släpper bara igenom siffror, mellanslag, komma och punkt', () => {
+    expect(cleanTypedAmount('ab1x2,5kr')).toBe('12,5')
+    expect(cleanTypedAmount('1 500 kr')).toBe('1 500 ')
+    expect(cleanTypedAmount('0.50')).toBe('0.50')
+    expect(cleanTypedAmount('ca 300:-')).toBe(' 300')
+    expect(cleanTypedAmount('abc')).toBe('')
+    expect(cleanTypedAmount('½€$')).toBe('')
+  })
+
+  it('spelets ruta (formatTypedNumber) visar inga bokstäver heller', () => {
+    expect(plain(formatTypedNumber('12ab34'))).toBe('1 234')
+    expect(formatTypedNumber('kr')).toBe('')
+    expect(formatTypedNumber('0,5x')).toBe('0,5')
   })
 })

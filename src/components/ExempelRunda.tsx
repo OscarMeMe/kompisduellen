@@ -4,7 +4,7 @@ import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
+import { cleanTypedAmount, formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
 import { pricePoints } from '@/lib/gissa-priset'
 import { exampleOrder, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
@@ -99,8 +99,8 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
                 ref={inputRef}
                 value={text}
                 onChange={(event) => {
-                  // Bara siffror, mellanslag och decimaltecken (komma eller punkt, för ören som 0,50).
-                  setText(event.target.value.replace(/[^\d\s.,]/g, ''))
+                  // Bara siffror, mellanslag och decimaltecken (komma eller punkt, för ören som 0,50), även vid inklistring.
+                  setText(cleanTypedAmount(event.target.value))
                   setError(null)
                 }}
                 inputMode="decimal"
