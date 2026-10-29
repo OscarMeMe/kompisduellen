@@ -1,9 +1,8 @@
-import { Crown } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Emoji } from '@/components/Emoji'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
-import { RoundStanding, SharedFirstBadge } from '@/components/lobby/RoundStanding'
+import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
+import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 import { roundStanding } from '@/lib/match'
@@ -35,18 +34,10 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
   // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
   const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
 
+  // Närmast först, den som inte svarade sist.
   const rows = Object.entries(state.players)
-    .map(([id, info]) => {
-      const guess = result.guesses[id]
-      return {
-        id,
-        ...info,
-        guess,
-        diff: guess === undefined ? null : Math.abs(guess - result.target),
-        winner: result.winners.includes(id),
-      }
-    })
-    .sort((a, b) => (a.diff ?? Infinity) - (b.diff ?? Infinity))
+    .map(([id, info]) => ({ id, ...info, guess: result.guesses[id] }))
+    .sort((a, b) => distance(a.guess, result.target) - distance(b.guess, result.target))
 
   const iWon = result.winners.includes(me.id)
 
@@ -75,34 +66,20 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
       </div>
 
       {!rolling && (
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-label="Allas gissningar">
           {rows.map((row) => (
-            <li
+            <ResultRow
               key={row.id}
-              className={cn(
-                'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-soft-sm animate-pop',
-                row.winner ? 'bg-mint-soft font-bold' : 'bg-card',
-              )}
-            >
-              <Emoji emoji={row.avatar} className="text-2xl" />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate">{row.name}</span>
-                  {leaderIds.includes(row.id) && (
-                    <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
-                  )}
-                  {row.winner && result.winners.length > 1 && <SharedFirstBadge />}
-                </span>
-                <span className="block text-sm font-normal text-muted-foreground">
-                  {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
-                </span>
-              </span>
-              <span className="w-10 text-right font-heading text-xl font-bold tabular-nums">{row.guess ?? '–'}</span>
-              <span className="shrink-0 text-right text-sm whitespace-nowrap">
-                {row.winner ? '+1 · ' : ''}
-                {state.scores[row.id] ?? 0} p
-              </span>
-            </li>
+              name={row.name}
+              avatar={row.avatar}
+              guess={row.guess === undefined ? undefined : String(row.guess)}
+              difference={row.guess === undefined ? undefined : numberDifference(row.guess, result.target)}
+              points={result.points[row.id] ?? 0}
+              total={state.scores[row.id] ?? 0}
+              winner={result.winners.includes(row.id)}
+              shared={result.winners.length > 1}
+              leader={leaderIds.includes(row.id)}
+            />
           ))}
         </ul>
       )}
@@ -119,4 +96,15 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
       />
     </Wide>
   )
+}
+
+function distance(guess: number | undefined, target: number) {
+  return guess === undefined ? Infinity : Math.abs(guess - target)
+}
+
+// "8 för lågt" med en pil nedåt, eller "Exakt rätt!".
+function numberDifference(guess: number, target: number): ResultRowProps['difference'] {
+  const diff = guess - target
+  if (diff === 0) return { text: 'Exakt rätt!', direction: 'exact' }
+  return { text: `${Math.abs(diff)} för ${diff > 0 ? 'högt' : 'lågt'}`, direction: diff > 0 ? 'up' : 'down' }
 }

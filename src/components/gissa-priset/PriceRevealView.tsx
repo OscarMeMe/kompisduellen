@@ -1,16 +1,16 @@
-import { Crown } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Emoji } from '@/components/Emoji'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
-import { RoundStanding, SharedFirstBadge } from '@/components/lobby/RoundStanding'
+import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
+import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { formatSek } from '@/lib/belopp'
+import { pricePoints } from '@/lib/gissa-priset'
 import { findPriceItem } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 import { roundStanding } from '@/lib/match'
-import { cn } from '@/lib/utils'
+import { rulesFor } from '@/lib/spelregler'
 
 export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
@@ -28,15 +28,11 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
   // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
   const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
 
+  // Bäst först. Lika poäng (t.ex. noll) sorteras på hur nära man var, och den som inte svarade hamnar sist.
+  const distance = (guess?: number) => (guess === undefined ? Infinity : rulesFor(state.game).distance(guess, result.target))
   const rows = Object.entries(state.players)
-    .map(([id, info]) => ({
-      id,
-      ...info,
-      guess: result.guesses[id],
-      points: result.points[id] ?? 0,
-      winner: result.winners.includes(id),
-    }))
-    .sort((a, b) => b.points - a.points || (a.guess === undefined ? 1 : 0) - (b.guess === undefined ? 1 : 0))
+    .map(([id, info]) => ({ id, ...info, guess: result.guesses[id], points: result.points[id] ?? 0 }))
+    .sort((a, b) => b.points - a.points || distance(a.guess) - distance(b.guess))
 
   return (
     <Wide>
@@ -56,35 +52,20 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
       </PriceAnswerCard>
 
       {revealed && (
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-label="Allas gissningar">
           {rows.map((row) => (
-            <li
+            <ResultRow
               key={row.id}
-              className={cn(
-                'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-soft-sm animate-pop',
-                row.winner ? 'bg-mint-soft font-bold' : 'bg-card',
-              )}
-            >
-              <Emoji emoji={row.avatar} className="text-2xl" />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate">{row.name}</span>
-                  {leaderIds.includes(row.id) && (
-                    <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
-                  )}
-                  {row.winner && result.winners.length > 1 && <SharedFirstBadge />}
-                </span>
-                <span className="block text-sm font-normal text-muted-foreground">
-                  {row.guess === undefined
-                    ? 'Ingen gissning'
-                    : `${formatSek(row.guess)} · ${differenceText(row.guess, result.target)}`}
-                </span>
-              </span>
-              <span className="shrink-0 text-right whitespace-nowrap">
-                <span className="block font-heading text-xl font-bold tabular-nums">+{row.points}</span>
-                <span className="block text-sm font-normal text-muted-foreground">{state.scores[row.id] ?? 0} totalt</span>
-              </span>
-            </li>
+              name={row.name}
+              avatar={row.avatar}
+              guess={row.guess === undefined ? undefined : formatSek(row.guess)}
+              difference={row.guess === undefined ? undefined : priceDifference(row.guess, result.target)}
+              points={row.points}
+              total={state.scores[row.id] ?? 0}
+              winner={result.winners.includes(row.id)}
+              shared={result.winners.length > 1}
+              leader={leaderIds.includes(row.id)}
+            />
           ))}
         </ul>
       )}
@@ -103,4 +84,11 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
       />
     </Wide>
   )
+}
+
+// "12 % för högt" med en pil uppåt. Fullpoäng räknas som rätt, även om det skiljer några procent.
+function priceDifference(guess: number, target: number): ResultRowProps['difference'] {
+  const text = differenceText(guess, target)
+  if (pricePoints(guess, target) === 100) return { text, direction: 'exact' }
+  return { text, direction: guess > target ? 'up' : 'down' }
 }
