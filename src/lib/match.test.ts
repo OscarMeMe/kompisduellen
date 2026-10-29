@@ -26,6 +26,7 @@ import {
   resolveRound,
   restoreHostState,
   roundOptionsFor,
+  roundStanding,
   setGame,
   setTempo,
   startGame,
@@ -524,5 +525,67 @@ describe('byt spel efter en match', () => {
     expect(kortkaos.game).toBe('kortkaos')
     expect(canStart('kortkaos', 2)).toBe(false)
     expect(hostCountdownStart({ state: kortkaos, secrets: null }, ['a', 'b'], NOW).state.rematchAt).toBeNull()
+  })
+})
+
+describe('ställningen efter en runda', () => {
+  // Närmast vinner: den närmaste får 1 poäng.
+  const match = (ids = ['a', 'b', 'c'], rounds = 5) => startGame(lobby('narmast', ids, { rounds }), ids, NOW)
+  // Spelar rundor där vinnaren gissar rätt och de andra långt bort.
+  function play(state: GameState, winners: string[]): GameState {
+    let next = state
+    winners.forEach((winner, i) => {
+      if (i > 0) next = nextRound(next, NOW)
+      const guesses = Object.fromEntries(Object.keys(next.players).map((id) => [id, id === winner ? 50 : 1]))
+      next = playRound(next, guesses, 50)
+    })
+    return next
+  }
+
+  it('säger ungefär var man ligger, utan placering', () => {
+    const state = play(match(['a', 'b', 'c', 'd', 'e']), ['a', 'a', 'a', 'b'])
+    // a 3, b 1, c d e 0. Nära = högst 1 poäng bakom. Lägst poäng är sist, även delat.
+    expect(roundStanding(state, 'a')?.kind).toBe('leader')
+    expect(roundStanding(state, 'b')?.kind).toBe('top')
+    expect(roundStanding(state, 'c')?.kind).toBe('last')
+    expect(roundStanding(state, 'e')?.kind).toBe('last')
+  })
+
+  it('nära ledaren går före sist', () => {
+    const state = play(match(['a', 'b']), ['a'])
+    expect(roundStanding(state, 'b')?.kind).toBe('close')
+  })
+
+  it('mitt i klungan i undre halvan', () => {
+    const state = play(match(['a', 'b', 'c', 'd', 'e'], 10), ['a', 'a', 'a', 'b', 'b', 'c', 'c', 'd'])
+    // a 3, b 2, c 2, d 1, e 0
+    expect(roundStanding(state, 'b')?.kind).toBe('close')
+    expect(roundStanding(state, 'd')?.kind).toBe('middle')
+    expect(roundStanding(state, 'e')?.kind).toBe('last')
+  })
+
+  it('delad ledning och ingen ledare innan någon fått poäng', () => {
+    expect(roundStanding(play(match(), ['a', 'b']), 'b')?.kind).toBe('shared')
+    expect(roundStanding(playRound(match(), {}, 12), 'a')).toMatchObject({ kind: 'none', leaderIds: [] })
+  })
+
+  it('visar bara när man klättrar, aldrig i första rundan', () => {
+    const first = play(match(), ['c'])
+    expect(roundStanding(first, 'c')?.climbed).toBe(false)
+    const second = play(match(), ['a', 'a', 'c', 'c'])
+    expect(roundStanding(second, 'c')?.climbed).toBe(true)
+    expect(roundStanding(second, 'a')?.climbed).toBe(false)
+  })
+
+  it('skiljer rundans vinnare från matchledaren', () => {
+    const state = play(match(), ['a', 'a', 'b'])
+    expect(state.lastResult?.winners).toEqual(['b'])
+    expect(roundStanding(state, 'b')?.leaderIds).toEqual(['a'])
+  })
+
+  it('allt avgörs i sista rundan när toppen ligger jämnt', () => {
+    expect(roundStanding(play(match(['a', 'b'], 3), ['a', 'b']), 'a')?.decider).toBe(true)
+    expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'a', 'a']), 'b')?.decider).toBe(false)
+    expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'b']), 'a')?.decider).toBe(false)
   })
 })

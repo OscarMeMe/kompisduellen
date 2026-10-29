@@ -1,12 +1,15 @@
+import { Crown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
+import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
+import { roundStanding } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
@@ -22,6 +25,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
 
   if (!result) return null
   const myPoints = result.points[me.id]
+  // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
+  const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
 
   const rows = Object.entries(state.players)
     .map(([id, info]) => ({
@@ -62,7 +67,12 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
             >
               <Emoji emoji={row.avatar} className="text-2xl" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate">{row.name}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate">{row.name}</span>
+                  {leaderIds.includes(row.id) && (
+                    <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
+                  )}
+                </span>
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.guess === undefined
                     ? 'Ingen gissning'
@@ -77,6 +87,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
           ))}
         </ul>
       )}
+
+      {revealed && <RoundStanding state={state} meId={me.id} />}
 
       {revealed && item && <PriceFact item={item} />}
 

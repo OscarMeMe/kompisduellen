@@ -437,6 +437,51 @@ export function rankPlayers(state: GameState): RankedPlayer[] {
   }))
 }
 
+// Ungefär var man ligger, utan exakt placering. Ingen får se "sist av fyra" mitt i matchen.
+export type StandingKind = 'none' | 'leader' | 'shared' | 'close' | 'last' | 'top' | 'middle'
+
+export type RoundStanding = {
+  kind: StandingKind
+  // Gick upp minst en placering i rundan. Aldrig i första rundan, då alla stod på noll.
+  climbed: boolean
+  // Nästa runda är den sista och toppen ligger inom en rundas poäng.
+  decider: boolean
+  // De som leder matchen efter rundan (flera vid lika poäng). Tom om ingen har poäng än.
+  leaderIds: string[]
+}
+
+// Var en spelare står i matchen efter facit, och hur det ändrades av rundan.
+// Skiljer matchledaren från rundans vinnare (lastResult.winners).
+export function roundStanding(state: GameState, playerId: string): RoundStanding | null {
+  const result = state.lastResult
+  if (!result || !state.players[playerId]) return null
+  const ids = Object.keys(state.players)
+  const after = (id: string) => state.scores[id] ?? 0
+  const before = (id: string) => after(id) - (result.points[id] ?? 0)
+  const placeOf = (score: (id: string) => number) => 1 + ids.filter((id) => score(id) > score(playerId)).length
+  const scores = ids.map(after).sort((a, b) => b - a)
+  const best = Math.max(0, scores[0] ?? 0)
+  const leaderIds = best > 0 ? ids.filter((id) => after(id) === best) : []
+  // "Nära" = högst så mycket som någon fått i en enda runda hittills (1 i Närmast vinner, upp till 100 i Gissa priset).
+  const roundMax = Math.max(1, ...[...state.matchRounds, result].flatMap((round) => Object.values(round.points)))
+  const place = placeOf(after)
+  const gap = best - after(playerId)
+
+  let kind: StandingKind
+  if (leaderIds.length === 0) kind = 'none'
+  else if (leaderIds.includes(playerId)) kind = leaderIds.length === 1 ? 'leader' : 'shared'
+  else if (gap <= roundMax) kind = 'close'
+  else if (after(playerId) === scores[scores.length - 1]) kind = 'last'
+  else kind = place <= Math.ceil(ids.length / 2) ? 'top' : 'middle'
+
+  return {
+    kind,
+    climbed: state.round > 1 && place < placeOf(before),
+    decider: state.round === state.rounds - 1 && best > 0 && best - (scores[1] ?? 0) <= roundMax,
+    leaderIds,
+  }
+}
+
 // Topplistan sorterad på antal vinster. Lika många vinster ger samma placering.
 export function rankLeaderboard(state: GameState): RankedEntry[] {
   const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))
