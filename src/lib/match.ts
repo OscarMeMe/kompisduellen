@@ -399,6 +399,18 @@ export function changeGame(state: GameState): GameState {
 
 export function backToWaiting(state: GameState): GameState {
   if (state.phase !== 'finished') return state
+  return resetMatch(state)
+}
+
+// Värden avbryter en pågående match: alla går tillbaka till väntrummet. Matchen räknas inte, så topplistan,
+// antalet spelade matcher och kvällens ställning är som före matchen.
+export function abortMatch(state: GameState): GameState {
+  if (state.phase !== 'guessing' && state.phase !== 'reveal' && state.phase !== 'playing') return state
+  return { ...resetMatch(state), notice: 'Värden avbröt matchen. Den räknas inte i kvällens ställning.' }
+}
+
+// Väntrummet efter en match: samma grupp, inställningar och topplista, men matchens poäng och rundor nollställs.
+function resetMatch(state: GameState): GameState {
   const scores: Record<string, number> = {}
   for (const id of Object.keys(state.players)) scores[id] = 0
   return {

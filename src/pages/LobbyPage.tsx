@@ -1,11 +1,12 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw, Undo2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
+import { AbortMatchDialog } from '@/components/lobby/AbortMatchDialog'
 import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
@@ -198,6 +199,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. En deltagare kan komma tillbaka med koden.
   const navigate = useNavigate()
   const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  // Värden har tryckt Tillbaka till väntrummet under en match och får frågan om matchen ska avbrytas.
+  const [aborting, setAborting] = useState(false)
   const othersPresent = online.length > 1
   const askBeforeLeaving = othersPresent
   function requestLeave(to: string) {
@@ -286,6 +289,21 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   return (
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
       {phaseView()}
+      {/* Värden kan avbryta en pågående match. Alla går tillbaka till väntrummet, och matchen räknas inte. */}
+      {inMatch && isHost && (
+        <Button variant="ghost" className="mx-auto mt-2 text-muted-foreground" onClick={() => setAborting(true)}>
+          <Undo2 aria-hidden />
+          Tillbaka till väntrummet
+        </Button>
+      )}
+      <AbortMatchDialog
+        open={aborting && inMatch}
+        onStay={() => setAborting(false)}
+        onAbort={() => {
+          setAborting(false)
+          actions.abortMatch()
+        }}
+      />
       <ReactionFloaters />
       {hostMissing && (
         <p

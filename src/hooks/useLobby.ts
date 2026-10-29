@@ -26,6 +26,7 @@ import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SE
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
 import type { FloatingReaction } from '@/components/lobby/Reactions'
 import {
+  abortMatch,
   addGuess,
   addPlayers,
   backToWaiting,
@@ -603,6 +604,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const successor = pickSuccessor(onlineRef.current, me.id)
         if (!successor) return
         await channelRef.current?.send({ type: 'broadcast', event: 'handover', payload: { to: successor.id, from: me.id } })
+      },
+      // Värden avbryter en pågående match: alla tillbaka till väntrummet, och matchen räknas inte.
+      abortMatch: () => {
+        if (!isHost) return
+        commit({ state: abortMatch(stateRef.current), secrets: null })
       },
       // Byt spel: samma lobby, grupp och ställning, och de andra ser att värden väljer nästa spel.
       changeGame: () => {
