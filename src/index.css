@@ -22,6 +22,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-primary-button: var(--primary-button);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
     --color-card-foreground: var(--card-foreground);
@@ -91,6 +92,8 @@
     --popover-foreground: oklch(0.3 0.025 260);
     --primary: oklch(0.66 0.16 30);
     --primary-foreground: oklch(0.99 0.01 85);
+    /* Korallknapparna (Button): en mörkare korall, så att den vita texten klarar WCAG AA (4,7:1) */
+    --primary-button: oklch(0.57 0.16 30);
     --secondary: oklch(0.93 0.024 78);
     --secondary-foreground: oklch(0.3 0.025 260);
     --muted: oklch(0.93 0.018 78);

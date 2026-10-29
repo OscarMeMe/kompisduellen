@@ -36,6 +36,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
   - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
   - `crown`: guld för kronan hos den som leder (`text-crown`)
+  - `primary-button`: den mörkare korallen på korallknapparna (`Button`), så att den vita texten klarar WCAG AA. Loggan och övriga detaljer använder `primary`
   - skuggor: `shadow-soft` (kort), `shadow-soft-sm` (små ytor), `shadow-primary` (korallknappar, finns redan på `Button`). Hur mörka de mjuka skuggorna är styrs av `--shadow-strength`
 - Rundning: knappar och fält `rounded-md` (1rem), kort `rounded-lg` (1.25rem), etiketter `rounded-full`.
 - Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
