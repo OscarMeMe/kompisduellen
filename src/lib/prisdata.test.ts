@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { priceRules } from '@/lib/gissa-priset'
-import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findExampleItem, findPriceItem, PRICE_ITEMS, questionText } from '@/lib/prisdata'
+import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findExampleItem, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
 
 // Filerna i public/prisbilder, t.ex. '/public/prisbilder/game-boy-1990.webp'.
 const files = Object.keys(import.meta.glob('/public/prisbilder/*'))
@@ -117,7 +117,18 @@ describe('frågor och ledtrådar', () => {
     }
   })
 
-  it('har exempelfrågorna bland de synliga', () => {
-    for (const example of EXAMPLE_ITEMS) expect(PRICE_ITEMS).toContain(example)
+  it('har exempelfrågorna bland de synliga, men slumpar aldrig fram dem i spelet', () => {
+    expect(GAME_ITEMS).toHaveLength(140)
+    let used: string[] = []
+    for (const example of EXAMPLE_ITEMS) {
+      expect(PRICE_ITEMS).toContain(example)
+      expect(GAME_ITEMS).not.toContain(example)
+    }
+    // Två varv genom alla frågor, så att även omstarten av listan provas.
+    for (let i = 0; i < GAME_ITEMS.length * 2; i++) {
+      const pick = priceRules.pickItem!(used)
+      expect(EXAMPLE_ITEMS.map((item) => item.id)).not.toContain(pick.itemId)
+      used = pick.usedItemIds
+    }
   })
 })

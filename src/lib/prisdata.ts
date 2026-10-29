@@ -23,6 +23,7 @@ import items from './prisdata.json'
 // dold: true döljer frågan i spelet (den slumpas aldrig fram) utan att den tas bort. Den syns kvar i datan och på /granska.
 //
 // exempel: true gör frågan till en av exempelrundorna på startsidan. En av dem slumpas varje gång sidan laddas.
+//   Exempelfrågorna slumpas aldrig fram i spelet (se GAME_ITEMS).
 //   Välj frågor där bilden tydligt visar just saken som frågas om.
 // exempelLedtrad: valfri ledtråd som bara exempelrundan visar, t.ex. med årtalet ('Svenskt butikspris hösten 1990').
 //   Saknas den visas clue. Spelets egen ledtråd påverkas inte.
@@ -64,6 +65,10 @@ export function findPriceItem(id: string | null | undefined): PriceItem | undefi
 
 // Frågorna som startsidans exempelrunda kan visa: de som är markerade med exempel: true.
 export const EXAMPLE_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel === true)
+
+// Frågorna som kan slumpas fram i spelet: de synliga utom exempelfrågorna, så att den som provat exempelrundan
+// på startsidan inte redan kan svaret.
+export const GAME_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel !== true)
 
 // En slumpad exempelfråga till startsidan.
 export function findExampleItem(random: () => number = Math.random): PriceItem | undefined {
