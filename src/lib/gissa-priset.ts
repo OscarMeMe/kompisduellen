@@ -10,6 +10,8 @@ import type { GameRules } from '@/lib/spelregler'
 const GUESS_SECONDS = 30
 export const GUESS_SECONDS_OPTIONS = [30, 45, 60] as const
 const REVEAL_SECONDS = 12
+// Så många av de senast visade frågorna spärras fortfarande när listan med frågor börjar om.
+export const RECENT_AFTER_RESET = 20
 
 // Poäng efter hur många GÅNGER fel man är, så att halva priset straffas lika hårt som dubbla priset.
 // Kurvan går genom de här punkterna (gånger fel, poäng). Däremellan räknas poängen mjukt ut med en
@@ -91,13 +93,14 @@ export const priceRules: GameRules = {
   ],
   isValidGuess: isValidPrice,
 
-  // En slumpad sak som inte varit med än. När alla använts börjar listan om. Exempelfrågorna är inte med (GAME_ITEMS).
+  // En slumpad sak som inte varit med än. När alla använts börjar listan om, men de senaste (RECENT_AFTER_RESET) står
+  // kvar som använda, så att en fråga aldrig kommer tillbaka direkt efter omstarten. Exempelfrågorna är inte med (GAME_ITEMS).
   pickItem(usedItemIds) {
     let unused = GAME_ITEMS.filter((item) => !usedItemIds.includes(item.id))
     let used = usedItemIds
     if (unused.length === 0) {
-      unused = GAME_ITEMS
-      used = []
+      used = usedItemIds.slice(-RECENT_AFTER_RESET)
+      unused = GAME_ITEMS.filter((item) => !used.includes(item.id))
     }
     const item = unused[Math.floor(Math.random() * unused.length)]
     return { itemId: item.id, usedItemIds: [...used, item.id] }

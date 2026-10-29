@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { pricePoints, priceRules } from '@/lib/gissa-priset'
+import { pricePoints, priceRules, RECENT_AFTER_RESET } from '@/lib/gissa-priset'
+import { GAME_ITEMS } from '@/lib/prisdata'
 
 // Kontrollerar att förklaringen under "Så räknas poängen" stämmer med beräkningen.
 describe('poängen i Gissa priset', () => {
@@ -73,5 +74,45 @@ describe('poängen i Gissa priset', () => {
     expect(priceRules.isBullseye(105, 100)).toBe(true)
     expect(priceRules.isBullseye(110, 100)).toBe(false)
     expect(priceRules.distance(200, 100)).toBeCloseTo(priceRules.distance(50, 100))
+  })
+})
+
+describe('frågorna i en lobby', () => {
+  // Spelar så många rundor och ger alla valda frågor i ordning, och listan över använda.
+  function play(rounds: number, used: string[] = []) {
+    const picked: string[] = []
+    for (let i = 0; i < rounds; i++) {
+      const pick = priceRules.pickItem!(used)
+      picked.push(pick.itemId)
+      used = pick.usedItemIds
+    }
+    return { picked, used }
+  }
+
+  it('visar varje fråga en gång innan någon kommer tillbaka', () => {
+    const { picked } = play(GAME_ITEMS.length)
+    expect(new Set(picked).size).toBe(GAME_ITEMS.length)
+  })
+
+  it('spärrar de senaste frågorna en stund till när listan börjar om', () => {
+    for (let run = 0; run < 20; run++) {
+      const first = play(GAME_ITEMS.length)
+      const recent = first.picked.slice(-RECENT_AFTER_RESET)
+      // Direkt efter omstarten: ingen av de senast visade frågorna, förrän alla andra visats igen.
+      const after = play(GAME_ITEMS.length - RECENT_AFTER_RESET, first.used).picked
+      expect(after.filter((id) => recent.includes(id))).toEqual([])
+      expect(new Set(after).size).toBe(after.length)
+    }
+  })
+
+  it('fortsätter fungera varv efter varv utan att fastna', () => {
+    const { picked } = play(GAME_ITEMS.length * 3)
+    expect(picked).toHaveLength(GAME_ITEMS.length * 3)
+    // Mellan två visningar av samma fråga går alltid minst RECENT_AFTER_RESET andra frågor.
+    const last = new Map<string, number>()
+    picked.forEach((id, i) => {
+      if (last.has(id)) expect(i - last.get(id)!).toBeGreaterThan(RECENT_AFTER_RESET)
+      last.set(id, i)
+    })
   })
 })
