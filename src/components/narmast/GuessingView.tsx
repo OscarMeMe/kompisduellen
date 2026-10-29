@@ -86,7 +86,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
               className="w-full"
               disabled={!valid}
             >
-              Lås in gissning
+              Lås svaret
             </Button>
           </form>
         )}
