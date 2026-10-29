@@ -3,6 +3,14 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
+import {
+  HELLO_RETRY_MS,
+  lobbyStatus,
+  shouldRetryHello,
+  STUCK_AFTER_MS,
+  wakeAction,
+} from '@/lib/anslutning'
+import { closeChannel, waitForChannel } from '@/lib/kanaler'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
@@ -52,7 +60,7 @@ export type OnlinePlayer = Player & {
   joinedAt: number
 }
 
-export type LobbyStatus = 'connecting' | 'ready' | 'no-host' | 'error'
+export type { LobbyStatus } from '@/lib/anslutning'
 
 const NO_HOST_GRACE_MS = 4000
 // Så länge räknas en spelare som tappat nätet (eller laddar om) fortfarande som med i ett kortspel,
@@ -77,6 +85,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [connected, setConnected] = useState(false)
   const [failed, setFailed] = useState(false)
   const [graceOver, setGraceOver] = useState(false)
+  // Ökas för att ansluta på nytt (Försök igen, fliken syns igen, nätet tillbaka).
+  const [connectKey, setConnectKey] = useState(0)
+  // Gästen har försökt komma in längre än STUCK_AFTER_MS utan att få något tillstånd.
+  const [waitedTooLong, setWaitedTooLong] = useState(false)
   // Skillnaden mellan min klocka och värdens klocka (ms). Används för nedräkningen.
   const [clockOffset, setClockOffset] = useState(0)
   // Kortspelen: min egen hand, som värden skickar bara till mig.
@@ -164,6 +176,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
   const current = useCallback((): HostState => ({ state: stateRef.current, secrets: secretsRef.current }), [])
 
+  // Gästen: be värden om det aktuella läget (och min hand i ett kortspel).
+  const meId = me?.id
+  const sendHello = useCallback(() => {
+    if (!meId) return
+    void channelRef.current?.send({ type: 'broadcast', event: 'hello', payload: { id: meId } })
+  }, [meId])
+
   // Spelare som är med: online nu, eller borta kortare tid än AWAY_GRACE_MS.
   const activeIds = useCallback((): string[] => {
     const now = Date.now()
@@ -188,197 +207,255 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
   useEffect(() => {
     if (!me || !code) return
+    const player = me
     const myId = me.id
-
-    const channel = supabase.channel(`lobby:${code}`, {
-      config: {
-        broadcast: { self: true },
-        presence: { key: me.id },
-      },
-    })
-    channelRef.current = channel
     // Värden: kollar närvaron igen när någon som gått varit borta för länge.
     let awayTimer: ReturnType<typeof setTimeout> | undefined
     // Värdbyte: tiden tills jag tar över om värden är borta.
     let takeoverTimer: ReturnType<typeof setTimeout> | undefined
     const stateReceived = () => receivedRef.current
+    let cancelled = false
+    let opened: RealtimeChannel | null = null
 
-    channel.on('presence', { event: 'sync' }, () => {
-      const raw = channel.presenceState<OnlinePlayer>()
-      const players: OnlinePlayer[] = Object.values(raw)
-        .map((metas) => metas[0])
-        .filter((meta) => Boolean(meta?.id))
-        .map(({ id, name, avatar, host, joinedAt }) => ({ id, name, avatar, host, joinedAt }))
-        .sort((a, b) => a.joinedAt - b.joinedAt)
-      const now = Date.now()
-      for (const p of onlineRef.current) {
-        if (!players.some((other) => other.id === p.id)) lastSeenRef.current[p.id] = now
-      }
-      for (const p of players) delete lastSeenRef.current[p.id]
-      onlineRef.current = players
-      setOnline(players)
-
-      // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
-      const mine = players.find((p) => p.id === me.id)
-      if (isHost && mine && Date.now() - promotedAtRef.current > TAKEOVER_SETTLE_MS && shouldYieldHost(mine, players)) {
-        leaveHostRole(code)
-        rolesRef.current?.onDemote()
-        return
-      }
-
-      watchHost()
-
-      if (isHost) {
-        const infos: Record<string, PlayerInfo> = {}
-        for (const p of players) infos[p.id] = { name: p.name, avatar: p.avatar }
-        // Nya spelare får vara med direkt i väntrummet. Under en match kommer de in med noll poäng.
-        let next = addPlayers(stateRef.current, infos)
-        next = resolveIfEveryoneGuessed(next)
-        commit(hostPresence({ state: next, secrets: secretsRef.current }, activeIds(), now))
-
-        clearTimeout(awayTimer)
-        if (Object.keys(lastSeenRef.current).length > 0) {
-          awayTimer = setTimeout(() => commit(hostPresence(current(), activeIds(), Date.now())), AWAY_GRACE_MS + 300)
-        }
-      }
+    // En kanal med samma namn kan hålla på att stängas (omladdning, kodkontrollen på startsidan). Då väntar vi,
+    // annars får vi tillbaka den gamla kanalen som aldrig svarar.
+    void waitForChannel(`lobby:${code}`).then(() => {
+      if (!cancelled) opened = connect()
     })
 
-    channel.on('broadcast', { event: 'state' }, ({ payload }) => {
-      if (isHost) return
-      const { state: next, sentAt } = payload as { state: GameState; sentAt: number }
-      stateRef.current = next
-      setState(next)
-      setReceived(true)
-      receivedRef.current = true
-      if (!joinTrackedRef.current) {
-        joinTrackedRef.current = true
-        track('lobby_gick_med', { spel: next.game })
-      }
-      clockOffsetRef.current = Date.now() - sentAt
-      setClockOffset(Date.now() - sentAt)
-    })
-
-    // Min hand i ett kortspel. Meddelanden till andra spelare slängs direkt.
-    channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
-      const { to, hand: next } = payload as { to: string; hand: MyHand | null }
-      if (to === me.id) setHand(next)
-    })
-
-    // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.
-    channel.on('broadcast', { event: 'reaction' }, ({ payload }) => {
-      const { id, reaction } = (payload ?? {}) as { id?: string; reaction?: string }
-      const def = findReaction(reaction)
-      if (!id || !def) return
-      const who = onlineRef.current.find((p) => p.id === id) ?? stateRef.current.players[id]
-      if (!who) return
-      const now = Date.now()
-      const history = acceptReaction(reactionHistoryRef.current[id] ?? [], now)
-      if (!history) return
-      reactionHistoryRef.current[id] = history
-      const item: FloatingReaction = {
-        key: `${id}-${now}-${Math.random()}`,
-        name: who.name,
-        emoji: def.emoji,
-      }
-      setFloating((list) => [...list.slice(-7), item])
-      setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)
-    })
-
-    channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
-      if (!isHost) return
-      const { id, value } = payload as { id: string; value: number }
-      let next = addGuess(stateRef.current, id, value, Date.now())
-      next = resolveIfEveryoneGuessed(next)
-      publish(next)
-    })
-
-    channel.on('broadcast', { event: 'move' }, ({ payload }) => {
-      if (!isHost) return
-      const { id, move } = payload as { id: string; move: CardMove }
-      commit(hostMove(current(), id, move, activeIds(), Date.now()))
-    })
-
-    // Värden lämnar med Lämna och pekar ut vem som tar över, så att lobbyn byter värd direkt.
-    channel.on('broadcast', { event: 'handover' }, ({ payload }) => {
-      if (isHost) return
-      if ((payload as { to?: string } | undefined)?.to === me.id) promote()
-    })
-
-    channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
-      // Någon har precis anslutit: skicka det aktuella läget till alla, och spelarens hand igen.
-      if (!isHost) return
-      void channel.send({
-        type: 'broadcast',
-        event: 'state',
-        payload: { state: stateRef.current, sentAt: Date.now() },
+    function connect(): RealtimeChannel {
+      const channel = supabase.channel(`lobby:${code}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: myId },
+        },
       })
-      const id = (payload as { id?: string } | undefined)?.id
-      if (id) {
-        delete sentHandsRef.current[id]
-        sendHands()
-      }
-    })
+      channelRef.current = channel
 
-    // Jag tar över som värd: spara rollen i fliken och gå med i kanalen på nytt som värd. Tillståndet skickas ut
-    // så snart jag är ansluten (se nedan).
-    function promote() {
-      if (isHost || takeoverRef.current) return
-      takeoverRef.current = { offset: clockOffsetRef.current }
-      promotedAtRef.current = Date.now()
-      markAsHost(code, stateRef.current.game)
-      rolesRef.current?.onPromote()
-    }
-
-    // Värden är borta (stängd flik, tappat nät). Är jag den som varit med längst tar jag över efter en stund, så att
-    // en omladdning hinner komma tillbaka först.
-    function watchHost() {
-      clearTimeout(takeoverTimer)
-      if (isHost || !stateReceived() || onlineRef.current.some((p) => p.host)) return
-      if (pickSuccessor(onlineRef.current)?.id !== myId) return
-      takeoverTimer = setTimeout(() => {
-        if (!onlineRef.current.some((p) => p.host) && pickSuccessor(onlineRef.current)?.id === myId) promote()
-      }, TAKEOVER_MS)
-    }
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        setConnected(true)
-        await channel.track({
-          id: me.id,
-          name: me.name,
-          avatar: me.avatar,
-          host: isHost,
-          joinedAt: Date.now(),
-        } satisfies OnlinePlayer)
-        if (isHost) {
-          // Efter en omladdning: skicka allas händer igen.
-          sentHandsRef.current = {}
-          sendHands()
-          // Jag tog precis över: skicka ut tillståndet med klockorna omräknade till min klocka.
-          const takeover = takeoverRef.current
-          if (takeover) {
-            takeoverRef.current = null
-            publish(takeOverState(stateRef.current, takeover.offset))
-          }
-        } else {
-          void channel.send({ type: 'broadcast', event: 'hello', payload: { id: me.id } })
+      channel.on('presence', { event: 'sync' }, () => {
+        const raw = channel.presenceState<OnlinePlayer>()
+        const players: OnlinePlayer[] = Object.values(raw)
+          .map((metas) => metas[0])
+          .filter((meta) => Boolean(meta?.id))
+          .map(({ id, name, avatar, host, joinedAt }) => ({ id, name, avatar, host, joinedAt }))
+          .sort((a, b) => a.joinedAt - b.joinedAt)
+        const now = Date.now()
+        for (const p of onlineRef.current) {
+          if (!players.some((other) => other.id === p.id)) lastSeenRef.current[p.id] = now
         }
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        setFailed(true)
+        for (const p of players) delete lastSeenRef.current[p.id]
+        onlineRef.current = players
+        setOnline(players)
+
+        // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
+        const mine = players.find((p) => p.id === myId)
+        if (isHost && mine && Date.now() - promotedAtRef.current > TAKEOVER_SETTLE_MS && shouldYieldHost(mine, players)) {
+          leaveHostRole(code)
+          rolesRef.current?.onDemote()
+          return
+        }
+
+        watchHost()
+
+        if (isHost) {
+          const infos: Record<string, PlayerInfo> = {}
+          for (const p of players) infos[p.id] = { name: p.name, avatar: p.avatar }
+          // Nya spelare får vara med direkt i väntrummet. Under en match kommer de in med noll poäng.
+          let next = addPlayers(stateRef.current, infos)
+          next = resolveIfEveryoneGuessed(next)
+          commit(hostPresence({ state: next, secrets: secretsRef.current }, activeIds(), now))
+
+          clearTimeout(awayTimer)
+          if (Object.keys(lastSeenRef.current).length > 0) {
+            awayTimer = setTimeout(() => commit(hostPresence(current(), activeIds(), Date.now())), AWAY_GRACE_MS + 300)
+          }
+        }
+      })
+
+      channel.on('broadcast', { event: 'state' }, ({ payload }) => {
+        if (isHost) return
+        const { state: next, sentAt } = payload as { state: GameState; sentAt: number }
+        stateRef.current = next
+        setState(next)
+        setReceived(true)
+        receivedRef.current = true
+        if (!joinTrackedRef.current) {
+          joinTrackedRef.current = true
+          track('lobby_gick_med', { spel: next.game })
+        }
+        clockOffsetRef.current = Date.now() - sentAt
+        setClockOffset(Date.now() - sentAt)
+      })
+
+      // Min hand i ett kortspel. Meddelanden till andra spelare slängs direkt.
+      channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
+        const { to, hand: next } = payload as { to: string; hand: MyHand | null }
+        if (to === myId) setHand(next)
+      })
+
+      // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.
+      channel.on('broadcast', { event: 'reaction' }, ({ payload }) => {
+        const { id, reaction } = (payload ?? {}) as { id?: string; reaction?: string }
+        const def = findReaction(reaction)
+        if (!id || !def) return
+        const who = onlineRef.current.find((p) => p.id === id) ?? stateRef.current.players[id]
+        if (!who) return
+        const now = Date.now()
+        const history = acceptReaction(reactionHistoryRef.current[id] ?? [], now)
+        if (!history) return
+        reactionHistoryRef.current[id] = history
+        const item: FloatingReaction = {
+          key: `${id}-${now}-${Math.random()}`,
+          name: who.name,
+          emoji: def.emoji,
+        }
+        setFloating((list) => [...list.slice(-7), item])
+        setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)
+      })
+
+      channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
+        if (!isHost) return
+        const { id, value } = payload as { id: string; value: number }
+        let next = addGuess(stateRef.current, id, value, Date.now())
+        next = resolveIfEveryoneGuessed(next)
+        publish(next)
+      })
+
+      channel.on('broadcast', { event: 'move' }, ({ payload }) => {
+        if (!isHost) return
+        const { id, move } = payload as { id: string; move: CardMove }
+        commit(hostMove(current(), id, move, activeIds(), Date.now()))
+      })
+
+      // Värden lämnar med Lämna och pekar ut vem som tar över, så att lobbyn byter värd direkt.
+      channel.on('broadcast', { event: 'handover' }, ({ payload }) => {
+        if (isHost) return
+        if ((payload as { to?: string } | undefined)?.to === myId) promote()
+      })
+
+      channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
+        // Någon har precis anslutit: skicka det aktuella läget till alla, och spelarens hand igen.
+        if (!isHost) return
+        void channel.send({
+          type: 'broadcast',
+          event: 'state',
+          payload: { state: stateRef.current, sentAt: Date.now() },
+        })
+        const id = (payload as { id?: string } | undefined)?.id
+        if (id) {
+          delete sentHandsRef.current[id]
+          sendHands()
+        }
+      })
+
+      // Jag tar över som värd: spara rollen i fliken och gå med i kanalen på nytt som värd. Tillståndet skickas ut
+      // så snart jag är ansluten (se nedan).
+      function promote() {
+        if (isHost || takeoverRef.current) return
+        takeoverRef.current = { offset: clockOffsetRef.current }
+        promotedAtRef.current = Date.now()
+        markAsHost(code, stateRef.current.game)
+        rolesRef.current?.onPromote()
       }
-    })
+
+      // Värden är borta (stängd flik, tappat nät). Är jag den som varit med längst tar jag över efter en stund, så att
+      // en omladdning hinner komma tillbaka först.
+      function watchHost() {
+        clearTimeout(takeoverTimer)
+        if (isHost || !stateReceived() || onlineRef.current.some((p) => p.host)) return
+        if (pickSuccessor(onlineRef.current)?.id !== myId) return
+        takeoverTimer = setTimeout(() => {
+          if (!onlineRef.current.some((p) => p.host) && pickSuccessor(onlineRef.current)?.id === myId) promote()
+        }, TAKEOVER_MS)
+      }
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          setConnected(true)
+          // Gästen frågar efter läget direkt, och igen med jämna mellanrum tills det kommer (se nedan).
+          if (!isHost) sendHello()
+          try {
+            await channel.track({
+              id: myId,
+              name: player.name,
+              avatar: player.avatar,
+              host: isHost,
+              joinedAt: Date.now(),
+            } satisfies OnlinePlayer)
+          } catch {
+            // Närvaron skickas igen när kanalen ansluter på nytt. Tillståndet kommer ändå via hello.
+          }
+          if (isHost) {
+            // Efter en omladdning: skicka allas händer igen.
+            sentHandsRef.current = {}
+            sendHands()
+            // Jag tog precis över: skicka ut tillståndet med klockorna omräknade till min klocka.
+            const takeover = takeoverRef.current
+            if (takeover) {
+              takeoverRef.current = null
+              publish(takeOverState(stateRef.current, takeover.offset))
+            }
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setFailed(true)
+        }
+      })
+      return channel
+    }
 
     const graceTimer = setTimeout(() => setGraceOver(true), NO_HOST_GRACE_MS)
 
     return () => {
+      cancelled = true
       clearTimeout(graceTimer)
       clearTimeout(awayTimer)
       clearTimeout(takeoverTimer)
       channelRef.current = null
       setConnected(false)
-      void supabase.removeChannel(channel)
+      if (opened) closeChannel(opened)
     }
-  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed])
+  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed, sendHello, connectKey])
+
+  // Gästen: frågar värden efter läget igen tills tillståndet kommer. Ett enstaka hello kan försvinna,
+  // t.ex. om det skickas medan värdens flik ligger i bakgrunden.
+  useEffect(() => {
+    if (!shouldRetryHello({ isHost, connected, received })) return
+    const timer = setInterval(sendHello, HELLO_RETRY_MS)
+    return () => clearInterval(timer)
+  }, [isHost, connected, received, sendHello])
+
+  // Gästen: har inget tillstånd kommit efter en stund visas ett meddelande med Försök igen.
+  useEffect(() => {
+    if (isHost || received) return
+    const timer = setTimeout(() => setWaitedTooLong(true), STUCK_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [isHost, received, connectKey])
+
+  // Ansluter på nytt: en ny kanal och ett nytt hello.
+  const reconnect = useCallback(() => {
+    setFailed(false)
+    setGraceOver(false)
+    setWaitedTooLong(false)
+    setConnectKey((key) => key + 1)
+  }, [])
+
+  // Fliken syns igen eller nätet kommer tillbaka: ny anslutning om kanalen har stängts, annars ett nytt hello,
+  // eftersom meddelanden kan ha missats medan fliken låg i bakgrunden.
+  useEffect(() => {
+    if (!me) return
+    function wake() {
+      if (document.visibilityState === 'hidden') return
+      const action = wakeAction({ isHost, channelState: channelRef.current?.state ?? null })
+      if (action === 'reconnect') reconnect()
+      else if (action === 'hello') sendHello()
+    }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('online', wake)
+    return () => {
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('online', wake)
+    }
+  }, [me, isHost, reconnect, sendHello])
 
   // Värden: tidtagning för varje steg i rundan. Timern gäller bara sin egen deadline, så den gör
   // ingenting om rundan redan gått vidare eller värden hoppat fram (se handleDeadline).
@@ -409,16 +486,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
   const hostMissing = !isHost && connected && received && !hostOnline
 
-  let status: LobbyStatus = 'connecting'
-  if (failed) status = 'error'
-  else if (connected && (isHost || (hostOnline && received))) status = 'ready'
-  else if (hostMissing) status = 'ready'
-  // Kopplingen byts (t.ex. när jag tar över som värd): vyn ligger kvar så länge jag har ett tillstånd, så att inget nollställs.
-  else if (!connected && received) status = 'ready'
-  else if (connected && graceOver && !hostOnline) status = 'no-host'
+  const status = lobbyStatus({ isHost, failed, connected, received, hostOnline, graceOver, waitedTooLong })
 
   const actions = useMemo(
     () => ({
+      // Försök igen: ny kanal och nytt hello, t.ex. när en gäst inte kommer in.
+      reconnect,
       setRounds: (rounds: number) => {
         if (isHost) publish(setRounds(stateRef.current, rounds))
       },
@@ -507,7 +580,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (isHost) commit(cancelRematch(current()))
       },
     }),
-    [isHost, me, publish, commit, current, activeIds],
+    [isHost, me, publish, commit, current, activeIds, reconnect],
   )
 
   // Handen gäller bara medan ett kortspel pågår.

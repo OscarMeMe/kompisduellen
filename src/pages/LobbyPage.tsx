@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
@@ -232,6 +232,28 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           <Loader2 className="size-10 animate-spin text-primary" />
           <p>Ansluter till lobby {code}…</p>
         </div>
+      </Narrow>
+    )
+  }
+
+  // Gästen har försökt en stund utan att komma in. Den fortsätter försöka i bakgrunden, men kan också börja om.
+  if (status === 'stuck') {
+    return (
+      <Narrow>
+        <div className="space-y-3 rounded-lg border bg-card p-8 text-center shadow-soft">
+          <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+          <h1 className="text-2xl">Det tar lite längre tid än vanligt</h1>
+          <p className="text-muted-foreground">
+            Vi försöker fortfarande komma in i lobby {code}. Kolla att du har nät, eller försök igen.
+          </p>
+        </div>
+        <Button size="lg" onClick={actions.reconnect}>
+          <RefreshCw aria-hidden />
+          Försök igen
+        </Button>
+        <Button asChild size="lg" variant="outline">
+          <Link to="/#spel">Tillbaka till alla spel</Link>
+        </Button>
       </Narrow>
     )
   }
