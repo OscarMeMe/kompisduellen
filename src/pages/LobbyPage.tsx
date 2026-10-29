@@ -206,18 +206,24 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   }
 
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
-  const { setInMatch, setLeaveGuard } = useLayout()
-  useEffect(() => {
-    if (!askBeforeLeaving) return
-    setLeaveGuard((to) => setLeaveTo(to))
-    return () => setLeaveGuard(null)
-  }, [askBeforeLeaving, setLeaveGuard])
+  const { setInMatch, setLeaveInMatch, setLeaveGuard } = useLayout()
   const inMatch =
     status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal' || state.phase === 'playing')
+  // Testa själv: ensam i en provomgång går det att lämna via loggan, efter en fråga.
+  const leavingPractice = inMatch && state.practice && !othersPresent
+  useEffect(() => {
+    if (!askBeforeLeaving && !leavingPractice) return
+    setLeaveGuard((to) => setLeaveTo(to))
+    return () => setLeaveGuard(null)
+  }, [askBeforeLeaving, leavingPractice, setLeaveGuard])
   useEffect(() => {
     setInMatch(inMatch)
     return () => setInMatch(false)
   }, [inMatch, setInMatch])
+  useEffect(() => {
+    setLeaveInMatch(leavingPractice)
+    return () => setLeaveInMatch(false)
+  }, [leavingPractice, setLeaveInMatch])
 
   if (status === 'connecting') {
     return (
@@ -269,6 +275,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       )}
       <LeaveLobbyDialog
         open={leaveTo !== null}
+        practice={state.practice && !othersPresent}
         nextHost={online.find((p) => !p.host && p.id !== me.id)?.name}
         onStay={() => setLeaveTo(null)}
         onLeave={async () => {

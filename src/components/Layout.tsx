@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
+  const [leaveInMatch, setLeaveInMatch] = useState(false)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
   const setLeaveGuard = useCallback((guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard), [])
@@ -30,8 +31,9 @@ export function Layout() {
             inMatch ? 'justify-center py-3 sm:py-5' : 'py-4',
           )}
         >
-          {/* Loggan leder till startsidan, utom under en match så att ingen lämnar lobbyn av misstag. */}
-          {inMatch ? (
+          {/* Loggan leder till startsidan, utom under en match så att ingen lämnar lobbyn av misstag.
+              I en provomgång går den att klicka på, med en fråga först. */}
+          {inMatch && !leaveInMatch ? (
             <Logo />
           ) : (
             <Link to="/" aria-label="Kompisduellen, till startsidan" className="group shrink-0 py-1" onClick={guarded('/')}>
@@ -61,7 +63,7 @@ export function Layout() {
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
-        <Outlet context={{ setInMatch, setLeaveGuard } satisfies LayoutContext} />
+        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard } satisfies LayoutContext} />
       </main>
     </div>
   )
