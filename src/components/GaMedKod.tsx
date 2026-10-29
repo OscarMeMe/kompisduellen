@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { hasFinePointer } from '@/lib/device'
-import { checkLobby, felText } from '@/lib/lobbykoll'
 import { normalizeCode } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +40,8 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
       return
     }
     setChecking(true)
+    // Kontrollen (och Supabase) hämtas först här, så att startsidan laddar snabbare.
+    const { checkLobby, felText } = await import('@/lib/lobbykoll')
     const result = await checkLobby(code)
     setChecking(false)
     if (result === 'finns') {
