@@ -719,3 +719,45 @@ describe('värden avbryter matchen', () => {
     expect(aborted.matchesPlayed).toBe(0)
   })
 })
+
+describe('frågorna som visats i lobbyn', () => {
+  // Spelar en hel match i Gissa priset med tre rundor och ger tillbaka den avslutade matchen.
+  function playMatch(state: GameState): GameState {
+    let next = startGame({ ...state, rounds: 3 }, ['a', 'b'], NOW)
+    for (let round = 0; round < 3; round++) next = nextRound(playRound(next, { a: 100, b: 1000 }, 100), NOW)
+    return next
+  }
+  const askedIn = (state: GameState) => state.usedItemIds
+
+  it('kommer lobbyn ihåg genom revansch, så att inga frågor upprepas', () => {
+    const first = playMatch(lobby('gissa-priset', ['a', 'b']))
+    expect(first.phase).toBe('finished')
+    expect(askedIn(first)).toHaveLength(3)
+    const host = hostRematch({ state: first, secrets: null }, NOW)
+    expect(askedIn(host.state)).toEqual(askedIn(first))
+    const at = host.state.rematchAt!
+    let second = hostRematchStart(host, ['a', 'b'], at, at).state
+    for (let round = 0; round < 3; round++) second = nextRound(playRound(second, { a: 100, b: 1000 }, 100), NOW)
+    expect(askedIn(second)).toHaveLength(6)
+    expect(new Set(askedIn(second)).size).toBe(6)
+  })
+
+  it('finns kvar när man går till väntrummet, byter spel och kommer tillbaka', () => {
+    const first = playMatch(lobby('gissa-priset', ['a', 'b']))
+    expect(askedIn(backToWaiting(first))).toEqual(askedIn(first))
+    let other = setGame(changeGame(first), 'narmast')
+    expect(askedIn(other)).toEqual(askedIn(first))
+    other = setGame(other, 'gissa-priset')
+    const again = playMatch(other)
+    expect(new Set(askedIn(again)).size).toBe(6)
+  })
+
+  it('finns kvar när värden avbryter en match, och frågan som hann visas räknas som visad', () => {
+    const playing = startGame({ ...lobby('gissa-priset', ['a', 'b']), rounds: 3 }, ['a', 'b'], NOW)
+    expect(askedIn(playing)).toHaveLength(1)
+    const aborted = abortMatch(playing)
+    expect(askedIn(aborted)).toEqual(askedIn(playing))
+    const next = startGame({ ...aborted, rounds: 3 }, ['a', 'b'], NOW)
+    expect(next.itemId).not.toBe(playing.itemId)
+  })
+})
