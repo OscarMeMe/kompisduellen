@@ -99,6 +99,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [graceOver, setGraceOver] = useState(false)
   // Ökas för att ansluta på nytt (Försök igen, fliken syns igen, nätet tillbaka).
   const [connectKey, setConnectKey] = useState(0)
+  // Värden: ökas när fliken syns igen, så att rundor och nedräkningar som borde ha slutat körs direkt. Webbläsaren kan
+  // ha hållit tillbaka klockorna medan fliken låg i bakgrunden.
+  const [wakeTick, setWakeTick] = useState(0)
   // Gästen har försökt komma in längre än STUCK_AFTER_MS utan att få något tillstånd.
   const [waitedTooLong, setWaitedTooLong] = useState(false)
   // Skillnaden mellan min klocka och värdens klocka (ms). Används för nedräkningen.
@@ -489,6 +492,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const action = wakeAction({ isHost, channelState: channelRef.current?.state ?? null })
       if (action === 'reconnect') reconnect()
       else if (action === 'hello') sendHello()
+      if (isHost) setWakeTick((tick) => tick + 1)
     }
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('online', wake)
@@ -508,7 +512,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     const delay = Math.max(0, deadline - Date.now()) + 300
     const timer = setTimeout(() => commit(hostDeadline(current(), Date.now(), deadline, activeIds())), delay)
     return () => clearTimeout(timer)
-  }, [isHost, state.phase, state.deadline, state.round, commit, current, activeIds])
+  }, [isHost, state.phase, state.deadline, state.round, commit, current, activeIds, wakeTick])
 
   // Värden: revanschens nedräkning är slut, så matchen startar. Timern gäller bara sin egen klocka (rematchAt),
   // så en gammal eller avbruten nedräkning startar ingenting (se hostRematchStart).
@@ -521,7 +525,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       commit(hostRematchStart(current(), ids, Date.now(), at))
     }, delay)
     return () => clearTimeout(timer)
-  }, [isHost, state.phase, state.rematchAt, commit, current])
+  }, [isHost, state.phase, state.rematchAt, commit, current, wakeTick])
 
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
