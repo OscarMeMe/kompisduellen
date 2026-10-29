@@ -38,7 +38,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
     <Wide>
       <RoundBadge state={state} />
 
-      {/* Priset och poängen först, sedan resultatlistan och sist faktatexten, så att det viktigaste syns direkt på mobilen. */}
+      {/* Priset och poängen först, sedan faktatexten om saken och sist allas gissningar. */}
       <PriceAnswerCard item={item} target={result.target} revealed={revealed}>
         {revealed && (
           <p className="mt-3 inline-block rounded-full bg-mint-soft px-5 py-2 font-heading text-xl font-bold sm:mt-5 sm:text-3xl">
@@ -50,6 +50,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
           </p>
         )}
       </PriceAnswerCard>
+
+      {revealed && item && <PriceFact item={item} />}
 
       {revealed && (
         <ul className="space-y-2" aria-label="Allas gissningar">
@@ -71,8 +73,6 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
       )}
 
       {revealed && <RoundStanding state={state} meId={me.id} />}
-
-      {revealed && item && <PriceFact item={item} />}
 
       <RevealFooter
         state={state}
