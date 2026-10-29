@@ -4,7 +4,7 @@
 // Avstånd mäts som i poängen (spelets distance). Uteblivna svar räknas inte som gissningar.
 // Rena funktioner, så att de är lätta att testa.
 
-import { matchWinners, type GameState } from '@/lib/match'
+import { matchWinners, rankPlayers, type GameState } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
 
 export type Highlight = {
@@ -281,6 +281,25 @@ function fastestAnswerer(state: GameState): Highlight | null {
     title: 'Blixten',
     text: `${nameOf(state, averages[0].id)} svarade snabbast: ${seconds} s i snitt. Snabbare än sin egen skugga!`,
   }
+}
+
+// Texten under prispallen: vem som vann och med hur mycket.
+export function winnerSummary(state: GameState): string {
+  const ranked = rankPlayers(state)
+  if (state.practice) {
+    const rounds = state.round === 1 ? '1 runda' : `${state.round} rundor`
+    return `Du fick ${ranked[0]?.score ?? 0} poäng på ${rounds}.`
+  }
+  const winners = ranked.filter((p) => p.place === 1)
+  const top = winners[0]?.score ?? 0
+  if (top === 0) return 'Ingen fick poäng den här gången. Revansch?'
+  if (winners.length > 1) {
+    return `Delad seger! ${joinNames(winners.map((p) => p.name))} fick ${winners.length === 2 ? 'båda' : 'alla'} ${top} poäng.`
+  }
+  const winner = `${winners[0].name} vann med ${top} poäng.`
+  const runnersUp = ranked.filter((p) => p.place === 2)
+  if (runnersUp.length === 0) return winner
+  return `${winner} ${top - runnersUp[0].score} poäng före ${joinNames(runnersUp.map((p) => p.name))}!`
 }
 
 // Alla insikter som stämmer för matchen, i fast ordning.

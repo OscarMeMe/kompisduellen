@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchHighlights, validHighlights } from '@/lib/hojdpunkter'
+import { matchHighlights, validHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { addGuess, addPlayers, initialState, nextRound, resolveRound, startGame, type GameState } from '@/lib/match'
 
 const NOW = 1_000_000
@@ -258,3 +258,33 @@ describe('fler insikter', () => {
 })
 
 const ids2 = (state: GameState) => matchHighlights(state).map((h) => h.id).join()
+
+describe('texten under prispallen', () => {
+  // Poängen sätts direkt, så att det är lätt att se vad texten ska bli.
+  function finished(scores: Record<string, number>, changes: Partial<GameState> = {}): GameState {
+    const players = Object.fromEntries(Object.keys(scores).map((id) => [id, { name: id, avatar: '👻' }]))
+    return { ...addPlayers(initialState('gissa-priset'), players), phase: 'finished', round: 5, scores, ...changes }
+  }
+
+  it('visar vinnaren, poängen och marginalen till tvåan', () => {
+    expect(winnerSummary(finished({ Michi: 247, Oscar: 201, Mia: 6 }))).toBe('Michi vann med 247 poäng. 46 poäng före Oscar!')
+  })
+
+  it('nämner alla som delar andraplatsen', () => {
+    expect(winnerSummary(finished({ Michi: 247, Oscar: 201, Mia: 201 }))).toBe('Michi vann med 247 poäng. 46 poäng före Mia och Oscar!')
+  })
+
+  it('säger delad seger när flera delar förstaplatsen', () => {
+    expect(winnerSummary(finished({ Anna: 120, Bo: 120, Cia: 40 }))).toBe('Delad seger! Anna och Bo fick båda 120 poäng.')
+    expect(winnerSummary(finished({ Anna: 3, Bo: 3, Cia: 3 }))).toBe('Delad seger! Anna, Bo och Cia fick alla 3 poäng.')
+  })
+
+  it('utan poäng blir det ingen vinnare', () => {
+    expect(winnerSummary(finished({ Anna: 0, Bo: 0 }))).toBe('Ingen fick poäng den här gången. Revansch?')
+  })
+
+  it('en provomgång visar bara den egna poängen', () => {
+    expect(winnerSummary(finished({ Oscar: 247 }, { practice: true }))).toBe('Du fick 247 poäng på 5 rundor.')
+    expect(winnerSummary(finished({ Oscar: 80 }, { practice: true, round: 1 }))).toBe('Du fick 80 poäng på 1 runda.')
+  })
+})

@@ -7,7 +7,7 @@ import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
 import type { GameInfo } from '@/lib/games'
-import { matchHighlights } from '@/lib/hojdpunkter'
+import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
@@ -97,10 +97,15 @@ export function FinishedView({
       {state.practice ? (
         <div className="space-y-1 rounded-lg border bg-mint-soft p-5 text-center shadow-soft animate-pop">
           <Emoji emoji={ranked[0]?.avatar ?? '🏆'} className="text-5xl" />
-          <p className="font-heading text-3xl font-bold">{ranked[0]?.score ?? 0} poäng</p>
+          <p className="font-heading text-2xl font-bold text-balance sm:text-3xl">{winnerSummary(state)}</p>
         </div>
       ) : (
-        <Podium players={ranked} />
+        <div className="space-y-4">
+          <Podium players={ranked} />
+          <p className="rounded-full bg-sun-soft px-5 py-2.5 text-center font-heading text-lg font-bold text-balance animate-pop sm:text-xl">
+            {winnerSummary(state)}
+          </p>
+        </div>
       )}
 
       {/* Valen kommer direkt efter prispallen. På mobil ligger knapparna fast i nederkant (utan att täcka innehållet,
