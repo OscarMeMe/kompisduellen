@@ -28,6 +28,8 @@ import {
   resumeReveal,
   cancelRematch,
   REMATCH_SECONDS,
+  rematchWishCount,
+  setRematchWish,
   resolveRound,
   restoreHostState,
   roundOptionsFor,
@@ -759,5 +761,63 @@ describe('frågorna som visats i lobbyn', () => {
     expect(askedIn(aborted)).toEqual(askedIn(playing))
     const next = startGame({ ...aborted, rounds: 3 }, ['a', 'b'], NOW)
     expect(next.itemId).not.toBe(playing.itemId)
+  })
+})
+
+describe('önskemål om revansch', () => {
+  // En avslutad match med a (värd), b, c, d och e.
+  function finished(ids = ['a', 'b', 'c', 'd', 'e']): GameState {
+    let state = startGame(lobby('gissa-priset', ids, { rounds: 1 }), ids, NOW)
+    state = nextRound(playRound(state, Object.fromEntries(ids.map((id) => [id, 100])), 100), NOW)
+    return state
+  }
+  const ids = ['a', 'b', 'c', 'd', 'e']
+
+  it('räknar hur många som vill ha revansch, utan värden', () => {
+    let state = finished()
+    expect(state.phase).toBe('finished')
+    state = setRematchWish(state, 'b', true)
+    state = setRematchWish(state, 'c', true)
+    state = setRematchWish(state, 'd', true)
+    expect(rematchWishCount(state, ids, ['a'])).toEqual({ wanting: 3, of: 4 })
+  })
+
+  it('går att ångra, och samma önskemål två gånger räknas en gång', () => {
+    let state = setRematchWish(finished(), 'b', true)
+    expect(setRematchWish(state, 'b', true)).toBe(state)
+    state = setRematchWish(state, 'b', false)
+    expect(state.rematchWishes).toEqual([])
+    expect(setRematchWish(state, 'b', false)).toBe(state)
+  })
+
+  it('räknar bara de som är online och var med i matchen', () => {
+    const state = setRematchWish(setRematchWish(finished(), 'b', true), 'c', true)
+    expect(rematchWishCount(state, ['a', 'b', 'd'], ['a'])).toEqual({ wanting: 1, of: 2 })
+    expect(setRematchWish(state, 'okänd', true)).toBe(state)
+  })
+
+  it('går bara att önska på slutskärmen efter en riktig match, innan revanschen har startat', () => {
+    const playing = startGame(lobby('gissa-priset', ['a', 'b']), ['a', 'b'], NOW)
+    expect(setRematchWish(playing, 'b', true)).toBe(playing)
+    const practice = finished(['a'])
+    expect(practice.practice).toBe(true)
+    expect(setRematchWish(practice, 'a', true)).toBe(practice)
+    const counting = { ...finished(), rematchAt: NOW + 3000 }
+    expect(setRematchWish(counting, 'b', true)).toBe(counting)
+  })
+
+  it('nollställs vid revansch, byt spel och tillbaka till väntrummet', () => {
+    const wished = setRematchWish(setRematchWish(finished(), 'b', true), 'c', true)
+    const host = hostRematch({ state: wished, secrets: null }, NOW)
+    expect(host.state.rematchWishes).toEqual([])
+    const started = hostRematchStart(host, ids, host.state.rematchAt!, host.state.rematchAt!)
+    expect(started.state.rematchWishes).toEqual([])
+    expect(changeGame(wished).rematchWishes).toEqual([])
+    expect(backToWaiting(wished).rematchWishes).toEqual([])
+  })
+
+  it('nollställs när en ny match startar', () => {
+    const wished = { ...lobby('gissa-priset', ['a', 'b']), rematchWishes: ['b'] }
+    expect(startGame(wished, ['a', 'b'], NOW).rematchWishes).toEqual([])
   })
 })

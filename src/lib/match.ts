@@ -86,6 +86,9 @@ export type GameState = {
   practice: boolean
   // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
   rematchAt: number | null
+  // Spelare (inte värden) som har tryckt Jag vill ha revansch på slutskärmen. Bara ett önskemål, startar inget.
+  // Nollställs när en ny match startar eller värden går till väntrummet (Revansch, Byt spel).
+  rematchWishes: string[]
   // Värden har tryckt Byt spel och väljer nästa spel. De andra ser det tills värden väljer eller startar.
   choosingGame: boolean
   // Ett meddelande till gruppen i väntrummet, t.ex. att en match avbröts när värden lämnade. Försvinner när en match startar.
@@ -138,6 +141,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     autoAdvance: true,
     practice: false,
     rematchAt: null,
+    rematchWishes: [],
     countdownKind: 'rematch',
     choosingGame: false,
     notice: null,
@@ -272,6 +276,7 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
     matchRounds: [],
     practice,
     rematchAt: null,
+    rematchWishes: [],
     choosingGame: false,
     notice: null,
   }
@@ -429,10 +434,27 @@ function resetMatch(state: GameState): GameState {
     itemId: null,
     practice: false,
     rematchAt: null,
+    rematchWishes: [],
     choosingGame: false,
     notice: null,
     cards: null,
   }
+}
+
+// En spelare önskar revansch (wants = true) eller ångrar sig. Bara på slutskärmen efter en riktig match, bara för
+// spelare som var med i matchen, och inte när värden redan har startat revanschen.
+export function setRematchWish(state: GameState, id: string, wants: boolean): GameState {
+  if (state.phase !== 'finished' || state.practice || state.rematchAt !== null || !state.players[id]) return state
+  const has = state.rematchWishes.includes(id)
+  if (has === wants) return state
+  const rematchWishes = wants ? [...state.rematchWishes, id] : state.rematchWishes.filter((other) => other !== id)
+  return { ...state, rematchWishes }
+}
+
+// Hur många som vill ha revansch av dem som kan önska: spelarna i matchen som är online, utom värden.
+export function rematchWishCount(state: GameState, onlineIds: string[], hostIds: string[]): { wanting: number; of: number } {
+  const eligible = onlineIds.filter((id) => state.players[id] && !hostIds.includes(id))
+  return { wanting: eligible.filter((id) => state.rematchWishes.includes(id)).length, of: eligible.length }
 }
 
 // Sorterar på poäng. Lika poäng ger samma placering (1, 2, 2, 4 …).

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { addPlayers, initialState, startGame } from '@/lib/match'
-import { isFromHost, parseGuess, parseHand, parseHandover, parseMove, parseStateMessage } from '@/lib/meddelanden'
+import {
+  isFromHost,
+  parseGuess,
+  parseHand,
+  parseHandover,
+  parseMove,
+  parseRematchWish,
+  parseStateMessage,
+} from '@/lib/meddelanden'
 
 const players = { a: { name: 'Anna', avatar: '👻' }, b: { name: 'Bo', avatar: '🤖' } }
 const lobby = addPlayers(initialState('gissa-priset'), players)
@@ -32,6 +40,7 @@ describe('läget från värden', () => {
       { state: { ...lobby, players: { a: { name: 5 } } }, sentAt: 1 },
       { state: { ...lobby, scores: { a: 'massor' } }, sentAt: 1 },
       { state: { ...lobby, matchRounds: 'nej' }, sentAt: 1 },
+      { state: { ...lobby, rematchWishes: [1] }, sentAt: 1 },
       { state: { ...lobby, lastResult: { target: 1 } }, sentAt: 1 },
       { state: { ...lobby, cards: { step: 'choosing' } }, sentAt: 1 },
       { state: { ...lobby, game: 7 }, sentAt: 1 },
@@ -107,5 +116,23 @@ describe('händer och värdbyten', () => {
     expect(parseHandover({ to: 'a', from: 'b' })).toEqual({ to: 'a', from: 'b' })
     expect(parseHandover({ to: 'a' })).toEqual({ to: 'a', from: null })
     expect(parseHandover({})).toBeNull()
+  })
+})
+
+describe('önskemål om revansch', () => {
+  it('tar emot ett önskemål och ett ångrat önskemål', () => {
+    expect(parseRematchWish({ id: 'b', wants: true })).toEqual({ id: 'b', wants: true })
+    expect(parseRematchWish({ id: 'b', wants: false })).toEqual({ id: 'b', wants: false })
+  })
+
+  it('slänger trasiga önskemål', () => {
+    for (const payload of [undefined, null, 'ja', {}, { id: 'b' }, { wants: true }, { id: 5, wants: true }, { id: 'b', wants: 'ja' }]) {
+      expect(parseRematchWish(payload)).toBeNull()
+    }
+  })
+
+  it('fyller i en tom lista när en äldre värd inte skickar önskemålen', () => {
+    const { rematchWishes: _wishes, ...old } = lobby
+    expect(parseStateMessage({ state: old, sentAt: 1 })?.state.rematchWishes).toEqual([])
   })
 })

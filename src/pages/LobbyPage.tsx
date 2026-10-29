@@ -400,7 +400,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           game={game}
           state={state}
           isHost={isHost}
-          onlineCount={online.length}
+          meId={me.id}
+          online={online}
+          onWishRematch={actions.wishRematch}
           onRematch={(settings) => {
             setPickGame(false)
             actions.rematch(settings)
