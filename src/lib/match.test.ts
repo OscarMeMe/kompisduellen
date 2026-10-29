@@ -38,6 +38,8 @@ import {
   type GameState,
   type HostState,
 } from '@/lib/match'
+import { parseStateMessage } from '@/lib/meddelanden'
+import { takeOverState } from '@/lib/vardbyte'
 
 const NOW = 1_000_000
 
@@ -750,6 +752,46 @@ describe('frågorna som visats i lobbyn', () => {
     other = setGame(other, 'gissa-priset')
     const again = playMatch(other)
     expect(new Set(askedIn(again)).size).toBe(6)
+  })
+
+  it('följer med till en ny värd: listan går genom kanalen och finns kvar efter övertagandet', () => {
+    const first = playMatch(lobby('gissa-priset', ['a', 'b']))
+    // Gästen b har fått läget genom kanalen (som alla läget) och tar över när a försvinner.
+    const received = parseStateMessage({ state: first, sentAt: 5, from: 'a' })!.state
+    expect(askedIn(received)).toEqual(askedIn(first))
+    const takenOver = takeOverState(received, 1234)
+    expect(askedIn(takenOver)).toEqual(askedIn(first))
+    // Den nya värden kör revansch: inga frågor från första matchen kommer tillbaka.
+    const host = hostRematch({ state: takenOver, secrets: null }, NOW)
+    const at = host.state.rematchAt!
+    let second = hostRematchStart(host, ['a', 'b'], at, at).state
+    for (let round = 0; round < 3; round++) second = nextRound(playRound(second, { a: 100, b: 1000 }, 100), NOW)
+    expect(new Set(askedIn(second)).size).toBe(6)
+  })
+
+  it('finns kvar när värden tar över mitt i en runda', () => {
+    const playing = startGame({ ...lobby('gissa-priset', ['a', 'b']), rounds: 3 }, ['a', 'b'], NOW)
+    const takenOver = takeOverState(playing, 500)
+    expect(takenOver.phase).toBe('guessing')
+    expect(askedIn(takenOver)).toEqual(askedIn(playing))
+    const next = nextRound(playRound(takenOver, { a: 100, b: 1000 }, 100), NOW)
+    expect(askedIn(next)).toHaveLength(2)
+    expect(next.itemId).not.toBe(playing.itemId)
+  })
+
+  it('finns kvar när värden laddar om sidan (saveHostLobby sparar tillståndet som JSON)', () => {
+    const first = playMatch(lobby('gissa-priset', ['a', 'b']))
+    const saved = JSON.parse(JSON.stringify({ state: first, secrets: null }))
+    const restored = restoreHostState(saved)!
+    expect(askedIn(restored.state)).toEqual(askedIn(first))
+    const again = playMatch(backToWaiting(restored.state))
+    expect(new Set(askedIn(again)).size).toBe(6)
+  })
+
+  it('börjar tomt när en sparad lobby från en äldre version saknar listan', () => {
+    const { usedItemIds: _used, ...old } = lobby('gissa-priset', ['a', 'b'])
+    expect(restoreHostState({ state: old, secrets: null })?.state.usedItemIds).toEqual([])
+    expect(parseStateMessage({ state: old, sentAt: 1 })?.state.usedItemIds).toEqual([])
   })
 
   it('finns kvar när värden avbryter en match, och frågan som hann visas räknas som visad', () => {
