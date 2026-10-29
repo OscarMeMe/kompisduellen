@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchHighlights, validHighlights, winnerSummary } from '@/lib/hojdpunkter'
+import { lowerFirst, matchHighlights, validHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { addGuess, addPlayers, initialState, nextRound, resolveRound, startGame, type GameState } from '@/lib/match'
 
 const NOW = 1_000_000
@@ -25,7 +25,10 @@ describe('matchens höjdpunkter', () => {
   it('visar fullträffen med sak och pris', () => {
     const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 79, mia: 100 }, price: 79 }])
     const hit = validHighlights(state).find((h) => h.id === 'fulltraff')
-    expect(hit?.text).toBe('Oscar prickade rätt: Ikeas hjärtformade kudde med armar, 79 kr.')
+    expect(hit).toMatchObject({
+      title: 'Pris-oraklet',
+      text: 'Oscar gissade 79 kr på Ikeas hjärtformade kudde med armar och fick fullpoäng. Så nära att vi börjar misstänka insiderinformation.',
+    })
   })
 
   it('visar ingen fullträff när ingen fick 100 poäng', () => {
@@ -37,7 +40,7 @@ describe('matchens höjdpunkter', () => {
     // 790 kr är tio gånger fel. 10 kr är nästan åtta gånger fel, alltså lite närmare.
     const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 790, mia: 10 }, price: 79 }])
     const miss = validHighlights(state).find((h) => h.id === 'langst-ifran')
-    expect(miss?.text).toBe('Oscar gissade 790 kr på ”Ikeas hjärtformade kudde med armar”. Rätt pris var 79 kr.')
+    expect(miss?.text).toBe('Oscar gissade 790 kr på Ikeas hjärtformade kudde med armar. Rätt pris var 79 kr. Vi säger inget mer.')
   })
 
   it('räknar inte uteblivna svar som dåliga gissningar', () => {
@@ -50,7 +53,7 @@ describe('matchens höjdpunkter', () => {
     // Dubbla och halva priset är lika fel.
     const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 200, mia: 50 }, price: 100 }])
     const miss = validHighlights(state).find((h) => h.id === 'langst-ifran')
-    expect(miss?.text).toBe('Oscar och Mia delar på den här: lika långt ifrån rätt svar.')
+    expect(miss?.text).toBe('Oscar och Mia delar på den här. Lika långt ifrån, lika stolta.')
   })
 
   it('visar avgörandet när sista rundan vände matchen', () => {
@@ -62,7 +65,7 @@ describe('matchens höjdpunkter', () => {
       ],
     )
     const decided = validHighlights(state).find((h) => h.id === 'sista-rundan')
-    expect(decided?.text).toBe('Mia låg efter inför sista rundan men vände och vann!')
+    expect(decided?.text).toBe('Mia låg efter inför sista rundan och vände allt. Snacka om timing!')
   })
 
   it('visar avgörandet när en delad ledning blev en ensam vinst', () => {
@@ -74,7 +77,7 @@ describe('matchens höjdpunkter', () => {
       ],
     )
     const decided = validHighlights(state).find((h) => h.id === 'sista-rundan')
-    expect(decided?.text).toBe('Oscar delade ledningen inför sista rundan och drog ifrån på slutet.')
+    expect(decided?.text).toBe('Oscar delade ledningen inför sista rundan och drog ifrån när det gällde.')
   })
 
   it('visar inget avgörande om ledaren bara behöll ledningen eller om det blev delad seger', () => {
@@ -138,10 +141,10 @@ function playTimed(ids: string[], rounds: Timed[]): GameState {
 
 const find = (state: GameState, id: string) => validHighlights(state).find((h) => h.id === id)
 
-describe('fler insikter', () => {
+describe('fler utmärkelser', () => {
   it('Tankeläsare: två gissade exakt samma', () => {
     const state = playMatch(['oscar', 'mia', 'kim'], [{ guesses: { oscar: 80, mia: 80, kim: 20 }, price: 79 }])
-    expect(find(state, 'tankelasare')?.text).toContain('Oscar och Mia gissade exakt samma sak: 80 kr')
+    expect(find(state, 'tankelasare')?.text).toBe('Två hjärnor, en tanke: Oscar och Mia gissade exakt samma, 80 kr.')
   })
 
   it('Tankeläsare saknas när alla gissade olika', () => {
@@ -185,7 +188,7 @@ describe('fler insikter', () => {
         { guesses: { oscar: 10_000, mia: 100 }, price: 100 }, // Mia 200 mot Oscar 80
       ],
     )
-    expect(find(state, 'comeback')?.text).toBe('Mia låg sist efter runda 1 men vände och tog hem segern!')
+    expect(find(state, 'comeback')?.text).toBe('Mia låg sist efter runda 1 men tog hem segern. Räkna aldrig bort Mia!')
   })
 
   it('Comeback saknas när vinnaren aldrig var sist', () => {
@@ -209,7 +212,7 @@ describe('fler insikter', () => {
         { guesses: { oscar: 125, mia: 100 }, price: 100 },
       ],
     )
-    expect(find(state, 'stabilast')?.text).toContain('Oscar höll jämnast nivå')
+    expect(find(state, 'stabilast')?.text).toContain('Oscar fick mellan')
     const same = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 100, mia: 100 }, price: 100 }, { guesses: { oscar: 100, mia: 100 }, price: 100 }, { guesses: { oscar: 100, mia: 100 }, price: 100 }])
     expect(find(same, 'stabilast')).toBeUndefined()
   })
@@ -224,7 +227,7 @@ describe('fler insikter', () => {
       ],
     )
     expect(find(state, 'sista-sekunden')?.text).toContain('Mia svarade sist i 3 av 3 rundor')
-    expect(find(state, 'blixten')?.text).toContain('Oscar svarade snabbast')
+    expect(find(state, 'blixten')?.text).toBe('Oscar svarade på 3 sekunder i snitt. Läste du ens frågan?')
   })
 
   it('Blixten saknas när tiderna ligger för nära varandra eller saknas', () => {
@@ -254,6 +257,137 @@ describe('fler insikter', () => {
     const picks = new Set<string>()
     for (let shift = 0; shift < 40; shift++) picks.add(ids2(playMatch(['oscar', 'mia'], rounds(shift))))
     expect(picks.size).toBeGreaterThan(1)
+  })
+  it('Närmast vinner får egna titlar och ingen plånbok', () => {
+    const players = { oscar: { name: 'Oscar', avatar: '👻' }, mia: { name: 'Mia', avatar: '👽' } }
+    let state = startGame({ ...addPlayers(initialState('narmast'), players), rounds: 3 }, ['oscar', 'mia'], NOW)
+    for (const [oscar, mia, target] of [[10, 90, 50], [20, 80, 50], [30, 70, 30]]) {
+      state = addGuess(addGuess(state, 'oscar', oscar), 'mia', mia)
+      state = nextRound(resolveRound(state, NOW, target), NOW)
+    }
+    expect(find(state, 'snalast')).toMatchObject({ title: 'Lågt och lugnt', text: 'Oscar gissade lägst i 3 av 3 rundor. Försiktig typ.' })
+    expect(find(state, 'slosaren')?.title).toBe('Högt i tak')
+    expect(find(state, 'fulltraff')).toMatchObject({ title: 'Prickskytten', text: 'Oscar gissade exakt 30. Mitt i prick!' })
+    // Stadig som en klippa finns bara i Gissa priset.
+    expect(find(state, 'stabilast')).toBeUndefined()
+  })
+
+  it('Start till mål: ensam ledare efter varje runda', () => {
+    const state = playMatch(
+      ['oscar', 'mia'],
+      [
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+        { guesses: { oscar: 150, mia: 100 }, price: 100 },
+      ],
+    )
+    expect(find(state, 'start-till-mal')?.text).toBe('Oscar ledde efter varje runda. Ingen kom ens nära.')
+    // Lika efter första rundan räknas inte.
+    const tiedStart = playMatch(
+      ['oscar', 'mia'],
+      [
+        { guesses: { oscar: 100, mia: 100 }, price: 100 },
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+      ],
+    )
+    expect(find(tiedStart, 'start-till-mal')).toBeUndefined()
+  })
+
+  it('Moralisk segrare: flest vunna rundor men inte matchen', () => {
+    // Tre gånger fel ger några få poäng, fyra gånger fel ger noll. Oscar vinner tre rundor med lite, Mia en med 100.
+    const state = playMatch(
+      ['oscar', 'mia'],
+      [
+        { guesses: { oscar: 300, mia: 400 }, price: 100 },
+        { guesses: { oscar: 300, mia: 400 }, price: 100 },
+        { guesses: { oscar: 300, mia: 400 }, price: 100 },
+        { guesses: { oscar: 400, mia: 100 }, price: 100 },
+      ],
+    )
+    expect(state.scores.mia).toBeGreaterThan(state.scores.oscar)
+    expect(find(state, 'moralisk-segrare')?.text).toBe('Oscar vann flest rundor (3 st) men inte matchen. Moralisk segrare!')
+  })
+
+  it('Moralisk segrare saknas när den som vann flest rundor också vann matchen', () => {
+    const state = playMatch(
+      ['oscar', 'mia'],
+      [
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+        { guesses: { oscar: 100, mia: 150 }, price: 100 },
+      ],
+    )
+    expect(find(state, 'moralisk-segrare')).toBeUndefined()
+  })
+
+  it('Var är du?: missade flest rundor men svarade minst en gång', () => {
+    const state = playMatch(
+      ['oscar', 'mia', 'kim'],
+      [
+        { guesses: { oscar: 100, mia: 100, kim: 100 }, price: 100 },
+        { guesses: { oscar: 100, mia: 100 }, price: 100 },
+        { guesses: { oscar: 100 }, price: 100 },
+        { guesses: { oscar: 100, mia: 100 }, price: 100 },
+      ],
+    )
+    expect(find(state, 'var-ar-du')?.text).toBe('Kim missade att svara i 3 rundor. Hämtade du snacks?')
+  })
+
+  it('Var är du? saknas för den som aldrig svarade och vid lika många missar', () => {
+    const never = playMatch(
+      ['oscar', 'mia'],
+      [
+        { guesses: { oscar: 100 }, price: 100 },
+        { guesses: { oscar: 100 }, price: 100 },
+      ],
+    )
+    expect(find(never, 'var-ar-du')).toBeUndefined()
+    const tied = playMatch(
+      ['oscar', 'mia', 'kim'],
+      [
+        { guesses: { oscar: 100, mia: 100, kim: 100 }, price: 100 },
+        { guesses: { oscar: 100 }, price: 100 },
+        { guesses: { oscar: 100 }, price: 100 },
+      ],
+    )
+    expect(find(tied, 'var-ar-du')).toBeUndefined()
+  })
+
+  it('en ensam provomgång får bara fullträffen', () => {
+    const state = playMatch(
+      ['oscar'],
+      [
+        { guesses: { oscar: 100 }, price: 100 },
+        { guesses: { oscar: 100 }, price: 100 },
+        { guesses: {}, price: 100 },
+        { guesses: {}, price: 100 },
+      ],
+    )
+    expect(ids(state)).toEqual(['fulltraff'])
+  })
+
+  it('slumpar texten men ger samma text till alla', () => {
+    const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 790, mia: 10 }, price: 79 }])
+    const texts = new Set([0, 0.5, 0.99].map((r) => validHighlights(state, () => r).find((h) => h.id === 'langst-ifran')?.text))
+    expect(texts.size).toBe(3)
+    expect(matchHighlights(state)).toEqual(matchHighlights(state))
+  })
+
+  it('sakens namn får liten bokstav mitt i meningen, men namn behåller sin', () => {
+    expect(lowerFirst('En ny Volvo Amazon')).toBe('en ny Volvo Amazon')
+    expect(lowerFirst('Att hyra en ishall')).toBe('att hyra en ishall')
+    expect(lowerFirst('Tåg Norrköping–Söderköping')).toBe('tåg Norrköping–Söderköping')
+    expect(lowerFirst('Steve Jobs slitna sandaler')).toBe('Steve Jobs slitna sandaler')
+    expect(lowerFirst('Ikeas soffa Klippan')).toBe('Ikeas soffa Klippan')
+  })
+
+  it('"trodde att" används aldrig för saker som börjar med att', () => {
+    const state = playMatch(['oscar', 'mia'], [{ guesses: { oscar: 790, mia: 10 }, price: 79 }])
+    const withAtt = { ...state, matchRounds: state.matchRounds.map((r) => ({ ...r, itemId: 'hogskoleprovet-2016' })) }
+    for (const r of [0, 0.4, 0.6, 0.99]) {
+      const text = validHighlights(withAtt, () => r).find((h) => h.id === 'langst-ifran')?.text ?? ''
+      expect(text).not.toContain('trodde att att')
+    }
   })
 })
 

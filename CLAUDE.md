@@ -74,7 +74,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `prisdata.ts`: typen `PriceItem` och `findPriceItem`. Själva sakerna i Gissa priset (pris, fakta, källa och ibland en bild) ligger i `prisdata.json`. Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
-  - `hojdpunkter.ts`: höjdpunkterna efter en match (fullträff, längst ifrån, avgjorde i sista rundan)
+  - `hojdpunkter.ts`: utmärkelserna efter en match (t.ex. Pris-oraklet, Snåljåpen, Moralisk segrare) med två eller tre texter var som slumpas med matchens frö, och `winnerSummary` med texten under prispallen. Alla kräver minst två spelare utom fullträffen, och lika resultat ger ingen eller en delad utmärkelse. Korten visas med `AwardCard`
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
   - `lobbykoll.ts`: kollar om en kod leder till en lobby som lever (lyssnar på närvaron i kanalen `lobby:KOD` utan att synas där). Används av kodfältet på startsidan. Utan värd inom 1,5 sekunder är lobbyn avslutad
