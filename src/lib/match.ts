@@ -475,7 +475,7 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
   const scores = ids.map(after).sort((a, b) => b - a)
   const best = Math.max(0, scores[0] ?? 0)
   const leaderIds = best > 0 ? ids.filter((id) => after(id) === best) : []
-  // "Nära" = högst så mycket som någon fått i en enda runda hittills (1 i Närmast vinner, upp till 100 i Gissa priset).
+  // Det mesta någon fått i en enda runda hittills (1 i Närmast vinner, upp till 100 i Gissa priset).
   const roundMax = Math.max(1, ...[...state.matchRounds, result].flatMap((round) => Object.values(round.points)))
   const place = placeOf(after)
   const gap = best - after(playerId)
@@ -483,7 +483,7 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
   let kind: StandingKind
   if (leaderIds.length === 0) kind = 'none'
   else if (leaderIds.includes(playerId)) kind = leaderIds.length === 1 ? 'leader' : 'shared'
-  else if (gap <= roundMax) kind = 'close'
+  else if (gap <= closeGap(roundMax)) kind = 'close'
   else if (after(playerId) === scores[scores.length - 1]) kind = 'last'
   else kind = place <= Math.ceil(ids.length / 2) ? 'top' : 'middle'
 
@@ -493,6 +493,37 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
     decider: state.round === state.rounds - 1 && best > 0 && best - (scores[1] ?? 0) <= roundMax,
     leaderIds,
   }
+}
+
+// "Nära ledaren" = högst en fjärdedel av en rundas poäng efter (minst 1). I Gissa priset, där en runda ger upp till
+// 100 poäng, är det 25 poäng. I Närmast vinner, där rundans vinnare får 1 poäng, är det 1 poäng.
+function closeGap(roundMax: number): number {
+  return Math.max(1, Math.round(roundMax / 4))
+}
+
+// Raden medan man väntar på de andra efter att ha låst sitt svar: den verkliga ställningen i poäng för spelaren,
+// från rundorna som redan är avgjorda (andras gissningar i den här rundan syns aldrig). Ingen rad i första rundan,
+// i en provomgång eller med färre än två spelare. I sista rundan börjar raden med "Sista frågan."
+export function waitingStanding(state: GameState, playerId: string): string | null {
+  const ids = Object.keys(state.players)
+  if (state.practice || !state.players[playerId] || ids.length < 2 || state.round <= 1) return null
+  const score = (id: string) => state.scores[id] ?? 0
+  const name = (id: string) => state.players[id]?.name ?? 'Någon'
+  const prefix = state.round >= state.rounds ? (state.game === 'gissa-priset' ? 'Sista frågan. ' : 'Sista rundan. ') : ''
+  const best = Math.max(...ids.map(score))
+  if (best <= 0) return `${prefix}Ingen har fått poäng än.`
+
+  const leaders = ids.filter((id) => score(id) === best)
+  if (score(playerId) === best) {
+    const others = leaders.filter((id) => id !== playerId)
+    if (others.length === 1) return `${prefix}Du delar ledningen med ${name(others[0])}.`
+    if (others.length > 1) return `${prefix}Du delar ledningen med ${others.length} andra.`
+    const second = Math.max(...ids.filter((id) => id !== playerId).map(score))
+    return `${prefix}Du leder med ${best - second} poäng. Håll ihop nu.`
+  }
+  const ahead =
+    leaders.length === 1 ? name(leaders[0]) : leaders.length === 2 ? `${name(leaders[0])} och ${name(leaders[1])}` : 'ledarna'
+  return `${prefix}Du ligger ${best - score(playerId)} poäng efter ${ahead}.`
 }
 
 // Hur stor del av vinnarens poäng en spelare har (0–1), för stapelhöjden på prispallen.

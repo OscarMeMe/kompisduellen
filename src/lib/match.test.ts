@@ -32,6 +32,7 @@ import {
   restoreHostState,
   roundOptionsFor,
   roundStanding,
+  waitingStanding,
   setGame,
   setTempo,
   startGame,
@@ -595,6 +596,18 @@ describe('ställningen efter en runda', () => {
     expect(roundStanding(last, 'b')).toBeNull()
   })
 
+  it('flåsar ledaren i nacken bara när man verkligen ligger nära i Gissa priset', () => {
+    const ids = ['a', 'b']
+    const start = startGame(lobby('gissa-priset', ids, { rounds: 5 }), ids, NOW)
+    // Rätt pris 100: a gissar exakt (100 poäng), b gissar 35 och ligger långt efter, b gissar 90 och ligger nära.
+    const far = playRound(start, { a: 100, b: 35 }, 100)
+    expect(far.scores.a - far.scores.b).toBeGreaterThan(25)
+    expect(roundStanding(far, 'b')?.kind).not.toBe('close')
+    const near = playRound(start, { a: 100, b: 90 }, 100)
+    expect(near.scores.a - near.scores.b).toBeLessThanOrEqual(25)
+    expect(roundStanding(near, 'b')?.kind).toBe('close')
+  })
+
   it('allt avgörs i sista rundan när toppen ligger jämnt', () => {
     expect(roundStanding(play(match(['a', 'b'], 3), ['a', 'b']), 'a')?.decider).toBe(true)
     expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'a', 'a']), 'b')?.decider).toBe(false)
@@ -759,5 +772,58 @@ describe('frågorna som visats i lobbyn', () => {
     expect(askedIn(aborted)).toEqual(askedIn(playing))
     const next = startGame({ ...aborted, rounds: 3 }, ['a', 'b'], NOW)
     expect(next.itemId).not.toBe(playing.itemId)
+  })
+})
+
+describe('ställningen medan man väntar på de andra', () => {
+  // Gissa priset med poäng satta direkt, i runda 2 av 5 (eller den runda som anges).
+  function waiting(scores: Record<string, number>, round = 2, changes: Partial<GameState> = {}): GameState {
+    const ids = Object.keys(scores)
+    const state = startGame(lobby('gissa-priset', ids, { rounds: 5 }), ids, NOW)
+    return { ...state, round, scores, ...changes }
+  }
+
+  it('säger hur mycket man leder med', () => {
+    expect(waitingStanding(waiting({ a: 90, b: 83, c: 10 }), 'a')).toBe('Du leder med 7 poäng. Håll ihop nu.')
+  })
+
+  it('säger hur mycket man ligger efter och efter vem', () => {
+    expect(waitingStanding(waiting({ a: 90, b: 83, c: 10 }), 'b')).toBe('Du ligger 7 poäng efter A.')
+    expect(waitingStanding(waiting({ a: 90, b: 83, c: 10 }), 'c')).toBe('Du ligger 80 poäng efter A.')
+  })
+
+  it('börjar med Sista frågan inför sista rundan', () => {
+    expect(waitingStanding(waiting({ a: 90, b: 83 }, 5), 'b')).toBe('Sista frågan. Du ligger 7 poäng efter A.')
+    expect(waitingStanding(waiting({ a: 90, b: 83 }, 5), 'a')).toBe('Sista frågan. Du leder med 7 poäng. Håll ihop nu.')
+  })
+
+  it('hanterar delad ledning', () => {
+    expect(waitingStanding(waiting({ a: 50, b: 50, c: 20 }), 'a')).toBe('Du delar ledningen med B.')
+    expect(waitingStanding(waiting({ a: 50, b: 50, c: 50, d: 1 }), 'a')).toBe('Du delar ledningen med 2 andra.')
+    expect(waitingStanding(waiting({ a: 50, b: 50, c: 20 }), 'c')).toBe('Du ligger 30 poäng efter A och B.')
+    expect(waitingStanding(waiting({ a: 50, b: 50, c: 50, d: 1 }), 'd')).toBe('Du ligger 49 poäng efter ledarna.')
+  })
+
+  it('visar ingen ställning i första rundan, i en provomgång eller med en spelare', () => {
+    expect(waitingStanding(waiting({ a: 0, b: 0 }, 1), 'a')).toBeNull()
+    expect(waitingStanding(waiting({ a: 40, b: 10 }, 2, { practice: true }), 'a')).toBeNull()
+    expect(waitingStanding(waiting({ a: 40 }), 'a')).toBeNull()
+    expect(waitingStanding(waiting({ a: 40, b: 10 }), 'okänd')).toBeNull()
+  })
+
+  it('säger att ingen har poäng när alla står på noll efter första rundan', () => {
+    expect(waitingStanding(waiting({ a: 0, b: 0 }), 'a')).toBe('Ingen har fått poäng än.')
+  })
+
+  it('bygger bara på avgjorda rundor, aldrig på gissningar i den pågående rundan', () => {
+    const state = waiting({ a: 90, b: 83 })
+    const guessed = addGuess(addGuess(state, 'a', 1), 'b', 5000)
+    expect(waitingStanding(guessed, 'b')).toBe(waitingStanding(state, 'b'))
+  })
+
+  it('säger Sista rundan i Närmast vinner', () => {
+    const ids = ['a', 'b']
+    const state = { ...startGame(lobby('narmast', ids, { rounds: 3 }), ids, NOW), round: 3, scores: { a: 2, b: 1 } }
+    expect(waitingStanding(state, 'b')).toBe('Sista rundan. Du ligger 1 poäng efter A.')
   })
 })
