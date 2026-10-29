@@ -11,6 +11,15 @@ import {
   wakeAction,
 } from '@/lib/anslutning'
 import { closeChannel, waitForChannel } from '@/lib/kanaler'
+import {
+  isFromHost,
+  parseGuess,
+  parseHand,
+  parseHandover,
+  parseMove,
+  parseStateMessage,
+  type StateMessage,
+} from '@/lib/meddelanden'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
@@ -58,6 +67,8 @@ import {
 export type OnlinePlayer = Player & {
   host: boolean
   joinedAt: number
+  // Skickar alltid med sitt id i läget och händerna (se meddelanden.ts). Saknas hos äldre versioner av sajten.
+  sendsFrom?: boolean
 }
 
 export type { LobbyStatus } from '@/lib/anslutning'
@@ -122,6 +133,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Övriga spelare: har vi räknat att vi gick med i lobbyn?
   const joinTrackedRef = useRef(false)
 
+  // Mitt id. Värden skickar med det (from), så att gästerna kan kolla att läget kommer från värden.
+  const meId = me?.id ?? null
+  // Gästen: ett läge från någon som ännu inte syns som värd i närvarolistan (t.ex. precis efter ett värdbyte).
+  // Det används så snart närvarolistan visar att avsändaren är värd.
+  const pendingStateRef = useRef<StateMessage | null>(null)
+
   const save = useCallback(() => {
     saveHostLobby(code, { state: stateRef.current, secrets: secretsRef.current } satisfies HostState)
   }, [code])
@@ -138,10 +155,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       void channelRef.current?.send({
         type: 'broadcast',
         event: 'state',
-        payload: { state: next, sentAt: Date.now() },
+        payload: { state: next, sentAt: Date.now(), from: meId },
       })
     },
-    [save],
+    [save, meId],
   )
 
   // Värden: skicka varje spelares hand till spelaren, men bara när den har ändrats.
@@ -156,9 +173,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const json = JSON.stringify(view)
       if (sentHandsRef.current[id] === json) continue
       sentHandsRef.current[id] = json
-      void channelRef.current?.send({ type: 'broadcast', event: 'hand', payload: { to: id, hand: view } })
+      void channelRef.current?.send({ type: 'broadcast', event: 'hand', payload: { to: id, from: meId, hand: view } })
     }
-  }, [])
+  }, [meId])
 
   // Värden: ta emot ett nytt tillstånd med hemlig data, skicka ut det och de händer som ändrats.
   const commit = useCallback(
@@ -177,7 +194,6 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const current = useCallback((): HostState => ({ state: stateRef.current, secrets: secretsRef.current }), [])
 
   // Gästen: be värden om det aktuella läget (och min hand i ett kortspel).
-  const meId = me?.id
   const sendHello = useCallback(() => {
     if (!meId) return
     void channelRef.current?.send({ type: 'broadcast', event: 'hello', payload: { id: meId } })
@@ -231,13 +247,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         },
       })
       channelRef.current = channel
+      // Vilka som är värd enligt närvarolistan (oftast en, två en kort stund vid ett värdbyte).
+      const hosts = () => onlineRef.current.filter((p) => p.host).map((p) => ({ id: p.id, sendsFrom: p.sendsFrom === true }))
 
       channel.on('presence', { event: 'sync' }, () => {
         const raw = channel.presenceState<OnlinePlayer>()
         const players: OnlinePlayer[] = Object.values(raw)
           .map((metas) => metas[0])
           .filter((meta) => Boolean(meta?.id))
-          .map(({ id, name, avatar, host, joinedAt }) => ({ id, name, avatar, host, joinedAt }))
+          .map(({ id, name, avatar, host, joinedAt, sendsFrom }) => ({ id, name, avatar, host, joinedAt, sendsFrom }))
           .sort((a, b) => a.joinedAt - b.joinedAt)
         const now = Date.now()
         for (const p of onlineRef.current) {
@@ -246,6 +264,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         for (const p of players) delete lastSeenRef.current[p.id]
         onlineRef.current = players
         setOnline(players)
+        const pending = pendingStateRef.current
+        if (!isHost && pending && isFromHost(pending.from, hosts())) {
+          pendingStateRef.current = null
+          applyState(pending)
+        }
 
         // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
         const mine = players.find((p) => p.id === myId)
@@ -272,9 +295,21 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         }
       })
 
+      // Läget från värden. Trasiga meddelanden slängs, och läget används bara om det kommer från värden.
       channel.on('broadcast', { event: 'state' }, ({ payload }) => {
         if (isHost) return
-        const { state: next, sentAt } = payload as { state: GameState; sentAt: number }
+        const message = parseStateMessage(payload)
+        if (!message) return
+        if (!isFromHost(message.from, hosts())) {
+          // Kanske en ny värd som inte syns i närvarolistan än. Sparas tills den gör det.
+          if (message.from !== null) pendingStateRef.current = message
+          return
+        }
+        pendingStateRef.current = null
+        applyState(message)
+      })
+
+      function applyState({ state: next, sentAt }: StateMessage) {
         stateRef.current = next
         setState(next)
         setReceived(true)
@@ -285,12 +320,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         }
         clockOffsetRef.current = Date.now() - sentAt
         setClockOffset(Date.now() - sentAt)
-      })
+      }
 
       // Min hand i ett kortspel. Meddelanden till andra spelare slängs direkt.
       channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
-        const { to, hand: next } = payload as { to: string; hand: MyHand | null }
-        if (to === myId) setHand(next)
+        const message = parseHand(payload)
+        if (message?.to === myId && isFromHost(message.from, hosts())) setHand(message.hand)
       })
 
       // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.
@@ -314,23 +349,27 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       })
 
       channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
-        if (!isHost) return
-        const { id, value } = payload as { id: string; value: number }
+        const guess = parseGuess(payload)
+        if (!isHost || !guess) return
+        const { id, value } = guess
         let next = addGuess(stateRef.current, id, value, Date.now())
         next = resolveIfEveryoneGuessed(next)
         publish(next)
       })
 
       channel.on('broadcast', { event: 'move' }, ({ payload }) => {
-        if (!isHost) return
-        const { id, move } = payload as { id: string; move: CardMove }
+        const message = parseMove(payload)
+        if (!isHost || !message) return
+        const { id, move } = message
         commit(hostMove(current(), id, move, activeIds(), Date.now()))
       })
 
       // Värden lämnar med Lämna och pekar ut vem som tar över, så att lobbyn byter värd direkt.
+      // Gäller bara om det kommer från den som är värd.
       channel.on('broadcast', { event: 'handover' }, ({ payload }) => {
         if (isHost) return
-        if ((payload as { to?: string } | undefined)?.to === myId) promote()
+        const message = parseHandover(payload)
+        if (message?.to === myId && message.from !== null && isFromHost(message.from, hosts())) promote()
       })
 
       channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
@@ -339,10 +378,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         void channel.send({
           type: 'broadcast',
           event: 'state',
-          payload: { state: stateRef.current, sentAt: Date.now() },
+          payload: { state: stateRef.current, sentAt: Date.now(), from: myId },
         })
-        const id = (payload as { id?: string } | undefined)?.id
-        if (id) {
+        const id = (payload as { id?: unknown } | undefined)?.id
+        if (typeof id === 'string') {
           delete sentHandsRef.current[id]
           sendHands()
         }
@@ -381,6 +420,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
               avatar: player.avatar,
               host: isHost,
               joinedAt: Date.now(),
+              sendsFrom: true,
             } satisfies OnlinePlayer)
           } catch {
             // Närvaron skickas igen när kanalen ansluter på nytt. Tillståndet kommer ändå via hello.
@@ -562,7 +602,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (!isHost || !me) return
         const successor = pickSuccessor(onlineRef.current, me.id)
         if (!successor) return
-        await channelRef.current?.send({ type: 'broadcast', event: 'handover', payload: { to: successor.id } })
+        await channelRef.current?.send({ type: 'broadcast', event: 'handover', payload: { to: successor.id, from: me.id } })
       },
       // Byt spel: samma lobby, grupp och ställning, och de andra ser att värden väljer nästa spel.
       changeGame: () => {

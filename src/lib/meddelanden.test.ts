@@ -1,0 +1,111 @@
+import { describe, expect, it } from 'vitest'
+import { addPlayers, initialState, startGame } from '@/lib/match'
+import { isFromHost, parseGuess, parseHand, parseHandover, parseMove, parseStateMessage } from '@/lib/meddelanden'
+
+const players = { a: { name: 'Anna', avatar: '👻' }, b: { name: 'Bo', avatar: '🤖' } }
+const lobby = addPlayers(initialState('gissa-priset'), players)
+
+describe('läget från värden', () => {
+  it('tar emot ett riktigt läge, även mitt i en match', () => {
+    const playing = startGame(lobby, ['a', 'b'], 1000)
+    const parsed = parseStateMessage({ state: playing, sentAt: 5, from: 'a' })
+    expect(parsed).toEqual({ state: playing, sentAt: 5, from: 'a' })
+  })
+
+  it('fyller i fält som saknas med startvärden, t.ex. från en äldre version av sajten', () => {
+    const { notice: _notice, choosingGame: _choosing, ...old } = lobby
+    const parsed = parseStateMessage({ state: old, sentAt: 5 })
+    expect(parsed?.state.notice).toBeNull()
+    expect(parsed?.state.choosingGame).toBe(false)
+    expect(parsed?.from).toBeNull()
+  })
+
+  it('slänger trasiga meddelanden i stället för att krascha', () => {
+    for (const payload of [
+      undefined,
+      null,
+      'hej',
+      {},
+      { state: null, sentAt: 1 },
+      { state: lobby },
+      { state: { ...lobby, phase: 'fusk' }, sentAt: 1 },
+      { state: { ...lobby, players: { a: { name: 5 } } }, sentAt: 1 },
+      { state: { ...lobby, scores: { a: 'massor' } }, sentAt: 1 },
+      { state: { ...lobby, matchRounds: 'nej' }, sentAt: 1 },
+      { state: { ...lobby, lastResult: { target: 1 } }, sentAt: 1 },
+      { state: { ...lobby, cards: { step: 'choosing' } }, sentAt: 1 },
+      { state: { ...lobby, game: 7 }, sentAt: 1 },
+      { state: lobby, sentAt: Number.NaN },
+    ]) {
+      expect(parseStateMessage(payload)).toBeNull()
+    }
+  })
+})
+
+describe('bara från värden', () => {
+  const host = { id: 'a', sendsFrom: true }
+  const oldHost = { id: 'a', sendsFrom: false }
+
+  it('godtar läget från den som är värd enligt närvarolistan', () => {
+    expect(isFromHost('a', [host])).toBe(true)
+    expect(isFromHost('b', [host])).toBe(false)
+    expect(isFromHost('a', [])).toBe(false)
+  })
+
+  it('slänger ett läge utan avsändare när värden alltid skickar med sig själv', () => {
+    // Annars kunde en fuskare bara låta bli att ange avsändare.
+    expect(isFromHost(null, [host])).toBe(false)
+    expect(isFromHost(null, [])).toBe(false)
+  })
+
+  it('godtar ett läge utan avsändare från en värd med en äldre version av sajten', () => {
+    expect(isFromHost(null, [oldHost])).toBe(true)
+  })
+})
+
+describe('gissningar och kortdrag', () => {
+  it('godtar en gissning med id och tal', () => {
+    expect(parseGuess({ id: 'a', value: 120 })).toEqual({ id: 'a', value: 120 })
+    expect(parseGuess({ id: 'a', value: '120' })).toBeNull()
+    expect(parseGuess({ id: 5, value: 120 })).toBeNull()
+    expect(parseGuess({ id: 'a', value: Number.POSITIVE_INFINITY })).toBeNull()
+    expect(parseGuess(null)).toBeNull()
+  })
+
+  it('godtar bara kortdrag med rätt form', () => {
+    expect(parseMove({ id: 'a', move: { type: 'pick', pick: { kind: 'card', card: 'x' } } })).toEqual({
+      id: 'a',
+      move: { type: 'pick', pick: { kind: 'card', card: 'x' }, done: undefined },
+    })
+    expect(parseMove({ id: 'a', move: { type: 'pick', pick: { kind: 'blank', text: 'egen' }, done: true } })?.move).toEqual({
+      type: 'pick',
+      pick: { kind: 'blank', text: 'egen' },
+      done: true,
+    })
+    expect(parseMove({ id: 'a', move: { type: 'done' } })?.move).toEqual({ type: 'done' })
+    expect(parseMove({ id: 'a', move: { type: 'judge', key: 'k1' } })?.move).toEqual({ type: 'judge', key: 'k1' })
+    // Utan kort, okänd sort, fel typer eller okänt drag.
+    expect(parseMove({ id: 'a', move: { type: 'pick' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'pick', pick: { kind: 'fusk' } } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'pick', pick: { kind: 'card', card: 1 } } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'judge' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'vinn' } })).toBeNull()
+    expect(parseMove({ id: 'a' })).toBeNull()
+  })
+})
+
+describe('händer och värdbyten', () => {
+  it('godtar en hand med rätt form, eller ingen hand', () => {
+    const hand = { cards: ['x', 'y'], blank: true, pick: null }
+    expect(parseHand({ to: 'a', from: 'b', hand })).toEqual({ to: 'a', from: 'b', hand })
+    expect(parseHand({ to: 'a', hand: null })).toEqual({ to: 'a', from: null, hand: null })
+    expect(parseHand({ to: 'a', hand: { cards: 'x' } })).toBeNull()
+    expect(parseHand({ hand })).toBeNull()
+  })
+
+  it('godtar ett värdbyte med mottagare', () => {
+    expect(parseHandover({ to: 'a', from: 'b' })).toEqual({ to: 'a', from: 'b' })
+    expect(parseHandover({ to: 'a' })).toEqual({ to: 'a', from: null })
+    expect(parseHandover({})).toBeNull()
+  })
+})
