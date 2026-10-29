@@ -10,7 +10,7 @@ export const REACTIONS: readonly Reaction[] = [
   { id: 'eld', emoji: '🔥', label: 'Eld' },
   { id: 'applader', emoji: '👏', label: 'Applåd' },
   { id: 'chock', emoji: '😱', label: 'Chock' },
-  { id: 'pinsamt', emoji: '🙈', label: 'Pinsamt' },
+  { id: 'arg', emoji: '😡', label: 'Arg' },
 ]
 
 export function findReaction(id: unknown): Reaction | undefined {
