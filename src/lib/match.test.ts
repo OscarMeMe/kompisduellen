@@ -530,32 +530,62 @@ describe('byt spel efter en match', () => {
 
 describe('ställningen efter en runda', () => {
   // Närmast vinner: den närmaste får 1 poäng.
-  const match = () => startGame(lobby('narmast', ['a', 'b', 'c'], { rounds: 3 }), ['a', 'b', 'c'], NOW)
+  const match = (ids = ['a', 'b', 'c'], rounds = 5) => startGame(lobby('narmast', ids, { rounds }), ids, NOW)
+  // Spelar rundor där vinnaren gissar rätt och de andra långt bort.
+  function play(state: GameState, winners: string[]): GameState {
+    let next = state
+    winners.forEach((winner, i) => {
+      if (i > 0) next = nextRound(next, NOW)
+      const guesses = Object.fromEntries(Object.keys(next.players).map((id) => [id, id === winner ? 50 : 1]))
+      next = playRound(next, guesses, 50)
+    })
+    return next
+  }
 
-  it('visar placering men ingen ändring efter första rundan', () => {
-    const state = playRound(match(), { a: 10, b: 50, c: 90 }, 12)
-    expect(roundStanding(state, 'a')).toEqual({ place: 1, previousPlace: null, players: 3, leaderIds: ['a'] })
-    expect(roundStanding(state, 'b')?.place).toBe(2)
+  it('säger ungefär var man ligger, utan placering', () => {
+    const state = play(match(['a', 'b', 'c', 'd', 'e']), ['a', 'a', 'a', 'b'])
+    // a 3, b 1, c d e 0. Nära = högst 1 poäng bakom. Lägst poäng är sist, även delat.
+    expect(roundStanding(state, 'a')?.kind).toBe('leader')
+    expect(roundStanding(state, 'b')?.kind).toBe('top')
+    expect(roundStanding(state, 'c')?.kind).toBe('last')
+    expect(roundStanding(state, 'e')?.kind).toBe('last')
   })
 
-  it('räknar ut placeringen före rundan, så att man ser om man gått upp', () => {
-    let state = nextRound(playRound(match(), { a: 10, b: 50, c: 90 }, 12), NOW)
-    state = nextRound(playRound(state, { a: 10, b: 50, c: 90 }, 88), NOW)
-    state = playRound(state, { a: 10, b: 50, c: 90 }, 90)
-    // c vann två rundor och gick från delad andraplats till ensam ledare.
-    expect(roundStanding(state, 'c')).toEqual({ place: 1, previousPlace: 1, players: 3, leaderIds: ['c'] })
-    expect(roundStanding(state, 'a')).toMatchObject({ place: 2, previousPlace: 1 })
+  it('nära ledaren går före sist', () => {
+    const state = play(match(['a', 'b']), ['a'])
+    expect(roundStanding(state, 'b')?.kind).toBe('close')
+  })
+
+  it('mitt i klungan i undre halvan', () => {
+    const state = play(match(['a', 'b', 'c', 'd', 'e'], 10), ['a', 'a', 'a', 'b', 'b', 'c', 'c', 'd'])
+    // a 3, b 2, c 2, d 1, e 0
+    expect(roundStanding(state, 'b')?.kind).toBe('close')
+    expect(roundStanding(state, 'd')?.kind).toBe('middle')
+    expect(roundStanding(state, 'e')?.kind).toBe('last')
+  })
+
+  it('delad ledning och ingen ledare innan någon fått poäng', () => {
+    expect(roundStanding(play(match(), ['a', 'b']), 'b')?.kind).toBe('shared')
+    expect(roundStanding(playRound(match(), {}, 12), 'a')).toMatchObject({ kind: 'none', leaderIds: [] })
+  })
+
+  it('visar bara när man klättrar, aldrig i första rundan', () => {
+    const first = play(match(), ['c'])
+    expect(roundStanding(first, 'c')?.climbed).toBe(false)
+    const second = play(match(), ['a', 'a', 'c', 'c'])
+    expect(roundStanding(second, 'c')?.climbed).toBe(true)
+    expect(roundStanding(second, 'a')?.climbed).toBe(false)
   })
 
   it('skiljer rundans vinnare från matchledaren', () => {
-    let state = nextRound(playRound(match(), { a: 10, b: 50, c: 90 }, 12), NOW)
-    state = playRound(state, { a: 10, b: 50, c: 90 }, 50)
+    const state = play(match(), ['a', 'a', 'b'])
     expect(state.lastResult?.winners).toEqual(['b'])
-    expect(roundStanding(state, 'b')?.leaderIds).toEqual(['a', 'b'])
+    expect(roundStanding(state, 'b')?.leaderIds).toEqual(['a'])
   })
 
-  it('har ingen ledare när ingen fått poäng', () => {
-    const state = playRound(match(), {}, 12)
-    expect(roundStanding(state, 'a')?.leaderIds).toEqual([])
+  it('allt avgörs i sista rundan när toppen ligger jämnt', () => {
+    expect(roundStanding(play(match(['a', 'b'], 3), ['a', 'b']), 'a')?.decider).toBe(true)
+    expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'a', 'a']), 'b')?.decider).toBe(false)
+    expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'b']), 'a')?.decider).toBe(false)
   })
 })
