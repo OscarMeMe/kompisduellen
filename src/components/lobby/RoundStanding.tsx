@@ -13,7 +13,7 @@ export function RoundStanding({ state, meId }: { state: GameState; meId: string 
       <p className="flex flex-wrap items-center gap-2">
         <span className="font-heading text-lg font-bold">{decider ? 'Allt avgörs nu!' : STANDING_TEXT[kind]}</span>
         {climbed && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-mint-soft px-2.5 py-0.5 text-sm font-semibold">
+          <span className="inline-flex items-center gap-1 rounded-full bg-mint-soft px-2.5 py-0.5 text-sm font-semibold motion-safe:animate-hop motion-safe:[animation-delay:350ms]">
             <TrendingUp className="size-3.5" aria-hidden />
             Du klättrar!
           </span>

@@ -127,7 +127,14 @@ export function WaitingRoom({
 
         {isHost ? (
           <div className="space-y-2">
-            <Button size="lg" className="w-full" onClick={onStartCountdown} disabled={!enoughPlayers || rematching}>
+            {/* Knappen vickar en gång när tillräckligt många har gått med (ny key startar om vickningen). */}
+            <Button
+              key={enoughPlayers ? 'redo' : 'vantar'}
+              size="lg"
+              className={cn('w-full', enoughPlayers && 'motion-safe:animate-wiggle')}
+              onClick={onStartCountdown}
+              disabled={!enoughPlayers || rematching}
+            >
               {enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
             {!enoughPlayers && (
@@ -316,7 +323,10 @@ function RematchCountdown({
     >
       <p className="font-heading text-lg font-bold">{kind === 'first' ? 'Nu kör vi!' : 'Revansch!'}</p>
       <p className="font-heading text-6xl font-bold text-primary tabular-nums" aria-label={`Startar om ${secondsLeft} sekunder`}>
-        {Math.max(1, secondsLeft)}
+        {/* Varje siffra poppar in för sig. */}
+        <span key={Math.max(1, secondsLeft)} className="inline-block motion-safe:animate-pop">
+          {Math.max(1, secondsLeft)}
+        </span>
       </p>
       <p className="text-sm text-muted-foreground">
         {kind === 'first' ? rule : 'Samma spel och samma inställningar. Gör er redo!'}

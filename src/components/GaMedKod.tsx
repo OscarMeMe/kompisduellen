@@ -27,6 +27,9 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  // Fel kod: fältet vickar en kort stund. Rätt kod: knappen studsar innan man skickas vidare.
+  const [wiggle, setWiggle] = useState(false)
+  const [found, setFound] = useState(false)
   const complete = code.length === 4
   const large = size === 'large'
 
@@ -34,14 +37,22 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
     event.preventDefault()
     if (checking) return
     if (!complete) {
-      setError('Koden har fyra bokstäver.')
+      showError('Koden har fyra bokstäver.')
       return
     }
     setChecking(true)
     const result = await checkLobby(code)
     setChecking(false)
-    if (result === 'finns') navigate(`/lobby/${code}`)
-    else setError(felText(code, result))
+    if (result === 'finns') {
+      setFound(true)
+      setTimeout(() => navigate(`/lobby/${code}`), 250)
+    } else showError(felText(code, result))
+  }
+
+  function showError(message: string) {
+    setError(message)
+    setWiggle(true)
+    setTimeout(() => setWiggle(false), 500)
   }
 
   return (
@@ -49,7 +60,7 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
       <Label htmlFor={fieldId} className="text-base font-bold">
         {label}
       </Label>
-      <div className={cn('flex gap-2', large && 'flex-col gap-3')}>
+      <div className={cn('flex gap-2', large && 'flex-col gap-3', wiggle && 'motion-safe:animate-wiggle')}>
         <Input
           id={fieldId}
           value={code}
@@ -74,7 +85,7 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
           type="submit"
           size="lg"
           variant={complete ? 'default' : 'outline'}
-          className={complete ? undefined : 'hover:bg-card hover:border-foreground/30'}
+          className={cn(!complete && 'hover:bg-card hover:border-foreground/30', found && 'motion-safe:animate-hop')}
           disabled={checking}
         >
           Gå med

@@ -1,5 +1,6 @@
 import { Lightbulb } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { CountingPrice } from '@/components/CountingPrice'
 import { formatExactSek, formatSek } from '@/lib/belopp'
 import type { PriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
@@ -10,15 +11,18 @@ export function PriceAnswerCard({
   item,
   target,
   revealed,
+  countUp = false,
   children,
 }: {
   item: PriceItem | undefined
   target: number
   revealed: boolean
+  // Priset räknas upp när det visas (i spelet). På /granska står det direkt.
+  countUp?: boolean
   children?: ReactNode
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
+    <div className="relative rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
       <div className="flex items-center justify-center gap-3">
         {/* Emojin bara när saken saknar bild. Bredvid ett foto ser den malplacerad ut. */}
         {!item?.image && <span className="text-4xl sm:text-5xl">{item?.emoji ?? '🏷️'}</span>}
@@ -34,7 +38,7 @@ export function PriceAnswerCard({
           revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
         )}
       >
-        {formatSek(target)}
+        {revealed && countUp ? <CountingPrice target={target} /> : formatSek(target)}
       </p>
       {/* Poängen räknas mot priset i hela kronor, men det exakta priset står under. */}
       {revealed && item && item.priceSek !== target && (

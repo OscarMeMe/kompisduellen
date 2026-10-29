@@ -39,7 +39,8 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
               Domaren somnade. Vinnaren lottades
             </p>
           )}
-          <p className="font-heading text-2xl leading-snug font-bold break-words sm:text-3xl">
+          {/* Vinnarkortet vickar till när det avslöjas. */}
+          <p className="font-heading text-2xl leading-snug font-bold break-words motion-safe:animate-wiggle motion-safe:[animation-delay:400ms] sm:text-3xl">
             <Sentence prompt={prompt} answer={winning.text} />
           </p>
           {winner && (

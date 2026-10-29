@@ -67,6 +67,8 @@
     --animate-hop: hop 0.35s cubic-bezier(0.3, 0.7, 0.4, 1.4);
     --animate-wave: wave 0.55s ease-in-out;
     --animate-confetti: confetti-fall 0.9s cubic-bezier(0.2, 0.6, 0.4, 1) both;
+    /* animate-grow: växer upp från botten, t.ex. prispallens staplar (med origin-bottom) */
+    --animate-grow: grow-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 
     @keyframes wiggle {
         0%, 100% { transform: rotate(0deg); }
@@ -79,6 +81,11 @@
         0% { transform: translateY(-110%); opacity: 0; filter: blur(2px); }
         60% { transform: translateY(12%); opacity: 1; filter: blur(0); }
         100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes grow-up {
+        0% { transform: scaleY(0); }
+        100% { transform: scaleY(1); }
     }
 
     @keyframes hop {

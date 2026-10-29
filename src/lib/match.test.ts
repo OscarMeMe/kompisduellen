@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  abortMatch,
   addGuess,
   addPlayers,
   advanceFromReveal,
@@ -666,5 +667,55 @@ describe('lika resultat', () => {
       ['b', 1, 1],
       ['c', 0, 3],
     ])
+  })
+})
+
+describe('värden avbryter matchen', () => {
+  // En lobby som redan spelat en match (a vann), och en ny match som pågår.
+  function midMatch() {
+    let state = startGame(lobby('narmast', ['a', 'b', 'c'], { rounds: 1 }), ['a', 'b', 'c'], NOW)
+    state = nextRound(playRound(state, { a: 10, b: 50, c: 90 }, 12), NOW)
+    state = backToWaiting(state)
+    state = startGame({ ...state, rounds: 3 }, ['a', 'b', 'c'], NOW)
+    return playRound(state, { a: 90, b: 50, c: 10 }, 12)
+  }
+
+  it('alla går tillbaka till väntrummet och matchens poäng nollställs', () => {
+    const aborted = abortMatch(midMatch())
+    expect(aborted.phase).toBe('waiting')
+    expect(aborted.round).toBe(0)
+    expect(aborted.scores).toEqual({ a: 0, b: 0, c: 0 })
+    expect(aborted.matchRounds).toEqual([])
+    expect(aborted.lastResult).toBeNull()
+    expect(aborted.cards).toBeNull()
+    expect(aborted.notice).toContain('avbröt matchen')
+  })
+
+  it('räknas inte: topplistan och antalet matcher är som före matchen', () => {
+    const before = midMatch()
+    const aborted = abortMatch(before)
+    expect(aborted.leaderboard).toEqual(before.leaderboard)
+    expect(aborted.matchesPlayed).toBe(1)
+    expect(aborted.gamesPlayed).toEqual({ narmast: 1 })
+    expect(aborted.leaderboard.a.wins).toBe(1)
+    // Inställningarna ligger kvar.
+    expect(aborted.rounds).toBe(3)
+    expect(aborted.game).toBe('narmast')
+  })
+
+  it('gör ingenting i väntrummet eller efter matchen', () => {
+    const waiting = lobby('narmast', ['a', 'b'])
+    expect(abortMatch(waiting)).toBe(waiting)
+    const done = nextRound(playRound(startGame(lobby('narmast', ['a', 'b'], { rounds: 1 }), ['a', 'b'], NOW), { a: 1 }, 1), NOW)
+    expect(abortMatch(done)).toBe(done)
+  })
+
+  it('fungerar mitt i en kortmatch', () => {
+    const host = hostStart({ state: lobby('kortkaos', ['a', 'b', 'c']), secrets: null }, ['a', 'b', 'c'], NOW)
+    expect(host.state.phase).toBe('playing')
+    const aborted = abortMatch(host.state)
+    expect(aborted.phase).toBe('waiting')
+    expect(aborted.cards).toBeNull()
+    expect(aborted.matchesPlayed).toBe(0)
   })
 })

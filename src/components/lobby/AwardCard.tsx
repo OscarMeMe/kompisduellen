@@ -38,11 +38,11 @@ const MEDALS: Record<HighlightId, { icon: LucideIcon; color: string }> = {
 export function AwardCard({ highlight }: { highlight: Highlight }) {
   const { icon: Icon, color } = MEDALS[highlight.id]
   return (
-    <li className="flex items-start gap-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
+    <li className="group flex items-start gap-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
       <span
         aria-hidden
         className={cn(
-          'grid size-14 shrink-0 place-items-center rounded-full shadow-soft-sm outline-2 -outline-offset-[6px] outline-foreground/15 outline-dashed',
+          'grid size-14 shrink-0 place-items-center rounded-full shadow-soft-sm outline-2 -outline-offset-[6px] outline-foreground/15 outline-dashed motion-safe:group-hover:animate-wiggle',
           color,
         )}
       >

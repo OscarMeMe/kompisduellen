@@ -6,8 +6,8 @@ const PIECES = 22
 
 // Ett litet konfettiregn över föräldern (som ska vara relative). Bara dekoration: göms för skärmläsare, tar inga tryck
 // och visas inte alls med "minska rörelse". Bitarnas plats, riktning och snurr räknas fram ur numret, så att samma
-// regn blir likadant varje gång.
-export function Konfetti() {
+// regn blir likadant varje gång. delay = hur länge regnet väntar innan det börjar (ms).
+export function Konfetti({ delay = 0 }: { delay?: number }) {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-0 motion-reduce:hidden">
       {Array.from({ length: PIECES }, (_, i) => {
@@ -25,7 +25,7 @@ export function Konfetti() {
             style={
               {
                 left: `${left}%`,
-                animationDelay: `${(i * 23) % 220}ms`,
+                animationDelay: `${delay + ((i * 23) % 220)}ms`,
                 '--x': `${drift}px`,
                 '--spin': `${i % 2 === 0 ? spin : -spin}deg`,
               } as CSSProperties

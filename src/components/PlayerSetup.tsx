@@ -57,11 +57,19 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
               aria-label={`Välj ${findEmoji(option)?.label ?? option}`}
               aria-pressed={avatar === option}
               className={cn(
-                'grid aspect-square min-h-11 place-items-center rounded-lg text-2xl transition outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:text-3xl',
+                'group grid aspect-square min-h-11 place-items-center rounded-lg text-2xl transition outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:text-3xl',
                 avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
-              <Emoji emoji={option} />
+              {/* Figurerna vickar när musen är över dem, och den valda gör ett litet hopp (ny key startar om hoppet). */}
+              <Emoji
+                key={avatar === option ? 'vald' : 'inte-vald'}
+                emoji={option}
+                className={cn(
+                  'motion-safe:group-hover:animate-wiggle',
+                  avatar === option && 'motion-safe:animate-hop motion-safe:group-hover:animate-hop',
+                )}
+              />
             </button>
           ))}
         </div>
