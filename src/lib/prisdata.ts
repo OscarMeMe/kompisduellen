@@ -22,10 +22,9 @@ import items from './prisdata.json'
 //
 // dold: true döljer frågan i spelet (den slumpas aldrig fram) utan att den tas bort. Den syns kvar i datan och på /granska.
 //
-// exempel: true gör frågan till en av exempelrundorna på startsidan. Besökaren får dem en i taget, med en slumpad
-//   första fråga (exampleOrder).
-//   Exempelfrågorna slumpas aldrig fram i spelet (se GAME_ITEMS).
+// exempel: 1, 2 eller 3 gör frågan till en av exempelrundans tre frågor på startsidan, i den ordningen.
 //   Välj frågor där bilden tydligt visar just saken som frågas om.
+//   Exempelfrågorna slumpas aldrig fram i spelet (se GAME_ITEMS).
 // exempelLedtrad: valfri ledtråd som bara exempelrundan visar, t.ex. med årtalet ('Svenskt butikspris hösten 1990').
 //   Saknas den visas clue. Spelets egen ledtråd påverkas inte.
 //
@@ -48,7 +47,7 @@ export type PriceItem = {
   imageCredit?: string
   imageSource?: string
   imageNote?: string
-  exempel?: boolean
+  exempel?: number
   dold?: boolean
   exempelLedtrad?: string
 }
@@ -64,18 +63,14 @@ export function findPriceItem(id: string | null | undefined): PriceItem | undefi
   return ALL_PRICE_ITEMS.find((item) => item.id === id)
 }
 
-// Frågorna som startsidans exempelrunda kan visa: de som är markerade med exempel: true.
-export const EXAMPLE_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel === true)
+// Exempelrundans frågor i ordning: de som är markerade med exempel (1, 2, 3).
+export const EXAMPLE_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel !== undefined).sort(
+  (a, b) => (a.exempel ?? 0) - (b.exempel ?? 0),
+)
 
 // Frågorna som kan slumpas fram i spelet: de synliga utom exempelfrågorna, så att den som provat exempelrundan
 // på startsidan inte redan kan svaret.
-export const GAME_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel !== true)
-
-// Ordningen för startsidans exempelrunda: en slumpad första fråga, sedan de andra i tur och ordning.
-export function exampleOrder(random: () => number = Math.random): PriceItem[] {
-  const start = Math.floor(random() * EXAMPLE_ITEMS.length)
-  return [...EXAMPLE_ITEMS.slice(start), ...EXAMPLE_ITEMS.slice(0, start)]
-}
+export const GAME_ITEMS: PriceItem[] = PRICE_ITEMS.filter((item) => item.exempel === undefined)
 
 // Frågan som visas som rubrik. Utan fraga byggs den av saken, frågeinledningen och året.
 export function questionText(item: PriceItem): string {
