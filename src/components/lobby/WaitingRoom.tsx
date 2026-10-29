@@ -146,12 +146,9 @@ export function WaitingRoom({
               <p className="text-center text-sm text-muted-foreground">Välj nästa spel under Inställningar.</p>
             )}
             {canPractice && (
-              <>
-                <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>
-                  Testa själv
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">En snabb provrunda som inte räknas i ställningen.</p>
-              </>
+              <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>
+                Testa själv
+              </Button>
             )}
           </div>
         ) : (
