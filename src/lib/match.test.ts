@@ -20,6 +20,7 @@ import {
   initialState,
   nextRound,
   pauseReveal,
+  podiumShare,
   resumeReveal,
   cancelRematch,
   REMATCH_SECONDS,
@@ -587,5 +588,20 @@ describe('ställningen efter en runda', () => {
     expect(roundStanding(play(match(['a', 'b'], 3), ['a', 'b']), 'a')?.decider).toBe(true)
     expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'a', 'a']), 'b')?.decider).toBe(false)
     expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'b']), 'a')?.decider).toBe(false)
+  })
+})
+
+describe('stapelhöjden på prispallen', () => {
+  it('följer poängen, så att låga poäng får en tydligt lägre stapel', () => {
+    expect(podiumShare(247, 247)).toBe(1)
+    expect(podiumShare(201, 247)).toBeCloseTo(0.81, 2)
+    expect(podiumShare(6, 247)).toBeLessThan(0.03)
+  })
+
+  it('ger lika poäng samma höjd och alla samma höjd när ingen har poäng', () => {
+    expect(podiumShare(120, 240)).toBe(podiumShare(120, 240))
+    expect(podiumShare(3, 3)).toBe(1)
+    expect(podiumShare(0, 0)).toBe(1)
+    expect(podiumShare(0, 10)).toBe(0)
   })
 })
