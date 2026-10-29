@@ -30,12 +30,12 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 ## Stil
 
-- Varm, ljus och lekfull: krämvit bakgrund med prickmönster, korallröd huvudfärg (`primary`), pastellfärgade kort, mjuka skuggor och stora rundningar.
+- Varm, ljus och lekfull: varm sandfärgad bakgrund med prickmönster och krämvita kort som syns tydligt mot den (bländar inte under en lång kväll), korallröd huvudfärg (`primary`), pastellfärgade kort, mjuka skuggor och stora rundningar.
 - Typsnitt: Syne för rubriker och knappar (`font-heading`, h1–h3 får det automatiskt), Plus Jakarta Sans för brödtext (`font-sans`). Båda via `@fontsource-variable`.
 - Alla färger och skuggor ligger som variabler i `src/index.css`. Använd dem i stället för Tailwinds färdiga färger (som `violet-500`):
   - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
   - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
-  - skuggor: `shadow-soft` (kort), `shadow-soft-sm` (små ytor), `shadow-primary` (korallknappar, finns redan på `Button`)
+  - skuggor: `shadow-soft` (kort), `shadow-soft-sm` (små ytor), `shadow-primary` (korallknappar, finns redan på `Button`). Hur mörka de mjuka skuggorna är styrs av `--shadow-strength`
 - Rundning: knappar och fält `rounded-md` (1rem), kort `rounded-lg` (1.25rem), etiketter `rounded-full`.
 - Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
 - `Button` (`size="lg"` för stora knappar, 3.25rem hög) och `Input` har redan designens mått, så lägg inte till egna höjder eller rundningar på dem.
