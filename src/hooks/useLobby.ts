@@ -278,7 +278,6 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const item: FloatingReaction = {
         key: `${id}-${now}-${Math.random()}`,
         name: who.name,
-        avatar: who.avatar,
         emoji: def.emoji,
       }
       setFloating((list) => [...list.slice(-7), item])

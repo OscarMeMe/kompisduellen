@@ -1,13 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Volume2, VolumeX } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { loadSoundOn, playPop, saveSoundOn } from '@/lib/ljud'
 import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
 // En reaktion som visas överst på skärmen en kort stund.
-export type FloatingReaction = { key: string; name: string; avatar: string; emoji: string }
+export type FloatingReaction = { key: string; name: string; emoji: string }
 
 // Så många reaktioner syns samtidigt. De äldsta försvinner först.
 const MAX_VISIBLE = 6
@@ -58,7 +57,7 @@ export function ReactionsProvider({ enabled, floating, send, children }: Reactio
   return <ReactionsContext.Provider value={value}>{children}</ReactionsContext.Provider>
 }
 
-// Tre reaktioner och en ljudknapp. Visas inte om man är ensam i lobbyn eller utanför en lobby.
+// Reaktionerna och en ljudknapp. Visas inte om man är ensam i lobbyn eller utanför en lobby.
 export function ReactionBar({ className }: { className?: string }) {
   const reactions = useContext(ReactionsContext)
   const [cooling, setCooling] = useState(false)
@@ -74,12 +73,12 @@ export function ReactionBar({ className }: { className?: string }) {
   }
 
   return (
-    <div role="group" aria-label="Reaktioner" className={cn('flex items-center justify-center gap-2', className)}>
+    <div role="group" aria-label="Reaktioner" className={cn('flex flex-wrap items-center justify-center gap-1.5 sm:gap-2', className)}>
       {REACTIONS.map((reaction) => (
         <Button
           key={reaction.id}
           variant="outline"
-          className="h-12 w-14 text-2xl"
+          className="h-12 w-11 text-2xl sm:w-14"
           disabled={cooling}
           onClick={() => press(reaction.id)}
           aria-label={reaction.label}
@@ -89,7 +88,7 @@ export function ReactionBar({ className }: { className?: string }) {
       ))}
       <Button
         variant="ghost"
-        className="h-12 w-12"
+        className="h-12 w-11 sm:w-12"
         aria-pressed={reactions.soundOn}
         aria-label={reactions.soundOn ? 'Stäng av ljud' : 'Sätt på ljud'}
         onClick={() => reactions.setSoundOn(!reactions.soundOn)}
@@ -111,10 +110,9 @@ export function ReactionFloaters() {
         {reactions.floating.slice(-MAX_VISIBLE).map((item) => (
           <div
             key={item.key}
-            className="flex items-center gap-1.5 rounded-full border bg-card py-1 pr-3 pl-1.5 shadow-soft motion-safe:animate-reaction motion-reduce:animate-reaction-fade"
+            className="flex items-center gap-2 rounded-full border bg-card py-1 pr-3 pl-1.5 shadow-soft motion-safe:animate-reaction motion-reduce:animate-reaction-fade"
           >
             <span className="text-2xl leading-none sm:text-4xl">{item.emoji}</span>
-            <Emoji emoji={item.avatar} className="text-lg" />
             <span className="max-w-24 truncate text-sm font-semibold sm:max-w-32">{item.name}</span>
           </div>
         ))}
