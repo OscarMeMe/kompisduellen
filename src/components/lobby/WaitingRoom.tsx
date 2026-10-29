@@ -3,7 +3,7 @@ import { Check, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
-import { Choice } from '@/components/lobby/Choice'
+import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
@@ -92,7 +92,7 @@ export function WaitingRoom({
     ...(hasTempoSettings(state.game)
       ? ([
           ['Svarstid', `${guessSecondsFor(state)} s`],
-          ['Efter facit', state.autoAdvance ? 'Automatiskt' : 'Värden går vidare'],
+          [NEXT_QUESTION_LABEL, state.autoAdvance ? AUTO_ADVANCE_TEXT : HOST_ADVANCES_TEXT],
         ] as [string, string][])
       : []),
   ]
@@ -255,16 +255,7 @@ export function WaitingRoom({
                   selected={guessSecondsFor(state)}
                   onSelect={(guessSeconds) => onSetTempo({ guessSeconds })}
                 />
-                <Choice
-                  label="Efter facit"
-                  hint={state.autoAdvance ? undefined : 'Facit står kvar tills värden går vidare.'}
-                  options={[
-                    { value: 1, label: 'Automatiskt' },
-                    { value: 0, label: 'Värden går vidare' },
-                  ]}
-                  selected={state.autoAdvance ? 1 : 0}
-                  onSelect={(value) => onSetTempo({ autoAdvance: value === 1 })}
-                />
+                <NextQuestionChoice autoAdvance={state.autoAdvance} onSelect={(autoAdvance) => onSetTempo({ autoAdvance })} />
               </>
             )}
           </>

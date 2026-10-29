@@ -8,7 +8,7 @@ import type { GameRules } from '@/lib/spelregler'
 // Längre tider än i Närmast vinner, så att man hinner skriva ett belopp och läsa faktameningen.
 // Värden kan välja en annan svarstid i lobbyn.
 const GUESS_SECONDS = 30
-export const GUESS_SECONDS_OPTIONS = [20, 30, 60] as const
+export const GUESS_SECONDS_OPTIONS = [30, 45, 60] as const
 const REVEAL_SECONDS = 12
 
 // Poäng efter hur många GÅNGER fel man är, så att halva priset straffas lika hårt som dubbla priset.

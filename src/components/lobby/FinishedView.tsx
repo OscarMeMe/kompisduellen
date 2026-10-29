@@ -3,7 +3,7 @@ import { Emoji } from '@/components/Emoji'
 import { Sentence } from '@/components/kort/PlayingCard'
 import { Leaderboard } from '@/components/Leaderboard'
 import { AwardCard } from '@/components/lobby/AwardCard'
-import { Choice } from '@/components/lobby/Choice'
+import { Choice, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
@@ -182,15 +182,7 @@ export function FinishedView({
                     selected={guessSeconds}
                     onSelect={setGuessSeconds}
                   />
-                  <Choice
-                    label="Efter facit"
-                    options={[
-                      { value: 1, label: 'Automatiskt' },
-                      { value: 0, label: 'Värden går vidare' },
-                    ]}
-                    selected={autoAdvance ? 1 : 0}
-                    onSelect={(value) => setAutoAdvance(value === 1)}
-                  />
+                  <NextQuestionChoice autoAdvance={autoAdvance} onSelect={setAutoAdvance} />
                 </>
               )}
             </div>

@@ -55,12 +55,12 @@ function playRound(state: GameState, guesses: Record<string, number>, target: nu
 }
 
 describe('tempo i lobbyn', () => {
-  it('låter värden välja 20, 30 eller 60 sekunder och ignorerar andra tider', () => {
+  it('låter värden välja 30, 45 eller 60 sekunder och ignorerar andra tider', () => {
     const state = lobby('gissa-priset', ['a', 'b'])
     expect(guessSecondsFor(state)).toBe(30)
-    expect(setTempo(state, { guessSeconds: 20 }).guessSeconds).toBe(20)
+    expect(setTempo(state, { guessSeconds: 45 }).guessSeconds).toBe(45)
     expect(setTempo(state, { guessSeconds: 60 }).guessSeconds).toBe(60)
-    expect(setTempo(state, { guessSeconds: 45 })).toBe(state)
+    expect(setTempo(state, { guessSeconds: 20 })).toBe(state)
   })
 
   it('ändrar inte tempot under en match', () => {
@@ -400,16 +400,16 @@ describe('snabbval vid revansch', () => {
 
   it('utan val gäller samma inställningar som förut, och ogiltiga val ignoreras', () => {
     expect(hostRematch(finished(), NOW).state).toMatchObject({ rounds: 3, guessSeconds: 30, autoAdvance: true })
-    expect(hostRematch(finished(), NOW, { rounds: 7, guessSeconds: 45 }).state).toMatchObject({ rounds: 3, guessSeconds: 30 })
+    expect(hostRematch(finished(), NOW, { rounds: 7, guessSeconds: 20 }).state).toMatchObject({ rounds: 3, guessSeconds: 30 })
   })
 
   it('startar matchen med de nya valen', () => {
-    const host = hostRematch(finished(), NOW, { rounds: 10, guessSeconds: 20 })
+    const host = hostRematch(finished(), NOW, { rounds: 10, guessSeconds: 45 })
     const at = host.state.rematchAt!
     const started = hostRematchStart(host, ['a', 'b'], at, at)
     expect(started.state.phase).toBe('guessing')
     expect(started.state.rounds).toBe(10)
-    expect(started.state.deadline).toBe(at + 20_000)
+    expect(started.state.deadline).toBe(at + 45_000)
   })
 })
 
