@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Volume2, VolumeX } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { loadSoundOn, playPop, saveSoundOn } from '@/lib/ljud'
 import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
-// En reaktion som svävar över skärmen en kort stund.
-export type FloatingReaction = { key: string; name: string; avatar: string; emoji: string; left: number }
+// En reaktion som visas överst på skärmen en kort stund.
+export type FloatingReaction = { key: string; name: string; emoji: string }
+
+// Så många reaktioner syns samtidigt. De äldsta försvinner först.
+const MAX_VISIBLE = 6
 
 type ReactionsValue = {
   // Reaktioner kan skickas när fler än en är med i lobbyn.
@@ -55,7 +57,7 @@ export function ReactionsProvider({ enabled, floating, send, children }: Reactio
   return <ReactionsContext.Provider value={value}>{children}</ReactionsContext.Provider>
 }
 
-// Tre reaktioner och en ljudknapp. Visas inte om man är ensam i lobbyn eller utanför en lobby.
+// Reaktionerna och en ljudknapp. Visas inte om man är ensam i lobbyn eller utanför en lobby.
 export function ReactionBar({ className }: { className?: string }) {
   const reactions = useContext(ReactionsContext)
   const [cooling, setCooling] = useState(false)
@@ -71,12 +73,12 @@ export function ReactionBar({ className }: { className?: string }) {
   }
 
   return (
-    <div role="group" aria-label="Reaktioner" className={cn('flex items-center justify-center gap-2', className)}>
+    <div role="group" aria-label="Reaktioner" className={cn('flex flex-wrap items-center justify-center gap-1.5 sm:gap-2', className)}>
       {REACTIONS.map((reaction) => (
         <Button
           key={reaction.id}
           variant="outline"
-          className="h-12 w-14 text-2xl"
+          className="h-12 w-11 text-2xl sm:w-14"
           disabled={cooling}
           onClick={() => press(reaction.id)}
           aria-label={reaction.label}
@@ -86,7 +88,7 @@ export function ReactionBar({ className }: { className?: string }) {
       ))}
       <Button
         variant="ghost"
-        className="h-12 w-12"
+        className="h-12 w-11 sm:w-12"
         aria-pressed={reactions.soundOn}
         aria-label={reactions.soundOn ? 'Stäng av ljud' : 'Sätt på ljud'}
         onClick={() => reactions.setSoundOn(!reactions.soundOn)}
@@ -97,25 +99,24 @@ export function ReactionBar({ className }: { className?: string }) {
   )
 }
 
-// Svävande reaktioner från alla i lobbyn. Ligger över sidan men tar inga tryck.
+// Reaktioner från alla i lobbyn, som bubblor i en rad överst på skärmen (under sidhuvudet och rundans tidsstapel).
+// De står bredvid varandra i stället för på varandra, och tar inga tryck.
 export function ReactionFloaters() {
   const reactions = useContext(ReactionsContext)
   if (!reactions || reactions.floating.length === 0) return null
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 h-0" aria-hidden>
-      {reactions.floating.map((item) => (
-        <div
-          key={item.key}
-          className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-1 duration-700 animate-in fade-in slide-in-from-bottom-16"
-          style={{ left: `${item.left}%` }}
-        >
-          <span className="text-5xl drop-shadow">{item.emoji}</span>
-          <span className="flex max-w-32 items-center gap-1 rounded-full bg-card/95 px-2 py-0.5 text-xs font-semibold shadow-soft-sm">
-            <Emoji emoji={item.avatar} className="text-sm" />
-            <span className="truncate">{item.name}</span>
-          </span>
-        </div>
-      ))}
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-30 flex justify-center px-4" aria-hidden>
+      <div className="flex max-w-xl flex-wrap justify-center gap-2">
+        {reactions.floating.slice(-MAX_VISIBLE).map((item) => (
+          <div
+            key={item.key}
+            className="flex items-center gap-2 rounded-full border bg-card py-1 pr-3 pl-1.5 shadow-soft motion-safe:animate-reaction motion-reduce:animate-reaction-fade"
+          >
+            <span className="text-2xl leading-none sm:text-4xl">{item.emoji}</span>
+            <span className="max-w-24 truncate text-sm font-semibold sm:max-w-32">{item.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

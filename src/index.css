@@ -45,11 +45,29 @@
     --radius-2xl: calc(var(--radius) + 0.5rem);
     --radius-3xl: calc(var(--radius) + 0.75rem);
     /* Mjuka skuggor: shadow-soft, shadow-soft-sm och shadow-primary (korall, på primärknappar) */
-    --shadow-soft: 0 8px 30px -12px oklch(0.3 0.025 260 / 0.18);
-    --shadow-soft-sm: 0 4px 16px -8px oklch(0.3 0.025 260 / 0.22);
+    --shadow-soft: 0 8px 30px -12px oklch(0.3 0.025 260 / var(--shadow-strength));
+    --shadow-soft-sm: 0 4px 16px -8px oklch(0.3 0.025 260 / calc(var(--shadow-strength) + 0.04));
     --shadow-primary: 0 8px 24px -10px oklch(0.66 0.16 30 / 0.45);
     /* animate-pop för saker som dyker upp */
     --animate-pop: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    /* animate-reaction för reaktionerna: poppar fram, står kvar och glider uppåt medan de tonar bort.
+       Lika lång som REACTION_VISIBLE_MS i reaktioner.ts. animate-reaction-fade när rörelse är avstängt. */
+    --animate-reaction: reaction-float 2.6s ease-out both;
+    --animate-reaction-fade: reaction-fade 2.6s linear both;
+
+    @keyframes reaction-float {
+        0% { transform: translateY(10px) scale(0.6); opacity: 0; }
+        12% { transform: translateY(0) scale(1.08); opacity: 1; }
+        20% { transform: translateY(0) scale(1); }
+        78% { transform: translateY(0) scale(1); opacity: 1; }
+        100% { transform: translateY(-18px) scale(0.95); opacity: 0; }
+    }
+
+    @keyframes reaction-fade {
+        0% { opacity: 0; }
+        10%, 85% { opacity: 1; }
+        100% { opacity: 0; }
+    }
 
     @keyframes pop-in {
         0% { transform: scale(0.85); opacity: 0; }
@@ -59,24 +77,27 @@
 }
 
 :root {
+    /* Varm sandfärgad bakgrund och krämvita kort, så att sidan inte bländar under en lång spelkväll */
     --radius: 1.25rem;
-    --background: oklch(0.993 0.006 85);
+    /* Hur mörka de mjuka skuggorna är (shadow-soft, shadow-soft-sm får lite mer) */
+    --shadow-strength: 0.26;
+    --background: oklch(0.952 0.02 75);
     --foreground: oklch(0.3 0.025 260);
-    --card: oklch(1 0 0);
+    --card: oklch(0.99 0.007 85);
     --card-foreground: oklch(0.3 0.025 260);
-    --popover: oklch(1 0 0);
+    --popover: oklch(0.99 0.007 85);
     --popover-foreground: oklch(0.3 0.025 260);
     --primary: oklch(0.66 0.16 30);
     --primary-foreground: oklch(0.99 0.01 85);
-    --secondary: oklch(0.96 0.02 85);
+    --secondary: oklch(0.93 0.024 78);
     --secondary-foreground: oklch(0.3 0.025 260);
-    --muted: oklch(0.955 0.012 85);
-    --muted-foreground: oklch(0.52 0.02 260);
+    --muted: oklch(0.93 0.018 78);
+    --muted-foreground: oklch(0.48 0.02 260);
     --accent: oklch(0.82 0.1 165);
     --accent-foreground: oklch(0.3 0.04 180);
     --destructive: oklch(0.6 0.2 25);
-    --border: oklch(0.91 0.012 85);
-    --input: oklch(0.93 0.01 85);
+    --border: oklch(0.86 0.022 75);
+    --input: oklch(0.88 0.02 75);
     --ring: oklch(0.66 0.16 30);
     --mint: oklch(0.83 0.1 165);
     --sun: oklch(0.89 0.13 90);
@@ -117,7 +138,7 @@
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
     }
-  /* Krämvit bakgrund med diskret prickmönster */
+  /* Varm sandfärgad bakgrund med diskret prickmönster */
   body {
     @apply bg-background text-foreground;
     background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);

@@ -278,9 +278,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const item: FloatingReaction = {
         key: `${id}-${now}-${Math.random()}`,
         name: who.name,
-        avatar: who.avatar,
         emoji: def.emoji,
-        left: 15 + Math.random() * 70,
       }
       setFloating((list) => [...list.slice(-7), item])
       setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)

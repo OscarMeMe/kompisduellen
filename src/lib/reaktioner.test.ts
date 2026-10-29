@@ -10,9 +10,9 @@ import {
 } from '@/lib/reaktioner'
 
 describe('reaktioner', () => {
-  it('har tre reaktioner med unika id', () => {
-    expect(REACTIONS).toHaveLength(3)
-    expect(new Set(REACTIONS.map((r) => r.id)).size).toBe(3)
+  it('har fem reaktioner med unika id', () => {
+    expect(REACTIONS).toHaveLength(5)
+    expect(new Set(REACTIONS.map((r) => r.id)).size).toBe(5)
   })
 
   it('känner bara igen kända reaktioner', () => {
