@@ -5,6 +5,7 @@ import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort
 import { track } from '@/lib/statistik'
 import {
   HELLO_RETRY_MS,
+  helloRetryAction,
   lobbyStatus,
   shouldRetryHello,
   STUCK_AFTER_MS,
@@ -97,8 +98,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [connected, setConnected] = useState(false)
   const [failed, setFailed] = useState(false)
   const [graceOver, setGraceOver] = useState(false)
-  // Ökas för att ansluta på nytt (Försök igen, fliken syns igen, nätet tillbaka).
+  // Ökas för att ansluta på nytt (Försök igen, fliken syns igen, nätet tillbaka, hello utan svar).
   const [connectKey, setConnectKey] = useState(0)
+  // Ökas när ett nytt försök att komma in börjar (Försök igen, fliken syns igen). Tiden till Försök igen räknas
+  // från det, så att gästens egen omanslutning (när hello inte får svar) inte skjuter upp beskedet.
+  const [attempt, setAttempt] = useState(0)
+  // Gästen har redan anslutit på nytt av sig själv i det här försöket (se helloRetryAction).
+  const autoReconnectedRef = useRef(false)
   // Värden: ökas när fliken syns igen, så att rundor och nedräkningar som borde ha slutat körs direkt. Webbläsaren kan
   // ha hållit tillbaka klockorna medan fliken låg i bakgrunden.
   const [wakeTick, setWakeTick] = useState(0)
@@ -461,10 +467,20 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed, sendHello, connectKey])
 
   // Gästen: frågar värden efter läget igen tills tillståndet kommer. Ett enstaka hello kan försvinna,
-  // t.ex. om det skickas medan värdens flik ligger i bakgrunden.
+  // t.ex. om det skickas medan värdens flik ligger i bakgrunden. Får flera hello inget svar kan kanalen vara död
+  // fast den ser öppen ut, och då ansluter gästen på nytt en gång (helloRetryAction).
   useEffect(() => {
     if (!shouldRetryHello({ isHost, connected, received })) return
-    const timer = setInterval(sendHello, HELLO_RETRY_MS)
+    let tries = 0
+    const timer = setInterval(() => {
+      tries += 1
+      if (helloRetryAction({ tries, autoReconnected: autoReconnectedRef.current }) === 'reconnect') {
+        autoReconnectedRef.current = true
+        setConnectKey((key) => key + 1)
+      } else {
+        sendHello()
+      }
+    }, HELLO_RETRY_MS)
     return () => clearInterval(timer)
   }, [isHost, connected, received, sendHello])
 
@@ -473,13 +489,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (isHost || received) return
     const timer = setTimeout(() => setWaitedTooLong(true), STUCK_AFTER_MS)
     return () => clearTimeout(timer)
-  }, [isHost, received, connectKey])
+  }, [isHost, received, attempt])
 
-  // Ansluter på nytt: en ny kanal och ett nytt hello.
+  // Ansluter på nytt: en ny kanal och ett nytt hello, och ett nytt försök att komma in.
   const reconnect = useCallback(() => {
     setFailed(false)
     setGraceOver(false)
     setWaitedTooLong(false)
+    autoReconnectedRef.current = false
+    setAttempt((n) => n + 1)
     setConnectKey((key) => key + 1)
   }, [])
 
@@ -489,7 +507,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (!me) return
     function wake() {
       if (document.visibilityState === 'hidden') return
-      const action = wakeAction({ isHost, channelState: channelRef.current?.state ?? null })
+      const action = wakeAction({ isHost, channelState: channelRef.current?.state ?? null, received: receivedRef.current })
       if (action === 'reconnect') reconnect()
       else if (action === 'hello') sendHello()
       if (isHost) setWakeTick((tick) => tick + 1)

@@ -6,6 +6,9 @@
 export const HELLO_RETRY_MS = 3000
 // Har gästen inte kommit in efter så här lång tid visas ett meddelande med Försök igen (ms).
 export const STUCK_AFTER_MS = 12_000
+// Har så många hello gått utan svar ansluter gästen på nytt av sig själv, en gång, innan Försök igen visas.
+// En kanal kan se öppen ut men vara död (t.ex. efter en stund i bakgrunden), och då kommer inga hello fram.
+export const RECONNECT_AFTER_HELLOS = 2
 
 // supabase.channel() ger tillbaka en befintlig kanal med samma namn, även en som håller på att stängas.
 // Öppnar man lobbyn igen precis då (omladdning, kodkontrollen på startsidan) får man den döende kanalen, som
@@ -72,11 +75,23 @@ export function shouldRetryHello(input: { isHost: boolean; connected: boolean; r
   return !input.isHost && input.connected && !input.received
 }
 
-// Fliken syns igen eller nätet kom tillbaka. Är kanalen stängd eller trasig görs en ny anslutning. Annars frågar
-// gästen efter läget igen, eftersom meddelanden kan ha missats medan fliken låg i bakgrunden.
+// Gästen har skickat tries hello utan att få något tillstånd. Efter RECONNECT_AFTER_HELLOS försök ansluter den på
+// nytt (en gång per försök att komma in), annars frågar den igen.
+export function helloRetryAction(input: { tries: number; autoReconnected: boolean }): 'hello' | 'reconnect' {
+  return input.tries >= RECONNECT_AFTER_HELLOS && !input.autoReconnected ? 'reconnect' : 'hello'
+}
+
+// Fliken syns igen eller nätet kom tillbaka. Är kanalen stängd eller trasig görs en ny anslutning. En gäst som inte
+// kommit in än (inget tillstånd) ansluter också på nytt, eftersom kanalen kan se öppen ut men vara död efter en stund
+// i bakgrunden. Annars frågar gästen efter läget igen, eftersom meddelanden kan ha missats.
 // channelState är kanalens läge (joined, joining, leaving, closed, errored), null medan en ny kanal väntar på att öppnas.
-export function wakeAction(input: { isHost: boolean; channelState: string | null }): 'reconnect' | 'hello' | null {
-  const { isHost, channelState } = input
+export function wakeAction(input: {
+  isHost: boolean
+  channelState: string | null
+  received: boolean
+}): 'reconnect' | 'hello' | null {
+  const { isHost, channelState, received } = input
   if (channelState === 'closed' || channelState === 'errored' || channelState === 'leaving') return 'reconnect'
-  return isHost || channelState === null ? null : 'hello'
+  if (isHost || channelState === null) return null
+  return received ? 'hello' : 'reconnect'
 }
