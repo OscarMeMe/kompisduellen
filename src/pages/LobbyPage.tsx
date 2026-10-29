@@ -194,12 +194,12 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     actions.start()
   }, [isHost, status, state.phase, meInLobby, actions, code])
 
-  // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. Finns andra med frågar vi först, oavsett om
-  // värden klickar på "Tillbaka till alla spel" eller på loggan. Deltagare lämnar bara sig själva och får ingen fråga.
+  // Finns andra med frågar vi först, oavsett om man klickar på "Tillbaka till alla spel", loggan eller profilen.
+  // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. En deltagare kan komma tillbaka med koden.
   const navigate = useNavigate()
   const [leaveTo, setLeaveTo] = useState<string | null>(null)
   const othersPresent = online.length > 1
-  const askBeforeLeaving = isHost && othersPresent
+  const askBeforeLeaving = othersPresent
   function requestLeave(to: string) {
     if (askBeforeLeaving) setLeaveTo(to)
     else void navigate(to)
@@ -275,7 +275,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       )}
       <LeaveLobbyDialog
         open={leaveTo !== null}
-        practice={state.practice && !othersPresent}
+        kind={state.practice && !othersPresent ? 'practice' : isHost ? 'host' : 'guest'}
+        code={code}
         nextHost={online.find((p) => !p.host && p.id !== me.id)?.name}
         onStay={() => setLeaveTo(null)}
         onLeave={async () => {
