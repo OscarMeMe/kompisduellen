@@ -32,7 +32,7 @@ export function ResultRow({ name, avatar, guess, difference, points, total, winn
         <Emoji emoji={avatar} className="text-3xl" />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           <span className="truncate font-bold">{name}</span>
-          {leader && <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />}
+          {leader && <Crown className="size-4 shrink-0 text-crown" aria-label="Leder matchen" />}
           {winner && (
             <span className="shrink-0 rounded-full bg-mint px-2 py-0.5 text-xs font-bold whitespace-nowrap text-accent-foreground">
               {shared ? 'Delad etta' : 'Närmast!'}
