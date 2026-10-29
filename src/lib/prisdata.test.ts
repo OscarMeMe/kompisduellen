@@ -70,6 +70,12 @@ describe('frågor och ledtrådar', () => {
     }
   })
 
+  it('har inga tankstreck som paus i faktatexterna (intervall som juni–augusti är okej)', () => {
+    for (const item of ALL_PRICE_ITEMS) {
+      expect(item.fact, item.id).not.toMatch(/ [–—] |—| - /)
+    }
+  })
+
   it('frågar efter auktionspris med "för på auktion" för alla som såldes', () => {
     const sold = ALL_PRICE_ITEMS.filter((item) => item.fraga?.startsWith('Vad såldes'))
     expect(sold).toHaveLength(13)
