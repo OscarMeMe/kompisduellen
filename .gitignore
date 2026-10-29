@@ -156,3 +156,6 @@ dev-dist
 granskning.json
 inkorg.json
 public/prisbilder-inkorg/
+
+# Claude Codes lokala inställningar (behörigheter på den här datorn)
+.claude/settings.local.json
