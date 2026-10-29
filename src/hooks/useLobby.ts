@@ -17,6 +17,7 @@ import {
   parseHand,
   parseHandover,
   parseMove,
+  parseRematchWish,
   parseStateMessage,
   type StateMessage,
 } from '@/lib/meddelanden'
@@ -47,6 +48,7 @@ import {
   resumeReveal,
   restoreHostState,
   setGame,
+  setRematchWish,
   setRounds,
   setTempo,
   type GameState,
@@ -361,6 +363,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         publish(next)
       })
 
+      // En spelare önskar revansch eller ångrar sig. Bara värden räknar, och alla ser det i läget.
+      channel.on('broadcast', { event: 'wish' }, ({ payload }) => {
+        const wish = parseRematchWish(payload)
+        if (!isHost || !wish) return
+        publish(setRematchWish(stateRef.current, wish.id, wish.wants))
+      })
+
       channel.on('broadcast', { event: 'move' }, ({ payload }) => {
         const message = parseMove(payload)
         if (!isHost || !message) return
@@ -628,6 +637,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       cancelRematch: () => {
         if (isHost) commit(cancelRematch(current()))
+      },
+      // Jag vill ha revansch (eller ångra det) på slutskärmen. Startar inget, värden bestämmer.
+      wishRematch: (wants: boolean) => {
+        if (!me || isHost) return
+        void channelRef.current?.send({ type: 'broadcast', event: 'wish', payload: { id: me.id, wants } })
       },
     }),
     [isHost, me, publish, commit, current, activeIds, reconnect],

@@ -7,6 +7,7 @@ import { Choice, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
+import type { OnlinePlayer } from '@/hooks/useLobby'
 import type { GameInfo } from '@/lib/games'
 import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
@@ -16,6 +17,7 @@ import {
   hasTempoSettings,
   matchWinners,
   rankLeaderboard,
+  rematchWishCount,
   rankPlayers,
   roundOptionsFor,
   type GameState,
@@ -28,8 +30,11 @@ type FinishedViewProps = {
   game: GameInfo
   state: GameState
   isHost: boolean
-  // Hur många som är online just nu. En revansch kräver spelets minsta antal spelare.
-  onlineCount: number
+  meId: string
+  // De som är online just nu. En revansch kräver spelets minsta antal spelare.
+  online: OnlinePlayer[]
+  // Jag vill ha revansch (true) eller ångra (false). Bara för de som inte är värd.
+  onWishRematch: (wants: boolean) => void
   // Revansch (och Testa igen efter ett solotest): samma spel och inställningar efter en nedräkning.
   // settings = valen på resultatsidan som gäller nästa match.
   onRematch: (settings: RematchSettings) => void
@@ -45,7 +50,9 @@ export function FinishedView({
   game,
   state,
   isHost,
-  onlineCount,
+  meId,
+  online,
+  onWishRematch,
   onRematch,
   onToWaitingRoom,
   onChangeGame,
@@ -57,7 +64,15 @@ export function FinishedView({
   const bestPlayer = best ? state.players[best.player] : undefined
   // Kortspelen slutar i förtid om för få spelare är kvar.
   const endedEarly = state.round < state.rounds
-  const canRematch = canStart(state.game, onlineCount)
+  const canRematch = canStart(state.game, online.length)
+  // Önskemål om revansch från de som inte är värd: "3 av 5 vill ha revansch".
+  const wishes = rematchWishCount(
+    state,
+    online.map((p) => p.id),
+    online.filter((p) => p.host).map((p) => p.id),
+  )
+  const iWish = state.rematchWishes.includes(meId)
+  const canWish = !state.practice && state.players[meId] !== undefined
 
   // Snabbval inför nästa match. De skickas med när värden trycker Revansch.
   const tempo = hasTempoSettings(state.game)
@@ -130,6 +145,11 @@ export function FinishedView({
             </div>
           ) : (
             <>
+              {wishes.wanting > 0 && (
+                <p className="text-center font-heading font-bold text-balance motion-safe:animate-pop">
+                  {wishes.wanting} vill försöka igen. Kör vi?
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <Button size="lg" onClick={rematch} disabled={!canRematch}>
                   Revansch
@@ -147,9 +167,25 @@ export function FinishedView({
             </>
           )
         ) : (
-          <p className="flex items-center justify-center rounded-md border bg-card px-4 py-4 text-center font-semibold text-muted-foreground shadow-soft-sm">
-            Värden väljer nästa steg
-          </p>
+          <div className="space-y-3 rounded-lg border bg-card p-4 text-center shadow-soft-sm">
+            <p className="font-semibold text-muted-foreground">Värden väljer nästa steg</p>
+            {canWish && (
+              <Button
+                size="lg"
+                variant={iWish ? 'outline' : 'default'}
+                className="w-full"
+                aria-pressed={iWish}
+                onClick={() => onWishRematch(!iWish)}
+              >
+                {iWish ? 'Ångra önskemålet' : 'Jag vill ha revansch'}
+              </Button>
+            )}
+            {wishes.wanting > 0 && (
+              <p className="text-sm font-semibold text-balance">
+                {wishes.wanting} av {wishes.of} vill ha revansch
+              </p>
+            )}
+          </div>
         )}
       </div>
 

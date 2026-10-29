@@ -83,6 +83,7 @@ const isGameState = shape({
   autoAdvance: isBoolean,
   practice: isBoolean,
   rematchAt: orNull(isNumber),
+  rematchWishes: listOf(isString),
   choosingGame: isBoolean,
   notice: orNull(isString),
   countdownKind: isString,
@@ -119,6 +120,11 @@ const isPick = (value: unknown): value is Pick =>
 
 export function parseGuess(payload: unknown): { id: string; value: number } | null {
   return shape({ id: isString, value: isNumber })(payload) ? { id: payload.id as string, value: payload.value as number } : null
+}
+
+// En spelare önskar revansch eller ångrar sig (Jag vill ha revansch på slutskärmen).
+export function parseRematchWish(payload: unknown): { id: string; wants: boolean } | null {
+  return shape({ id: isString, wants: isBoolean })(payload) ? { id: payload.id as string, wants: payload.wants as boolean } : null
 }
 
 export function parseMove(payload: unknown): { id: string; move: CardMove } | null {
