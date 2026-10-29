@@ -51,12 +51,54 @@
     --shadow-soft: 0 8px 30px -12px oklch(0.3 0.025 260 / var(--shadow-strength));
     --shadow-soft-sm: 0 4px 16px -8px oklch(0.3 0.025 260 / calc(var(--shadow-strength) + 0.04));
     --shadow-primary: 0 8px 24px -10px oklch(0.66 0.16 30 / 0.45);
+    /* shadow-lift för kort som lyfter vid hover */
+    --shadow-lift: 0 18px 40px -14px oklch(0.3 0.025 260 / calc(var(--shadow-strength) + 0.08));
     /* animate-pop för saker som dyker upp */
     --animate-pop: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
     /* animate-reaction för reaktionerna: poppar fram, står kvar och glider uppåt medan de tonar bort.
        Lika lång som REACTION_VISIBLE_MS i reaktioner.ts. animate-reaction-fade när rörelse är avstängt. */
     --animate-reaction: reaction-float 2.6s ease-out both;
     --animate-reaction-fade: reaction-fade 2.6s linear both;
+    /* Små lekfulla rörelser (alltid med motion-safe:, så att de stängs av med "minska rörelse"):
+       animate-wiggle vickar (skakar inte), animate-slot rullar in ett tecken som på en spelautomat,
+       animate-hop gör ett litet hopp, animate-wave vinkar och animate-confetti är en fallande konfettibit. */
+    --animate-wiggle: wiggle 0.5s ease-in-out;
+    --animate-slot: slot-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+    --animate-hop: hop 0.35s cubic-bezier(0.3, 0.7, 0.4, 1.4);
+    --animate-wave: wave 0.55s ease-in-out;
+    --animate-confetti: confetti-fall 0.9s cubic-bezier(0.2, 0.6, 0.4, 1) both;
+
+    @keyframes wiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-3deg); }
+        55% { transform: rotate(4deg); }
+        80% { transform: rotate(-2deg); }
+    }
+
+    @keyframes slot-in {
+        0% { transform: translateY(-110%); opacity: 0; filter: blur(2px); }
+        60% { transform: translateY(12%); opacity: 1; filter: blur(0); }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes hop {
+        0%, 100% { transform: translateY(0); }
+        45% { transform: translateY(-6px) scale(1.08); }
+    }
+
+    @keyframes wave {
+        0%, 100% { transform: rotate(0deg); }
+        20% { transform: rotate(-14deg); }
+        45% { transform: rotate(12deg); }
+        70% { transform: rotate(-8deg); }
+    }
+
+    /* Bitens riktning och snurr sätts per bit med --x och --spin. */
+    @keyframes confetti-fall {
+        0% { transform: translate(0, -10px) rotate(0deg); opacity: 0; }
+        12% { opacity: 1; }
+        100% { transform: translate(var(--x, 0px), 110px) rotate(var(--spin, 360deg)); opacity: 0; }
+    }
 
     @keyframes reaction-float {
         0% { transform: translateY(10px) scale(0.6); opacity: 0; }

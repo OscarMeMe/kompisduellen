@@ -41,7 +41,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Rundning: knappar och fält `rounded-md` (1rem), kort `rounded-lg` (1.25rem), etiketter `rounded-full`.
 - Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
 - `Button` (`size="lg"` för stora knappar, 3.25rem hög) och `Input` har redan designens mått, så lägg inte till egna höjder eller rundningar på dem.
-- `animate-pop` för saker som dyker upp.
+- `animate-pop` för saker som dyker upp. Små lekfulla rörelser: `animate-wiggle` (vickar, skakar inte), `animate-slot` (rullar in som på en spelautomat), `animate-hop`, `animate-wave` och `animate-confetti` (`Konfetti`). Kort som lyfter vid hover får `shadow-lift`. Alla animationer skrivs med `motion-safe:`, så att de stängs av med "minska rörelse". Håll dem korta (under 0,6 s) och låt inget pågå hela tiden. Nya keyframes läggs i `src/index.css`.
 - Spelikoner och spelarfigurer visas med `<Emoji emoji="🧙" />` som Microsoft Fluent Emoji i 3D (MIT, licensen ligger i `public/emoji/LICENSE.txt`). Bilderna ligger i `public/emoji` och hämtas aldrig från en extern sida. Storleken följer textstorleken (t.ex. `className="text-2xl"`). Saknas en bild visas tecknet. Ny figur eller nytt spel: lägg PNG-filen i `public/emoji` och en rad i `src/lib/emoji.ts`. Emojierna i Gissa priset-frågorna är vanliga tecken.
 
 ## Kommandon
@@ -55,13 +55,14 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Struktur
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
-- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
+- `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `Konfetti`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, `ResultRow` med en spelares rad i facit (gissningen stort, hur långt ifrån, poäng och totalt), `RoundStanding` efter facit: ungefär var man ligger i ord ("Du flåsar ledaren i nacken"), aldrig exakt placering, plus "Du klättrar!" och matchledaren, aldrig efter sista rundan, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
   - `kortkaos/`: Kortkaos vy för hela rundan (`KortkaosView` med ett steg per fil). Kortspel har en `Play`-vy i `GAME_VIEWS`
   - `kort/`: spelkort som fler kortspel kan använda (`PromptCard`, `AnswerCard`, `Sentence`, `Hand`)
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
+- `src/hooks/useCountUp.ts`: räknar upp ett tal till sitt värde (rätt pris i exempelrundan)
 - `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
