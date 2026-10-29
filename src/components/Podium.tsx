@@ -1,11 +1,12 @@
+import type { CSSProperties } from 'react'
 import { Emoji } from '@/components/Emoji'
-import type { RankedPlayer } from '@/lib/match'
+import { podiumShare, type RankedPlayer } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
-const STEP_STYLES: Record<number, { height: string; color: string; medal: string }> = {
-  1: { height: 'h-40 sm:h-48', color: 'bg-sun', medal: '🥇' },
-  2: { height: 'h-28 sm:h-36', color: 'bg-sky', medal: '🥈' },
-  3: { height: 'h-20 sm:h-24', color: 'bg-coral-soft', medal: '🥉' },
+const STEP_STYLES: Record<number, { color: string; medal: string }> = {
+  1: { color: 'bg-sun', medal: '🥇' },
+  2: { color: 'bg-sky', medal: '🥈' },
+  3: { color: 'bg-coral-soft', medal: '🥉' },
 }
 
 function points(score: number) {
@@ -16,6 +17,7 @@ function points(score: number) {
 export function Podium({ players }: { players: RankedPlayer[] }) {
   const onPodium = players.filter((p) => p.place <= 3)
   const rest = players.filter((p) => p.place > 3)
+  const best = Math.max(0, ...players.map((p) => p.score))
 
   // Pallen visas i ordningen 2 – 1 – 3. Flera spelare på samma plats står bredvid varandra.
   const columns = [2, 1, 3]
@@ -27,6 +29,8 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
       <div className="flex items-end justify-center gap-2 sm:gap-4">
         {columns.map(({ place, players: here }) => {
           const style = STEP_STYLES[place]
+          // Stapeln följer poängen: minsta höjden räcker för medaljen, resten delas efter andelen av vinnarens poäng.
+          const share = podiumShare(here[0].score, best)
           return (
             <div key={place} className="flex min-w-24 flex-1 flex-col items-center sm:max-w-48">
               <div className="mb-2 flex flex-wrap justify-center gap-2">
@@ -40,10 +44,10 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
               </div>
               <div
                 className={cn(
-                  'flex w-full items-start justify-center rounded-t-lg pt-3 text-3xl shadow-soft-sm',
-                  style.height,
+                  'flex h-[calc(4rem+6rem*var(--share))] w-full items-start justify-center rounded-t-lg pt-3 text-3xl shadow-soft-sm sm:h-[calc(4rem+8rem*var(--share))]',
                   style.color,
                 )}
+                style={{ '--share': share } as CSSProperties}
               >
                 {style.medal}
               </div>

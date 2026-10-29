@@ -482,6 +482,13 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
   }
 }
 
+// Hur stor del av vinnarens poäng en spelare har (0–1), för stapelhöjden på prispallen.
+// Lika poäng ger samma andel. Har ingen poäng blir alla staplar lika höga.
+export function podiumShare(score: number, best: number): number {
+  if (best <= 0) return 1
+  return Math.min(1, Math.max(0, score / best))
+}
+
 // Topplistan sorterad på antal vinster. Lika många vinster ger samma placering.
 export function rankLeaderboard(state: GameState): RankedEntry[] {
   const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))

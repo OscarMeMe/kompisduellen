@@ -36,7 +36,7 @@ type FinishedViewProps = {
   onToWaitingRoom: () => void
   // Till väntrummet med spelvalet i bild.
   onChangeGame: () => void
-  // Tillbaka till alla spel. Värden får en fråga först, eftersom lobbyn avslutas för alla.
+  // Tillbaka till alla spel. Är andra med får man en fråga först.
   onLeave: () => void
 }
 

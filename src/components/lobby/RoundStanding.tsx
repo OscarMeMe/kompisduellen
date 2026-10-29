@@ -46,3 +46,12 @@ function leaderText(state: GameState, leaderIds: string[]) {
   if (names.length === 2) return `Delad ledning: ${names[0]} och ${names[1]}`
   return `Delad ledning mellan ${names.length} spelare`
 }
+
+// Etikett på raderna i facit när flera delar rundans bästa resultat, så att det inte ser ut som att alla vann var för sig.
+export function SharedFirstBadge() {
+  return (
+    <span className="shrink-0 rounded-full bg-mint px-2 py-0.5 text-xs font-bold whitespace-nowrap text-accent-foreground">
+      Delad etta
+    </span>
+  )
+}

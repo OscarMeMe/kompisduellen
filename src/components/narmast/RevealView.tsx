@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
-import { RoundStanding } from '@/components/lobby/RoundStanding'
+import { RoundStanding, SharedFirstBadge } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 import { roundStanding } from '@/lib/match'
@@ -63,10 +63,12 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
           <p className="mt-2 text-lg font-bold">
             {result.winners.length === 0
               ? 'Ingen hann gissa den här gången'
-              : iWon
-                ? 'Du var närmast! +1 poäng'
-                : result.winners.length > 1
-                  ? 'Delad seger!'
+              : result.winners.length > 1
+                ? iWon
+                  ? 'Delad etta! +1 poäng'
+                  : 'Delad etta! Flera var lika nära.'
+                : iWon
+                  ? 'Du var närmast! +1 poäng'
                   : `${state.players[result.winners[0]]?.name ?? 'Någon'} var närmast!`}
           </p>
         )}
@@ -89,6 +91,7 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
                   {leaderIds.includes(row.id) && (
                     <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
                   )}
+                  {row.winner && result.winners.length > 1 && <SharedFirstBadge />}
                 </span>
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
