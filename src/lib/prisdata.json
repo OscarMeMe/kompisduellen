@@ -190,7 +190,8 @@
     "source": "https://www.allas.se/noje/glassnostalgi-vet-du-vilken-glass-som-fyller-50-i-ar/8361528",
     "image": "/prisbilder/piggelin-1972.webp",
     "imageCredit": "Foto: Catasa, CC BY-SA 3.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Piggelin.JPG"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Piggelin.JPG",
+    "exempel": true
   },
   {
     "id": "bigmac-1973",
@@ -711,7 +712,8 @@
     "source": "https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/",
     "image": "/prisbilder/game-boy-1990.webp",
     "imageCredit": "Foto: Raimond Spekking, CC BY-SA 4.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg"
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg",
+    "exempel": true
   },
   {
     "id": "bingolott-1991",

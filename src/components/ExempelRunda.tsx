@@ -19,10 +19,11 @@ type ExempelRundaProps = {
 
 // En liten spelbar exempelrunda på startsidan. Besökaren gissar ett pris och ser facit, helt lokalt: ingen lobby skapas,
 // inget skickas och ingen klocka går. Skild från det fullständiga provläget som "Testa själv" öppnar.
-// Frågan är den som är markerad med exempel: true i prisdata.json. Rutan är kompakt: bilden är liten bredvid frågan,
+// Frågan slumpas bland dem som är markerade med exempel: true i prisdata.json. Rutan är kompakt: bilden är liten bredvid frågan,
 // och bildkrediten står alltid under bilden.
 export function ExempelRunda({ onPlay }: ExempelRundaProps) {
-  const item = findExampleItem()
+  // En av exempelfrågorna slumpas när sidan laddas och ligger kvar, även vid Gissa igen.
+  const [item] = useState(() => findExampleItem())
   const fieldId = useId()
   const errorId = useId()
   const [text, setText] = useState('')
