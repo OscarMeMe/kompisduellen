@@ -3,13 +3,14 @@ import { Lock } from 'lucide-react'
 import { AmountInput } from '@/components/gissa-priset/AmountInput'
 import { PriceQuestionCard } from '@/components/gissa-priset/PriceQuestionCard'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
+import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { useMyGuess } from '@/hooks/useMyGuess'
 import { formatSek, MAX_PRICE, MIN_PRICE, parseTypedNumber } from '@/lib/belopp'
-import { isValidGuess } from '@/lib/match'
+import { isValidGuess, waitingStanding } from '@/lib/match'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
@@ -43,6 +44,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             <p className="text-muted-foreground">Din gissning</p>
             <p className="font-heading text-3xl font-bold break-all text-primary motion-safe:animate-pop sm:text-5xl">{formatSek(locked)}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
+            <WaitingStanding text={waitingStanding(state, me.id)} />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">

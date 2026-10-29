@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
+import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMyGuess } from '@/hooks/useMyGuess'
 import { hasFinePointer } from '@/lib/device'
-import { isValidGuess } from '@/lib/match'
+import { isValidGuess, waitingStanding } from '@/lib/match'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
@@ -34,6 +35,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
             <p className="text-muted-foreground">Din gissning</p>
             <p className="font-heading text-7xl font-bold text-primary motion-safe:animate-pop">{locked}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
+            <WaitingStanding text={waitingStanding(state, me.id)} />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
