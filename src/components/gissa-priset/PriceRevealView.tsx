@@ -4,7 +4,7 @@ import { Emoji } from '@/components/Emoji'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
-import { RoundStanding } from '@/components/lobby/RoundStanding'
+import { RoundStanding, SharedFirstBadge } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { formatSek } from '@/lib/belopp'
 import { findPriceItem } from '@/lib/prisdata'
@@ -72,6 +72,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
                   {leaderIds.includes(row.id) && (
                     <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
                   )}
+                  {row.winner && result.winners.length > 1 && <SharedFirstBadge />}
                 </span>
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.guess === undefined

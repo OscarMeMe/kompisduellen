@@ -18,8 +18,11 @@ import {
   hostRematchStart,
   hostStart,
   initialState,
+  matchWinners,
   nextRound,
   pauseReveal,
+  rankLeaderboard,
+  rankPlayers,
   podiumShare,
   resumeReveal,
   cancelRematch,
@@ -603,5 +606,58 @@ describe('stapelhöjden på prispallen', () => {
     expect(podiumShare(3, 3)).toBe(1)
     expect(podiumShare(0, 0)).toBe(1)
     expect(podiumShare(0, 10)).toBe(0)
+  })
+})
+
+describe('lika resultat', () => {
+  // Gissa priset: 0–100 poäng efter hur många gånger fel man var. Priset är 1 000 kr.
+  function priceRound(guesses: Record<string, number>) {
+    const state = startGame(lobby('gissa-priset', ['a', 'b', 'c', 'd'], { rounds: 1 }), ['a', 'b', 'c', 'd'], NOW)
+    return playRound(state, guesses, 1000)
+  }
+
+  it('alla som delar rundans bästa resultat är vinnare, ingen annan', () => {
+    // a och b exakt rätt (100), c och d dubbelt fel åt var sitt håll, alltså lika långt bort men sämre.
+    const state = priceRound({ a: 1000, b: 1000, c: 2000, d: 500 })
+    const result = state.lastResult!
+    expect(result.points.a).toBe(100)
+    expect(result.points.c).toBe(result.points.d)
+    expect(result.points.c).toBeLessThan(100)
+    expect(result.winners.sort()).toEqual(['a', 'b'])
+  })
+
+  it('samma poäng under den bästa gör ingen till vinnare', () => {
+    const state = priceRound({ a: 1000, c: 2000, d: 500 })
+    expect(state.lastResult!.winners).toEqual(['a'])
+  })
+
+  it('ingen vinner rundan när alla får noll', () => {
+    const state = priceRound({ a: 100_000, b: 100_000 })
+    expect(state.lastResult!.points.a).toBe(0)
+    expect(state.lastResult!.winners).toEqual([])
+  })
+
+  it('Närmast vinner: lika nära ger båda en poäng och delad vinst', () => {
+    const state = playRound(startGame(lobby('narmast', ['a', 'b', 'c']), ['a', 'b', 'c'], NOW), { a: 40, b: 60, c: 90 }, 50)
+    expect(state.lastResult!.winners.sort()).toEqual(['a', 'b'])
+    expect(state.scores).toMatchObject({ a: 1, b: 1 })
+    expect(state.scores.c ?? 0).toBe(0)
+  })
+
+  it('delade placeringar hoppar över nästa plats (1, 1, 3)', () => {
+    const state = lobby('narmast', ['a', 'b', 'c'], { scores: { a: 5, b: 5, c: 2 } })
+    expect(rankPlayers(state).map((p) => [p.id, p.place])).toEqual([['a', 1], ['b', 1], ['c', 3]])
+  })
+
+  it('delad matchseger ger alla på förstaplatsen en vinst i topplistan', () => {
+    let state = startGame(lobby('narmast', ['a', 'b', 'c'], { rounds: 1 }), ['a', 'b', 'c'], NOW)
+    state = nextRound(playRound(state, { a: 40, b: 60, c: 90 }, 50), NOW)
+    expect(state.phase).toBe('finished')
+    expect(matchWinners(state).sort()).toEqual(['a', 'b'])
+    expect(rankLeaderboard(state).map((e) => [e.id, e.wins, e.place])).toEqual([
+      ['a', 1, 1],
+      ['b', 1, 1],
+      ['c', 0, 3],
+    ])
   })
 })
