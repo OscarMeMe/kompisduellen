@@ -21,6 +21,7 @@ import {
   type GameState,
 } from '@/lib/match'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
+import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
 import { cn } from '@/lib/utils'
 
 type WaitingRoomProps = {
@@ -144,6 +145,10 @@ export function WaitingRoom({
             )}
             {state.choosingGame && enoughPlayers && (
               <p className="text-center text-sm text-muted-foreground">Välj nästa spel under Inställningar.</p>
+            )}
+            {/* Telefoner som inte kan hålla skärmen tänd själva (se useWakeLock) får ett tips. */}
+            {enoughPlayers && !canKeepScreenOn() && !hasFinePointer() && (
+              <p className="text-center text-sm text-muted-foreground">Håll skärmen tänd under matchen, annars stannar spelet.</p>
             )}
             {canPractice && (
               <Button variant="outline" className="w-full" onClick={onStart} disabled={rematching}>

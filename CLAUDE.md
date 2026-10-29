@@ -62,6 +62,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `kort/`: spelkort som fler kortspel kan använda (`PromptCard`, `AnswerCard`, `Sentence`, `Hand`)
 - `src/hooks/useLobby.ts`: lobbyn och realtiden (Supabase Realtime: presence + broadcast, inga tabeller)
 - `src/hooks/useMyGuess.ts`: min gissning i rundan (inlåst direkt när den skickas)
+- `src/hooks/useWakeLock.ts`: håller skärmen tänd (Screen Wake Lock), för värden under en match
 - `src/hooks/useCountUp.ts`: räknar upp ett tal till sitt värde (rätt pris i exempelrundan)
 - `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
@@ -95,6 +96,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Alla i en lobby ansluter till Realtime-kanalen `lobby:KOD`.
 - Den som skapade lobbyn är värd och äger spelets tillstånd. Värden skickar ut hela tillståndet (`state`) till alla.
 - Övriga skickar bara sina gissningar (`guess`) eller kortdrag (`move`) till värden. Nya spelare skickar `hello` (med sitt id) för att få aktuellt läge, och skickar det igen var tredje sekund tills läget kommer. När fliken syns igen eller nätet kommer tillbaka ansluter gästen på nytt om kanalen stängts, annars skickas ett nytt `hello`. Kommer gästen inte in visas "Det tar lite längre tid än vanligt" med Försök igen.
+- Värden i bakgrunden: anslutningens hjärtslag går i en egen tråd (`realtime: { worker: true }` i `supabase.ts`), så att webbläsaren inte stänger anslutningen när fliken ligger i bakgrunden. När värdens flik syns igen körs rundor och nedräkningar som borde ha slutat direkt (`wakeTick` i `useLobby`). Under en match hålls värdens skärm tänd (`useWakeLock`). Telefoner som inte klarar det får tipset "Håll skärmen tänd under matchen" i väntrummet (`canKeepScreenOn` i `device.ts`).
 - Allt som kommer in i kanalen kontrolleras i `meddelanden.ts` innan det används. Värden skickar med sitt id (`from`) i läget, händerna och värdbytet.
 - Kortspelen har hemlig data (leken, allas händer, vem som spelade vad) som bara värden har och som aldrig skickas med `state`. Varje spelare får sin hand i ett eget meddelande (`hand`) som andra flikar slänger. Vem som spelade vilket kort syns först när rundan avslöjas. Den som läser nätverkstrafiken kan se andras händer, och det räcker för ett kompisspel.
 - I kortspelen räknas en spelare som tappat nätet som kvar i 10 sekunder, så att domaren inte byts och matchen inte slutar i onödan.
