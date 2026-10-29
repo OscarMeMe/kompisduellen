@@ -587,6 +587,13 @@ describe('ställningen efter en runda', () => {
     expect(roundStanding(state, 'b')?.leaderIds).toEqual(['a'])
   })
 
+  it('visar ingenting efter sista rundan, så att prispallen får avslöja resultatet', () => {
+    const last = play(match(['a', 'b'], 2), ['a', 'a'])
+    expect(last.round).toBe(last.rounds)
+    expect(roundStanding(last, 'a')).toBeNull()
+    expect(roundStanding(last, 'b')).toBeNull()
+  })
+
   it('allt avgörs i sista rundan när toppen ligger jämnt', () => {
     expect(roundStanding(play(match(['a', 'b'], 3), ['a', 'b']), 'a')?.decider).toBe(true)
     expect(roundStanding(play(match(['a', 'b'], 4), ['a', 'a', 'a']), 'b')?.decider).toBe(false)

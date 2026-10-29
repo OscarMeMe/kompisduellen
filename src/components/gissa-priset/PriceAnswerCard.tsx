@@ -1,3 +1,4 @@
+import { Lightbulb } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { formatExactSek, formatSek } from '@/lib/belopp'
 import type { PriceItem } from '@/lib/prisdata'
@@ -45,8 +46,17 @@ export function PriceAnswerCard({
 }
 
 // Bakgrunden till priset, som visas efter svaret.
+// Faktatexten om saken, som en egen ruta som sticker ut från resultatlistan.
 export function PriceFact({ item }: { item: PriceItem }) {
   return (
-    <p className="px-2 text-center text-xs text-muted-foreground animate-in fade-in sm:text-sm">{item.fact}</p>
+    <aside className="flex items-start gap-3 rounded-lg border bg-sky-soft p-4 shadow-soft-sm animate-pop sm:gap-4 sm:p-5">
+      <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-sky shadow-soft-sm sm:size-12">
+        <Lightbulb className="size-5 sm:size-6" />
+      </span>
+      <div className="min-w-0 space-y-1">
+        <p className="font-heading text-lg leading-tight font-bold">Visste du?</p>
+        <p className="leading-snug sm:text-lg">{item.fact}</p>
+      </div>
+    </aside>
   )
 }

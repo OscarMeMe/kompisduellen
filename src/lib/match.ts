@@ -451,10 +451,11 @@ export type RoundStanding = {
 }
 
 // Var en spelare står i matchen efter facit, och hur det ändrades av rundan.
-// Skiljer matchledaren från rundans vinnare (lastResult.winners).
+// Skiljer matchledaren från rundans vinnare (lastResult.winners). Efter sista rundan blir det null,
+// så att varken ställningen eller kronan avslöjar resultatet innan prispallen visas.
 export function roundStanding(state: GameState, playerId: string): RoundStanding | null {
   const result = state.lastResult
-  if (!result || !state.players[playerId]) return null
+  if (!result || !state.players[playerId] || state.round >= state.rounds) return null
   const ids = Object.keys(state.players)
   const after = (id: string) => state.scores[id] ?? 0
   const before = (id: string) => after(id) - (result.points[id] ?? 0)

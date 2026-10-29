@@ -54,7 +54,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`)
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
-  - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, `RoundStanding` efter facit: ungefär var man ligger i ord ("Du flåsar ledaren i nacken"), aldrig exakt placering, plus "Du klättrar!" och matchledaren, props-typerna för spelvyer)
+  - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, `ResultRow` med en spelares rad i facit (gissningen stort, hur långt ifrån, poäng och totalt), `RoundStanding` efter facit: ungefär var man ligger i ord ("Du flåsar ledaren i nacken"), aldrig exakt placering, plus "Du klättrar!" och matchledaren, aldrig efter sista rundan, props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
   - `kortkaos/`: Kortkaos vy för hela rundan (`KortkaosView` med ett steg per fil). Kortspel har en `Play`-vy i `GAME_VIEWS`
   - `kort/`: spelkort som fler kortspel kan använda (`PromptCard`, `AnswerCard`, `Sentence`, `Hand`)
@@ -74,7 +74,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `prisdata.ts`: typen `PriceItem` och `findPriceItem`. Själva sakerna i Gissa priset (pris, fakta, källa och ibland en bild) ligger i `prisdata.json`. Bilderna ligger som webp (max 800 px bred) i `public/prisbilder` och kommer bara från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels. Fotograf och licens står i `imageCredit` när licensen kräver det
   - `belopp.ts`: belopp i Gissa priset: tolkning av det man skriver (kronor, komma eller punkt för ören), min/max och visning i kronor
   - `emoji.ts`: vilka emoji som visas som Fluent-bilder (bildfil och svensk alt-text per tecken)
-  - `hojdpunkter.ts`: höjdpunkterna efter en match (fullträff, längst ifrån, avgjorde i sista rundan)
+  - `hojdpunkter.ts`: utmärkelserna efter en match (t.ex. Pris-oraklet, Snåljåpen, Moralisk segrare) med två eller tre texter var som slumpas med matchens frö, och `winnerSummary` med texten under prispallen. Alla kräver minst två spelare utom fullträffen, och lika resultat ger ingen eller en delad utmärkelse. Korten visas med `AwardCard`
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
   - `lobbykoll.ts`: kollar om en kod leder till en lobby som lever (lyssnar på närvaron i kanalen `lobby:KOD` utan att synas där). Används av kodfältet på startsidan. Utan värd inom 1,5 sekunder är lobbyn avslutad
