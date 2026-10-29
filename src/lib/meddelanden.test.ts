@@ -32,6 +32,8 @@ describe('läget från värden', () => {
       { state: { ...lobby, players: { a: { name: 5 } } }, sentAt: 1 },
       { state: { ...lobby, scores: { a: 'massor' } }, sentAt: 1 },
       { state: { ...lobby, matchRounds: 'nej' }, sentAt: 1 },
+      { state: { ...lobby, usedItemIds: [1, 2] }, sentAt: 1 },
+      { state: { ...lobby, usedItemIds: 'alla' }, sentAt: 1 },
       { state: { ...lobby, lastResult: { target: 1 } }, sentAt: 1 },
       { state: { ...lobby, cards: { step: 'choosing' } }, sentAt: 1 },
       { state: { ...lobby, game: 7 }, sentAt: 1 },
