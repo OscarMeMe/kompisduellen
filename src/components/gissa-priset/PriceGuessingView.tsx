@@ -33,20 +33,19 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
 
       <PriceQuestionCard item={item} />
 
-      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} hideLine />
-
+      {/* Svarsdelen direkt under frågan, så att fält och knapp syns utan scrollning. Spelarna står under. */}
       <AnswerDock state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked}>
         {!inGame ? (
           <p className="py-3 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
-          <div className="space-y-1 py-1 text-center sm:space-y-2 sm:py-4">
+          <div className="space-y-1 py-1 text-center sm:space-y-2 sm:py-2">
             <Lock className="mx-auto size-6 text-primary motion-safe:animate-hop sm:size-8" />
             <p className="text-muted-foreground">Din gissning</p>
             <p className="font-heading text-3xl font-bold break-all text-primary motion-safe:animate-pop sm:text-5xl">{formatSek(locked)}</p>
             <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
             <AmountInput text={text} onTextChange={setText} inputRef={inputRef} />
             <p
               className={cn(
@@ -68,11 +67,13 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
               className="w-full"
               disabled={!valid}
             >
-              Lås in gissning
+              Lås svaret
             </Button>
           </form>
         )}
       </AnswerDock>
+
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} hideLine />
     </Wide>
   )
 }

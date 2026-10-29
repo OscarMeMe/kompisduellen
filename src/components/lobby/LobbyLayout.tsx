@@ -8,7 +8,7 @@ export function Narrow({ children }: { children: ReactNode }) {
 }
 
 export function Wide({ children }: { children: ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6">{children}</div>
+  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2">{children}</div>
 }
 
 export function RoundBadge({ state }: { state: GameState }) {

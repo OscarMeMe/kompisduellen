@@ -5,6 +5,8 @@
 @import "@fontsource-variable/plus-jakarta-sans";
 
 @custom-variant dark (&:is(.dark *));
+/* Låg skärm (t.ex. en bärbar dator på 1366×768): mindre bild, rubrik och mellanrum i spelvyerna, så att svarsdelen syns. */
+@custom-variant short (@media (max-height: 860px));
 
 @theme inline {
     /* Rubriker och knappar i Syne, brödtext i Plus Jakarta Sans */
