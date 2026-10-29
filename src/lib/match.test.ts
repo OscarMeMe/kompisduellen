@@ -26,6 +26,7 @@ import {
   resolveRound,
   restoreHostState,
   roundOptionsFor,
+  roundStanding,
   setGame,
   setTempo,
   startGame,
@@ -524,5 +525,37 @@ describe('byt spel efter en match', () => {
     expect(kortkaos.game).toBe('kortkaos')
     expect(canStart('kortkaos', 2)).toBe(false)
     expect(hostCountdownStart({ state: kortkaos, secrets: null }, ['a', 'b'], NOW).state.rematchAt).toBeNull()
+  })
+})
+
+describe('ställningen efter en runda', () => {
+  // Närmast vinner: den närmaste får 1 poäng.
+  const match = () => startGame(lobby('narmast', ['a', 'b', 'c'], { rounds: 3 }), ['a', 'b', 'c'], NOW)
+
+  it('visar placering men ingen ändring efter första rundan', () => {
+    const state = playRound(match(), { a: 10, b: 50, c: 90 }, 12)
+    expect(roundStanding(state, 'a')).toEqual({ place: 1, previousPlace: null, players: 3, leaderIds: ['a'] })
+    expect(roundStanding(state, 'b')?.place).toBe(2)
+  })
+
+  it('räknar ut placeringen före rundan, så att man ser om man gått upp', () => {
+    let state = nextRound(playRound(match(), { a: 10, b: 50, c: 90 }, 12), NOW)
+    state = nextRound(playRound(state, { a: 10, b: 50, c: 90 }, 88), NOW)
+    state = playRound(state, { a: 10, b: 50, c: 90 }, 90)
+    // c vann två rundor och gick från delad andraplats till ensam ledare.
+    expect(roundStanding(state, 'c')).toEqual({ place: 1, previousPlace: 1, players: 3, leaderIds: ['c'] })
+    expect(roundStanding(state, 'a')).toMatchObject({ place: 2, previousPlace: 1 })
+  })
+
+  it('skiljer rundans vinnare från matchledaren', () => {
+    let state = nextRound(playRound(match(), { a: 10, b: 50, c: 90 }, 12), NOW)
+    state = playRound(state, { a: 10, b: 50, c: 90 }, 50)
+    expect(state.lastResult?.winners).toEqual(['b'])
+    expect(roundStanding(state, 'b')?.leaderIds).toEqual(['a', 'b'])
+  })
+
+  it('har ingen ledare när ingen fått poäng', () => {
+    const state = playRound(match(), {}, 12)
+    expect(roundStanding(state, 'a')?.leaderIds).toEqual([])
   })
 })

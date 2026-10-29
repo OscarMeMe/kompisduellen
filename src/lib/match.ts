@@ -437,6 +437,33 @@ export function rankPlayers(state: GameState): RankedPlayer[] {
   }))
 }
 
+export type RoundStanding = {
+  place: number
+  // Placeringen före rundan. null i första rundan, då alla stod på noll.
+  previousPlace: number | null
+  players: number
+  // De som leder matchen efter rundan (flera vid lika poäng). Tom om ingen har poäng än.
+  leaderIds: string[]
+}
+
+// Var en spelare står i matchen efter facit, och hur det ändrades av rundan.
+// Skiljer matchledaren från rundans vinnare (lastResult.winners).
+export function roundStanding(state: GameState, playerId: string): RoundStanding | null {
+  const result = state.lastResult
+  if (!result || !state.players[playerId]) return null
+  const ids = Object.keys(state.players)
+  const after = (id: string) => state.scores[id] ?? 0
+  const before = (id: string) => after(id) - (result.points[id] ?? 0)
+  const placeOf = (score: (id: string) => number) => 1 + ids.filter((id) => score(id) > score(playerId)).length
+  const best = Math.max(0, ...ids.map(after))
+  return {
+    place: placeOf(after),
+    previousPlace: state.round > 1 ? placeOf(before) : null,
+    players: ids.length,
+    leaderIds: best > 0 ? ids.filter((id) => after(id) === best) : [],
+  }
+}
+
 // Topplistan sorterad på antal vinster. Lika många vinster ger samma placering.
 export function rankLeaderboard(state: GameState): RankedEntry[] {
   const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))

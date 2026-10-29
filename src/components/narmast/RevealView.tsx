@@ -1,9 +1,12 @@
+import { Crown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
+import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
+import { roundStanding } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
@@ -29,6 +32,8 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
 
   if (!result) return null
   const rolling = shownTarget !== result.target
+  // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
+  const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
 
   const rows = Object.entries(state.players)
     .map(([id, info]) => {
@@ -79,7 +84,12 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
             >
               <Emoji emoji={row.avatar} className="text-2xl" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate">{row.name}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate">{row.name}</span>
+                  {leaderIds.includes(row.id) && (
+                    <Crown className="size-4 shrink-0 text-amber-500" aria-label="Leder matchen" />
+                  )}
+                </span>
                 <span className="block text-sm font-normal text-muted-foreground">
                   {row.diff === null ? 'Ingen gissning' : `${row.diff} ifrån`}
                 </span>
@@ -93,6 +103,8 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
           ))}
         </ul>
       )}
+
+      {!rolling && <RoundStanding state={state} meId={me.id} />}
 
       <RevealFooter
         state={state}
