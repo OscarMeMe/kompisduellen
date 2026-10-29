@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Info } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { playersLabel, type GameInfo } from '@/lib/games'
 import { cn } from '@/lib/utils'
@@ -72,10 +71,7 @@ export function SpelKort({ game, recommended = false, highlight = false, onShowR
           <p className="text-sm font-semibold text-muted-foreground">
             {[playersLabel(game), game.feel].filter(Boolean).join(' · ')}
           </p>
-          <h3 className="flex items-center gap-2 text-xl leading-tight">
-            <Emoji emoji={game.emoji} className="text-2xl" />
-            {game.name}
-          </h3>
+          <h3 className="text-xl leading-tight">{game.name}</h3>
         </div>
         <p className="leading-snug text-muted-foreground">{game.tagline}</p>
         <div className="mt-auto flex flex-col gap-1 pt-1">
