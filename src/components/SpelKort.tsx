@@ -58,7 +58,7 @@ const PREVIEWS: Record<string, ReactNode> = {
 
 type SpelKortProps = {
   game: GameInfo
-  // Spelet som rekommenderas först. Det är ett redaktionellt val, inget påstående om hur populärt det är.
+  // Spelet som rekommenderas först (får den fyllda knappen). Det är ett redaktionellt val, inget påstående om hur populärt det är.
   recommended?: boolean
   // Kortet lyser upp en kort stund när besökaren tryckt på Välj spel.
   highlight?: boolean
@@ -83,9 +83,6 @@ export function SpelKort({ game, recommended = false, highlight = false, onShowR
         <div aria-hidden className="flex w-full items-center justify-center pt-6">
           {PREVIEWS[game.id]}
         </div>
-        {recommended && (
-          <span className="absolute top-3 left-3 rounded-full border bg-card px-3 py-1 text-sm font-bold">Börja här</span>
-        )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
