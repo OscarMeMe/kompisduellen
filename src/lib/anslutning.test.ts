@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { ClosingChannels, lobbyStatus, shouldRetryHello, wakeAction, type StatusInput } from '@/lib/anslutning'
+import {
+  ClosingChannels,
+  helloRetryAction,
+  lobbyStatus,
+  RECONNECT_AFTER_HELLOS,
+  shouldRetryHello,
+  wakeAction,
+  type StatusInput,
+} from '@/lib/anslutning'
 
 describe('kanaler som håller på att stängas', () => {
   it('en ny kanal väntar tills den gamla med samma namn är stängd', async () => {
@@ -97,13 +105,27 @@ describe('försök igen', () => {
 
   it('när fliken syns igen: ny anslutning om kanalen är nere, annars hello från gästen', () => {
     for (const state of ['closed', 'errored', 'leaving']) {
-      expect(wakeAction({ isHost: false, channelState: state })).toBe('reconnect')
-      expect(wakeAction({ isHost: true, channelState: state })).toBe('reconnect')
+      for (const received of [true, false]) {
+        expect(wakeAction({ isHost: false, channelState: state, received })).toBe('reconnect')
+        expect(wakeAction({ isHost: true, channelState: state, received })).toBe('reconnect')
+      }
     }
-    expect(wakeAction({ isHost: false, channelState: 'joined' })).toBe('hello')
-    expect(wakeAction({ isHost: false, channelState: 'joining' })).toBe('hello')
-    expect(wakeAction({ isHost: true, channelState: 'joined' })).toBeNull()
+    expect(wakeAction({ isHost: false, channelState: 'joined', received: true })).toBe('hello')
+    expect(wakeAction({ isHost: false, channelState: 'joining', received: true })).toBe('hello')
+    expect(wakeAction({ isHost: true, channelState: 'joined', received: false })).toBeNull()
     // En ny kanal väntar fortfarande på att den gamla ska stängas: gör ingenting.
-    expect(wakeAction({ isHost: false, channelState: null })).toBeNull()
+    expect(wakeAction({ isHost: false, channelState: null, received: false })).toBeNull()
+  })
+
+  it('en gäst som fastnat på Ansluter ansluter på nytt när fliken syns igen, även om kanalen ser öppen ut', () => {
+    expect(wakeAction({ isHost: false, channelState: 'joined', received: false })).toBe('reconnect')
+    expect(wakeAction({ isHost: false, channelState: 'joining', received: false })).toBe('reconnect')
+  })
+
+  it('gästen ansluter på nytt en gång när hello inte får svar, och frågar sedan vidare', () => {
+    expect(helloRetryAction({ tries: 1, autoReconnected: false })).toBe('hello')
+    expect(helloRetryAction({ tries: RECONNECT_AFTER_HELLOS, autoReconnected: false })).toBe('reconnect')
+    expect(helloRetryAction({ tries: RECONNECT_AFTER_HELLOS, autoReconnected: true })).toBe('hello')
+    expect(helloRetryAction({ tries: 10, autoReconnected: true })).toBe('hello')
   })
 })
