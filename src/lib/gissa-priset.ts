@@ -2,7 +2,7 @@
 // sedan avslöjas priset.
 
 import { formatSek, isValidPrice, roundSek } from '@/lib/belopp'
-import { findPriceItem, PRICE_ITEMS } from '@/lib/prisdata'
+import { findPriceItem, GAME_ITEMS } from '@/lib/prisdata'
 import type { GameRules } from '@/lib/spelregler'
 
 // Längre tider än i Närmast vinner, så att man hinner skriva ett belopp och läsa faktameningen.
@@ -91,12 +91,12 @@ export const priceRules: GameRules = {
   ],
   isValidGuess: isValidPrice,
 
-  // En slumpad sak som inte varit med än. När alla använts börjar listan om.
+  // En slumpad sak som inte varit med än. När alla använts börjar listan om. Exempelfrågorna är inte med (GAME_ITEMS).
   pickItem(usedItemIds) {
-    let unused = PRICE_ITEMS.filter((item) => !usedItemIds.includes(item.id))
+    let unused = GAME_ITEMS.filter((item) => !usedItemIds.includes(item.id))
     let used = usedItemIds
     if (unused.length === 0) {
-      unused = PRICE_ITEMS
+      unused = GAME_ITEMS
       used = []
     }
     const item = unused[Math.floor(Math.random() * unused.length)]

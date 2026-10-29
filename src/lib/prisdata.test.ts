@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { priceRules } from '@/lib/gissa-priset'
-import { ALL_PRICE_ITEMS, findExampleItem, findPriceItem, PRICE_ITEMS, questionText } from '@/lib/prisdata'
+import { ALL_PRICE_ITEMS, EXAMPLE_ITEMS, findExampleItem, findPriceItem, GAME_ITEMS, PRICE_ITEMS, questionText } from '@/lib/prisdata'
 
 // Filerna i public/prisbilder, t.ex. '/public/prisbilder/game-boy-1990.webp'.
 const files = Object.keys(import.meta.glob('/public/prisbilder/*'))
@@ -26,16 +26,22 @@ describe('bilderna i Gissa priset', () => {
   })
 })
 
-describe('exempelfrågan på startsidan', () => {
-  it('är exakt en fråga och har en bild med fotograf när licensen kräver det', () => {
-    expect(PRICE_ITEMS.filter((item) => item.exempel)).toHaveLength(1)
-    const example = findExampleItem()
-    expect(example?.image).toMatch(/^\/prisbilder\/.+\.webp$/)
-    expect(example?.imageSource).toMatch(/^https:\/\//)
-    // Bilden ska visa just saken, så ingen anteckning om att den visar något annat.
-    expect(example?.imageNote).toBeUndefined()
-    // Exempelrundans ledtråd får inte avslöja priset.
-    expect(example?.exempelLedtrad ?? '').not.toContain(String(example?.priceSek))
+describe('exempelfrågorna på startsidan', () => {
+  it('är tre frågor med en bild som visar just saken', () => {
+    expect(EXAMPLE_ITEMS).toHaveLength(3)
+    for (const example of EXAMPLE_ITEMS) {
+      expect(example.image, example.id).toMatch(/^\/prisbilder\/.+\.webp$/)
+      expect(example.imageSource, example.id).toMatch(/^https:\/\//)
+      // Bilden ska visa just saken, så ingen anteckning om att den visar något annat.
+      expect(example.imageNote, example.id).toBeUndefined()
+      // Exempelrundans ledtråd får inte avslöja priset.
+      expect(example.exempelLedtrad ?? example.clue, example.id).not.toContain(String(example.priceSek))
+    }
+  })
+
+  it('slumpar fram var och en av dem', () => {
+    const picked = new Set([0, 0.4, 0.99].map((r) => findExampleItem(() => r)?.id))
+    expect(picked.size).toBe(3)
   })
 })
 
@@ -111,7 +117,18 @@ describe('frågor och ledtrådar', () => {
     }
   })
 
-  it('har exempelfrågan bland de synliga', () => {
-    expect(PRICE_ITEMS).toContain(findExampleItem())
+  it('har exempelfrågorna bland de synliga, men slumpar aldrig fram dem i spelet', () => {
+    expect(GAME_ITEMS).toHaveLength(140)
+    let used: string[] = []
+    for (const example of EXAMPLE_ITEMS) {
+      expect(PRICE_ITEMS).toContain(example)
+      expect(GAME_ITEMS).not.toContain(example)
+    }
+    // Två varv genom alla frågor, så att även omstarten av listan provas.
+    for (let i = 0; i < GAME_ITEMS.length * 2; i++) {
+      const pick = priceRules.pickItem!(used)
+      expect(EXAMPLE_ITEMS.map((item) => item.id)).not.toContain(pick.itemId)
+      used = pick.usedItemIds
+    }
   })
 })
