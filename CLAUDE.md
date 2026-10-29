@@ -77,6 +77,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `hojdpunkter.ts`: utmärkelserna efter en match (t.ex. Pris-oraklet, Snåljåpen, Moralisk segrare) med två eller tre texter var som slumpas med matchens frö, och `winnerSummary` med texten under prispallen. Alla kräver minst två spelare utom fullträffen, och lika resultat ger ingen eller en delad utmärkelse. Korten visas med `AwardCard`
   - `inbjudan.ts`: inbjudningslänken och vad Dela och Kopiera gör i alla utfall
   - `statistik.ts`: PostHog-statistik (`track`). Utan `VITE_POSTHOG_KEY` skickas inget. Bara spel och antal, aldrig namn eller figurer. Matchhändelserna skickas av värden i `useLobby`
+  - `anslutning.ts`: anslutningen till en lobby. Lobbysidans status (`lobbyStatus`, med `stuck` när en gäst inte kommit in efter 12 sekunder), när gästen skickar `hello` igen och vad som händer när fliken syns igen eller nätet kommer tillbaka (`wakeAction`). Rena funktioner
+  - `kanaler.ts`: öppna och stäng Realtime-kanaler (`waitForChannel`, `closeChannel`). `supabase.channel()` ger tillbaka en befintlig kanal med samma namn, även en som håller på att stängas, så en ny kanal väntar tills den gamla är helt stängd. Används av `useLobby` och `lobbykoll`
   - `lobbykoll.ts`: kollar om en kod leder till en lobby som lever (lyssnar på närvaron i kanalen `lobby:KOD` utan att synas där). Används av kodfältet på startsidan. Utan värd inom 1,5 sekunder är lobbyn avslutad
   - `skillnad.ts`: hur långt ifrån rätt pris en gissning var, i ord (`differenceText`). Används i facit och i startsidans exempelrunda
   - `vardbyte.ts`: vem som tar över som värd, vem som viker sig vid två värdar och tillståndet vid övertagande. Rena funktioner
@@ -88,7 +90,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 - Alla i en lobby ansluter till Realtime-kanalen `lobby:KOD`.
 - Den som skapade lobbyn är värd och äger spelets tillstånd. Värden skickar ut hela tillståndet (`state`) till alla.
-- Övriga skickar bara sina gissningar (`guess`) eller kortdrag (`move`) till värden. Nya spelare skickar `hello` (med sitt id) för att få aktuellt läge.
+- Övriga skickar bara sina gissningar (`guess`) eller kortdrag (`move`) till värden. Nya spelare skickar `hello` (med sitt id) för att få aktuellt läge, och skickar det igen var tredje sekund tills läget kommer. När fliken syns igen eller nätet kommer tillbaka ansluter gästen på nytt om kanalen stängts, annars skickas ett nytt `hello`. Kommer gästen inte in visas "Det tar lite längre tid än vanligt" med Försök igen.
 - Kortspelen har hemlig data (leken, allas händer, vem som spelade vad) som bara värden har och som aldrig skickas med `state`. Varje spelare får sin hand i ett eget meddelande (`hand`) som andra flikar slänger. Vem som spelade vilket kort syns först när rundan avslöjas. Den som läser nätverkstrafiken kan se andras händer, och det räcker för ett kompisspel.
 - I kortspelen räknas en spelare som tappat nätet som kvar i 10 sekunder, så att domaren inte byts och matchen inte slutar i onödan.
 - Spelar-id och värdflaggan sparas per flik (sessionStorage), så varje flik är en egen spelare. Det går att testa med flera spelare i flera flikar.
