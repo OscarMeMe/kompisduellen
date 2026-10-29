@@ -6,8 +6,11 @@ import { loadSoundOn, playPop, saveSoundOn } from '@/lib/ljud'
 import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
-// En reaktion som svävar över skärmen en kort stund.
-export type FloatingReaction = { key: string; name: string; avatar: string; emoji: string; left: number }
+// En reaktion som visas överst på skärmen en kort stund.
+export type FloatingReaction = { key: string; name: string; avatar: string; emoji: string }
+
+// Så många reaktioner syns samtidigt. De äldsta försvinner först.
+const MAX_VISIBLE = 6
 
 type ReactionsValue = {
   // Reaktioner kan skickas när fler än en är med i lobbyn.
@@ -97,25 +100,25 @@ export function ReactionBar({ className }: { className?: string }) {
   )
 }
 
-// Svävande reaktioner från alla i lobbyn. Ligger över sidan men tar inga tryck.
+// Reaktioner från alla i lobbyn, som bubblor i en rad överst på skärmen (under sidhuvudet och rundans tidsstapel).
+// De står bredvid varandra i stället för på varandra, och tar inga tryck.
 export function ReactionFloaters() {
   const reactions = useContext(ReactionsContext)
   if (!reactions || reactions.floating.length === 0) return null
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 h-0" aria-hidden>
-      {reactions.floating.map((item) => (
-        <div
-          key={item.key}
-          className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-1 duration-700 animate-in fade-in slide-in-from-bottom-16"
-          style={{ left: `${item.left}%` }}
-        >
-          <span className="text-5xl drop-shadow">{item.emoji}</span>
-          <span className="flex max-w-32 items-center gap-1 rounded-full bg-card/95 px-2 py-0.5 text-xs font-semibold shadow-soft-sm">
-            <Emoji emoji={item.avatar} className="text-sm" />
-            <span className="truncate">{item.name}</span>
-          </span>
-        </div>
-      ))}
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-30 flex justify-center px-4" aria-hidden>
+      <div className="flex max-w-xl flex-wrap justify-center gap-2">
+        {reactions.floating.slice(-MAX_VISIBLE).map((item) => (
+          <div
+            key={item.key}
+            className="flex items-center gap-1.5 rounded-full border bg-card py-1 pr-3 pl-1.5 shadow-soft motion-safe:animate-reaction motion-reduce:animate-reaction-fade"
+          >
+            <span className="text-2xl leading-none sm:text-4xl">{item.emoji}</span>
+            <Emoji emoji={item.avatar} className="text-lg" />
+            <span className="max-w-24 truncate text-sm font-semibold sm:max-w-32">{item.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
