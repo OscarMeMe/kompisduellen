@@ -2,6 +2,7 @@
 // en lobby finns så länge värden är med i Realtime-kanalen lobby:KOD. Kontrollen lyssnar bara på närvaron
 // (utan att själv synas där) och släpper kanalen direkt efteråt.
 
+import { closeChannel, waitForChannel } from '@/lib/kanaler'
 import { supabase } from '@/lib/supabase'
 
 export type LobbyKoll = 'finns' | 'saknas' | 'fel'
@@ -24,7 +25,8 @@ export function felText(code: string, result: Exclude<LobbyKoll, 'finns'>): stri
     : 'Det gick inte att kontrollera koden. Försök igen.'
 }
 
-export function checkLobby(code: string): Promise<LobbyKoll> {
+export async function checkLobby(code: string): Promise<LobbyKoll> {
+  await waitForChannel(`lobby:${code}`)
   return new Promise((resolve) => {
     const channel = supabase.channel(`lobby:${code}`, { config: { presence: { key: `koll-${crypto.randomUUID()}` } } })
     let done = false
@@ -34,7 +36,8 @@ export function checkLobby(code: string): Promise<LobbyKoll> {
       done = true
       clearTimeout(timer)
       clearTimeout(settle)
-      void supabase.removeChannel(channel)
+      // Stängs via kanaler.ts, så att lobbysidan som öppnas direkt efteråt inte får den här kanalen.
+      closeChannel(channel)
       resolve(result)
     }
     const timer = setTimeout(() => finish('fel'), TIMEOUT_MS)
