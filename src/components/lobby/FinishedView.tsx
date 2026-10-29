@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { Sentence } from '@/components/kort/PlayingCard'
 import { Leaderboard } from '@/components/Leaderboard'
+import { AwardCard } from '@/components/lobby/AwardCard'
 import { Choice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
@@ -212,14 +213,9 @@ export function FinishedView({
       )}
 
       {highlights.length > 0 && (
-        <ul className={cn('grid gap-3', highlights.length > 1 && 'sm:grid-cols-2')} aria-label="Matchens höjdpunkter">
+        <ul className={cn('grid gap-3', highlights.length > 1 && 'sm:grid-cols-2')} aria-label="Matchens utmärkelser">
           {highlights.map((highlight) => (
-            <li key={highlight.id} className="flex gap-3 rounded-lg border bg-sun-soft p-4 shadow-soft-sm animate-pop">
-              <span className="min-w-0">
-                <span className="block font-heading font-bold">{highlight.title}</span>
-                <span className="block text-sm break-words text-muted-foreground">{highlight.text}</span>
-              </span>
-            </li>
+            <AwardCard key={highlight.id} highlight={highlight} />
           ))}
         </ul>
       )}
