@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
+  // Hur många gånger figuren uppe till höger har klickats (för hoppet).
+  const [hops, setHops] = useState(0)
   const [leaveInMatch, setLeaveInMatch] = useState(false)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
@@ -44,10 +46,14 @@ export function Layout() {
             {player ? (
               <Link
                 to="/profil"
-                onClick={guarded('/profil')}
+                onClick={(event) => {
+                  setHops((n) => n + 1)
+                  guarded('/profil')(event)
+                }}
                 className="flex items-center gap-2 rounded-full border bg-card py-2 pr-4 pl-3 text-sm font-bold shadow-soft-sm transition-transform hover:-translate-y-0.5"
               >
-                <Emoji emoji={player.avatar} className="text-xl" />
+                {/* Figuren hoppar till vid klick. Ny key startar om hoppet. */}
+                <Emoji key={hops} emoji={player.avatar} className={cn('text-xl', hops > 0 && 'motion-safe:animate-hop')} />
                 <span className="max-w-24 truncate sm:max-w-32">{player.name}</span>
               </Link>
             ) : (
@@ -73,7 +79,7 @@ function Logo() {
   return (
     <span className="font-heading text-xl font-bold tracking-tight whitespace-nowrap sm:text-2xl">
       Kompis{' '}
-      <span className="inline-block -rotate-3 rounded-full bg-primary px-3 pb-0.5 text-primary-foreground shadow-primary transition-transform group-hover:rotate-0">
+      <span className="inline-block -rotate-3 rounded-full bg-primary px-3 pb-0.5 text-primary-foreground shadow-primary transition-[rotate] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-safe:group-hover:rotate-3">
         duellen
       </span>
     </span>

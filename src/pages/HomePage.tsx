@@ -55,7 +55,7 @@ export function HomePage() {
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
           <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
-            Bra sällskap. <span className="whitespace-nowrap text-primary">Dåliga förlorare.</span>
+            Bra sällskap. <span className="inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Samla kompisarna, välj ett spel och dela koden. Alla spelar på sin egen mobil eller dator.

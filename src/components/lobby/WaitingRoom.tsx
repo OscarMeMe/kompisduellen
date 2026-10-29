@@ -173,7 +173,8 @@ export function WaitingRoom({
           <ul className="flex flex-wrap gap-2">
             {online.map((p) => (
               <li key={p.id} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2 animate-pop">
-                <Emoji emoji={p.avatar} className="text-xl" />
+                {/* Figuren vinkar när spelaren dyker upp i listan. */}
+                <Emoji emoji={p.avatar} className="origin-bottom text-xl motion-safe:animate-wave motion-safe:[animation-delay:200ms]" />
                 <span className="truncate font-semibold">{p.name}</span>
                 {p.id === meId && (
                   <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Du</span>
