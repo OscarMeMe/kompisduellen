@@ -83,6 +83,7 @@ out
 .nuxt
 dist
 .output
+dist-ssr
 
 # Gatsby files
 .cache/
