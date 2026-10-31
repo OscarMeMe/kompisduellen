@@ -3,6 +3,7 @@ import { Emoji } from '@/components/Emoji'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { guessSecondsFor, type GameState } from '@/lib/match'
+import type { TimeWarning } from '@/lib/tidvarning'
 import { cn } from '@/lib/utils'
 
 type GuessStatusListProps = {
@@ -12,6 +13,8 @@ type GuessStatusListProps = {
   meId: string
   // Min inlåsta gissning. Räknas som svar direkt, innan värden hunnit skicka ut den.
   locked: number | null
+  // Från useTimeWarning. Sekunderna blir fetare vid varning och hoppar till vid varje tick när det är kritiskt.
+  warning?: TimeWarning
 }
 
 function useAnswerStatus({ state, online, clockOffset, meId, locked }: GuessStatusListProps) {
@@ -28,7 +31,22 @@ export function GuessStatusLine(props: GuessStatusListProps) {
   const { secondsLeft, activePlayers, answered } = useAnswerStatus(props)
   return (
     <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
-      {props.state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}
+      {props.state.deadline !== null && (
+        <>
+          {'⏱ '}
+          <span
+            key={props.warning === 'kritisk' ? secondsLeft : 'lugnt'}
+            className={cn(
+              'inline-block',
+              props.warning && props.warning !== 'normal' && 'font-bold text-foreground',
+              props.warning === 'kritisk' && 'motion-safe:animate-hop',
+            )}
+          >
+            {secondsLeft}
+          </span>
+          {' s kvar · '}
+        </>
+      )}
       {answered}/{activePlayers.length} har svarat
     </p>
   )

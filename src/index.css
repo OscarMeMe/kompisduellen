@@ -71,6 +71,9 @@
     --animate-confetti: confetti-fall 0.9s cubic-bezier(0.2, 0.6, 0.4, 1) both;
     /* animate-grow: växer upp från botten, t.ex. prispallens staplar (med origin-bottom) */
     --animate-grow: grow-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+    /* animate-frame-pulse: ramen runt spelvyn lyser upp en gång när tiden nästan är ute (TimeWarningFrame).
+       Spelas en gång per sekund, aldrig oftare. */
+    --animate-frame-pulse: frame-pulse 0.5s ease-out;
 
     @keyframes wiggle {
         0%, 100% { transform: rotate(0deg); }
@@ -121,6 +124,15 @@
         0% { opacity: 0; }
         10%, 85% { opacity: 1; }
         100% { opacity: 0; }
+    }
+
+    @keyframes frame-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 0 transparent; }
+        40% {
+            box-shadow:
+                0 0 16px 3px color-mix(in oklch, var(--color-primary) 55%, transparent),
+                inset 0 0 16px 3px color-mix(in oklch, var(--color-primary) 40%, transparent);
+        }
     }
 
     @keyframes pop-in {

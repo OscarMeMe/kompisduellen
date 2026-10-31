@@ -6,11 +6,13 @@ import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { useMyGuess } from '@/hooks/useMyGuess'
+import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { formatSek, MAX_PRICE, MIN_PRICE, parseTypedNumber } from '@/lib/belopp'
-import { isValidGuess, waitingStanding } from '@/lib/match'
+import { guessSecondsFor, isValidGuess, waitingStanding } from '@/lib/match'
 import { findPriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +24,13 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
   // Det tolkade beloppet i kronor är det som skickas som gissning.
   const value = parseTypedNumber(text)
   const valid = isValidGuess(state.game, value)
+  // Tydligare när tiden håller på att ta slut, bara medan jag gissar.
+  const { warning, secondsLeft } = useTimeWarning(
+    state.deadline,
+    clockOffset,
+    guessSecondsFor(state),
+    locked !== null || !inGame,
+  )
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -30,12 +39,13 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
 
   return (
     <Wide>
-      <RoundTimer state={state} clockOffset={clockOffset} />
+      <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
+      <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
 
       <PriceQuestionCard item={item} />
 
       {/* Svarsdelen direkt under frågan, så att fält och knapp syns utan scrollning. Spelarna står under. */}
-      <AnswerDock state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked}>
+      <AnswerDock state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} warning={warning}>
         {!inGame ? (
           <p className="py-3 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
@@ -63,10 +73,11 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
                     ? `Det är för mycket. Max ${formatSek(MAX_PRICE)}.`
                     : `Minst ${formatSek(MIN_PRICE)}.`}
             </p>
+            {/* Vickar till en gång när det blir fem sekunder kvar. */}
             <Button
               type="submit"
               size="lg"
-              className="w-full"
+              className={cn('w-full', warning === 'kritisk' && 'motion-safe:animate-wiggle')}
               disabled={!valid}
             >
               Lås svaret

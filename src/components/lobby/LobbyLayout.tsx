@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useCountdown } from '@/hooks/useCountdown'
 import { guessSecondsFor, type GameState } from '@/lib/match'
+import type { TimeWarning } from '@/lib/tidvarning'
 import { cn } from '@/lib/utils'
 
 export function Narrow({ children }: { children: ReactNode }) {
@@ -30,16 +31,19 @@ function PracticeChip() {
 // Runda och en tunn stapel som krymper med tiden medan man gissar. Sekunderna står i statusraden
 // under gissningsrutan. Ligger fast högst upp, så att tiden syns även när man scrollar.
 // totalSeconds = stegets hela tid, om den inte är svarstiden (t.ex. i kortspelen).
+// warning (från useTimeWarning): stapeln blir solgul vid varning och röd när det är kritiskt.
 export function RoundTimer({
   state,
   clockOffset,
   totalSeconds,
+  warning = 'normal',
 }: {
   state: GameState
   clockOffset: number
   totalSeconds?: number
+  warning?: TimeWarning
 }) {
-  const { progress, urgent } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
+  const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
 
   return (
     <div className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
@@ -49,11 +53,10 @@ export function RoundTimer({
       </p>
       {state.deadline !== null && (
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-          {/* Korallröd de sista fem sekunderna */}
           <div
             className={cn(
               'h-full rounded-full transition-[width,background-color] duration-200 ease-linear',
-              urgent ? 'bg-primary' : 'bg-mint',
+              warning === 'kritisk' ? 'bg-destructive' : warning === 'varning' ? 'bg-sun' : 'bg-mint',
             )}
             style={{ width: `${progress * 100}%` }}
           />

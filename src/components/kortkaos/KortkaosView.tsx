@@ -7,7 +7,9 @@ import { JudgingStep } from '@/components/kortkaos/JudgingStep'
 import { PlayerStatus } from '@/components/kortkaos/PlayerStatus'
 import { RevealStep } from '@/components/kortkaos/RevealStep'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { CardViewProps } from '@/components/lobby/types'
+import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { findGame } from '@/lib/games'
 import { capitalize, type MyHand } from '@/lib/kort'
 import { kortkaosRules } from '@/lib/kortkaos'
@@ -17,6 +19,16 @@ import type { GameState } from '@/lib/match'
 // LobbyPage ger vyn en ny key för varje frågekort, så att val och utkast börjar om.
 export function KortkaosView({ state, me, online, isHost, clockOffset, hand, onMove, onNext }: CardViewProps) {
   const table = state.cards
+  // Tiden varnar bara när jag har något kvar att göra: lägga mitt kort, eller välja vinnare som domare.
+  const myTurn =
+    (table?.step === 'choosing' && table.judge !== me.id && hand !== null && !table.done.includes(me.id)) ||
+    (table?.step === 'judging' && table.judge === me.id)
+  const { warning, secondsLeft } = useTimeWarning(
+    state.deadline,
+    clockOffset,
+    kortkaosRules.seconds[table?.step ?? 'choosing'],
+    !myTurn,
+  )
   if (!table) return null
   const prompt = kortkaosRules.promptText(table.prompt)
   const isJudge = table.judge === me.id
@@ -29,7 +41,8 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, onM
 
   return (
     <Wide>
-      <RoundTimer state={state} clockOffset={clockOffset} totalSeconds={kortkaosRules.seconds[table.step]} />
+      <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
+      <RoundTimer state={state} clockOffset={clockOffset} totalSeconds={kortkaosRules.seconds[table.step]} warning={warning} />
       <JudgeBanner state={state} meId={me.id} />
 
       {table.step === 'question' && (
