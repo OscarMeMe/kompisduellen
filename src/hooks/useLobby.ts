@@ -412,9 +412,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const item = findThrowItem(message.item)
         if (!from || !to || !item) return
         const key = `${message.id}-${now}-${Math.random()}`
-        // Splatten får inte täcka svarsdelen eller korten. Får den inte plats blir det en rad även för mig.
+        // I spelet får splatten inte täcka svarsdelen eller korten. Får den inte plats blir det en rad även för mig.
+        // I lobbyn (väntrummet, facit, slutskärmen) får den bli stor.
         if (message.to === myId) {
-          const place = measureSplatPlace()
+          const phase = stateRef.current.phase
+          const place = measureSplatPlace(phase === 'guessing' || phase === 'playing' ? 'spel' : 'lobby')
           const next = place && nextSplat(splatRef.current, { key, from: from.name, item: item.id, place })
           if (next?.shown) {
             splatRef.current = next.splat
