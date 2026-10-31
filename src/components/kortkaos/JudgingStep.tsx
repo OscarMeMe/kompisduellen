@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FlipCard } from '@/components/kort/FlipCard'
 import { AnswerCard, Sentence } from '@/components/kort/PlayingCard'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { Button } from '@/components/ui/button'
@@ -41,14 +42,17 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
 
       <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2" aria-label="Insända kort">
         {table.submissions.map((submission, i) => (
-          <li key={submission.key} className="animate-pop" style={{ animationDelay: `${i * 120}ms` }}>
-            <AnswerCard
-              selected={chosen === submission.key}
-              disabled={sent}
-              onSelect={isJudge ? () => setChosen(submission.key) : undefined}
-            >
-              <Sentence prompt={prompt} answer={submission.text} />
-            </AnswerCard>
+          <li key={submission.key}>
+            {/* Korten vänds upp ett i taget. */}
+            <FlipCard delay={i * 180}>
+              <AnswerCard
+                selected={chosen === submission.key}
+                disabled={sent}
+                onSelect={isJudge ? () => setChosen(submission.key) : undefined}
+              >
+                <Sentence prompt={prompt} answer={submission.text} />
+              </AnswerCard>
+            </FlipCard>
           </li>
         ))}
       </ul>
