@@ -403,6 +403,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             me={me}
             online={online}
             isHost={isHost}
+            clockOffset={clockOffset}
             imposterCard={imposterCard}
             onMove={actions.move}
             onStartAnyway={actions.imposterStartAnyway}

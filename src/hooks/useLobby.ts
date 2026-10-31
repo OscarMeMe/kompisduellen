@@ -192,6 +192,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Gästen: ett läge från någon som ännu inte syns som värd i närvarolistan (t.ex. precis efter ett värdbyte).
   // Det används så snart närvarolistan visar att avsändaren är värd.
   const pendingStateRef = useRef<StateMessage | null>(null)
+  // Samma sak för min hand (kortspel) och mitt kort (Imposterjakten). Efter en omladdning kan de komma innan
+  // närvarolistan visar vem som är värd, och då ska de inte slängas.
+  const pendingHandRef = useRef<{ from: string; hand: MyHand | null } | null>(null)
+  const pendingCardRef = useRef<{ from: string; card: MyImposterCard } | null>(null)
 
   const save = useCallback(() => {
     saveHostLobby(code, { state: stateRef.current, secrets: secretsRef.current } satisfies HostState)
@@ -344,6 +348,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           pendingStateRef.current = null
           applyState(pending)
         }
+        const pendingHand = pendingHandRef.current
+        if (pendingHand && isFromHost(pendingHand.from, hosts())) {
+          pendingHandRef.current = null
+          setHand(pendingHand.hand)
+        }
+        const pendingCard = pendingCardRef.current
+        if (pendingCard && isFromHost(pendingCard.from, hosts())) {
+          pendingCardRef.current = null
+          setImposterCard(pendingCard.card)
+        }
 
         // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
         const mine = players.find((p) => p.id === myId)
@@ -400,13 +414,26 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       // Min hand i ett kortspel. Meddelanden till andra spelare slängs direkt.
       channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
         const message = parseHand(payload)
-        if (message?.to === myId && isFromHost(message.from, hosts())) setHand(message.hand)
+        if (message?.to !== myId) return
+        if (isFromHost(message.from, hosts())) {
+          pendingHandRef.current = null
+          setHand(message.hand)
+        } else if (message.from !== null) {
+          // Kanske innan närvarolistan visar värden (t.ex. efter en omladdning). Sparas tills den gör det.
+          pendingHandRef.current = { from: message.from, hand: message.hand }
+        }
       })
 
       // Mitt kort i Imposterjakten. Meddelanden till andra spelare slängs direkt.
       channel.on('broadcast', { event: 'kort' }, ({ payload }) => {
         const message = parseImposterCard(payload)
-        if (message?.to === myId && isFromHost(message.from, hosts())) setImposterCard(message.card)
+        if (message?.to !== myId) return
+        if (isFromHost(message.from, hosts())) {
+          pendingCardRef.current = null
+          setImposterCard(message.card)
+        } else if (message.from !== null) {
+          pendingCardRef.current = { from: message.from, card: message.card }
+        }
       })
 
       // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.

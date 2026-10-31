@@ -1,6 +1,6 @@
 // Imposterjakten: alla utom en får samma hemliga ord. Impostern får inte ordet (i Normal bara en vag ledtråd) och
-// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, två varv, och sedan diskuterar och
-// röstar gruppen (diskussionen och omröstningen kommer i nästa steg).
+// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, två varv. Sedan diskuterar gruppen, och när
+// mer än hälften är redo börjar en nedräkning till omröstningen. Sista gissningen och poängen kommer i nästa steg.
 //
 // Som i kortspelen ligger det hemliga (ordet, vem som är impostern och avvisade ord) i ImposterSecrets, som bara
 // värden har och som aldrig skickas med det vanliga tillståndet. Varje spelare får sitt kort (myImposterCard) i ett
@@ -51,6 +51,8 @@ export const DEFAULT_ROUNDS = 3
 // Varje spelare ger ett ord per varv.
 export const CLUE_ROUNDS = 2
 export const MAX_CLUE_LENGTH = 30
+// Nedräkningen till omröstningen när mer än hälften är redo.
+export const COUNTDOWN_SECONDS = 30
 
 // Värdens val i väntrummet. hard = Svår (impostern får ingen ledtråd). category = null för Blandat.
 // aloud = associationerna sägs högt i stället för att skrivas i appen.
@@ -67,8 +69,9 @@ export function imposterSettingsSummary(settings: ImposterSettings): [string, st
   ]
 }
 
-// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, två varv. diskussion: allas ord syns kvar.
-export type ImposterStep = 'kort' | 'ledtradar' | 'diskussion'
+// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, två varv. diskussion: allas ord syns kvar och man
+// markerar när man är redo att rösta. rostning: hemlig omröstning. resultat: rösterna visas.
+export type ImposterStep = 'kort' | 'ledtradar' | 'diskussion' | 'rostning' | 'resultat'
 
 // En tur i ledtrådsvarven: ett skrivet ord, pass eller "sa sitt ord högt".
 export type Clue = { player: string; kind: 'ord' | 'pass' | 'sagt'; word: string | null }
@@ -87,19 +90,41 @@ export type ImposterTable = {
   category: string | null
   hard: boolean
   aloud: boolean
+  // Hur många som är redo att rösta och hur många som har röstat. Vilka syns inte.
+  readyCount: number
+  votedCount: number
+  // Nedräkningen till omröstningen har startat (bara en gång per omgång). Den slutar vid state.deadline.
+  countdownStarted: boolean
+  // Allas röster (vem → på vem), först när alla har röstat. null innan dess.
+  votes: Record<string, string> | null
 }
 
 // Det bara värden vet. rejected = när varje spelares senaste ord avvisades, så att bara den spelaren får beskedet.
-export type ImposterSecrets = { kind: 'imposter'; wordId: string; imposter: string; rejected: Record<string, number> }
+// ready = vilka som är redo att rösta. votes = rösterna innan de visas.
+export type ImposterSecrets = {
+  kind: 'imposter'
+  wordId: string
+  imposter: string
+  rejected: Record<string, number>
+  ready: string[]
+  votes: Record<string, string>
+}
 
 export type ImposterCard =
   | { role: 'oskyldig'; word: string; category: string | null }
   | { role: 'imposter'; hint: string | null; category: string | null }
 
-// Det en spelare får veta: sitt kort (null = inte med i omgången) och när ens senaste ord avvisades.
-export type MyImposterCard = { card: ImposterCard | null; rejectedAt: number | null }
+// Det en spelare får veta: sitt kort (null = inte med i omgången), när ens senaste ord avvisades, om man är redo att
+// rösta och vem man har röstat på.
+export type MyImposterCard = { card: ImposterCard | null; rejectedAt: number | null; ready: boolean; vote: string | null }
 
-export type ImposterMove = { type: 'read' } | { type: 'clue'; word: string } | { type: 'pass' } | { type: 'said' }
+export type ImposterMove =
+  | { type: 'read' }
+  | { type: 'clue'; word: string }
+  | { type: 'pass' }
+  | { type: 'said' }
+  | { type: 'ready'; on: boolean }
+  | { type: 'vote'; target: string }
 
 export type ImposterHost = { state: GameState; secrets: ImposterSecrets }
 
@@ -110,7 +135,7 @@ export function isImposterSecrets(secrets: unknown): secrets is ImposterSecrets 
 }
 
 export function isImposterMove(move: { type: string }): move is ImposterMove {
-  return ['read', 'clue', 'pass', 'said'].includes(move.type)
+  return ['read', 'clue', 'pass', 'said', 'ready', 'vote'].includes(move.type)
 }
 
 // Ord jämförs utan hänsyn till stora och små bokstäver och onödiga mellanslag. Å, ä och ö skiljs åt.
@@ -161,8 +186,12 @@ export function dealRound(
       category: settings.category,
       hard: settings.hard,
       aloud: settings.aloud,
+      readyCount: 0,
+      votedCount: 0,
+      countdownStarted: false,
+      votes: null,
     },
-    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {} },
+    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {} },
     usedWordIds: picked.usedWordIds,
   }
 }
@@ -180,7 +209,12 @@ export function cardFor(secrets: ImposterSecrets, table: ImposterTable, playerId
 }
 
 export function myImposterCard(secrets: ImposterSecrets, table: ImposterTable, playerId: string): MyImposterCard {
-  return { card: cardFor(secrets, table, playerId), rejectedAt: secrets.rejected[playerId] ?? null }
+  return {
+    card: cardFor(secrets, table, playerId),
+    rejectedAt: secrets.rejected[playerId] ?? null,
+    ready: secrets.ready.includes(playerId),
+    vote: secrets.votes[playerId] ?? null,
+  }
 }
 
 export function totalTurns(table: ImposterTable): number {
@@ -198,8 +232,23 @@ export function clueRound(table: ImposterTable): number {
   return Math.min(CLUE_ROUNDS, Math.floor(table.turn / Math.max(1, table.order.length)) + 1)
 }
 
+// Former som en ledtråd inte får likna: ordet, de godkända formerna och varje del på minst 4 bokstäver i ett ord med
+// mellanslag (så att "Skansen" spärras för Allsång på Skansen).
+export function blockedForms(word: ImposterWord): string[] {
+  const forms = [word.ord, ...word.godkanda].map(normalizeWord)
+  const parts = forms.flatMap((form) => form.split(' ')).filter((part) => part.length >= 4)
+  return [...new Set([...forms, ...parts])]
+}
+
+// Är ledtråden för lik en spärrad form? Former på minst 5 bokstäver får inte finnas någonstans i ledtråden. Kortare
+// former spärrar bara när ledtråden är exakt samma ord eller börjar med formen, så att "torgstånd" spärras för Torg men
+// "storgata" går igenom.
+function looksLike(clue: string, form: string): boolean {
+  return form.length >= 5 ? clue.includes(form) : clue === form || clue.startsWith(form)
+}
+
 // Kontroll av ett skrivet ord: exakt ett ord (sammansatta ord är okej), inte det hemliga ordet, en godkänd form av
-// det eller något som innehåller det, och inte ett ord som redan sagts i omgången.
+// det eller något som innehåller det (se looksLike), och inte ett ord som redan sagts i omgången.
 export function checkClue(
   text: string,
   word: ImposterWord,
@@ -208,8 +257,7 @@ export function checkClue(
   const trimmed = text.trim()
   if (!trimmed || trimmed.length > MAX_CLUE_LENGTH || !/^[\p{L}\p{N}-]+$/u.test(trimmed)) return { ok: false }
   const normalized = normalizeWord(trimmed)
-  const forms = [word.ord, ...word.godkanda].map(normalizeWord)
-  if (forms.some((form) => normalized.includes(form))) return { ok: false }
+  if (blockedForms(word).some((form) => looksLike(normalized, form))) return { ok: false }
   if (earlier.some((clue) => clue.word !== null && normalizeWord(clue.word) === normalized)) return { ok: false }
   return { ok: true, word: trimmed }
 }
@@ -271,6 +319,8 @@ export function imposterMove(
     const next = withTable(host, { ...table, read: [...table.read, playerId] })
     return everyoneRead(next.state.imposter!, activeIds) ? toClues(next) : next
   }
+  if (move.type === 'ready') return markReady(host, playerId, move.on, activeIds, now)
+  if (move.type === 'vote') return castVote(host, playerId, move.target, activeIds)
 
   if (currentTurn(table) !== playerId) return host
   if (move.type === 'said') return table.aloud ? addClue(host, { player: playerId, kind: 'sagt', word: null }) : host
@@ -305,20 +355,114 @@ export function imposterNewWord(host: ImposterHost, activeIds: readonly string[]
   return startImposterRound(markUsed(state, secrets), state.round, players.length > 0 ? players : state.imposter!.order, random)
 }
 
-// Värden går vidare till nästa omgång efter diskussionen, eller avslutar matchen efter sista omgången.
+// Spelarna i omgången som fortfarande är med.
+function present(table: ImposterTable, activeIds: readonly string[]): string[] {
+  return table.order.filter((id) => activeIds.includes(id))
+}
+
+// Startar en nedräkning? Bara när mer än hälften av spelarna i omgången är redo. Exakt hälften räcker inte.
+export function moreThanHalf(count: number, players: number): boolean {
+  return count * 2 > players
+}
+
+// Diskussionen: räkna redo-markeringarna. Är alla redo öppnas omröstningen direkt. Är mer än hälften redo startar
+// nedräkningen, en gång per omgång.
+function checkReady(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  const table = host.state.imposter!
+  const players = present(table, activeIds)
+  const ready = host.secrets.ready.filter((id) => players.includes(id))
+  const counted = withTable(host, { ...table, readyCount: ready.length })
+  if (players.length > 0 && ready.length === players.length) return openVoting(counted)
+  if (!table.countdownStarted && moreThanHalf(ready.length, players.length)) {
+    return {
+      ...counted,
+      state: {
+        ...counted.state,
+        deadline: now + COUNTDOWN_SECONDS * 1000,
+        imposter: { ...counted.state.imposter!, countdownStarted: true },
+      },
+    }
+  }
+  return counted
+}
+
+// Redo att rösta (on) eller inte. Under nedräkningen går det inte att ta tillbaka, men fler kan bli redo.
+function markReady(host: ImposterHost, playerId: string, on: boolean, activeIds: readonly string[], now: number): ImposterHost {
+  const table = host.state.imposter!
+  if (table.step !== 'diskussion' || !activeIds.includes(playerId)) return host
+  const has = host.secrets.ready.includes(playerId)
+  if (has === on || (!on && table.countdownStarted)) return host
+  const ready = on ? [...host.secrets.ready, playerId] : host.secrets.ready.filter((id) => id !== playerId)
+  return checkReady({ ...host, secrets: { ...host.secrets, ready } }, activeIds, now)
+}
+
+function openVoting(host: ImposterHost): ImposterHost {
+  const table = host.state.imposter!
+  return { ...host, state: { ...host.state, deadline: null, imposter: { ...table, step: 'rostning', votedCount: 0 } } }
+}
+
+// Omröstningen: en röst var på en annan spelare i omgången. En bekräftad röst går inte att ändra. När alla som är
+// kvar har röstat visas rösterna.
+function castVote(host: ImposterHost, voter: string, target: string, activeIds: readonly string[]): ImposterHost {
+  const table = host.state.imposter!
+  if (table.step !== 'rostning' || voter === target || !table.order.includes(target)) return host
+  if (host.secrets.votes[voter] !== undefined) return host
+  const votes = { ...host.secrets.votes, [voter]: target }
+  return checkVotes({ ...host, secrets: { ...host.secrets, votes } }, activeIds)
+}
+
+function checkVotes(host: ImposterHost, activeIds: readonly string[]): ImposterHost {
+  const table = host.state.imposter!
+  const players = present(table, activeIds)
+  const voted = players.filter((id) => host.secrets.votes[id] !== undefined)
+  if (players.length > 0 && voted.length === players.length) {
+    return withTable(host, { ...table, step: 'resultat', votedCount: voted.length, votes: host.secrets.votes })
+  }
+  return withTable(host, { ...table, votedCount: voted.length })
+}
+
+// Rösterna ihop: hur många röster var och en fick, och vem eller vilka som fick flest (flera vid lika).
+export function tallyVotes(votes: Record<string, string>): { counts: Record<string, number>; top: string[] } {
+  const counts: Record<string, number> = {}
+  for (const target of Object.values(votes)) counts[target] = (counts[target] ?? 0) + 1
+  const most = Math.max(0, ...Object.values(counts))
+  return { counts, top: most > 0 ? Object.keys(counts).filter((id) => counts[id] === most) : [] }
+}
+
+// Värdens timer: nedräkningen är slut och omröstningen öppnas. Gör bara något om klockan som löpte ut fortfarande är
+// den som gäller.
+export function imposterDeadline(host: ImposterHost, now: number, deadline: number): ImposterHost {
+  const { state } = host
+  const table = state.imposter
+  if (state.phase !== 'playing' || table?.step !== 'diskussion' || !table.countdownStarted) return host
+  if (state.deadline !== deadline || now < deadline) return host
+  return openVoting(host)
+}
+
+// Värden går vidare till nästa omgång när rösterna har visats, eller avslutar matchen efter sista omgången.
 // Nya spelare som väntat är med från nästa omgång.
 export function imposterNextRound(host: ImposterHost, activeIds: readonly string[], random: Random = Math.random): ImposterHost {
   const { state, secrets } = host
-  if (state.phase !== 'playing' || state.imposter?.step !== 'diskussion') return host
+  if (state.phase !== 'playing' || state.imposter?.step !== 'resultat') return host
   const used = markUsed(state, secrets)
   if (state.round >= state.rounds) return { ...host, state: { ...used, phase: 'finished', deadline: null } }
   const players = Object.keys(state.players).filter((id) => activeIds.includes(id))
   return startImposterRound(used, state.round + 1, players, random)
 }
 
-// Någon har kommit eller gått. Har alla som är kvar läst sitt kort går omgången vidare.
-export function imposterPresence(host: ImposterHost, activeIds: readonly string[]): ImposterHost {
+// Någon har kommit eller gått. Har alla som är kvar läst sitt kort, blivit redo eller röstat går omgången vidare.
+export function imposterPresence(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter
-  if (host.state.phase !== 'playing' || table?.step !== 'kort') return host
-  return everyoneRead(table, activeIds) ? toClues(host) : host
+  if (host.state.phase !== 'playing' || !table) return host
+  if (table.step === 'kort') return everyoneRead(table, activeIds) ? toClues(host) : host
+  if (table.step === 'diskussion') {
+    const next = checkReady(host, activeIds, now)
+    const same = next.state.imposter!.readyCount === table.readyCount && next.state.imposter!.step === table.step
+    return same && next.state.deadline === host.state.deadline ? host : next
+  }
+  if (table.step === 'rostning') {
+    const next = checkVotes(host, activeIds)
+    return next.state.imposter!.votedCount === table.votedCount && next.state.imposter!.step === table.step ? host : next
+  }
+  return host
 }

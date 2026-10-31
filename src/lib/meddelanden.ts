@@ -67,7 +67,7 @@ const isCardTable = (value: unknown): value is CardTable =>
 
 const isImposterTable = (value: unknown): value is ImposterTable =>
   shape({
-    step: (step) => isString(step) && ['kort', 'ledtradar', 'diskussion'].includes(step),
+    step: (step) => isString(step) && ['kort', 'ledtradar', 'diskussion', 'rostning', 'resultat'].includes(step),
     order: listOf(isString),
     turn: isNumber,
     clues: listOf(
@@ -81,6 +81,10 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     category: orNull(isString),
     hard: isBoolean,
     aloud: isBoolean,
+    readyCount: isNumber,
+    votedCount: isNumber,
+    countdownStarted: isBoolean,
+    votes: orNull(recordOf(isString)),
   })(value)
 
 const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
@@ -174,6 +178,8 @@ export function parseMove(payload: unknown): { id: string; move: CardMove | Impo
   if (!isObject(payload) || !isString(payload.id) || !isObject(payload.move)) return null
   const move = payload.move
   if (move.type === 'read' || move.type === 'pass' || move.type === 'said') return { id: payload.id, move: { type: move.type } }
+  if (move.type === 'ready' && isBoolean(move.on)) return { id: payload.id, move: { type: 'ready', on: move.on } }
+  if (move.type === 'vote' && isString(move.target)) return { id: payload.id, move: { type: 'vote', target: move.target } }
   if (move.type === 'clue' && isString(move.word) && move.word.length <= 100) {
     return { id: payload.id, move: { type: 'clue', word: move.word } }
   }
@@ -201,9 +207,10 @@ const isImposterCard = (value: unknown): value is ImposterCard =>
 // Mitt kort i Imposterjakten (som hand i kortspelen). card null = inte med i omgången.
 export function parseImposterCard(payload: unknown): { to: string; from: string | null; card: MyImposterCard } | null {
   if (!isObject(payload) || !isString(payload.to) || !isObject(payload.card)) return null
-  const { card, rejectedAt } = payload.card
+  const { card, rejectedAt, ready, vote } = payload.card
   if (!(card === null || isImposterCard(card)) || !orNull(isNumber)(rejectedAt)) return null
-  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt } }
+  if (!isBoolean(ready) || !orNull(isString)(vote)) return null
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt, ready, vote } }
 }
 
 export function parseHandover(payload: unknown): { to: string; from: string | null } | null {
