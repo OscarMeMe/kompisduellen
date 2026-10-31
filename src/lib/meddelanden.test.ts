@@ -8,6 +8,7 @@ import {
   parseMove,
   parseRematchWish,
   parseStateMessage,
+  parseThrow,
 } from '@/lib/meddelanden'
 
 const players = { a: { name: 'Anna', avatar: '👻' }, b: { name: 'Bo', avatar: '🤖' } }
@@ -136,5 +137,49 @@ describe('önskemål om revansch', () => {
   it('fyller i en tom lista när en äldre värd inte skickar önskemålen', () => {
     const { rematchWishes: _wishes, ...old } = lobby
     expect(parseStateMessage({ state: old, sentAt: 1 })?.state.rematchWishes).toEqual([])
+  })
+})
+
+describe('kast', () => {
+  const online = [{ id: 'a' }, { id: 'b' }, { id: 'c', noThrows: true }]
+  const open = { online, throwsAllowed: true }
+
+  it('tar emot ett kast mellan två spelare i lobbyn', () => {
+    expect(parseThrow({ id: 'a', to: 'b', item: 'tomat' }, open)).toEqual({ id: 'a', to: 'b', item: 'tomat' })
+    expect(parseThrow({ id: 'b', to: 'a', item: 'agg' }, open)).toEqual({ id: 'b', to: 'a', item: 'agg' })
+  })
+
+  it('slänger trasiga kast och okända saker', () => {
+    for (const payload of [
+      undefined,
+      null,
+      'tomat',
+      {},
+      { id: 'a', to: 'b' },
+      { id: 'a', item: 'tomat' },
+      { id: 5, to: 'b', item: 'tomat' },
+      { id: 'a', to: 'b', item: 'bomb' },
+      { id: 'a', to: 'b', item: 7 },
+    ]) {
+      expect(parseThrow(payload, open)).toBeNull()
+    }
+  })
+
+  it('slänger kast på sig själv, till eller från någon som inte finns i lobbyn och till den som stängt av kast', () => {
+    expect(parseThrow({ id: 'a', to: 'a', item: 'paj' }, open)).toBeNull()
+    expect(parseThrow({ id: 'a', to: 'x', item: 'paj' }, open)).toBeNull()
+    expect(parseThrow({ id: 'x', to: 'a', item: 'paj' }, open)).toBeNull()
+    expect(parseThrow({ id: 'a', to: 'c', item: 'paj' }, open)).toBeNull()
+  })
+
+  it('slänger alla kast när värden har stängt av dem', () => {
+    expect(parseThrow({ id: 'a', to: 'b', item: 'tomat' }, { online, throwsAllowed: false })).toBeNull()
+  })
+
+  it('godtar läget med kasten avstängda, och slår på dem när en äldre värd inte skickar fältet', () => {
+    expect(parseStateMessage({ state: { ...lobby, throwsAllowed: false }, sentAt: 1 })?.state.throwsAllowed).toBe(false)
+    const { throwsAllowed: _throws, ...old } = lobby
+    expect(parseStateMessage({ state: old, sentAt: 1 })?.state.throwsAllowed).toBe(true)
+    expect(parseStateMessage({ state: { ...lobby, throwsAllowed: 'ja' }, sentAt: 1 })).toBeNull()
   })
 })

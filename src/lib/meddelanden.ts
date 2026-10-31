@@ -4,6 +4,7 @@
 // att bevisa vem som skickat något utan inloggning, men det stoppar trasiga meddelanden och enkla försök att
 // låtsas vara värd. Rena funktioner, så att de är lätta att testa.
 
+import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
 import { initialState, type GameState, type RoundResult } from '@/lib/match'
 
@@ -81,6 +82,7 @@ const isGameState = shape({
   usedItemIds: listOf(isString),
   guessSeconds: isNumber,
   autoAdvance: isBoolean,
+  throwsAllowed: isBoolean,
   practice: isBoolean,
   rematchAt: orNull(isNumber),
   rematchWishes: listOf(isString),
@@ -125,6 +127,21 @@ export function parseGuess(payload: unknown): { id: string; value: number } | nu
 // En spelare önskar revansch eller ångrar sig (Jag vill ha revansch på slutskärmen).
 export function parseRematchWish(payload: unknown): { id: string; wants: boolean } | null {
   return shape({ id: isString, wants: isBoolean })(payload) ? { id: payload.id as string, wants: payload.wants as boolean } : null
+}
+
+// Ett kast på en annan spelare. Slängs om saken är okänd, om någon kastar på sig själv, om avsändaren eller målet
+// inte finns i lobbyn (närvarolistan), om målet inte tar emot kast eller om värden har stängt av kasten.
+export function parseThrow(
+  payload: unknown,
+  lobby: { online: readonly { id: string; noThrows?: boolean }[]; throwsAllowed: boolean },
+): { id: string; to: string; item: ThrowItemId } | null {
+  if (!lobby.throwsAllowed || !shape({ id: isString, to: isString, item: isString })(payload)) return null
+  const { id, to } = payload as { id: string; to: string }
+  const item = findThrowItem(payload.item)
+  if (!item || id === to) return null
+  const target = lobby.online.find((player) => player.id === to)
+  if (!target || target.noThrows || !lobby.online.some((player) => player.id === id)) return null
+  return { id, to, item: item.id }
 }
 
 export function parseMove(payload: unknown): { id: string; move: CardMove } | null {

@@ -82,6 +82,8 @@ export type GameState = {
   guessSeconds: number
   // true = nästa runda startar av sig själv efter facit. false = värden går vidare.
   autoAdvance: boolean
+  // Får man kasta saker på varandra (kast.ts)? Värden kan stänga av det i väntrummet. På från början.
+  throwsAllowed: boolean
   // Matchen har bara en spelare: en provomgång som inte räknas i topplistan.
   practice: boolean
   // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
@@ -139,6 +141,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     usedItemIds: [],
     guessSeconds: rulesFor('gissa-priset').guessSeconds,
     autoAdvance: true,
+    throwsAllowed: true,
     practice: false,
     rematchAt: null,
     rematchWishes: [],
@@ -207,6 +210,11 @@ export function setGame(state: GameState, game: string): GameState {
 }
 
 // Värdens tempoval i väntrummet. Svarstider som spelet inte erbjuder ignoreras.
+// Värden slår på eller av kasten i lobbyn.
+export function setThrowsAllowed(state: GameState, allowed: boolean): GameState {
+  return state.throwsAllowed === allowed ? state : { ...state, throwsAllowed: allowed }
+}
+
 export function setTempo(state: GameState, tempo: { guessSeconds?: number; autoAdvance?: boolean }): GameState {
   if (state.phase !== 'waiting') return state
   const options = rulesFor(state.game).guessSecondsOptions ?? []
