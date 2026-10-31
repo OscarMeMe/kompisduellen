@@ -66,6 +66,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/hooks/useWakeLock.ts`: håller skärmen tänd (Screen Wake Lock), för värden under en match
 - `src/hooks/useCountUp.ts`: räknar upp ett tal till sitt värde (rätt pris i exempelrundan)
 - `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
+- `src/hooks/useNoIndex.ts`: sätter `<meta name="robots" content="noindex">` medan sidan visas (lobbysidan) och tar bort den efteråt
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
@@ -112,6 +113,12 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Gissa priset har tempo i lobbyn: svarstid (30, 45 eller 60 s) och om facit går vidare automatiskt eller när värden klickar. Värdens timer gäller bara sin egen deadline (`handleDeadline`), och "nästa runda" tar med sig rundan som visades (`advanceFromReveal`), så inget hoppas över.
 - En match med en spelare är en provomgång (`practice`) och räknas inte i topplistan. "Testa själv" (`/skapa?spel=gissa-priset&testa=1`) startar en direkt. Närmast vinner kräver två spelare och Kortkaos tre.
 - Värdbyte (`vardbyte.ts`, `useLobby`): lämnar värden tar en annan spelare över, så att lobbyn finns kvar. Alla har redan det senaste tillståndet (värden skickar ut hela tillståndet vid varje ändring). Den som varit med längst av de kvarvarande (`pickSuccessor`) tar över. Väljer värden Lämna skickas `handover` till den spelaren och bytet sker direkt. Försvinner värden hastigt (stängd flik, tappat nät) tar efterträdaren över efter 4 sekunder (`TAKEOVER_MS`), så att en omladdning hinner komma tillbaka. Den nya värden ansluter till kanalen som värd, sparar rollen i fliken (`markAsHost`) och skickar ut tillståndet med klockorna omräknade till sin egen klocka (`takeOverState`). Spelvyn ligger kvar under bytet (en gissning som skickades medan ingen var värd skickas om till den nya värden, `useMyGuess`). Kortspelens hemliga data (leken och händerna) fanns bara hos förra värden, så en pågående kortmatch avbryts och gruppen kommer tillbaka till väntrummet med ett meddelande (`notice`). Kommer den gamla värden tillbaka medan en annan är värd viker den som anslöt senast sig (`shouldYieldHost`, med 6 sekunders betänketid för en ny värd). Är ingen kvar försvinner lobbyn. Värden sparar tillståndet och kortspelens hemliga data i fliken (sessionStorage, `saveHostLobby`), så laddar värden om sidan fortsätter matchen med topplista och inställningar, och gästerna återansluter. Inget sparas i databasen ännu.
+
+## Synlighet i sökmotorer
+
+- `index.html` har sidtitel, beskrivning, kanonisk adress, Open Graph-taggar och strukturerad data (JSON-LD, `WebSite` och `WebApplication`). Ändras beskrivningen: uppdatera den i alla tre och i manifestet i `vite.config.ts`.
+- `public/robots.txt` stänger ute `/lobby/`, `/spel/`, `/resultat/` och `/granska`. `public/sitemap.xml` listar `/`, `/skapa` och `/ga-med`. Nya sidor som ska synas läggs till där.
+- Service workern släpper igenom `robots.txt` och `sitemap.xml` (`navigateFallbackDenylist` i `vite.config.ts`).
 
 ## Routes
 
