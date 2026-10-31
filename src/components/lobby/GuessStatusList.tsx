@@ -1,5 +1,6 @@
 import { Check, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { ThrowTarget } from '@/components/lobby/Kast'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { guessSecondsFor, type GameState } from '@/lib/match'
@@ -63,14 +64,15 @@ export function GuessStatusList({ hideLine = false, ...props }: GuessStatusListP
         {activePlayers.map((p) => {
           const done = hasAnswered(p.id)
           return (
-            <li
-              key={`${p.id}-${done}`}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
-                done && 'motion-safe:animate-pop',
-                done ? 'bg-mint-soft text-accent-foreground' : 'bg-card text-muted-foreground',
-              )}
-            >
+            <li key={`${p.id}-${done}`} className={cn('flex', done && 'motion-safe:animate-pop')}>
+              {/* Går det att kasta på spelaren är chipet en knapp som öppnar kastmenyn. */}
+              <ThrowTarget
+                player={p}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
+                  done ? 'bg-mint-soft text-accent-foreground' : 'bg-card text-muted-foreground',
+                )}
+              >
               <Emoji emoji={p.avatar} className="text-sm" />
               {p.name}
               {/* Bocken poppar fram när spelaren har svarat. */}
@@ -79,6 +81,7 @@ export function GuessStatusList({ hideLine = false, ...props }: GuessStatusListP
               ) : (
                 <Loader2 className="size-3.5 animate-spin" aria-label="Har inte svarat" />
               )}
+              </ThrowTarget>
             </li>
           )
         })}

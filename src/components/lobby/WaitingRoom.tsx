@@ -5,6 +5,7 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
+import { AcceptThrowsChoice, ThrowTarget } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -40,6 +41,7 @@ type WaitingRoomProps = {
   onSetRounds: (rounds: number) => void
   onSetGame: (game: string) => void
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
+  onSetThrowsAllowed: (allowed: boolean) => void
   // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
   onStartCountdown: () => void
@@ -58,6 +60,7 @@ export function WaitingRoom({
   onSetRounds,
   onSetGame,
   onSetTempo,
+  onSetThrowsAllowed,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
@@ -100,6 +103,7 @@ export function WaitingRoom({
           [NEXT_QUESTION_LABEL, state.autoAdvance ? AUTO_ADVANCE_TEXT : HOST_ADVANCES_TEXT],
         ] as [string, string][])
       : []),
+    ['Kasta saker', state.throwsAllowed ? 'På' : 'Av'],
   ]
 
   return (
@@ -184,7 +188,9 @@ export function WaitingRoom({
           <h2 className="text-xl">Spelare</h2>
           <ul className="flex flex-wrap gap-2">
             {online.map((p) => (
-              <li key={p.id} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2 animate-pop">
+              <li key={p.id} className="max-w-full min-w-0 animate-pop">
+                {/* Går det att kasta på spelaren är chipet en knapp som öppnar kastmenyn. */}
+                <ThrowTarget player={p} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2">
                 {/* Figuren vinkar när spelaren dyker upp i listan. */}
                 <Emoji emoji={p.avatar} className="origin-bottom text-xl motion-safe:animate-wave motion-safe:[animation-delay:200ms]" />
                 <span className="truncate font-semibold">{p.name}</span>
@@ -192,10 +198,17 @@ export function WaitingRoom({
                   <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Du</span>
                 )}
                 {p.host && <Crown className="size-4 shrink-0 text-crown" aria-label="Värd" />}
+                </ThrowTarget>
               </li>
             ))}
           </ul>
           <ReactionBar className="pt-1" />
+          {online.length > 1 && state.throwsAllowed && (
+            <>
+              <p className="text-sm text-muted-foreground">Tryck på en kompis för att kasta något.</p>
+              <AcceptThrowsChoice />
+            </>
+          )}
         </section>
       </div>
 
@@ -263,6 +276,17 @@ export function WaitingRoom({
                 <NextQuestionChoice autoAdvance={state.autoAdvance} onSelect={(autoAdvance) => onSetTempo({ autoAdvance })} />
               </>
             )}
+
+            <Choice
+              label="Kasta saker"
+              hint="Tomater, pajer, ägg och toapapper på varandra"
+              options={[
+                { value: 1, label: 'På' },
+                { value: 0, label: 'Av' },
+              ]}
+              selected={state.throwsAllowed ? 1 : 0}
+              onSelect={(value) => onSetThrowsAllowed(value === 1)}
+            />
           </>
         ) : (
           <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">

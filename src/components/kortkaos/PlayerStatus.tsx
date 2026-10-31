@@ -1,5 +1,6 @@
 import { Check, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { ThrowTarget } from '@/components/lobby/Kast'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { kortkaosRules } from '@/lib/kortkaos'
@@ -31,13 +32,15 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
           const done = table.done.includes(p.id)
           const hasChosen = table.chosen.includes(p.id)
           return (
-            <li
-              key={p.id}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
-                done ? 'bg-mint-soft text-accent-foreground' : hasChosen ? 'bg-sky-soft' : 'bg-card text-muted-foreground',
-              )}
-            >
+            <li key={p.id} className="flex">
+              {/* Går det att kasta på spelaren är chipet en knapp som öppnar kastmenyn. */}
+              <ThrowTarget
+                player={p}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
+                  done ? 'bg-mint-soft text-accent-foreground' : hasChosen ? 'bg-sky-soft' : 'bg-card text-muted-foreground',
+                )}
+              >
               <Emoji emoji={p.avatar} className="text-sm" />
               {p.name}
               {done ? (
@@ -47,6 +50,7 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
               ) : (
                 <Loader2 className="size-3.5 animate-spin" aria-label="Väljer" />
               )}
+              </ThrowTarget>
             </li>
           )
         })}
