@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { useLayout } from '@/hooks/useLayout'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { useLobby } from '@/hooks/useLobby'
+import { useNoIndex } from '@/hooks/useNoIndex'
 import { useOneTab } from '@/hooks/useOneTab'
 import { findGame, GAMES } from '@/lib/games'
 import {
@@ -52,6 +53,8 @@ const GAME_VIEWS: Record<string, GameViews> = {
 }
 
 export function LobbyPage() {
+  // Lobbyer ska inte synas i sökresultaten.
+  useNoIndex()
   const params = useParams()
   const code = normalizeCode(params.code ?? '')
   // Fliken minns vem den är i den här lobbyn. Annars gäller namnet och figuren som webbläsaren har sparat.

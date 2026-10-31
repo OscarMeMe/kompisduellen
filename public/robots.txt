@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /spel/gissa-priset
+Allow: /spel/narmast-vinner
+Allow: /spel/kortkaos
+Disallow: /lobby/
+Disallow: /spel/
+Disallow: /resultat/
+Disallow: /granska
+
+Sitemap: https://kompisduellen.se/sitemap.xml

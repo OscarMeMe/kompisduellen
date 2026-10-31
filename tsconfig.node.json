@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "vite-plugin-granska.ts"]
+  "include": ["vite.config.ts", "vite-plugin-granska.ts", "vite-plugin-forrendera.ts"]
 }

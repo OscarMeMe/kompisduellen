@@ -2,6 +2,7 @@ import { useCallback, useState, type MouseEvent } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
 import type { LayoutContext } from '@/hooks/useLayout'
+import { usePageMeta } from '@/hooks/usePageMeta'
 import { loadPlayer } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +21,8 @@ export function Layout() {
       leaveGuard(to)
     }
   }
+  // Titel, beskrivning och övrigt i <head> för sidan man är på.
+  usePageMeta()
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   useLocation()
   const player = loadPlayer()
