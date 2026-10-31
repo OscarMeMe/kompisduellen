@@ -3,6 +3,7 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { guessSecondsFor, type GameState } from '@/lib/match'
 import type { TimeWarning } from '@/lib/tidvarning'
 import { cn } from '@/lib/utils'
+import { SPLAT_CEILING } from '@/lib/splatt'
 
 export function Narrow({ children }: { children: ReactNode }) {
   return <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">{children}</div>
@@ -46,7 +47,10 @@ export function RoundTimer({
   const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
 
   return (
-    <div className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
+    <div
+      {...SPLAT_CEILING}
+      className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6"
+    >
       <p className="flex items-center justify-center gap-2 font-heading text-sm font-bold tabular-nums">
         Runda {state.round}/{state.rounds}
         {state.practice && <PracticeChip />}

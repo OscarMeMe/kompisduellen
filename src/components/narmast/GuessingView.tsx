@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
+import { SPLAT_SHIELD } from '@/lib/splatt'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
@@ -36,7 +37,8 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
       <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
       <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
 
-      <div className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
+      {/* Svarsdelen. En splatt från ett kast täcker den aldrig. */}
+      <div {...SPLAT_SHIELD} className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
         {!inGame ? (
           <p className="py-8 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (

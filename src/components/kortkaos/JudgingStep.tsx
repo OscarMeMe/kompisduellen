@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AnswerCard, Sentence } from '@/components/kort/PlayingCard'
+import { SPLAT_SHIELD } from '@/lib/splatt'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { CardMove } from '@/lib/kort'
@@ -38,7 +39,7 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
         </p>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2" aria-label="Insända kort">
+      <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2" aria-label="Insända kort">
         {table.submissions.map((submission, i) => (
           <li key={submission.key} className="animate-pop" style={{ animationDelay: `${i * 120}ms` }}>
             <AnswerCard
@@ -53,7 +54,7 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
       </ul>
 
       {isJudge && (
-        <div className="sticky bottom-4 z-10">
+        <div {...SPLAT_SHIELD} className="sticky bottom-4 z-10">
           <Button size="lg" className="w-full" disabled={!chosen || sent} onClick={confirm}>
             {sent ? 'Vinnaren är vald' : chosen ? 'Välj som vinnare' : 'Tryck på ett kort'}
           </Button>
