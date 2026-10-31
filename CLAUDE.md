@@ -26,7 +26,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - React Router (paketet `react-router`, inte `react-router-dom`)
 - Supabase (`src/lib/supabase.ts`) för databas, inloggning och realtid
 - PWA via `vite-plugin-pwa` (manifestet ligger i `vite.config.ts`, ikonerna i `public/`: `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` och `icon-512-maskable.png`)
-- Driftsätts på Vercel (`vercel.json` skickar alla sökvägar till `index.html`)
+- Driftsätts på Vercel (`vercel.json` skickar alla sökvägar som inte är en fil till appskalet `app.html`)
+- Förrendering i bygget (`vite-plugin-forrendera.ts`, se Synlighet i sökmotorer)
 
 ## Stil
 
@@ -48,14 +49,14 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 ## Kommandon
 
 - `npm run dev`: startar dev-servern på http://localhost:5173
-- `npm run build`: typkontroll och produktionsbygge till `dist/`
+- `npm run build`: typkontroll, serverdelen till `dist-ssr/` (för förrenderingen) och produktionsbygget till `dist/`
 - `npm run lint`: kör oxlint
 - `npm test`: kör testerna (Vitest). Tester ligger bredvid koden, t.ex. `src/lib/match.test.ts`
 - `npx shadcn@latest add <komponent>`: lägger till en shadcn-komponent i `src/components/ui/`
 
 ## Struktur
 
-- `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`). Startsidan laddas direkt, övriga sidor först när man går dit (`lazy`), så att startsidan laddar snabbt. Kodfältet hämtar `lobbykoll` (och Supabase) först när man trycker Gå med
+- `src/pages/`: en komponent per sida (routes finns i `src/App.tsx`). Startsidan och spelsidorna (`GameInfoPage`) laddas direkt, övriga sidor först när man går dit (`lazy`), så att startsidan laddar snabbt. Kodfältet hämtar `lobbykoll` (och Supabase) först när man trycker Gå med
 - `src/components/`: delade komponenter (`Layout`, `PageHeader`, `PlayerSetup`, `Countdown`, `Podium`, `Leaderboard`, `Emoji`, `Konfetti`, `GaMedKod`, `ExempelRunda` och `SpelKort` på startsidan)
   - `lobby/`: väntrum, prispall och delar som alla spel använder (`RoundTimer` med runda och tidsstapel, `GuessStatusList` med statusraden "⏱ 12 s kvar · 3/4 har svarat", `RoundBadge`, `RevealFooter`, `ResultRow` med en spelares rad i facit (gissningen stort, hur långt ifrån, poäng och totalt), `RoundStanding` efter facit: ungefär var man ligger i ord ("Du flåsar ledaren i nacken"), aldrig exakt placering, plus "Du klättrar!" och matchledaren, aldrig efter sista rundan. "Nära ledaren" är högst en fjärdedel av en rundas poäng. `WaitingStanding` med ställningen i poäng medan man väntar på de andra efter att ha låst sitt svar, från `waitingStanding` i `match.ts`: "Du leder med 7 poäng. Håll ihop nu.", inför sista rundan med "Sista frågan." först, ingen rad i första rundan eller i en provomgång. Props-typerna för spelvyer)
   - `narmast/` och `gissa-priset/`: varje spels vy för att gissa och visa svaret. `LobbyPage` väljer vy via `GAME_VIEWS`
@@ -66,11 +67,14 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/hooks/useWakeLock.ts`: håller skärmen tänd (Screen Wake Lock), för värden under en match
 - `src/hooks/useCountUp.ts`: räknar upp ett tal till sitt värde (rätt pris i exempelrundan)
 - `src/hooks/useCountdown.ts`: sekunder och andel kvar till en deadline (används av `Countdown`, `RoundTimer` och statusraden)
+- `src/hooks/usePageMeta.ts`: byter taggarna i `<head>` (titel, beskrivning, kanonisk adress, Open Graph, JSON-LD) när man byter sida. Anropas i `Layout`
 - `src/hooks/useNoIndex.ts`: sätter `<meta name="robots" content="noindex">` medan sidan visas (lobbysidan) och tar bort den efteråt
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
+  - `spelsidor.ts`: texterna på spelsidorna (`/spel/gissa-priset` …): titel, beskrivning, intro, Så spelar ni, tid och vanliga frågor
+  - `sidinfo.ts`: taggarna i `<head>` per sida (`pageMeta`, `renderHeadTags`), vilka sidor som förrenderas (`PRERENDER_PATHS`) och vilka som bara får egna taggar (`HEAD_ONLY_PATHS`)
   - `player.ts`: gästspelare (namn + figur i localStorage, spelar-id i sessionStorage), lobbykoder, värdflagga (sessionStorage)
   - `match.ts`: matchflödet som är gemensamt för alla spel (rundor, gissningar, poäng, topplistan). Rena funktioner. Värdens funktioner (`hostStart`, `hostDeadline`, `hostMove` …) tar och ger `HostState`, alltså tillståndet plus kortspelens hemliga data
   - `kort.ts`: kortspel med domare (lek, händer, val, anonym visning, rundflödet och undantagen). Återanvändbart: ett nytt kortspel behöver bara egna `CardGameRules`
@@ -116,8 +120,11 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 ## Synlighet i sökmotorer
 
-- `index.html` har sidtitel, beskrivning, kanonisk adress, Open Graph-taggar och strukturerad data (JSON-LD, `WebSite` och `WebApplication`). Ändras beskrivningen: uppdatera den i alla tre och i manifestet i `vite.config.ts`.
-- `public/robots.txt` stänger ute `/lobby/`, `/spel/`, `/resultat/` och `/granska`. `public/sitemap.xml` listar `/`, `/skapa` och `/ga-med`. Nya sidor som ska synas läggs till där.
+- Förrendering: `npm run build` bygger först serverdelen (`src/entry-server.ts` till `dist-ssr/`), sedan sajten. `vite-plugin-forrendera.ts` renderar startsidan och spelsidorna (`PRERENDER_PATHS`) till färdig HTML (`dist/index.html`, `dist/spel/x/index.html`) som en förstagångsbesökare ser dem. `/skapa` och `/ga-med` (`HEAD_ONLY_PATHS`) får appskalet med egna taggar. Allt annat får `dist/app.html`, det tomma appskalet, som Vercel och service workern (`navigateFallback`) pekar på.
+- Appen startar alltid med `createRoot` och ritar om sidan, även när den är förrenderad. Därför behöver sidorna inte se exakt likadana ut i bygget och i webbläsaren (sparat namn och figur), och lobbyn fungerar som förut. Sidor som förrenderas får inte vara `lazy`, annars syns en snurra när appen tar över.
+- Taggarna i `<head>` ligger mellan `<!-- sidinfo -->` och `<!-- /sidinfo -->` i `index.html` och kommer från `sidinfo.ts`, både i bygget och i appen (`usePageMeta`). Startsidan och spelsidorna har kanonisk adress, Open Graph och JSON-LD (startsidan `WebSite` och `WebApplication`, spelsidorna `VideoGame` och `FAQPage`). Lobbyn och andra sidor har ingen kanonisk adress. Ändras startsidans beskrivning: uppdatera även manifestet i `vite.config.ts`.
+- Spelsidorna (`/spel/gissa-priset`, `/spel/narmast-vinner`, `/spel/kortkaos`) har texterna i `spelsidor.ts`. De fasta sökvägarna går före `/spel/:code` i React Router, och lobbykoder har bara fyra bokstäver. Spelets namn på startsidans kort leder dit. Nytt spel med egen sida: en rad i `GAME_PAGES`, och sökvägen i `public/sitemap.xml` och som `Allow:` i `public/robots.txt` (testerna i `sidinfo.test.ts` kollar det).
+- `public/robots.txt` stänger ute `/lobby/`, `/spel/` (utom spelsidorna), `/resultat/` och `/granska`. `public/sitemap.xml` listar startsidan, spelsidorna, `/skapa` och `/ga-med`.
 - Service workern släpper igenom `robots.txt` och `sitemap.xml` (`navigateFallbackDenylist` i `vite.config.ts`).
 
 ## Routes
@@ -129,6 +136,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/ga-med` | Gå med (skriv in kod, kontrolleras mot lobbyn) |
 | `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`, `kortkaos`) |
 | `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
+| `/spel/gissa-priset`, `/spel/narmast-vinner`, `/spel/kortkaos` | Spelsidor (vad spelet är, så spelar ni, vanliga frågor) |
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
 | `/profil` | Profil (ändra namn och figur, sparas i webbläsaren) |
