@@ -28,9 +28,9 @@ export function shouldYieldHost(me: Present, others: readonly Present[]): boolea
 }
 
 // Tillståndet när en ny värd tar över. Klockan som deadline och nedräkning räknas mot är värdens egen, så den
-// räknas om till den nya värdens klocka (offset = min klocka minus förra värdens klocka). Kortspelens hemliga
-// data (leken och händerna) fanns bara hos förra värden, så en pågående kortmatch avbryts och gruppen
-// kommer tillbaka till väntrummet med en förklaring.
+// räknas om till den nya värdens klocka (offset = min klocka minus förra värdens klocka). Kortspelens och
+// Imposterjaktens hemliga data (leken, händerna, ordet och impostern) fanns bara hos förra värden, så en pågående
+// match avbryts och gruppen kommer tillbaka till väntrummet med en förklaring.
 export function takeOverState(state: GameState, offset: number): GameState {
   const moved = (time: number | null) => (time === null ? null : time + offset)
   if (state.phase === 'playing') {
@@ -52,6 +52,7 @@ export function takeOverState(state: GameState, offset: number): GameState {
       rematchAt: null,
       choosingGame: false,
       cards: null,
+      imposter: null,
       notice: 'Matchen avbröts när värden lämnade. Starta om den när ni vill.',
     }
   }

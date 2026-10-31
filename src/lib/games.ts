@@ -78,6 +78,29 @@ export const GAMES: GameInfo[] = [
     playable: true,
   },
   {
+    id: 'imposterjakten',
+    name: 'Imposterjakten',
+    tagline: 'Vem är det som bluffar?',
+    quickRule: 'Alla utom en har samma ord. Ge ett ord var och lista ut vem som bluffar.',
+    emoji: '🔍',
+    color: 'bg-mint-soft',
+    minPlayers: 3,
+    maxPlayers: 10,
+    feel: 'Bluffigt',
+    // Byggs i steg. Spelbart bara i utvecklingsläget tills omröstningen och poängen finns. På sajten syns det under
+    // Fler dueller är på väg.
+    playable: import.meta.env.DEV,
+    intro: {
+      emoji: '🔍',
+      pitch: 'Alla vet ordet. Utom en. Lista ut vem som bluffar innan bluffaren listar ut ordet.',
+      steps: [
+        'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in.',
+        'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv.',
+        'Diskutera och rösta fram vem ni tror är impostern.',
+      ],
+    },
+  },
+  {
     id: 'vem-skrev',
     name: 'Vem skrev vad?',
     tagline: 'Alla svarar anonymt. Kan du lista ut vem som skrev vad?',
