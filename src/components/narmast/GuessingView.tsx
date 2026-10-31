@@ -3,18 +3,28 @@ import { Lock } from 'lucide-react'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMyGuess } from '@/hooks/useMyGuess'
+import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { hasFinePointer } from '@/lib/device'
-import { isValidGuess, waitingStanding } from '@/lib/match'
+import { guessSecondsFor, isValidGuess, waitingStanding } from '@/lib/match'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
+import { cn } from '@/lib/utils'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const [value, setValue] = useState(50)
   const { locked, inGame, lockIn } = useMyGuess(state, me.id, onGuess)
   const valid = isValidGuess(state.game, value)
+  // Tydligare när tiden håller på att ta slut, bara medan jag gissar.
+  const { warning, secondsLeft } = useTimeWarning(
+    state.deadline,
+    clockOffset,
+    guessSecondsFor(state),
+    locked !== null || !inGame,
+  )
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -23,7 +33,8 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
 
   return (
     <Wide>
-      <RoundTimer state={state} clockOffset={clockOffset} />
+      <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
+      <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
 
       <div className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
         {!inGame ? (
@@ -82,10 +93,11 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
               aria-label="Dra för att välja tal"
               className="w-full accent-primary"
             />
+            {/* Vickar till en gång när det blir fem sekunder kvar. */}
             <Button
               type="submit"
               size="lg"
-              className="w-full"
+              className={cn('w-full', warning === 'kritisk' && 'motion-safe:animate-wiggle')}
               disabled={!valid}
             >
               Lås svaret
@@ -94,7 +106,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
         )}
       </div>
 
-      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} />
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} warning={warning} />
     </Wide>
   )
 }
