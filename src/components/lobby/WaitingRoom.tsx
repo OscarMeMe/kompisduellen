@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
@@ -64,9 +64,13 @@ export function WaitingRoom({
   // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
   const settingsRef = useRef<HTMLElement>(null)
   // Ett dubbeltryck på Byt spel ska inte också välja ett spel: det andra trycket landar på spelvalet i väntrummet.
-  const arrivedAt = useRef(Date.now())
+  const [canChoose, setCanChoose] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setCanChoose(true), 700)
+    return () => clearTimeout(timer)
+  }, [])
   function chooseGame(id: string) {
-    if (state.choosingGame && Date.now() - arrivedAt.current < 700) return
+    if (state.choosingGame && !canChoose) return
     onSetGame(id)
   }
   useEffect(() => {
