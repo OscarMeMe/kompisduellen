@@ -47,6 +47,15 @@ export type ImposterSettings = { hard: boolean; category: string | null; aloud: 
 
 export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null, aloud: false }
 
+// Inställningarna i ord, för deltagarnas sammanfattning i väntrummet.
+export function imposterSettingsSummary(settings: ImposterSettings): [string, string][] {
+  return [
+    ['Svårighet', settings.hard ? 'Svår' : 'Normal'],
+    ['Kategori', settings.category ?? 'Blandat'],
+    ['Associationer', settings.aloud ? 'Säg högt' : 'Skriv i appen'],
+  ]
+}
+
 // kort: alla läser sitt kort. ledtradar: ett ord var i turordning, två varv. diskussion: allas ord syns kvar.
 export type ImposterStep = 'kort' | 'ledtradar' | 'diskussion'
 

@@ -5,6 +5,7 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
+import { ImposterSettingsChoices } from '@/components/imposterjakten/ImposterSettingsChoices'
 import { AcceptThrowsChoice, ThrowBar } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,13 @@ import {
   type CountdownKind,
   type GameState,
 } from '@/lib/match'
+import {
+  IMPOSTER_GAME,
+  IMPOSTER_HOW_TO,
+  IMPOSTER_SCORING,
+  imposterSettingsSummary,
+  type ImposterSettings,
+} from '@/lib/imposterjakten'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
 import { cn } from '@/lib/utils'
@@ -42,6 +50,7 @@ type WaitingRoomProps = {
   onSetGame: (game: string) => void
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
   onSetThrowsAllowed: (allowed: boolean) => void
+  onSetImposterSettings: (settings: Partial<ImposterSettings>) => void
   // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
   onStartCountdown: () => void
@@ -61,6 +70,7 @@ export function WaitingRoom({
   onSetGame,
   onSetTempo,
   onSetThrowsAllowed,
+  onSetImposterSettings,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
@@ -80,10 +90,12 @@ export function WaitingRoom({
     if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
   }, [scrollToGames, isHost])
   const rules = rulesFor(state.game)
-  // Kortspelen har egen beskrivning och poängförklaring.
+  // Kortspelen och Imposterjakten har egen beskrivning och poängförklaring.
   const cardRules = cardRulesFor(state.game)
-  const howTo = cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
-  const scoringDetails = cardRules ? cardRules.scoringDetails : rules.scoringDetails
+  const imposter = state.game === IMPOSTER_GAME
+  const howTo = imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
+  const scoringDetails = imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
+  const roundsLabel = imposter ? 'Antal omgångar' : 'Antal rundor'
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
   const enoughPlayers = online.length >= game.minPlayers
   // För få spelare för spelet som är valt, t.ex. Kortkaos med två. Kort, eftersom knappen redan säger att det väntar.
@@ -96,7 +108,8 @@ export function WaitingRoom({
   // Det som deltagarna ser i stället för valen: spel, antal rundor och, för spel med tempo, svarstid och facit.
   const summary: [string, string][] = [
     ['Spel', game.name],
-    ['Antal rundor', String(state.rounds)],
+    [roundsLabel, String(state.rounds)],
+    ...(imposter ? imposterSettingsSummary(state.imposterSettings) : []),
     ...(hasTempoSettings(state.game)
       ? ([
           ['Svarstid', `${guessSecondsFor(state)} s`],
@@ -258,7 +271,7 @@ export function WaitingRoom({
             </div>
 
             <Choice
-              label="Antal rundor"
+              label={roundsLabel}
               options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
               selected={state.rounds}
               onSelect={onSetRounds}
@@ -276,6 +289,8 @@ export function WaitingRoom({
                 <NextQuestionChoice autoAdvance={state.autoAdvance} onSelect={(autoAdvance) => onSetTempo({ autoAdvance })} />
               </>
             )}
+
+            {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}
 
             <Choice
               label="Kasta saker"
