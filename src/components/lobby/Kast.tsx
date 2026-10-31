@@ -156,6 +156,7 @@ export function SplatOverlay() {
         {item.id === 'paj' && <PieHit size={stage} />}
         {item.id === 'agg' && <EggHit size={stage} />}
         {item.id === 'toapapper' && <PaperHit size={stage} />}
+        {item.id === 'gurka' && <CucumberHit size={stage} />}
       </div>
     </div>
   )
@@ -332,6 +333,51 @@ function EggHit({ size }: { size: number }) {
         </svg>
       ))}
       <Flying emoji="🥚" size={size * 0.4} />
+    </div>
+  )
+}
+
+// Gurkan smäller och delar sig i skivor som flyger åt alla håll, och en grön fläck växer ut.
+function CucumberHit({ size }: { size: number }) {
+  const slices: Piece[] = [
+    { x: -0.4, y: 0.35, size: 0.2, turn: -200 },
+    { x: 0.42, y: 0.3, size: 0.18, turn: 220 },
+    { x: -0.18, y: 0.55, size: 0.16, turn: 140 },
+    { x: 0.2, y: 0.6, size: 0.2, turn: -160 },
+    { x: 0.02, y: -0.4, size: 0.14, turn: 300 },
+  ]
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 size-full origin-center motion-safe:animate-splat-blob">
+        <path
+          className="fill-mint"
+          d="M50 26C60 22 70 30 76 32C86 36 84 48 78 52C86 60 78 70 68 68C64 78 52 78 46 72C36 78 24 70 26 60C16 54 20 42 30 40C30 30 40 24 50 26Z"
+        />
+        <path className="fill-mint-soft" d="M42 40C50 34 62 38 64 46C66 54 56 60 48 58C40 56 36 46 42 40Z" />
+        {[
+          [44, 46],
+          [52, 44],
+          [58, 50],
+          [48, 54],
+        ].map(([cx, cy]) => (
+          <ellipse key={`${cx}-${cy}`} className="fill-card" cx={cx} cy={cy} rx="2" ry="1.2" />
+        ))}
+      </svg>
+      {slices.map((slice, i) => (
+        <span
+          key={i}
+          className="absolute top-1/2 left-1/2 flex items-center justify-center rounded-full border-4 border-accent-foreground/60 bg-mint-soft opacity-0 motion-safe:animate-crumb-fall"
+          style={{
+            width: slice.size * size,
+            height: slice.size * size,
+            ...vars({ '--x': `${slice.x * size}px`, '--y': `${slice.y * size}px`, '--r': `${slice.turn}deg` }),
+          }}
+        >
+          {/* Kärnorna i mitten av skivan. */}
+          <span className="size-1/3 rounded-full border-2 border-dotted border-mint" />
+        </span>
+      ))}
+      <Flying emoji="🥒" size={size * 0.44} />
     </div>
   )
 }

@@ -51,13 +51,14 @@ describe('kast', () => {
     expect(nextSplat(first, second)).toEqual({ splat: first, shown: false })
   })
 
-  it('har fyra saker med texter utan tankstreck', () => {
-    expect(THROW_ITEMS.map((item) => item.id)).toEqual(['tomat', 'paj', 'agg', 'toapapper'])
+  it('har fem saker med texter utan tankstreck', () => {
+    expect(THROW_ITEMS.map((item) => item.id)).toEqual(['tomat', 'paj', 'agg', 'toapapper', 'gurka'])
     expect(findThrowItem('agg')?.emoji).toBe('🥚')
     expect(findThrowItem('bomb')).toBeUndefined()
     expect(hitText('Oscar', findThrowItem('tomat')!)).toBe('Oscar kastade en tomat på dig!')
     expect(hitText('Lisa', findThrowItem('agg')!)).toBe('Lisa kastade ett ägg på dig!')
     expect(hitText('Kim', findThrowItem('toapapper')!)).toBe('Kim kastade toapapper på dig!')
+    expect(hitText('Oscar', findThrowItem('gurka')!)).toBe('Oscar kastade en gurka på dig!')
     for (const item of THROW_ITEMS) expect(hitText('A', item)).not.toMatch(/[–—]/)
   })
 

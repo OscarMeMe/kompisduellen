@@ -32,6 +32,7 @@ const EMOJI: Record<string, EmojiInfo> = {
   '🥧': { file: 'pie', label: 'Paj' },
   '🥚': { file: 'egg', label: 'Ägg' },
   '🧻': { file: 'roll-of-paper', label: 'Toapapper' },
+  '🥒': { file: 'cucumber', label: 'Gurka' },
 }
 
 // Tecknet utan variantväljare (U+FE0F), så att t.ex. "🏷️" och "🏷" ger samma bild.

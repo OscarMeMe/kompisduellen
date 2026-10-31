@@ -48,7 +48,7 @@ export function playPop() {
 // Ljuden när något kastas på en (kast.ts). Ett svisch medan saken flyger, och träffen när den slår i skärmen efter
 // impactSeconds (samma tid som rörelsen i index.css). Allt läggs på ljudklockan direkt, så att det hamnar i takt.
 // Tomat: duns och blött splatt med små plask. Paj: djup duns och ett kladdigt squelch. Ägg: vasst knäck och ett plopp.
-// Toapapper: fladdrande swisch och ett mjukt poff när rullen landar.
+// Toapapper: fladdrande swisch och ett mjukt poff när rullen landar. Gurka: ett ihåligt bonk och ett krasch.
 export function playThrow(item: ThrowItemId, impactSeconds: number) {
   try {
     context ??= new AudioContext()
@@ -81,6 +81,11 @@ export function playThrow(item: ThrowItemId, impactSeconds: number) {
       }
       tone(ctx, hit + 0.09, 620, 190, 0.14, 0.14)
       noise(ctx, hit + 0.1, 0.22, 'lowpass', 1400, 300, 0.1)
+    } else if (item === 'gurka') {
+      tone(ctx, hit, 320, 140, 0.18, 0.3)
+      tone(ctx, hit + 0.01, 480, 210, 0.12, 0.12)
+      noise(ctx, hit, 0.2, 'bandpass', 2400, 700, 0.18, { q: 1.8 })
+      noise(ctx, hit + 0.08, 0.15, 'lowpass', 1500, 400, 0.08)
     } else {
       noise(ctx, hit - 0.05, 0.6, 'bandpass', 600, 2600, 0.12, { q: 1.5, wobble: 22 })
       tone(ctx, hit + 0.65, 150, 90, 0.12, 0.12)

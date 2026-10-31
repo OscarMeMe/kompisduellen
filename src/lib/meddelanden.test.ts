@@ -147,6 +147,7 @@ describe('kast', () => {
   it('tar emot ett kast mellan två spelare i lobbyn', () => {
     expect(parseThrow({ id: 'a', to: 'b', item: 'tomat' }, open)).toEqual({ id: 'a', to: 'b', item: 'tomat' })
     expect(parseThrow({ id: 'b', to: 'a', item: 'agg' }, open)).toEqual({ id: 'b', to: 'a', item: 'agg' })
+    expect(parseThrow({ id: 'a', to: 'b', item: 'gurka' }, open)).toEqual({ id: 'a', to: 'b', item: 'gurka' })
   })
 
   it('slänger trasiga kast och okända saker', () => {

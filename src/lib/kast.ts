@@ -5,7 +5,7 @@
 
 import type { SplatPlace } from '@/lib/splatt'
 
-export type ThrowItemId = 'tomat' | 'paj' | 'agg' | 'toapapper'
+export type ThrowItemId = 'tomat' | 'paj' | 'agg' | 'toapapper' | 'gurka'
 
 export type ThrowItem = {
   id: ThrowItemId
@@ -24,6 +24,7 @@ export const THROW_ITEMS: readonly ThrowItem[] = [
   { id: 'paj', emoji: '🥧', label: 'Paj', text: 'en paj', splat: 'bg-sun' },
   { id: 'agg', emoji: '🥚', label: 'Ägg', text: 'ett ägg', splat: 'bg-card', yolk: true },
   { id: 'toapapper', emoji: '🧻', label: 'Toapapper', text: 'toapapper', splat: 'bg-muted' },
+  { id: 'gurka', emoji: '🥒', label: 'Gurka', text: 'en gurka', splat: 'bg-mint' },
 ]
 
 export function findThrowItem(id: unknown): ThrowItem | undefined {

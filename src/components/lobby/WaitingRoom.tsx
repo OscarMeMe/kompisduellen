@@ -279,7 +279,7 @@ export function WaitingRoom({
 
             <Choice
               label="Kasta saker"
-              hint="Tomater, pajer, ägg och toapapper på varandra"
+              hint="Tomater, pajer, ägg, toapapper och gurkor på varandra"
               options={[
                 { value: 1, label: 'På' },
                 { value: 0, label: 'Av' },
