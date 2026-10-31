@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { Choice } from '@/components/lobby/Choice'
+import { AcceptThrowsToggle } from '@/components/lobby/Kast'
 import { PageHeader } from '@/components/PageHeader'
 import { PlayerSetup } from '@/components/PlayerSetup'
 import { loadAcceptsThrows, saveAcceptsThrows } from '@/lib/kast'
@@ -23,17 +23,11 @@ export function ProfilePage() {
         </p>
       </div>
       <div className="rounded-lg border bg-card p-5 shadow-soft">
-        <Choice
-          label="Ta emot kast"
-          hint="Tomater och pajer från de andra"
-          options={[
-            { value: 1, label: 'På' },
-            { value: 0, label: 'Av' },
-          ]}
-          selected={acceptsThrows ? 1 : 0}
-          onSelect={(value) => {
-            setAcceptsThrows(value === 1)
-            saveAcceptsThrows(value === 1)
+        <AcceptThrowsToggle
+          on={acceptsThrows}
+          onChange={(on) => {
+            setAcceptsThrows(on)
+            saveAcceptsThrows(on)
           }}
         />
       </div>

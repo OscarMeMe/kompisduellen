@@ -1,6 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Emoji } from '@/components/Emoji'
-import { Choice } from '@/components/lobby/Choice'
 import { useThrows } from '@/hooks/useReactions'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -139,16 +138,34 @@ export function SplatOverlay() {
 export function AcceptThrowsChoice() {
   const throws = useThrows()
   if (!throws) return null
+  return <AcceptThrowsToggle on={throws.acceptsThrows} onChange={throws.setAcceptsThrows} />
+}
+
+// Rubriken och en liten växlare med På och Av sida vid sida, på samma rad när det får plats. Används i väntrummet
+// och på profilsidan.
+export function AcceptThrowsToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const labelId = useId()
   return (
-    <Choice
-      label="Ta emot kast"
-      hint="Tomater och pajer från de andra"
-      options={[
-        { value: 1, label: 'På' },
-        { value: 0, label: 'Av' },
-      ]}
-      selected={throws.acceptsThrows ? 1 : 0}
-      onSelect={(value) => throws.setAcceptsThrows(value === 1)}
-    />
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+      <p id={labelId} className="font-bold">
+        Ta emot kast
+      </p>
+      <div role="group" aria-labelledby={labelId} className="flex rounded-full bg-muted p-1">
+        {[true, false].map((value) => (
+          <button
+            key={String(value)}
+            type="button"
+            aria-pressed={on === value}
+            onClick={() => onChange(value)}
+            className={cn(
+              'h-9 min-w-14 rounded-full px-3 text-sm font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+              on === value ? 'bg-card text-foreground shadow-soft-sm' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {value ? 'På' : 'Av'}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
