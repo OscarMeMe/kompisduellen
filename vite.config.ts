@@ -36,6 +36,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // robots.txt och sajtkartan ska visas som filer, inte som appen.
+        navigateFallbackDenylist: [/^\/(robots\.txt|sitemap\.xml)$/],
       },
     }),
   ],
