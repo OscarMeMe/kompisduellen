@@ -74,6 +74,31 @@
     /* animate-frame-pulse: ramen runt spelvyn lyser upp en gång när tiden nästan är ute (TimeWarningFrame).
        Spelas en gång per sekund, aldrig oftare. */
     --animate-frame-pulse: frame-pulse 0.5s ease-out;
+    /* Kast (Kast.tsx). Saken flyger in på 0,45 s (animate-throw-smash: flyger in och plattas till) och träffar på
+       sitt eget sätt: fläcken växer ut (splat-blob), stänk flyger (splash-drop), droppar rinner (drip), det som
+       träffat glider neråt (slide-down), bitar faller (crumb-fall) och toapappret rullas ut (paper-roll,
+       ribbon-draw, paper-sag). Allt tonas bort efter 2 s (splat-life, splat-fade med "minska rörelse").
+       Vid träffen: en kort stöt (impact-shake), en ring (impact-ring), strålar (streak) och texten poppar fram
+       (hit-label). Äggulan dallrar (jiggle).
+       Bekräftelsen för den som kastade: thrown-life, och saken gör en volt (toss). */
+    --animate-throw-smash: throw-in 0.45s cubic-bezier(0.3, 0.8, 0.4, 1) both, smash 0.22s 0.45s ease-out forwards;
+    --animate-splat-blob: splat-blob 0.3s 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+    --animate-impact-shake: impact-shake 0.25s 0.45s ease-out;
+    --animate-impact-ring: impact-ring 0.4s 0.45s ease-out both;
+    --animate-hit-label: pop-in 0.35s 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    --animate-streak: streak 0.35s 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    --animate-jiggle: jiggle 0.45s 0.75s ease-out;
+    --animate-splash-drop: splash-drop 0.4s 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    --animate-drip: drip 1.1s 0.7s ease-in both;
+    --animate-slide-down: slide-down 1.2s 0.75s ease-in forwards;
+    --animate-crumb-fall: crumb-fall 1.1s 0.45s cubic-bezier(0.4, 0, 1, 1) both;
+    --animate-ribbon-draw: ribbon-draw 0.8s ease-out both;
+    --animate-paper-roll: paper-roll 0.8s 0.1s cubic-bezier(0.2, 0.7, 0.3, 1) both, fall-away 0.5s 1.1s ease-in forwards;
+    --animate-paper-sag: slide-down 0.9s 1s ease-in forwards;
+    --animate-splat-life: splat-life 2s linear both;
+    --animate-splat-fade: splat-fade 2s linear both;
+    --animate-thrown-life: splat-life 1.6s linear both;
+    --animate-toss: toss 0.55s ease-in-out;
 
     @keyframes wiggle {
         0%, 100% { transform: rotate(0deg); }
@@ -133,6 +158,107 @@
                 0 0 16px 3px color-mix(in oklch, var(--color-primary) 55%, transparent),
                 inset 0 0 16px 3px color-mix(in oklch, var(--color-primary) 40%, transparent);
         }
+    }
+
+    /* I en båge mot skärmen: liten långt bort och större när den kommer närmare. */
+    @keyframes throw-in {
+        0% { transform: translate(-140px, 260px) rotate(-300deg) scale(0.3); opacity: 0; }
+        15% { opacity: 1; }
+        55% { transform: translate(-50px, 50px) rotate(-120deg) scale(0.6); }
+        100% { transform: translate(0, 0) rotate(0deg) scale(1.05); }
+    }
+
+    @keyframes impact-shake {
+        0%, 100% { transform: translate(0, 0); }
+        20% { transform: translate(-5px, 3px); }
+        45% { transform: translate(4px, -3px); }
+        70% { transform: translate(-2px, 2px); }
+    }
+
+    @keyframes impact-ring {
+        0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0.9; }
+        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    /* Strålar som skjuts ut från mitten i vinkeln --a, sträckan --d. */
+    @keyframes streak {
+        0% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scaleY(0.2); opacity: 0; }
+        30% { opacity: 1; }
+        100% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(-1 * var(--d))) scaleY(1); opacity: 1; }
+    }
+
+    @keyframes jiggle {
+        0%, 100% { transform: scale(1); }
+        30% { transform: scale(1.1, 0.9); }
+        60% { transform: scale(0.95, 1.05); }
+    }
+
+    @keyframes smash {
+        0% { transform: scale(1); opacity: 1; }
+        40% { transform: scale(1.35, 0.55); }
+        100% { transform: scale(1.5, 0.3); opacity: 0; }
+    }
+
+    @keyframes splat-blob {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.15); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Stänk och bitar flyger från mitten till --x och --y (och snurrar --r). */
+    @keyframes splash-drop {
+        0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+        30% { opacity: 1; }
+        100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1); opacity: 1; }
+    }
+
+    @keyframes crumb-fall {
+        0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 0; }
+        8% { opacity: 1; }
+        100% { transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)); opacity: 0; }
+    }
+
+    @keyframes drip {
+        0% { transform: scaleY(0); }
+        100% { transform: scaleY(1); }
+    }
+
+    @keyframes slide-down {
+        0% { transform: translateY(0) scaleY(1); }
+        100% { transform: translateY(var(--slide)) scaleY(1.08); }
+    }
+
+    /* Toapappret: rullen kommer in från --from, remsan ritas ut (pathLength 1) och rullen faller undan. */
+    @keyframes paper-roll {
+        0% { transform: translateX(var(--from)) rotate(-540deg); opacity: 0; }
+        10% { opacity: 1; }
+        100% { transform: translateX(0) rotate(0deg); }
+    }
+
+    @keyframes ribbon-draw {
+        0% { stroke-dashoffset: 1; }
+        100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes fall-away {
+        0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+        100% { transform: translate(20%, 120%) rotate(50deg); opacity: 0; }
+    }
+
+    @keyframes splat-life {
+        0%, 85% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
+    @keyframes splat-fade {
+        0% { opacity: 0; }
+        10%, 85% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+
+    @keyframes toss {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-14px) rotate(-180deg) scale(1.15); }
     }
 
     @keyframes pop-in {

@@ -5,6 +5,7 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
+import { AcceptThrowsChoice, ThrowBar } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -40,6 +41,7 @@ type WaitingRoomProps = {
   onSetRounds: (rounds: number) => void
   onSetGame: (game: string) => void
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
+  onSetThrowsAllowed: (allowed: boolean) => void
   // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
   onStartCountdown: () => void
@@ -58,6 +60,7 @@ export function WaitingRoom({
   onSetRounds,
   onSetGame,
   onSetTempo,
+  onSetThrowsAllowed,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
@@ -100,6 +103,7 @@ export function WaitingRoom({
           [NEXT_QUESTION_LABEL, state.autoAdvance ? AUTO_ADVANCE_TEXT : HOST_ADVANCES_TEXT],
         ] as [string, string][])
       : []),
+    ['Kasta saker', state.throwsAllowed ? 'På' : 'Av'],
   ]
 
   return (
@@ -199,6 +203,12 @@ export function WaitingRoom({
             ))}
           </ul>
           <ReactionBar className="pt-1" />
+          {online.length > 1 && state.throwsAllowed && (
+            <>
+              <ThrowBar />
+              <AcceptThrowsChoice />
+            </>
+          )}
         </section>
       </div>
 
@@ -266,6 +276,17 @@ export function WaitingRoom({
                 <NextQuestionChoice autoAdvance={state.autoAdvance} onSelect={(autoAdvance) => onSetTempo({ autoAdvance })} />
               </>
             )}
+
+            <Choice
+              label="Kasta saker"
+              hint="Tomater, pajer, ägg, toapapper och gurkor på varandra"
+              options={[
+                { value: 1, label: 'På' },
+                { value: 0, label: 'Av' },
+              ]}
+              selected={state.throwsAllowed ? 1 : 0}
+              onSelect={(value) => onSetThrowsAllowed(value === 1)}
+            />
           </>
         ) : (
           <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">

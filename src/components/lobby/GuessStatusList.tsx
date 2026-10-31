@@ -1,5 +1,6 @@
 import { Check, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { ThrowBar } from '@/components/lobby/Kast'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { guessSecondsFor, type GameState } from '@/lib/match'
@@ -83,6 +84,8 @@ export function GuessStatusList({ hideLine = false, ...props }: GuessStatusListP
           )
         })}
       </ul>
+      {/* Kasta något på de andra medan ni gissar. */}
+      <ThrowBar />
     </div>
   )
 }

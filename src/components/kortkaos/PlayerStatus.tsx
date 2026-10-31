@@ -1,5 +1,6 @@
 import { Check, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { ThrowBar } from '@/components/lobby/Kast'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { kortkaosRules } from '@/lib/kortkaos'
@@ -51,6 +52,8 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
           )
         })}
       </ul>
+      {/* Kasta något på de andra medan de väljer kort. */}
+      <ThrowBar />
     </div>
   )
 }

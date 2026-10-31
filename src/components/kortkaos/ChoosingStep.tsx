@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { Hand, HandSlot } from '@/components/kort/Hand'
 import { AnswerCard, PromptCard } from '@/components/kort/PlayingCard'
+import { SPLAT_SHIELD } from '@/lib/splatt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -99,9 +100,11 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
             />
           )}
 
-          <Button size="lg" className="w-full" disabled={!current} onClick={finish}>
-            Klar
-          </Button>
+          <div {...SPLAT_SHIELD}>
+            <Button size="lg" className="w-full" disabled={!current} onClick={finish}>
+              Klar
+            </Button>
+          </div>
         </div>
       )}
     </>

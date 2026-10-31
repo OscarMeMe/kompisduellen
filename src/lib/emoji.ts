@@ -27,6 +27,12 @@ const EMOJI: Record<string, EmojiInfo> = {
   '🤡': { file: 'clown', label: 'Clown' },
   '💀': { file: 'skull', label: 'Dödskalle' },
   '🎃': { file: 'jack-o-lantern', label: 'Pumpalykta' },
+  // Det man kan kasta på varandra (THROW_ITEMS i kast.ts)
+  '🍅': { file: 'tomato', label: 'Tomat' },
+  '🥧': { file: 'pie', label: 'Paj' },
+  '🥚': { file: 'egg', label: 'Ägg' },
+  '🧻': { file: 'roll-of-paper', label: 'Toapapper' },
+  '🥒': { file: 'cucumber', label: 'Gurka' },
 }
 
 // Tecknet utan variantväljare (U+FE0F), så att t.ex. "🏷️" och "🏷" ger samma bild.

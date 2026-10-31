@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { GuessStatusLine } from '@/components/lobby/GuessStatusList'
+import { SPLAT_SHIELD } from '@/lib/splatt'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import type { GameState } from '@/lib/match'
@@ -23,6 +24,7 @@ export function AnswerDock({ state, online, clockOffset, meId, locked, warning, 
 
   return (
     <div
+      {...SPLAT_SHIELD}
       className="sticky z-10 -mx-4 space-y-2 border-t bg-background/95 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:mx-0 sm:space-y-3 sm:border-0 sm:px-0 sm:pt-0 sm:pb-2"
       style={{ bottom: keyboard }}
     >

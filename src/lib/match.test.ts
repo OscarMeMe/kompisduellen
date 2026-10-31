@@ -37,6 +37,7 @@ import {
   waitingStanding,
   setGame,
   setTempo,
+  setThrowsAllowed,
   startGame,
   type GameState,
   type HostState,
@@ -58,6 +59,19 @@ function playRound(state: GameState, guesses: Record<string, number>, target: nu
   for (const [id, value] of Object.entries(guesses)) next = addGuess(next, id, value)
   return resolveRound(next, now, target)
 }
+
+describe('kast i lobbyn', () => {
+  it('är på från början och kan stängas av och på av värden, även under en match', () => {
+    const state = lobby('gissa-priset', ['a', 'b'])
+    expect(state.throwsAllowed).toBe(true)
+    const off = setThrowsAllowed(state, false)
+    expect(off.throwsAllowed).toBe(false)
+    expect(setThrowsAllowed(off, false)).toBe(off)
+    const playing = startGame(off, ['a', 'b'], NOW)
+    expect(playing.throwsAllowed).toBe(false)
+    expect(setThrowsAllowed(playing, true).throwsAllowed).toBe(true)
+  })
+})
 
 describe('tempo i lobbyn', () => {
   it('låter värden välja 30, 45 eller 60 sekunder och ignorerar andra tider', () => {

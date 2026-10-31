@@ -1,4 +1,5 @@
 import { Loader2, Pause, Play } from 'lucide-react'
+import { ThrowBar } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { useCountdown } from '@/hooks/useCountdown'
 import { Button } from '@/components/ui/button'
@@ -78,6 +79,7 @@ export function RevealFooter({ state, isHost, clockOffset, onNext, onPause, onRe
         </div>
       )}
       <ReactionBar />
+      <ThrowBar />
     </div>
   )
 }
