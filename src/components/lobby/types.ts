@@ -46,6 +46,7 @@ export type ImposterViewProps = {
   me: Player
   online: OnlinePlayer[]
   isHost: boolean
+  clockOffset: number
   // Mitt kort, som bara jag får. null innan det har kommit.
   imposterCard: MyImposterCard | null
   onMove: (move: ImposterMove) => void

@@ -3,34 +3,59 @@ import { Check, RefreshCw, Send } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { ClueList } from '@/components/imposterjakten/ClueList'
 import { MyCard } from '@/components/imposterjakten/MyCard'
+import { DiscussionStep, ResultStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { ThrowBar } from '@/components/lobby/Kast'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { canChangeWord, clueRound, CLUE_ROUNDS, currentTurn, MAX_CLUE_LENGTH, type ImposterTable } from '@/lib/imposterjakten'
+import { useTimeWarning } from '@/hooks/useTimeWarning'
+import {
+  canChangeWord,
+  clueRound,
+  CLUE_ROUNDS,
+  COUNTDOWN_SECONDS,
+  currentTurn,
+  MAX_CLUE_LENGTH,
+  type ImposterTable,
+} from '@/lib/imposterjakten'
 import { hasFinePointer } from '@/lib/device'
 import { cn } from '@/lib/utils'
 
 // Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
-// varv. Kortet går att visa och dölja hela tiden. Diskussionen och omröstningen kommer i nästa steg, så efter varven
-// står allas ord kvar och värden går vidare till nästa omgång.
+// varv. Sedan diskuterar gruppen och röstar. Kortet går att visa och dölja hela tiden. Avslöjandet, sista gissningen
+// och poängen kommer i nästa steg, så efter omröstningen visas rösterna och värden går vidare till nästa omgång.
 export function ImposterjaktenView(props: ImposterViewProps) {
-  const { state, me, isHost, imposterCard, onNewWord } = props
+  const { state, me, isHost, imposterCard, clockOffset, onNewWord } = props
   const table = state.imposter
+  // Nedräkningen till omröstningen varnar på samma sätt som tiden i de andra spelen.
+  const countdown = useTimeWarning(state.deadline, clockOffset, COUNTDOWN_SECONDS, false)
   if (!table) return null
   const inRound = table.order.includes(me.id)
+  const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
 
   return (
     <Wide>
-      <RoundTimer state={state} clockOffset={0} label="Omgång" />
+      {table.countdownStarted && table.step === 'diskussion' && (
+        <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />
+      )}
+      <RoundTimer
+        state={state}
+        clockOffset={clockOffset}
+        label="Omgång"
+        totalSeconds={COUNTDOWN_SECONDS}
+        warning={table.step === 'diskussion' ? countdown.warning : 'normal'}
+      />
       <MyCard mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
 
       {table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
       {table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
-      {table.step === 'diskussion' && <DiscussionStep {...props} table={table} />}
+      {table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
+      {table.step === 'rostning' && <VotingStep {...stepProps} />}
+      {table.step === 'resultat' && <ResultStep {...stepProps} />}
 
       {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
       {isHost && canChangeWord(table) && (
@@ -185,23 +210,5 @@ function WriteTurn({ onMove, rejectedAt }: { onMove: StepProps['onMove']; reject
         </Button>
       </div>
     </form>
-  )
-}
-
-// Tillfälligt i steg 1: allas ord står kvar, och värden går vidare. Diskussionen och omröstningen kommer i nästa steg.
-function DiscussionStep({ state, table, me, isHost, onNextRound }: StepProps) {
-  const last = state.round >= state.rounds
-  return (
-    <>
-      <ClueList state={state} table={table} meId={me.id} />
-      <p className="rounded-md bg-sky-soft px-4 py-3 text-center font-semibold">
-        Diskussionen och omröstningen kommer i nästa steg.
-      </p>
-      {isHost && (
-        <Button size="lg" onClick={onNextRound}>
-          {last ? 'Visa resultatet' : 'Nästa omgång'}
-        </Button>
-      )}
-    </>
   )
 }
