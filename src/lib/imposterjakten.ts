@@ -11,7 +11,18 @@ import words from '@/lib/imposterjakten.json'
 
 export const IMPOSTER_GAME = 'imposterjakten'
 
-export type ImposterWord = { id: string; ord: string; kategori: string; ledtrad: string; godkanda: string[] }
+// Ett ord i ordlistan. ledtrad = imposterns hjälpledtråd i Normal. godkanda = former som räknas som ordet (i
+// kontrollen av ledtrådar och i sista gissningen). nara (ett närliggande ord) och svarighet (latt, mellan eller klurig)
+// används inte än.
+export type ImposterWord = {
+  id: string
+  ord: string
+  kategori: string
+  ledtrad: string
+  nara: string
+  godkanda: string[]
+  svarighet: string
+}
 
 export const WORDS: readonly ImposterWord[] = words
 
