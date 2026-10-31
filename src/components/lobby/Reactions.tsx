@@ -9,7 +9,8 @@ import {
   type ReactionsValue,
   type Throws,
 } from '@/hooks/useReactions'
-import { loadSoundOn, playPop, playSplat, saveSoundOn } from '@/lib/ljud'
+import { IMPACT_MS } from '@/lib/kast'
+import { loadSoundOn, playHit, playPop, saveSoundOn } from '@/lib/ljud'
 import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
@@ -36,10 +37,14 @@ export function ReactionsProvider({ enabled, floating, send, throws, children }:
     lastKey.current = key
   }, [floating, soundOn])
 
+  // Ljudet för det som träffar mig spelas när saken slår i skärmen.
   const splatKey = throws.splat?.key
+  const splatItem = throws.splat?.item
   useEffect(() => {
-    if (splatKey && soundOn) playSplat()
-  }, [splatKey, soundOn])
+    if (!splatKey || !splatItem || !soundOn) return
+    const timer = setTimeout(() => playHit(splatItem), IMPACT_MS)
+    return () => clearTimeout(timer)
+  }, [splatKey, splatItem, soundOn])
 
   const value = useMemo<ReactionsValue>(
     () => ({

@@ -35,8 +35,10 @@ export const THROW_COOLDOWN_MS = 10_000
 // Mottagarna släpper igenom ett kast per avsändare och så här lång tid. Lite kortare än avsändarens spärr, så att
 // ett kast som kommer fram lite fortare än det förra inte slängs i onödan.
 export const THROW_ACCEPT_MS = THROW_COOLDOWN_MS - 1000
-// Så länge syns splatten (ms).
-export const SPLAT_VISIBLE_MS = 1500
+// Så länge syns splatten (ms), och när saken slår i skärmen efter att ha flugit in (ms). Rörelserna i index.css
+// (throw-in och de olika träffarna) är gjorda för de här tiderna.
+export const SPLAT_VISIBLE_MS = 2000
+export const IMPACT_MS = 450
 
 // Får jag kasta nu? lastSent = när jag kastade senast (ms), eller null.
 export function canThrow(lastSent: number | null, now: number): boolean {
