@@ -84,7 +84,7 @@ function ThrowMenu({
         ))}
       </div>
       <p className="min-h-5 text-center text-sm text-muted-foreground">
-        {wait > 0 ? `Du kan kasta igen om ${wait} s` : 'Du kan kasta en gång per 15 sekunder.'}
+        {wait > 0 ? `Du kan kasta igen om ${wait} s` : 'Du kan kasta en gång per 10 sekunder.'}
       </p>
     </div>
   )

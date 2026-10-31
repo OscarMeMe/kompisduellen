@@ -13,18 +13,18 @@ import {
 } from '@/lib/kast'
 
 describe('kast', () => {
-  it('låter mig kasta en gång per 15 sekunder', () => {
-    expect(THROW_COOLDOWN_MS).toBe(15_000)
+  it('låter mig kasta en gång per 10 sekunder', () => {
+    expect(THROW_COOLDOWN_MS).toBe(10_000)
     expect(canThrow(null, 1000)).toBe(true)
-    expect(canThrow(1000, 1000 + 14_999)).toBe(false)
-    expect(canThrow(1000, 1000 + 15_000)).toBe(true)
+    expect(canThrow(1000, 1000 + 9_999)).toBe(false)
+    expect(canThrow(1000, 1000 + 10_000)).toBe(true)
   })
 
   it('räknar ner sekunderna tills jag får kasta igen', () => {
     expect(throwCooldownSeconds(null, 5000)).toBe(0)
-    expect(throwCooldownSeconds(0, 0)).toBe(15)
-    expect(throwCooldownSeconds(0, 2500)).toBe(13)
-    expect(throwCooldownSeconds(0, 15_000)).toBe(0)
+    expect(throwCooldownSeconds(0, 0)).toBe(10)
+    expect(throwCooldownSeconds(0, 2500)).toBe(8)
+    expect(throwCooldownSeconds(0, 10_000)).toBe(0)
     expect(throwCooldownSeconds(0, 60_000)).toBe(0)
   })
 

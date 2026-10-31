@@ -692,7 +692,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         lastReactionRef.current = now
         void channelRef.current?.send({ type: 'broadcast', event: 'reaction', payload: { id: me.id, reaction: reactionId } })
       },
-      // Kasta något på en annan spelare. En gång per 15 sekunder, och bara på den som tar emot kast.
+      // Kasta något på en annan spelare. En gång per 10 sekunder, och bara på den som tar emot kast.
       throwAt: (to: string, item: ThrowItemId) => {
         if (!me || !findThrowItem(item) || !stateRef.current.throwsAllowed) return
         if (!throwTargets(onlineRef.current, me.id).some((p) => p.id === to)) return
