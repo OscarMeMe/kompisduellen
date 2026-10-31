@@ -1,4 +1,4 @@
-// Ljudeffekterna för reaktioner (ett kort "plopp") och kast (playHit). Allt ritas upp med Web Audio, så inga
+// Ljudeffekterna för reaktioner (ett kort "plopp") och kast (playThrow). Allt ritas upp med Web Audio, så inga
 // ljudfiler behövs.
 // Valet att stänga av ljudet sparas i webbläsaren. Ljudet är på från början.
 
@@ -45,33 +45,54 @@ export function playPop() {
   }
 }
 
-// Ljuden när något träffar en (kast.ts). Allt ritas upp med Web Audio, så inga ljudfiler behövs.
-// Tomat: ett blött splatt. Paj: en dov duns och ett kladdigt ljud. Ägg: ett knäck och ett litet plask.
-// Toapapper: ett fladdrande swisch.
-export function playHit(item: ThrowItemId) {
+// Ljuden när något kastas på en (kast.ts). Ett svisch medan saken flyger, och träffen när den slår i skärmen efter
+// impactSeconds (samma tid som rörelsen i index.css). Allt läggs på ljudklockan direkt, så att det hamnar i takt.
+// Tomat: duns och blött splatt med små plask. Paj: djup duns och ett kladdigt squelch. Ägg: vasst knäck och ett plopp.
+// Toapapper: fladdrande swisch och ett mjukt poff när rullen landar.
+export function playThrow(item: ThrowItemId, impactSeconds: number) {
   try {
     context ??= new AudioContext()
     if (context.state === 'suspended') void context.resume()
     const ctx = context
     const now = ctx.currentTime
+    const hit = now + impactSeconds
+    // Svischet medan saken flyger: brus som stiger i tonhöjd och blir starkare mot slutet.
+    noise(ctx, now, impactSeconds, 'bandpass', 300, 1600, 0.05, { rise: true, q: 1.2 })
     if (item === 'tomat') {
-      noise(ctx, now, 0.25, 'lowpass', 1800, 300, 0.25)
+      tone(ctx, hit, 180, 70, 0.12, 0.22)
+      noise(ctx, hit, 0.3, 'lowpass', 2200, 280, 0.28)
+      for (const [delay, pitch] of [
+        [0.06, 900],
+        [0.11, 1300],
+        [0.17, 700],
+      ]) {
+        tone(ctx, hit + delay, pitch, pitch * 0.55, 0.06, 0.05)
+      }
     } else if (item === 'paj') {
-      tone(ctx, now, 140, 55, 0.22, 0.35)
-      noise(ctx, now + 0.02, 0.3, 'lowpass', 700, 200, 0.15)
+      tone(ctx, hit, 120, 42, 0.28, 0.42)
+      noise(ctx, hit + 0.02, 0.4, 'bandpass', 900, 250, 0.2, { q: 2.5, wobble: 18 })
     } else if (item === 'agg') {
-      noise(ctx, now, 0.025, 'highpass', 2500, 2500, 0.3)
-      noise(ctx, now + 0.05, 0.025, 'highpass', 3000, 3000, 0.22)
-      noise(ctx, now + 0.08, 0.18, 'lowpass', 1200, 300, 0.12)
+      for (const [delay, freq, volume] of [
+        [0, 3200, 0.32],
+        [0.035, 4200, 0.24],
+        [0.06, 2800, 0.18],
+      ]) {
+        noise(ctx, hit + delay, 0.02, 'highpass', freq, freq, volume, { q: 6 })
+      }
+      tone(ctx, hit + 0.09, 620, 190, 0.14, 0.14)
+      noise(ctx, hit + 0.1, 0.22, 'lowpass', 1400, 300, 0.1)
     } else {
-      noise(ctx, now, 0.45, 'bandpass', 500, 2500, 0.14)
+      noise(ctx, hit - 0.05, 0.6, 'bandpass', 600, 2600, 0.12, { q: 1.5, wobble: 22 })
+      tone(ctx, hit + 0.65, 150, 90, 0.12, 0.12)
+      noise(ctx, hit + 0.65, 0.15, 'lowpass', 800, 200, 0.08)
     }
   } catch {
     // Inget ljud är inget fel.
   }
 }
 
-// Brus genom ett filter som glider från en frekvens till en annan, och tonar ut.
+// Brus genom ett filter som glider från en frekvens till en annan. Tonar ut, eller växer (rise) mot slutet.
+// q = hur smalt filtret är. wobble = hur många gånger i sekunden ljudet fladdrar (för det kladdiga och pappret).
 function noise(
   ctx: AudioContext,
   start: number,
@@ -80,22 +101,28 @@ function noise(
   from: number,
   to: number,
   volume: number,
+  options: { rise?: boolean; q?: number; wobble?: number } = {},
 ) {
   const length = Math.max(1, Math.floor(ctx.sampleRate * duration))
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
   const data = buffer.getChannelData(0)
-  for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 2
+  for (let i = 0; i < length; i++) {
+    const t = i / length
+    const envelope = options.rise ? t * t : (1 - t) ** 2
+    const flutter = options.wobble ? 0.6 + 0.4 * Math.sin(2 * Math.PI * options.wobble * (i / ctx.sampleRate)) : 1
+    data[i] = (Math.random() * 2 - 1) * envelope * flutter
+  }
   const source = ctx.createBufferSource()
   source.buffer = buffer
   const filter = ctx.createBiquadFilter()
   filter.type = type
+  if (options.q) filter.Q.value = options.q
   filter.frequency.setValueAtTime(from, start)
   filter.frequency.exponentialRampToValueAtTime(to, start + duration)
   const gain = ctx.createGain()
-  gain.gain.setValueAtTime(volume, start)
-  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+  gain.gain.value = volume
   source.connect(filter).connect(gain).connect(ctx.destination)
-  source.start(start)
+  source.start(Math.max(start, ctx.currentTime))
   source.stop(start + duration + 0.01)
 }
 
@@ -106,7 +133,8 @@ function tone(ctx: AudioContext, start: number, from: number, to: number, durati
   oscillator.type = 'sine'
   oscillator.frequency.setValueAtTime(from, start)
   oscillator.frequency.exponentialRampToValueAtTime(to, start + duration)
-  gain.gain.setValueAtTime(volume, start)
+  gain.gain.setValueAtTime(0.0001, start)
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.008)
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
   oscillator.connect(gain).connect(ctx.destination)
   oscillator.start(start)
