@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /lobby/
+Disallow: /spel/
+Disallow: /resultat/
+Disallow: /granska
+
+Sitemap: https://kompisduellen.se/sitemap.xml
