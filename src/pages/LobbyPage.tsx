@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Undo2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { PriceGuessingView } from '@/components/gissa-priset/PriceGuessingView'
 import { PriceRevealView } from '@/components/gissa-priset/PriceRevealView'
+import { ImposterjaktenView } from '@/components/imposterjakten/ImposterjaktenView'
 import { KortkaosView } from '@/components/kortkaos/KortkaosView'
 import { FinishedView } from '@/components/lobby/FinishedView'
 import { AbortMatchDialog } from '@/components/lobby/AbortMatchDialog'
@@ -12,7 +13,7 @@ import { Narrow } from '@/components/lobby/LobbyLayout'
 import { SplatOverlay, ThrownConfirm } from '@/components/lobby/Kast'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { Throws } from '@/hooks/useReactions'
-import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
+import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps } from '@/components/lobby/types'
 import { WaitingRoom } from '@/components/lobby/WaitingRoom'
 import { GuessingView } from '@/components/narmast/GuessingView'
 import { RevealView } from '@/components/narmast/RevealView'
@@ -44,15 +45,17 @@ import {
 } from '@/lib/player'
 
 // Vyerna i varje spel. Gissningsspelen har en vy för att gissa och en för att visa svaret, kortspelen
-// en vy för hela rundan. Väntrum och prispall är gemensamma.
+// en vy för hela rundan och Imposterjakten en vy för hela omgången. Väntrum och prispall är gemensamma.
 type GameViews =
   | { Guessing: ComponentType<GuessingViewProps>; Reveal: ComponentType<RevealViewProps> }
   | { Play: ComponentType<CardViewProps> }
+  | { Imposter: ComponentType<ImposterViewProps> }
 
 const GAME_VIEWS: Record<string, GameViews> = {
   narmast: { Guessing: GuessingView, Reveal: RevealView },
   'gissa-priset': { Guessing: PriceGuessingView, Reveal: PriceRevealView },
   kortkaos: { Play: KortkaosView },
+  imposterjakten: { Imposter: ImposterjaktenView },
 }
 
 export function LobbyPage() {
@@ -185,6 +188,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     online,
     clockOffset,
     hand,
+    imposterCard,
     floating,
     splat,
     thrown,
@@ -384,11 +388,29 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onSetGame={actions.setGame}
           onSetTempo={actions.setTempo}
           onSetThrowsAllowed={actions.setThrowsAllowed}
+          onSetImposterSettings={actions.setImposterSettings}
           onStart={actions.start}
           onStartCountdown={actions.startCountdown}
         />
       )
     case 'playing':
+      if ('Imposter' in views) {
+        return (
+          <views.Imposter
+            // Ny vy för varje omgång och varje nytt ord, så att kortet döljs och utkast börjar om.
+            key={`${state.round}-${state.imposter?.order.join()}`}
+            state={state}
+            me={me}
+            online={online}
+            isHost={isHost}
+            imposterCard={imposterCard}
+            onMove={actions.move}
+            onStartAnyway={actions.imposterStartAnyway}
+            onNewWord={actions.imposterNewWord}
+            onNextRound={actions.imposterNextRound}
+          />
+        )
+      }
       if (!('Play' in views)) return null
       return (
         <views.Play
