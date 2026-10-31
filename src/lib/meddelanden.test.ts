@@ -114,6 +114,13 @@ describe('gissningar och kortdrag', () => {
     expect(parseMove({ id: 'a', move: { type: 'clue' } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 5 } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 'x'.repeat(101) } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'ready', on: true } })?.move).toEqual({ type: 'ready', on: true })
+    expect(parseMove({ id: 'a', move: { type: 'ready', on: false } })?.move).toEqual({ type: 'ready', on: false })
+    expect(parseMove({ id: 'a', move: { type: 'ready' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'ready', on: 'ja' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'vote', target: 'b' } })?.move).toEqual({ type: 'vote', target: 'b' })
+    expect(parseMove({ id: 'a', move: { type: 'vote' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'vote', target: 2 } })).toBeNull()
   })
 })
 
@@ -127,14 +134,17 @@ describe('händer och värdbyten', () => {
   })
 
   it('godtar mitt kort i Imposterjakten, eller inget kort', () => {
-    const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null }
+    const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null, ready: false, vote: null }
     expect(parseImposterCard({ to: 'a', from: 'b', card: innocent })).toEqual({ to: 'a', from: 'b', card: innocent })
-    const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12 }
+    const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12, ready: true, vote: 'b' }
     expect(parseImposterCard({ to: 'a', card: imposter })?.card).toEqual(imposter)
-    expect(parseImposterCard({ to: 'a', card: { card: null, rejectedAt: null } })?.card.card).toBeNull()
-    expect(parseImposterCard({ to: 'a', card: { card: { role: 'kung' }, rejectedAt: null } })).toBeNull()
-    expect(parseImposterCard({ to: 'a', card: { card: { role: 'oskyldig', word: 3, category: null }, rejectedAt: null } })).toBeNull()
-    expect(parseImposterCard({ to: 'a', card: { card: null, rejectedAt: 'nu' } })).toBeNull()
+    const empty = { card: null, rejectedAt: null, ready: false, vote: null }
+    expect(parseImposterCard({ to: 'a', card: empty })?.card.card).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { ...empty, card: { role: 'kung' } } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { ...empty, card: { role: 'oskyldig', word: 3, category: null } } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { ...empty, rejectedAt: 'nu' } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { ...empty, ready: 'ja' } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { ...empty, vote: 5 } })).toBeNull()
     expect(parseImposterCard({ card: innocent })).toBeNull()
   })
 
@@ -219,15 +229,35 @@ describe('Imposterjakten i läget', () => {
       category: null,
       hard: false,
       aloud: false,
+      readyCount: 1,
+      votedCount: 0,
+      countdownStarted: false,
+      votes: null,
     }
     expect(parseStateMessage({ state: { ...lobby, imposter }, sentAt: 1 })?.state.imposter).toEqual(imposter)
+    const revealed = { ...imposter, step: 'resultat', votes: { a: 'b', b: 'c', c: 'b' } }
+    expect(parseStateMessage({ state: { ...lobby, imposter: revealed }, sentAt: 1 })?.state.imposter).toEqual(revealed)
+    expect(parseStateMessage({ state: { ...lobby, imposter: { ...imposter, votes: { a: 1 } } }, sentAt: 1 })).toBeNull()
     const { imposter: _i, imposterSettings: _s, usedWordIds: _u, ...old } = lobby
     const parsed = parseStateMessage({ state: old, sentAt: 1 })?.state
     expect(parsed).toMatchObject({ imposter: null, usedWordIds: [], imposterSettings: { hard: false, category: null, aloud: false } })
   })
 
   it('slänger läget när omgången har fel form', () => {
-    const bad = { step: 'rösta', order: [], turn: 0, clues: [], read: [], category: null, hard: false, aloud: false }
+    const bad = {
+      step: 'rösta',
+      order: [],
+      turn: 0,
+      clues: [],
+      read: [],
+      category: null,
+      hard: false,
+      aloud: false,
+      readyCount: 0,
+      votedCount: 0,
+      countdownStarted: false,
+      votes: null,
+    }
     expect(parseStateMessage({ state: { ...lobby, imposter: bad }, sentAt: 1 })).toBeNull()
     expect(parseStateMessage({ state: { ...lobby, imposterSettings: { hard: 'ja' } }, sentAt: 1 })).toBeNull()
   })

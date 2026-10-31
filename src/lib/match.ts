@@ -24,6 +24,7 @@ import {
   DEFAULT_ROUNDS as IMPOSTER_DEFAULT_ROUNDS,
   DEFAULT_SETTINGS as IMPOSTER_DEFAULT_SETTINGS,
   IMPOSTER_GAME,
+  imposterDeadline,
   imposterMove,
   imposterNewWord,
   imposterNextRound,
@@ -727,6 +728,7 @@ export function hostDeadline(
   random: Random = Math.random,
 ): HostState {
   if (host.state.phase === 'playing') {
+    if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterDeadline(game, now, deadline))
     return withCards(host, (cards, rules) => cardDeadline(cards, rules, now, deadline, activeIds, random))
   }
   const state = handleDeadline(host.state, now, deadline)
@@ -754,7 +756,7 @@ export function hostMove(
 }
 
 export function hostPresence(host: HostState, activeIds: string[], now: number, random: Random = Math.random): HostState {
-  if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterPresence(game, activeIds))
+  if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterPresence(game, activeIds, now))
   return withCards(host, (cards, rules) => cardPresence(cards, rules, activeIds, now, random))
 }
 

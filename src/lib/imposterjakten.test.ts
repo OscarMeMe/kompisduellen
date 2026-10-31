@@ -10,10 +10,12 @@ import {
   dealRound,
   DEFAULT_SETTINGS,
   findWord,
+  moreThanHalf,
   myImposterCard,
   normalizeWord,
   pickWord,
   RECENT_AFTER_RESET,
+  tallyVotes,
   totalTurns,
   WORDS,
   type ImposterSecrets,
@@ -26,6 +28,7 @@ import {
   hostImposterNewWord,
   hostImposterNextRound,
   hostImposterStartAnyway,
+  hostDeadline,
   hostMove,
   hostPresence,
   hostStart,
@@ -61,6 +64,21 @@ const table = (host: HostState) => host.state.imposter!
 // Alla läser sitt kort.
 function readAll(host: HostState, ids = ABC): HostState {
   return ids.reduce((next, id) => hostMove(next, id, { type: 'read' }, ids, NOW), host)
+}
+
+// Alla blir redo att rösta.
+function readyAll(host: HostState, ids = ABC): HostState {
+  return ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW), host)
+}
+
+// Alla röstar på nästa spelare i listan.
+function voteAll(host: HostState, ids = ABC): HostState {
+  return ids.reduce((next, id, i) => hostMove(next, id, { type: 'vote', target: ids[(i + 1) % ids.length] }, ids, NOW), host)
+}
+
+// En hel omgång fram till att rösterna visas.
+function playRound(host: HostState, ids = ABC): HostState {
+  return voteAll(readyAll(playClues(readAll(host, ids), ids), ids), ids)
 }
 
 // Spelar alla turer med ett eget ord per tur.
@@ -136,7 +154,7 @@ describe('Imposterjakten: ord och roller', () => {
   it('ger inget kort till den som inte är med i omgången', () => {
     const { table, secrets } = dealRound(ABC, DEFAULT_SETTINGS, [], () => 0)
     expect(cardFor(secrets, table, 'z')).toBeNull()
-    expect(myImposterCard(secrets, table, 'z')).toEqual({ card: null, rejectedAt: null })
+    expect(myImposterCard(secrets, table, 'z')).toEqual({ card: null, rejectedAt: null, ready: false, vote: null })
   })
 
   it('väljer ord som inte visats, och börjar om med de senaste spärrade när alla använts', () => {
@@ -174,6 +192,30 @@ describe('Imposterjakten: ledtrådarna', () => {
     for (const text of ['paraply', 'PARAPLY', 'Paraplyet', 'paraplyer', 'paraplyställ']) {
       expect(checkClue(text, paraply, [])).toEqual({ ok: false })
     }
+  })
+
+  it('spärrar delar på minst 4 bokstäver i ord med mellanslag', () => {
+    const skansen = findWord('allsang-pa-skansen')!
+    expect(checkClue('Skansen', skansen, [])).toEqual({ ok: false })
+    expect(checkClue('allsång', skansen, [])).toEqual({ ok: false })
+    // "på" är för kort för att spärras.
+    expect(checkClue('påsk', skansen, [])).toMatchObject({ ok: true })
+    expect(checkClue('Lindgren', findWord('astrid-lindgren')!, [])).toEqual({ ok: false })
+    expect(checkClue('spåret', findWord('pa-sparet')!, [])).toEqual({ ok: false })
+    expect(checkClue('pingpong', findWord('beer-pong')!, [])).toMatchObject({ ok: true })
+    expect(checkClue('pong', findWord('beer-pong')!, [])).toEqual({ ok: false })
+  })
+
+  it('spärrar korta former bara när ledtråden är samma ord eller börjar med formen', () => {
+    const torg = findWord('torg')!
+    expect(checkClue('torg', torg, [])).toEqual({ ok: false })
+    expect(checkClue('Torgstånd', torg, [])).toEqual({ ok: false })
+    expect(checkClue('storgata', torg, [])).toMatchObject({ ok: true })
+    const afterwork = findWord('afterwork')!
+    expect(checkClue('aw', afterwork, [])).toEqual({ ok: false })
+    expect(checkClue('crawl', afterwork, [])).toMatchObject({ ok: true })
+    // Former på minst 5 bokstäver spärras var de än står.
+    expect(checkClue('fredagsafterwork', afterwork, [])).toEqual({ ok: false })
   })
 
   it('avvisar ett ord som redan sagts i omgången', () => {
@@ -265,23 +307,34 @@ describe('Imposterjakten: en omgång', () => {
     const word = findWord(secretsOf(host).wordId)!
     expect(host.state.usedWordIds).not.toContain(word.id)
     expect(JSON.stringify(host.state)).not.toContain(word.ord)
-    const done = hostImposterNextRound(playClues(readAll(host)), ABC)
+    const done = hostImposterNextRound(playRound(host), ABC)
     expect(done.state.usedWordIds).toContain(word.id)
   })
 
   it('börjar nästa omgång från början, utan något från den förra', () => {
-    const first = playClues(readAll(start()))
+    const first = playRound(start())
     const next = hostImposterNextRound(first, ABC, sequence(0.7, 0.7, 0.7))
     expect(next.state.round).toBe(2)
-    expect(table(next)).toMatchObject({ step: 'kort', turn: 0, clues: [], read: [] })
-    expect(secretsOf(next).rejected).toEqual({})
+    expect(table(next)).toMatchObject({
+      step: 'kort',
+      turn: 0,
+      clues: [],
+      read: [],
+      readyCount: 0,
+      votedCount: 0,
+      countdownStarted: false,
+      votes: null,
+    })
+    expect(secretsOf(next)).toMatchObject({ rejected: {}, ready: [], votes: {} })
+    expect(next.state.deadline).toBeNull()
     expect(secretsOf(next).wordId).not.toBe(secretsOf(first).wordId)
   })
 
-  it('går bara vidare efter diskussionen, och slutar efter sista omgången', () => {
+  it('går bara vidare när rösterna har visats, och slutar efter sista omgången', () => {
     let host = start()
     expect(hostImposterNextRound(host, ABC)).toBe(host)
-    for (let round = 1; round <= 3; round++) host = hostImposterNextRound(playClues(readAll(host)), ABC)
+    expect(hostImposterNextRound(playClues(readAll(host)), ABC).state.round).toBe(1)
+    for (let round = 1; round <= 3; round++) host = hostImposterNextRound(playRound(host), ABC)
     expect(host.state.phase).toBe('finished')
     expect(host.secrets).toBeNull()
     expect(host.state.matchesPlayed).toBe(1)
@@ -291,8 +344,103 @@ describe('Imposterjakten: en omgång', () => {
     let host = start()
     host = { ...host, state: addPlayers(host.state, { d: { name: 'D', avatar: '👻' } }) }
     expect(myImposterCard(secretsOf(host), table(host), 'd').card).toBeNull()
-    host = hostImposterNextRound(playClues(readAll(host)), ['a', 'b', 'c', 'd'])
+    // d kan varken bli redo eller rösta i omgången den anslöt mitt i.
+    const discussing = playClues(readAll(host))
+    expect(hostMove(discussing, 'd', { type: 'ready', on: true }, ['a', 'b', 'c', 'd'], NOW)).toBe(discussing)
+    host = hostImposterNextRound(playRound(host), ['a', 'b', 'c', 'd'])
     expect(table(host).order).toContain('d')
     expect(cardFor(secretsOf(host), table(host), 'd')).not.toBeNull()
+  })
+})
+
+describe('Imposterjakten: diskussionen och omröstningen', () => {
+  const ABCD = ['a', 'b', 'c', 'd']
+  const discussion = (ids = ABCD) => playClues(readAll(start(ids), ids), ids)
+  const ready = (host: HostState, id: string, on = true, ids = ABCD) => hostMove(host, id, { type: 'ready', on }, ids, NOW)
+  const vote = (host: HostState, id: string, target: string, ids = ABCD) =>
+    hostMove(host, id, { type: 'vote', target }, ids, NOW)
+
+  it('startar nedräkningen först när mer än hälften är redo', () => {
+    expect(moreThanHalf(1, 4)).toBe(false)
+    expect(moreThanHalf(2, 4)).toBe(false)
+    expect(moreThanHalf(3, 4)).toBe(true)
+    expect(moreThanHalf(2, 3)).toBe(true)
+    let host = ready(discussion(), 'a')
+    expect(table(host)).toMatchObject({ readyCount: 1, countdownStarted: false })
+    host = ready(host, 'b')
+    expect(table(host)).toMatchObject({ readyCount: 2, countdownStarted: false })
+    expect(host.state.deadline).toBeNull()
+    host = ready(host, 'c')
+    expect(table(host)).toMatchObject({ readyCount: 3, countdownStarted: true, step: 'diskussion' })
+    expect(host.state.deadline).toBe(NOW + 30_000)
+  })
+
+  it('låter en spelare ta tillbaka sin markering före nedräkningen men inte under den', () => {
+    let host = ready(discussion(), 'a')
+    host = ready(host, 'a', false)
+    expect(table(host).readyCount).toBe(0)
+    host = ready(ready(ready(host, 'a'), 'b'), 'c')
+    expect(table(host).countdownStarted).toBe(true)
+    expect(ready(host, 'a', false)).toBe(host)
+  })
+
+  it('startar nedräkningen bara en gång, även om fler blir redo', () => {
+    const host = ready(ready(ready(discussion(), 'a'), 'b'), 'c')
+    const deadline = host.state.deadline
+    const later = hostMove(host, 'c', { type: 'ready', on: true }, ABCD, NOW + 5000)
+    expect(later).toBe(host)
+    expect(later.state.deadline).toBe(deadline)
+  })
+
+  it('öppnar omröstningen direkt när alla är redo', () => {
+    const host = readyAll(discussion(), ABCD)
+    expect(table(host).step).toBe('rostning')
+    expect(host.state.deadline).toBeNull()
+  })
+
+  it('öppnar omröstningen när nedräkningen är slut', () => {
+    const host = ready(ready(ready(discussion(), 'a'), 'b'), 'c')
+    const deadline = host.state.deadline!
+    expect(hostDeadline(host, deadline - 1, deadline, ABCD)).toBe(host)
+    expect(hostDeadline(host, deadline, deadline + 1, ABCD)).toBe(host)
+    const voting = hostDeadline(host, deadline, deadline, ABCD)
+    expect(table(voting).step).toBe('rostning')
+    expect(voting.state.deadline).toBeNull()
+  })
+
+  it('räknar om tröskeln när någon lämnar', () => {
+    const host = ready(ready(discussion(), 'a'), 'b')
+    const smaller = hostPresence(host, ['a', 'b', 'c'], NOW)
+    expect(table(smaller)).toMatchObject({ readyCount: 2, countdownStarted: true })
+  })
+
+  it('tar emot en röst var på en annan spelare, och visar rösterna först när alla röstat', () => {
+    let host = readyAll(discussion(), ABCD)
+    expect(vote(host, 'a', 'a')).toBe(host)
+    expect(vote(host, 'a', 'z')).toBe(host)
+    host = vote(host, 'a', 'b')
+    expect(vote(host, 'a', 'c')).toBe(host)
+    expect(table(host)).toMatchObject({ votedCount: 1, votes: null })
+    expect(JSON.stringify(host.state.imposter)).not.toContain('"a":"b"')
+    expect(myImposterCard(secretsOf(host), table(host), 'a').vote).toBe('b')
+    host = vote(vote(vote(host, 'b', 'c'), 'c', 'b'), 'd', 'b')
+    expect(table(host)).toMatchObject({ step: 'resultat', votedCount: 4, votes: { a: 'b', b: 'c', c: 'b', d: 'b' } })
+  })
+
+  it('räknar rösterna: ensamt flest röster, och lika', () => {
+    expect(tallyVotes({ a: 'b', b: 'c', c: 'b', d: 'b' })).toEqual({ counts: { b: 3, c: 1 }, top: ['b'] })
+    expect(tallyVotes({ a: 'b', b: 'a', c: 'b', d: 'a', e: 'c' }).top).toEqual(['b', 'a'])
+    expect(tallyVotes({}).top).toEqual([])
+  })
+
+  it('visar rösterna när den som inte röstat lämnar', () => {
+    const host = vote(vote(vote(readyAll(discussion(), ABCD), 'a', 'b'), 'b', 'c'), 'c', 'b')
+    expect(table(hostPresence(host, ['a', 'b', 'c'], NOW)).step).toBe('resultat')
+  })
+
+  it('tar inte emot redo-markeringar eller röster i fel steg', () => {
+    const host = start(ABCD)
+    expect(ready(host, 'a')).toBe(host)
+    expect(vote(host, 'a', 'b')).toBe(host)
   })
 })
