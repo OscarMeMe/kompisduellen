@@ -4,7 +4,7 @@ import { StaticRouter } from 'react-router'
 import App from './App.tsx'
 
 // Startpunkten när sidorna förrenderas i bygget (vite-plugin-forrendera.ts). Körs i Node, aldrig i webbläsaren.
-export { pageMeta, PRERENDER_PATHS, renderHeadTags } from '@/lib/sidinfo'
+export { HEAD_ONLY_PATHS, pageMeta, PRERENDER_PATHS, renderHeadTags } from '@/lib/sidinfo'
 
 // Sidans HTML för en sökväg, som en förstagångsbesökare utan sparat namn ser den. prerender väntar in allt som
 // laddas med lazy, så att sidan blir komplett.

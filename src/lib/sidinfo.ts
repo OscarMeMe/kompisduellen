@@ -3,6 +3,9 @@
 // sida i webbläsaren (usePageMeta). Taggarna ligger mellan kommentarerna <!-- sidinfo --> och <!-- /sidinfo -->
 // i index.html.
 
+import { findGame } from '@/lib/games'
+import { GAME_PAGES, type GamePageInfo } from '@/lib/spelsidor'
+
 export const SITE_URL = 'https://kompisduellen.se'
 export const SITE_NAME = 'Kompisduellen'
 
@@ -58,8 +61,64 @@ const HOME: PageMeta = {
 // Övriga sidor (lobbyn, profilen, sidor som inte finns): sajtens titel och beskrivning, utan kanonisk adress.
 const DEFAULT: PageMeta = { title: SITE_NAME, description: SITE_DESCRIPTION, path: null, jsonLd: [] }
 
+// En spelsida: spelet som VideoGame (gratis, flera spelare, i webbläsaren) och de vanliga frågorna som FAQPage.
+function gamePageMeta(page: GamePageInfo): PageMeta {
+  const path = `/spel/${page.slug}`
+  const game = findGame(page.gameId)
+  return {
+    title: page.title,
+    description: page.description,
+    path,
+    jsonLd: [
+      {
+        '@type': 'VideoGame',
+        name: game?.name ?? page.heading,
+        url: `${SITE_URL}${path}`,
+        description: page.description,
+        inLanguage: 'sv',
+        genre: 'Partyspel',
+        playMode: 'MultiPlayer',
+        gamePlatform: 'Webbläsare',
+        applicationCategory: 'GameApplication',
+        operatingSystem: 'Alla med webbläsare',
+        numberOfPlayers: game && {
+          '@type': 'QuantitativeValue',
+          minValue: game.minPlayers,
+          ...(game.maxPlayers && { maxValue: game.maxPlayers }),
+        },
+        isAccessibleForFree: true,
+        offers: free,
+        isPartOf: { '@id': WEBSITE_ID },
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: page.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.question,
+          acceptedAnswer: { '@type': 'Answer', text: item.answer },
+        })),
+      },
+    ],
+  }
+}
+
 const PAGES: Record<string, PageMeta> = {
   '/': HOME,
+  '/skapa': {
+    title: 'Skapa en lobby | Kompisduellen',
+    description:
+      'Välj spel, skapa en lobby och bjud in kompisarna med en kod på fyra bokstäver. Gratis, utan konto och utan app.',
+    path: '/skapa',
+    jsonLd: [],
+  },
+  '/ga-med': {
+    title: 'Gå med i en lobby | Kompisduellen',
+    description:
+      'Har du fått en kod av en kompis? Skriv in den och hoppa in i spelet direkt från mobilen eller datorn.',
+    path: '/ga-med',
+    jsonLd: [],
+  },
+  ...Object.fromEntries(GAME_PAGES.map((page) => [`/spel/${page.slug}`, gamePageMeta(page)])),
 }
 
 export function pageMeta(pathname: string): PageMeta {
@@ -68,7 +127,10 @@ export function pageMeta(pathname: string): PageMeta {
 }
 
 // Sidorna som förrenderas till färdig HTML i bygget. Övriga sökvägar får appskalet (app.html).
-export const PRERENDER_PATHS: string[] = ['/']
+export const PRERENDER_PATHS: string[] = ['/', ...GAME_PAGES.map((page) => `/spel/${page.slug}`)]
+// Sidor som syns i sökmotorerna men visar sådant som bara finns i webbläsaren (sparat namn och figur). De får
+// appskalet med sina egna taggar i <head>.
+export const HEAD_ONLY_PATHS: string[] = ['/skapa', '/ga-med']
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

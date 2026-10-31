@@ -7,8 +7,8 @@ import type { Plugin } from 'vite'
 // direkt. Kör bara i produktionsbygget, efter att serverdelen byggts till dist-ssr (se "build" i package.json).
 //
 // - dist/index.html blir den förrenderade startsidan och dist/spel/x/index.html spelsidorna, med egna taggar i <head>.
-// - dist/app.html är det tomma appskalet för alla andra sökvägar (lobbyn, Skapa lobby …). Vercel och service workern
-//   pekar dit.
+// - dist/app.html är det tomma appskalet för alla andra sökvägar (lobbyn, profilen …). Vercel och service workern
+//   pekar dit. Skapa lobby och Gå med får skalet med sina egna taggar (dist/skapa/index.html …).
 // - Appen startar med createRoot som förut och ritar om sidan, så lobbyn och spelen fungerar precis som innan.
 //
 // Körs i writeBundle, före service workern skapas i closeBundle, så att de förrenderade sidorna kommer med i den.
@@ -17,6 +17,7 @@ type Server = {
   pageMeta: (path: string) => unknown
   renderHeadTags: (meta: unknown) => string
   PRERENDER_PATHS: string[]
+  HEAD_ONLY_PATHS: string[]
 }
 
 const HEAD_BLOCK = /( *<!-- sidinfo -->\r?\n)[\s\S]*?(\r?\n *<!-- \/sidinfo -->)/
@@ -38,6 +39,12 @@ export function forrenderaPlugin(): Plugin {
 
       // Appskalet får sajtens allmänna taggar, utan kanonisk adress.
       await writeFile(path.join(outDir, 'app.html'), withHead('/app'))
+
+      for (const pagePath of server.HEAD_ONLY_PATHS) {
+        const file = path.join(outDir, pagePath, 'index.html')
+        await mkdir(path.dirname(file), { recursive: true })
+        await writeFile(file, withHead(pagePath))
+      }
 
       for (const pagePath of server.PRERENDER_PATHS) {
         const html = await server.render(pagePath)
