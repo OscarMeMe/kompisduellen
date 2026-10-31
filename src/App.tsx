@@ -2,10 +2,12 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Route, Routes } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { Layout } from '@/components/Layout'
+import { GameInfoPage } from '@/pages/GameInfoPage'
 import { GamePage } from '@/pages/GamePage'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ResultsPage } from '@/pages/ResultsPage'
+import { GAME_PAGES } from '@/lib/spelsidor'
 
 // Startsidan ingår i första laddningen. Övriga sidor hämtas först när man går dit, så att startsidan laddar snabbt
 // på mobilnät. Lobbysidan är störst (alla spel, realtiden och QR-koden).
@@ -43,6 +45,10 @@ export default function App() {
         <Route path="skapa" element={<Loading><CreateLobbyPage /></Loading>} />
         <Route path="ga-med" element={<Loading><JoinPage /></Loading>} />
         <Route path="lobby/:code" element={<Loading><LobbyPage /></Loading>} />
+        {/* Spelsidorna. En fast sökväg går före spel/:code, och lobbykoder har bara fyra bokstäver. */}
+        {GAME_PAGES.map((page) => (
+          <Route key={page.slug} path={`spel/${page.slug}`} element={<GameInfoPage page={page} />} />
+        ))}
         <Route path="spel/:code" element={<GamePage />} />
         <Route path="resultat/:code" element={<ResultsPage />} />
         <Route path="profil" element={<Loading><ProfilePage /></Loading>} />
