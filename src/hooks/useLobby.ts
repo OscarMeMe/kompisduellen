@@ -20,12 +20,25 @@ import {
   parseMove,
   parseRematchWish,
   parseStateMessage,
+  parseThrow,
   type StateMessage,
 } from '@/lib/meddelanden'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
+import {
+  acceptThrow,
+  canThrow,
+  findThrowItem,
+  loadAcceptsThrows,
+  nextSplat,
+  saveAcceptsThrows,
+  SPLAT_VISIBLE_MS,
+  throwTargets,
+  type Splat,
+  type ThrowItemId,
+} from '@/lib/kast'
 import type { FloatingReaction } from '@/components/lobby/Reactions'
 import {
   abortMatch,
@@ -52,6 +65,7 @@ import {
   setRematchWish,
   setRounds,
   setTempo,
+  setThrowsAllowed,
   type GameState,
   type HostState,
   type PlayerInfo,
@@ -73,6 +87,8 @@ export type OnlinePlayer = Player & {
   joinedAt: number
   // Skickar alltid med sitt id i läget och händerna (se meddelanden.ts). Saknas hos äldre versioner av sajten.
   sendsFrom?: boolean
+  // Vill inte ta emot kast (kast.ts). Syns då inte som mål.
+  noThrows?: boolean
 }
 
 export type { LobbyStatus } from '@/lib/anslutning'
@@ -134,6 +150,18 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     rolesRef.current = roles
   }, [roles])
   const reactionHistoryRef = useRef<Record<string, number[]>>({})
+  // Kast: när jag kastade senast, när ett kast från varje spelare släpptes igenom senast, och splatten som visas
+  // för mig just nu (högst en åt gången).
+  const [lastThrowAt, setLastThrowAt] = useState<number | null>(null)
+  const lastThrowRef = useRef<number | null>(null)
+  const throwHistoryRef = useRef<Record<string, number>>({})
+  const [splat, setSplat] = useState<Splat | null>(null)
+  const splatRef = useRef<Splat | null>(null)
+  // Tar jag emot kast? Sparas i webbläsaren och skickas i närvaron, så att de andra vet vem de kan kasta på.
+  const [acceptsThrows, setAcceptsThrowsState] = useState(loadAcceptsThrows)
+  const acceptsThrowsRef = useRef(acceptsThrows)
+  // Det jag skickade i närvaron senast, så att den kan skickas igen med ett nytt val utan att något annat ändras.
+  const presenceRef = useRef<OnlinePlayer | null>(null)
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
   const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
   const sentHandsRef = useRef<Record<string, string>>({})
@@ -269,7 +297,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const players: OnlinePlayer[] = Object.values(raw)
           .map((metas) => metas[0])
           .filter((meta) => Boolean(meta?.id))
-          .map(({ id, name, avatar, host, joinedAt, sendsFrom }) => ({ id, name, avatar, host, joinedAt, sendsFrom }))
+          .map(({ id, name, avatar, host, joinedAt, sendsFrom, noThrows }) => ({
+            id,
+            name,
+            avatar,
+            host,
+            joinedAt,
+            sendsFrom,
+            noThrows: noThrows === true,
+          }))
           .sort((a, b) => a.joinedAt - b.joinedAt)
         const now = Date.now()
         for (const p of onlineRef.current) {
@@ -362,6 +398,37 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)
       })
 
+      // Ett kast på en spelare. Kontrolleras i meddelanden.ts, och högst ett kast per avsändare släpps igenom
+      // inom spärren. Den som träffas ser en splatt (en åt gången), alla andra en rad i flödet.
+      channel.on('broadcast', { event: 'throw' }, ({ payload }) => {
+        const message = parseThrow(payload, { online: onlineRef.current, throwsAllowed: stateRef.current.throwsAllowed })
+        if (!message) return
+        const now = Date.now()
+        if (!acceptThrow(throwHistoryRef.current[message.id], now)) return
+        throwHistoryRef.current[message.id] = now
+        const from = onlineRef.current.find((p) => p.id === message.id)
+        const to = onlineRef.current.find((p) => p.id === message.to)
+        const item = findThrowItem(message.item)
+        if (!from || !to || !item) return
+        const key = `${message.id}-${now}-${Math.random()}`
+        if (message.to === myId) {
+          const next = nextSplat(splatRef.current, { key, from: from.name, item: item.id })
+          if (next.shown) {
+            splatRef.current = next.splat
+            setSplat(next.splat)
+            setTimeout(() => {
+              if (splatRef.current?.key !== key) return
+              splatRef.current = null
+              setSplat(null)
+            }, SPLAT_VISIBLE_MS)
+            return
+          }
+        }
+        const line: FloatingReaction = { key, name: from.name, emoji: item.emoji, target: to.id === myId ? 'dig' : to.name }
+        setFloating((list) => [...list.slice(-7), line])
+        setTimeout(() => setFloating((list) => list.filter((other) => other.key !== key)), REACTION_VISIBLE_MS)
+      })
+
       channel.on('broadcast', { event: 'guess' }, ({ payload }) => {
         const guess = parseGuess(payload)
         if (!isHost || !guess) return
@@ -435,14 +502,17 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           // Gästen frågar efter läget direkt, och igen med jämna mellanrum tills det kommer (se nedan).
           if (!isHost) sendHello()
           try {
-            await channel.track({
+            const presence: OnlinePlayer = {
               id: myId,
               name: player.name,
               avatar: player.avatar,
               host: isHost,
               joinedAt: Date.now(),
               sendsFrom: true,
-            } satisfies OnlinePlayer)
+              noThrows: !acceptsThrowsRef.current,
+            }
+            presenceRef.current = presence
+            await channel.track(presence)
           } catch {
             // Närvaron skickas igen när kanalen ansluter på nytt. Tillståndet kommer ändå via hello.
           }
@@ -619,6 +689,31 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         lastReactionRef.current = now
         void channelRef.current?.send({ type: 'broadcast', event: 'reaction', payload: { id: me.id, reaction: reactionId } })
       },
+      // Kasta något på en annan spelare. En gång per 15 sekunder, och bara på den som tar emot kast.
+      throwAt: (to: string, item: ThrowItemId) => {
+        if (!me || !findThrowItem(item) || !stateRef.current.throwsAllowed) return
+        if (!throwTargets(onlineRef.current, me.id).some((p) => p.id === to)) return
+        const now = Date.now()
+        if (!canThrow(lastThrowRef.current, now)) return
+        lastThrowRef.current = now
+        setLastThrowAt(now)
+        void channelRef.current?.send({ type: 'broadcast', event: 'throw', payload: { id: me.id, to, item } })
+      },
+      // Värden slår på eller av kasten i lobbyn.
+      setThrowsAllowed: (allowed: boolean) => {
+        if (isHost) publish(setThrowsAllowed(stateRef.current, allowed))
+      },
+      // Mitt eget val att ta emot kast. Sparas i webbläsaren och skickas i närvaron.
+      setAcceptsThrows: (on: boolean) => {
+        saveAcceptsThrows(on)
+        acceptsThrowsRef.current = on
+        setAcceptsThrowsState(on)
+        const presence = presenceRef.current
+        if (presence) {
+          presenceRef.current = { ...presence, noThrows: !on }
+          void channelRef.current?.track(presenceRef.current).catch(() => {})
+        }
+      },
       // Värden pausar och fortsätter nedräkningen efter facit. round = rundan som visades.
       pauseReveal: (round: number) => {
         if (isHost && me) publish(pauseReveal(stateRef.current, Date.now(), round, me.name))
@@ -668,7 +763,19 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   )
 
   // Handen gäller bara medan ett kortspel pågår.
-  return { status, state, online, clockOffset, hand: state.phase === 'playing' ? hand : null, floating, hostMissing, actions }
+  return {
+    status,
+    state,
+    online,
+    clockOffset,
+    hand: state.phase === 'playing' ? hand : null,
+    floating,
+    splat,
+    lastThrowAt,
+    acceptsThrows,
+    hostMissing,
+    actions,
+  }
 }
 
 // Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.

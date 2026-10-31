@@ -6,7 +6,8 @@ import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
 // En reaktion som visas överst på skärmen en kort stund.
-export type FloatingReaction = { key: string; name: string; emoji: string }
+// target = den som träffades av ett kast ("Oscar 🍅 → Lisa"). Saknas för vanliga reaktioner.
+export type FloatingReaction = { key: string; name: string; emoji: string; target?: string }
 
 // Så många reaktioner syns samtidigt. De äldsta försvinner först.
 const MAX_VISIBLE = 6
