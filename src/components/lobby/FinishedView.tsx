@@ -13,15 +13,16 @@ import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
+  type GameState,
   guessSecondsFor,
   hasTempoSettings,
+  leaderboardOrderBefore,
   matchWinners,
   rankLeaderboard,
-  rematchWishCount,
   rankPlayers,
-  roundOptionsFor,
-  type GameState,
   type RematchSettings,
+  rematchWishCount,
+  roundOptionsFor,
 } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
@@ -248,11 +249,13 @@ export function FinishedView({
         </ul>
       )}
 
+      {/* Raderna glider från ställningen före matchen till den nya. */}
       <Leaderboard
         entries={rankLeaderboard(state)}
         matchesPlayed={state.matchesPlayed}
         gamesPlayed={state.gamesPlayed}
         lastWinners={state.practice ? [] : matchWinners(state)}
+        glideFrom={state.practice ? undefined : leaderboardOrderBefore(rankLeaderboard(state), matchWinners(state))}
       />
 
       <Button size="lg" variant="ghost" onClick={onLeave}>

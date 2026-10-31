@@ -14,14 +14,29 @@ export type ResultRowProps = {
   // Bäst i rundan. shared = flera delar bästa resultatet.
   winner: boolean
   shared: boolean
-  // Leder matchen efter rundan.
+  // Leder matchen efter rundan. crownLands = tog ledningen i den här rundan, så kronan faller ned på namnet.
   leader: boolean
+  crownLands?: boolean
   // Plats i listan. Raderna dyker upp en i taget, uppifrån och ned.
   index?: number
 }
 
 // En spelares rad i facit: namn och poäng (rundan och totalt) överst, gissningen stort och hur långt ifrån den var under.
-export function ResultRow({ name, avatar, guess, difference, points, total, winner, shared, leader, index = 0 }: ResultRowProps) {
+export function ResultRow({
+  name,
+  avatar,
+  guess,
+  difference,
+  points,
+  total,
+  winner,
+  shared,
+  leader,
+  crownLands = false,
+  index = 0,
+}: ResultRowProps) {
+  // Rörelserna i raden börjar när raden har poppat in.
+  const after = (ms: number) => ({ animationDelay: `${index * 90 + ms}ms` })
   return (
     <li
       className={cn(
@@ -34,8 +49,26 @@ export function ResultRow({ name, avatar, guess, difference, points, total, winn
       <div className="flex items-center gap-3">
         <Emoji emoji={avatar} className="text-3xl" />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="truncate font-bold">{name}</span>
-          {leader && <Crown className="size-4 shrink-0 text-crown" aria-label="Leder matchen" />}
+          <span className="relative min-w-0">
+            <span className="block truncate font-bold">{name}</span>
+            {/* Rundans poäng flyger upp ovanför namnet och tonas bort. */}
+            {points > 0 && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-3 left-0 font-heading text-lg font-bold text-primary opacity-0 motion-safe:animate-rise motion-reduce:hidden"
+                style={after(300)}
+              >
+                +{points}
+              </span>
+            )}
+          </span>
+          {leader && (
+            <Crown
+              className={cn('size-4 shrink-0 text-crown', crownLands && 'motion-safe:animate-crown-drop motion-reduce:animate-fade')}
+              style={crownLands ? after(450) : undefined}
+              aria-label="Leder matchen"
+            />
+          )}
           {winner && (
             <span className="shrink-0 rounded-full bg-mint px-2 py-0.5 text-xs font-bold whitespace-nowrap text-accent-foreground">
               {shared ? 'Delad etta' : 'Närmast!'}

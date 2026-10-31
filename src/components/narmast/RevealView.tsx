@@ -32,7 +32,9 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
   if (!result) return null
   const rolling = shownTarget !== result.target
   // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
-  const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
+  const standing = state.practice ? null : roundStanding(state, me.id)
+  const leaderIds = standing?.leaderIds ?? []
+  const newLeaderIds = standing?.newLeaderIds ?? []
 
   // Närmast först, den som inte svarade sist.
   const rows = Object.entries(state.players)
@@ -80,6 +82,7 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
               winner={result.winners.includes(row.id)}
               shared={result.winners.length > 1}
               leader={leaderIds.includes(row.id)}
+              crownLands={newLeaderIds.includes(row.id)}
             />
           ))}
         </ul>

@@ -34,6 +34,7 @@ import {
   restoreHostState,
   roundOptionsFor,
   roundStanding,
+  leaderboardOrderBefore,
   waitingStanding,
   setGame,
   setTempo,
@@ -659,6 +660,20 @@ describe('ställningen efter en runda', () => {
     expect(roundStanding(second, 'a')?.climbed).toBe(false)
   })
 
+  it('vet vem som just tog ledningen, så att kronan bara landar då', () => {
+    const first = play(match(), ['a'])
+    expect(roundStanding(first, 'b')?.newLeaderIds).toEqual(['a'])
+    const still = play(match(), ['a', 'a'])
+    expect(roundStanding(still, 'b')?.newLeaderIds).toEqual([])
+    // a 1, b 1: b kommer ikapp och delar ledningen.
+    const caught = play(match(), ['a', 'b'])
+    expect(roundStanding(caught, 'c')?.newLeaderIds).toEqual(['b'])
+    // a 1, b 2: b delade redan ledningen före rundan, så kronan landar inte igen.
+    const passed = play(match(), ['a', 'b', 'b'])
+    expect(roundStanding(passed, 'a')?.newLeaderIds).toEqual([])
+    expect(roundStanding(playRound(match(), {}, 12), 'a')?.newLeaderIds).toEqual([])
+  })
+
   it('skiljer rundans vinnare från matchledaren', () => {
     const state = play(match(), ['a', 'a', 'b'])
     expect(state.lastResult?.winners).toEqual(['b'])
@@ -941,5 +956,19 @@ describe('ställningen medan man väntar på de andra', () => {
     const ids = ['a', 'b']
     const state = { ...startGame(lobby('narmast', ids, { rounds: 3 }), ids, NOW), round: 3, scores: { a: 2, b: 1 } }
     expect(waitingStanding(state, 'b')).toBe('Sista rundan. Du ligger 1 poäng efter A.')
+  })
+})
+
+describe('topplistan före matchen', () => {
+  it('ger ordningen innan vinnarna fick sin vinst, så att raderna kan glida till sina nya platser', () => {
+    // Cia vann matchen och gick från delad plats till ensam etta.
+    const entries = [
+      { id: 'c', name: 'Cia', avatar: '👽', wins: 2, played: 3, place: 1 },
+      { id: 'a', name: 'Anna', avatar: '👻', wins: 1, played: 3, place: 2 },
+      { id: 'b', name: 'Bo', avatar: '🤖', wins: 1, played: 3, place: 2 },
+    ]
+    expect(leaderboardOrderBefore(entries, ['c'])).toEqual(['a', 'b', 'c'])
+    expect(leaderboardOrderBefore(entries, [])).toEqual(['c', 'a', 'b'])
+    expect(leaderboardOrderBefore(entries, ['a', 'b'])).toEqual(['c', 'a', 'b'])
   })
 })

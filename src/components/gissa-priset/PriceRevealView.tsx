@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Konfetti } from '@/components/Konfetti'
+import { Stjarnstank } from '@/components/Stjarnstank'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
@@ -27,7 +28,9 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
   if (!result) return null
   const myPoints = result.points[me.id]
   // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
-  const leaderIds = state.practice ? [] : (roundStanding(state, me.id)?.leaderIds ?? [])
+  const standing = state.practice ? null : roundStanding(state, me.id)
+  const leaderIds = standing?.leaderIds ?? []
+  const newLeaderIds = standing?.newLeaderIds ?? []
 
   // Bäst först. Lika poäng (t.ex. noll) sorteras på hur nära man var, och den som inte svarade hamnar sist.
   const distance = (guess?: number) => (guess === undefined ? Infinity : rulesFor(state.game).distance(guess, result.target))
@@ -41,8 +44,13 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
 
       {/* Priset och poängen först, sedan faktatexten om saken och sist allas gissningar. */}
       <PriceAnswerCard item={item} target={result.target} revealed={revealed} countUp>
-        {/* Pricken mitt i ger konfetti. */}
-        {revealed && myPoints === 100 && <Konfetti />}
+        {/* Pricken mitt i ger konfetti och ett stjärnstänk. */}
+        {revealed && myPoints === 100 && (
+          <>
+            <Konfetti />
+            <Stjarnstank delay={150} />
+          </>
+        )}
         {revealed && (
           <p className="mt-3 inline-block rounded-full bg-mint-soft px-5 py-2 font-heading text-xl font-bold sm:mt-5 sm:text-3xl">
             {myPoints === undefined
@@ -71,6 +79,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
               winner={result.winners.includes(row.id)}
               shared={result.winners.length > 1}
               leader={leaderIds.includes(row.id)}
+              crownLands={newLeaderIds.includes(row.id)}
             />
           ))}
         </ul>

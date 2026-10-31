@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react'
 import { Crown, Trophy } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { findGame } from '@/lib/games'
@@ -11,6 +12,8 @@ type LeaderboardProps = {
   gamesPlayed: Record<string, number>
   // Vinnarna av matchen som precis tog slut. En vinnare får "Vann senaste", flera får "Oavgjort".
   lastWinners?: string[]
+  // Ordningen (id:n) före matchen. Raderna börjar där och glider till sina nya platser (slutskärmen).
+  glideFrom?: string[]
 }
 
 function count(n: number, one: string, many: string) {
@@ -18,7 +21,30 @@ function count(n: number, one: string, many: string) {
 }
 
 // Kvällens ställning i lobbyn (topplistan). Räknar vunna matcher i alla spel så länge lobbyn finns.
-export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }: LeaderboardProps) {
+export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners, glideFrom }: LeaderboardProps) {
+  const rows = useRef(new Map<string, HTMLLIElement>())
+  // Raderna som bytt plats glider från sin gamla plats till den nya, en gång när listan visas (FLIP: mät var raderna
+  // står, flytta tillbaka dem till den gamla platsen och låt dem glida dit de hör hemma). Inte med "minska rörelse".
+  useLayoutEffect(() => {
+    if (!glideFrom || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const ids = entries.map((entry) => entry.id)
+    const tops = ids.map((id) => rows.current.get(id)?.offsetTop ?? 0)
+    const glides = ids.flatMap((id, index) => {
+      const from = glideFrom.indexOf(id)
+      const row = rows.current.get(id)
+      if (!row || from < 0 || from === index || from >= tops.length) return []
+      return row.animate([{ transform: `translateY(${tops[from] - tops[index]}px)` }, { transform: 'none' }], {
+        duration: 500,
+        delay: 700,
+        easing: 'cubic-bezier(0.3, 0.7, 0.3, 1)',
+        fill: 'backwards',
+      })
+    })
+    return () => glides.forEach((glide) => glide.cancel())
+    // Bara när listan visas första gången, så att raderna inte glider igen när något annat ändras.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (matchesPlayed === 0 || entries.length === 0) return null
 
   const games = Object.entries(gamesPlayed).map(([id, n]) => ({ id, label: `${findGame(id)?.name ?? id} ${n}` }))
@@ -53,6 +79,10 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners }
           return (
             <li
               key={entry.id}
+              ref={(element) => {
+                if (element) rows.current.set(entry.id, element)
+                else rows.current.delete(entry.id)
+              }}
               className={cn('flex items-center gap-2 rounded-lg px-3 py-3 sm:gap-3 sm:px-4', leader ? 'bg-sun-soft' : 'bg-muted')}
             >
               <span className="w-6 font-heading text-lg font-bold text-muted-foreground">{entry.place}</span>

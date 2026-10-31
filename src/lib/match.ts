@@ -490,6 +490,8 @@ export type RoundStanding = {
   decider: boolean
   // De som leder matchen efter rundan (flera vid lika poäng). Tom om ingen har poäng än.
   leaderIds: string[]
+  // De av ledarna som inte ledde före rundan, alltså tog ledningen nu. Kronan landar på dem i facit.
+  newLeaderIds: string[]
 }
 
 // Var en spelare står i matchen efter facit, och hur det ändrades av rundan.
@@ -505,6 +507,8 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
   const scores = ids.map(after).sort((a, b) => b - a)
   const best = Math.max(0, scores[0] ?? 0)
   const leaderIds = best > 0 ? ids.filter((id) => after(id) === best) : []
+  const bestBefore = Math.max(0, ...ids.map(before))
+  const leadersBefore = bestBefore > 0 ? ids.filter((id) => before(id) === bestBefore) : []
   // Det mesta någon fått i en enda runda hittills (1 i Närmast vinner, upp till 100 i Gissa priset).
   const roundMax = Math.max(1, ...[...state.matchRounds, result].flatMap((round) => Object.values(round.points)))
   const place = placeOf(after)
@@ -522,6 +526,7 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
     climbed: state.round > 1 && place < placeOf(before),
     decider: state.round === state.rounds - 1 && best > 0 && best - (scores[1] ?? 0) <= roundMax,
     leaderIds,
+    newLeaderIds: leaderIds.filter((id) => !leadersBefore.includes(id)),
   }
 }
 
@@ -564,6 +569,13 @@ export function podiumShare(score: number, best: number): number {
 }
 
 // Topplistan sorterad på antal vinster. Lika många vinster ger samma placering.
+// Topplistans ordning (id:n) som den var före matchen som precis tog slut: vinnarna har en vinst mindre. Slutskärmen
+// låter raderna glida därifrån till sina nya platser.
+export function leaderboardOrderBefore(entries: readonly RankedEntry[], winners: readonly string[]): string[] {
+  const wins = (entry: RankedEntry) => entry.wins - (winners.includes(entry.id) ? 1 : 0)
+  return [...entries].sort((a, b) => wins(b) - wins(a) || a.name.localeCompare(b.name, 'sv')).map((entry) => entry.id)
+}
+
 export function rankLeaderboard(state: GameState): RankedEntry[] {
   const list = Object.entries(state.leaderboard).map(([id, entry]) => ({ id, ...entry }))
   list.sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name, 'sv'))
