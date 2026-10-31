@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Loader2, RefreshCw, Undo2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
@@ -9,7 +9,9 @@ import { FinishedView } from '@/components/lobby/FinishedView'
 import { AbortMatchDialog } from '@/components/lobby/AbortMatchDialog'
 import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
+import { SplatOverlay } from '@/components/lobby/Kast'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
+import type { Throws } from '@/hooks/useReactions'
 import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
 import { WaitingRoom } from '@/components/lobby/WaitingRoom'
 import { GuessingView } from '@/components/narmast/GuessingView'
@@ -22,6 +24,7 @@ import { useLobby } from '@/hooks/useLobby'
 import { useNoIndex } from '@/hooks/useNoIndex'
 import { useOneTab } from '@/hooks/useOneTab'
 import { findGame, GAMES } from '@/lib/games'
+import { throwTargets } from '@/lib/kast'
 import {
   adoptPlayer,
   clearPracticeRequest,
@@ -176,7 +179,7 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
 function Lobby({ code, me }: { code: string; me: Player }) {
   // Rollen kan byta under lobbyns gång: lämnar värden tar en annan över (se vardbyte.ts).
   const [isHost, setIsHost] = useState(() => hostedGame(code) !== null)
-  const { status, state, online, clockOffset, hand, floating, hostMissing, actions } = useLobby(
+  const { status, state, online, clockOffset, hand, floating, splat, lastThrowAt, acceptsThrows, hostMissing, actions } = useLobby(
     code,
     me,
     isHost,
@@ -206,6 +209,19 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Värden har tryckt Tillbaka till väntrummet under en match och får frågan om matchen ska avbrytas.
   const [aborting, setAborting] = useState(false)
   const othersPresent = online.length > 1
+  // Kasten: på om värden inte stängt av dem och fler än en är med. Målen är de andra som tar emot kast.
+  const throws = useMemo<Throws>(
+    () => ({
+      allowed: state.throwsAllowed && othersPresent,
+      targets: throwTargets(online, me.id).map((p) => p.id),
+      lastThrowAt,
+      throwAt: actions.throwAt,
+      acceptsThrows,
+      setAcceptsThrows: actions.setAcceptsThrows,
+      splat,
+    }),
+    [state.throwsAllowed, othersPresent, online, me.id, lastThrowAt, actions, acceptsThrows, splat],
+  )
   const askBeforeLeaving = othersPresent
   function requestLeave(to: string) {
     if (askBeforeLeaving) setLeaveTo(to)
@@ -293,7 +309,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   }
 
   return (
-    <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react}>
+    <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react} throws={throws}>
       {phaseView()}
       {/* Värden kan avbryta en pågående match. Alla går tillbaka till väntrummet, och matchen räknas inte. */}
       {inMatch && isHost && (
@@ -311,6 +327,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         }}
       />
       <ReactionFloaters />
+      <SplatOverlay />
       {hostMissing && (
         <p
           role="status"
@@ -351,6 +368,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onSetRounds={actions.setRounds}
           onSetGame={actions.setGame}
           onSetTempo={actions.setTempo}
+          onSetThrowsAllowed={actions.setThrowsAllowed}
           onStart={actions.start}
           onStartCountdown={actions.startCountdown}
         />

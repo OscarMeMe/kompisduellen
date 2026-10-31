@@ -23,6 +23,7 @@ import {
   parseThrow,
   type StateMessage,
 } from '@/lib/meddelanden'
+import { measureSplatPlace } from '@/lib/splatt'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
@@ -39,7 +40,7 @@ import {
   type Splat,
   type ThrowItemId,
 } from '@/lib/kast'
-import type { FloatingReaction } from '@/components/lobby/Reactions'
+import type { FloatingReaction } from '@/hooks/useReactions'
 import {
   abortMatch,
   addGuess,
@@ -411,9 +412,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const item = findThrowItem(message.item)
         if (!from || !to || !item) return
         const key = `${message.id}-${now}-${Math.random()}`
+        // Splatten får inte täcka svarsdelen eller korten. Får den inte plats blir det en rad även för mig.
         if (message.to === myId) {
-          const next = nextSplat(splatRef.current, { key, from: from.name, item: item.id })
-          if (next.shown) {
+          const place = measureSplatPlace()
+          const next = place && nextSplat(splatRef.current, { key, from: from.name, item: item.id, place })
+          if (next?.shown) {
             splatRef.current = next.splat
             setSplat(next.splat)
             setTimeout(() => {
