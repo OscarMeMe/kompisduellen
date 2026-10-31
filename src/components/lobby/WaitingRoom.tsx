@@ -181,6 +181,9 @@ export function WaitingRoom({
         )}
       </section>
 
+      {/* Gästerna väntar ändå, så reglerna står utfällda direkt under väntarutan (före QR-koden och spelarna). */}
+      {!isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} open />}
+
       <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <InviteCard code={code} game={game} />
 
@@ -302,19 +305,27 @@ export function WaitingRoom({
 
       <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
 
-      <details className="rounded-lg border bg-card px-4 text-sm shadow-soft-sm">
-        {/* Hela raden är tryckbar, minst 44 px hög. */}
-        <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så spelas det</summary>
-        <div className="space-y-2 pb-3 text-muted-foreground">
-          <p>{howTo}</p>
-          <ul className="list-disc space-y-1 pl-5">
-            {scoringDetails.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </div>
-      </details>
+      {isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} />}
     </Wide>
+  )
+}
+
+// Så spelas det: hur spelet går till och hur poängen räknas, för spelet som är valt just nu. Gästerna ser det utfällt
+// direkt under väntarutan, eftersom de ändå väntar. Värden har det hopfällt längst ner.
+function HowToPlay({ howTo, scoringDetails, open = false }: { howTo: string; scoringDetails: string[]; open?: boolean }) {
+  return (
+    <details open={open} className="rounded-lg border bg-card px-4 text-sm shadow-soft-sm">
+      {/* Hela raden är tryckbar, minst 44 px hög. */}
+      <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så spelas det</summary>
+      <div className="space-y-2 pb-3 text-muted-foreground">
+        <p>{howTo}</p>
+        <ul className="list-disc space-y-1 pl-5">
+          {scoringDetails.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </div>
+    </details>
   )
 }
 
