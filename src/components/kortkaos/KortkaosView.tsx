@@ -14,6 +14,7 @@ import { findGame } from '@/lib/games'
 import { capitalize, type MyHand } from '@/lib/kort'
 import { kortkaosRules } from '@/lib/kortkaos'
 import type { GameState } from '@/lib/match'
+import { cn } from '@/lib/utils'
 
 // Kortkaos: hela rundan i en vy. Vilket steg som visas styrs av state.cards.step.
 // LobbyPage ger vyn en ny key för varje frågekort, så att val och utkast börjar om.
@@ -89,13 +90,26 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, onM
 function JudgeBanner({ state, meId }: { state: GameState; meId: string }) {
   const judgeId = state.cards!.judge
   const judge = state.players[judgeId]
+  // När det blir min tur att välja vinnare pulserar rutan en gång och "Din tur!" poppar in (ny key startar om).
+  const myTurn = judgeId === meId && state.cards!.step === 'judging'
   return (
-    <div className="flex items-center justify-center gap-2 self-center rounded-full border bg-sun-soft px-4 py-1.5 shadow-soft-sm">
+    <div
+      key={myTurn ? 'min-tur' : 'vantar'}
+      className={cn(
+        'flex items-center justify-center gap-2 self-center rounded-full border bg-sun-soft px-4 py-1.5 shadow-soft-sm',
+        myTurn && 'motion-safe:animate-turn-pulse',
+      )}
+    >
       <Gavel className="size-4 shrink-0" aria-hidden />
       {judge && <Emoji emoji={judge.avatar} className="text-xl" />}
       <p className="font-heading text-sm font-bold">
         {judgeId === meId ? 'Du är domare den här rundan' : `${judge?.name ?? 'Någon'} är domare`}
       </p>
+      {myTurn && (
+        <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground motion-safe:animate-pop motion-reduce:animate-fade">
+          Din tur!
+        </span>
+      )}
     </div>
   )
 }
