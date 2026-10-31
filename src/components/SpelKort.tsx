@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { playersLabel, type GameInfo } from '@/lib/games'
+import { gamePageFor } from '@/lib/spelsidor'
 import { cn } from '@/lib/utils'
 
 // Små förhandsvisningar med egen karaktär för varje spel. De är bara dekoration (göms för skärmläsare), och texten i dem
@@ -69,6 +70,7 @@ type SpelKortProps = {
 // Kortet är inte en enda stor klickyta, så att reglerna och Skapa lobby inte konkurrerar.
 export function SpelKort({ game, recommended = false, highlight = false, onShowRules }: SpelKortProps) {
   const { ref, playing, play } = usePlayOnce()
+  const page = gamePageFor(game.id)
   return (
     <article
       ref={ref}
@@ -89,7 +91,16 @@ export function SpelKort({ game, recommended = false, highlight = false, onShowR
           <p className="text-sm font-semibold text-muted-foreground">
             {[playersLabel(game), game.feel].filter(Boolean).join(' · ')}
           </p>
-          <h3 className="text-xl leading-tight">{game.name}</h3>
+          <h3 className="text-xl leading-tight">
+            {/* Namnet leder till spelets egen sida med mer om spelet. */}
+            {page ? (
+              <Link to={`/spel/${page.slug}`} className="underline-offset-4 hover:underline">
+                {game.name}
+              </Link>
+            ) : (
+              game.name
+            )}
+          </h3>
         </div>
         <p className="leading-snug text-muted-foreground">{game.tagline}</p>
         <div className="mt-auto flex flex-col gap-1 pt-1">
