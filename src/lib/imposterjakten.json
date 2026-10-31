@@ -1,0 +1,14 @@
+[
+  { "id": "paraply", "ord": "Paraply", "kategori": "Vardag och saker", "ledtrad": "väder", "godkanda": ["paraply", "paraplyet", "paraplyer"] },
+  { "id": "tandborste", "ord": "Tandborste", "kategori": "Vardag och saker", "ledtrad": "badrum", "godkanda": ["tandborste", "tandborsten", "tandborstar"] },
+  { "id": "cykel", "ord": "Cykel", "kategori": "Vardag och saker", "ledtrad": "transport", "godkanda": ["cykel", "cykeln", "cyklar"] },
+  { "id": "kanelbulle", "ord": "Kanelbulle", "kategori": "Mat och fika", "ledtrad": "bakverk", "godkanda": ["kanelbulle", "kanelbullen", "kanelbullar"] },
+  { "id": "pizza", "ord": "Pizza", "kategori": "Mat och fika", "ledtrad": "italienskt", "godkanda": ["pizza", "pizzan", "pizzor"] },
+  { "id": "pingvin", "ord": "Pingvin", "kategori": "Djur och natur", "ledtrad": "kyla", "godkanda": ["pingvin", "pingvinen", "pingviner"] },
+  { "id": "alg", "ord": "Älg", "kategori": "Djur och natur", "ledtrad": "skogen", "godkanda": ["älg", "älgen", "älgar"] },
+  { "id": "flygplats", "ord": "Flygplats", "kategori": "Platser", "ledtrad": "resa", "godkanda": ["flygplats", "flygplatsen"] },
+  { "id": "bibliotek", "ord": "Bibliotek", "kategori": "Platser", "ledtrad": "tystnad", "godkanda": ["bibliotek", "biblioteket"] },
+  { "id": "fotboll", "ord": "Fotboll", "kategori": "Sport och fritid", "ledtrad": "lag", "godkanda": ["fotboll", "fotbollen"] },
+  { "id": "bastu", "ord": "Bastu", "kategori": "Sport och fritid", "ledtrad": "värme", "godkanda": ["bastu", "bastun"] },
+  { "id": "midsommar", "ord": "Midsommar", "kategori": "Svenska traditioner", "ledtrad": "sommar", "godkanda": ["midsommar", "midsommarafton"] }
+]

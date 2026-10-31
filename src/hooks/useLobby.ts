@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
-import { myHand, type CardMove, type CardSecrets, type MyHand } from '@/lib/kort'
+import { isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
+import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
   HELLO_RETRY_MS,
@@ -17,6 +18,7 @@ import {
   parseGuess,
   parseHand,
   parseHandover,
+  parseImposterCard,
   parseMove,
   parseRematchWish,
   parseStateMessage,
@@ -53,6 +55,9 @@ import {
   everyoneHasGuessed,
   hostAdvance,
   hostDeadline,
+  hostImposterNewWord,
+  hostImposterNextRound,
+  hostImposterStartAnyway,
   hostMove,
   hostPresence,
   hostCountdownStart,
@@ -65,6 +70,7 @@ import {
   resumeReveal,
   restoreHostState,
   setGame,
+  setImposterSettings,
   setRematchWish,
   setRounds,
   setTempo,
@@ -135,6 +141,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [clockOffset, setClockOffset] = useState(0)
   // Kortspelen: min egen hand, som värden skickar bara till mig.
   const [hand, setHand] = useState<MyHand | null>(null)
+  // Imposterjakten: mitt eget kort, som värden skickar bara till mig (på samma sätt som handen).
+  const [imposterCard, setImposterCard] = useState<MyImposterCard | null>(null)
   // Reaktioner som syns på skärmen just nu.
   const [floating, setFloating] = useState<FloatingReaction[]>([])
 
@@ -167,7 +175,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Det jag skickade i närvaron senast, så att den kan skickas igen med ett nytt val utan att något annat ändras.
   const presenceRef = useRef<OnlinePlayer | null>(null)
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
-  const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
+  const secretsRef = useRef<HostState['secrets']>(restored?.secrets ?? null)
   const sentHandsRef = useRef<Record<string, string>>({})
   // Värden: när spelare som inte längre är online sågs senast. Efter en omladdning räknas alla i
   // matchen som nyss sedda, så att de hinner ansluta igen.
@@ -207,11 +215,24 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     [save, meId],
   )
 
-  // Värden: skicka varje spelares hand till spelaren, men bara när den har ändrats.
+  // Värden: skicka varje spelares hand (kortspel) eller kort (Imposterjakten) till spelaren, men bara när det har
+  // ändrats.
   const sendHands = useCallback(() => {
     const secrets = secretsRef.current
     if (!secrets) {
       sentHandsRef.current = {}
+      return
+    }
+    if (isImposterSecrets(secrets)) {
+      const table = stateRef.current.imposter
+      if (!table) return
+      for (const id of Object.keys(stateRef.current.players)) {
+        const card = myImposterCard(secrets, table, id)
+        const json = JSON.stringify(card)
+        if (sentHandsRef.current[id] === json) continue
+        sentHandsRef.current[id] = json
+        void channelRef.current?.send({ type: 'broadcast', event: 'kort', payload: { to: id, from: meId, card } })
+      }
       return
     }
     for (const id of Object.keys(secrets.hands)) {
@@ -380,6 +401,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
         const message = parseHand(payload)
         if (message?.to === myId && isFromHost(message.from, hosts())) setHand(message.hand)
+      })
+
+      // Mitt kort i Imposterjakten. Meddelanden till andra spelare slängs direkt.
+      channel.on('broadcast', { event: 'kort' }, ({ payload }) => {
+        const message = parseImposterCard(payload)
+        if (message?.to === myId && isFromHost(message.from, hosts())) setImposterCard(message.card)
       })
 
       // En reaktion från någon i lobbyn. Okända reaktioner och för många från samma spelare slängs.
@@ -660,6 +687,19 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (next.game !== from) track('bytte_spel', { fran_spel: from, till_spel: next.game })
         publish(next)
       },
+      // Imposterjakten: värdens val i väntrummet, och värdens knappar under omgången.
+      setImposterSettings: (settings: Partial<ImposterSettings>) => {
+        if (isHost) publish(setImposterSettings(stateRef.current, settings))
+      },
+      imposterStartAnyway: () => {
+        if (isHost) commit(hostImposterStartAnyway(current()))
+      },
+      imposterNewWord: () => {
+        if (isHost) commit(hostImposterNewWord(current(), activeIds()))
+      },
+      imposterNextRound: () => {
+        if (isHost) commit(hostImposterNextRound(current(), activeIds()))
+      },
       setTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => {
         if (isHost) publish(setTempo(stateRef.current, tempo))
       },
@@ -682,8 +722,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           payload: { id: me.id, value },
         })
       },
-      // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare.
-      move: (move: CardMove) => {
+      // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare. Imposterjakten: läst kortet,
+      // skriva ett ord, passa eller säga sitt ord högt.
+      move: (move: CardMove | ImposterMove) => {
         if (!me) return
         void channelRef.current?.send({
           type: 'broadcast',
@@ -783,6 +824,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     online,
     clockOffset,
     hand: state.phase === 'playing' ? hand : null,
+    imposterCard: state.phase === 'playing' ? imposterCard : null,
     floating,
     splat,
     thrown,

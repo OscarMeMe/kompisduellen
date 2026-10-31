@@ -1,8 +1,9 @@
 // Matchflödet för alla spel, plus lobbyns topplista.
 // Gissningsspelen går till på samma sätt: alla gissar ett tal på tid, sedan avslöjas svaret.
 // Det som skiljer dem åt (tider, giltiga gissningar och poäng) finns i spelregler.ts.
-// Kortspelen (t.ex. Kortkaos) har fasen 'playing' och följer rundflödet i kort.ts. Värden har då
-// också hemlig data (CardSecrets) som aldrig skickas ut, så värdens funktioner tar och ger HostState.
+// Kortspelen (t.ex. Kortkaos) och Imposterjakten har fasen 'playing' och följer rundflödet i kort.ts och
+// imposterjakten.ts. Värden har då också hemlig data (CardSecrets eller ImposterSecrets) som aldrig skickas ut, så
+// värdens funktioner tar och ger HostState.
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
 import { findGame } from '@/lib/games'
@@ -18,6 +19,26 @@ import {
   type CardSecrets,
   type CardTable,
 } from '@/lib/kort'
+import {
+  CATEGORIES,
+  DEFAULT_ROUNDS as IMPOSTER_DEFAULT_ROUNDS,
+  DEFAULT_SETTINGS as IMPOSTER_DEFAULT_SETTINGS,
+  IMPOSTER_GAME,
+  imposterMove,
+  imposterNewWord,
+  imposterNextRound,
+  imposterPresence,
+  imposterStartAnyway,
+  isImposterMove,
+  isImposterSecrets,
+  ROUND_OPTIONS as IMPOSTER_ROUND_OPTIONS,
+  startImposterMatch,
+  type ImposterHost,
+  type ImposterMove,
+  type ImposterSecrets,
+  type ImposterSettings,
+  type ImposterTable,
+} from '@/lib/imposterjakten'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 
 // Antal rundor att välja mellan i gissningsspelen. Kortspelen har egna (roundOptionsFor).
@@ -103,12 +124,17 @@ export type GameState = {
   leaderboard: Record<string, LeaderboardEntry>
   // Kortspelen: det alla får se av rundan. null i gissningsspelen.
   cards: CardTable | null
+  // Imposterjakten: det alla får se av omgången (null i andra spel), värdens inställningar i väntrummet och ord som
+  // redan visats i lobbyn. Ordet som spelas just nu läggs till först när omgången är slut.
+  imposter: ImposterTable | null
+  imposterSettings: ImposterSettings
+  usedWordIds: string[]
 }
 
-// Värdens tillstånd: det som skickas ut till alla, och kortspelens hemliga data.
+// Värdens tillstånd: det som skickas ut till alla, och kortspelens eller Imposterjaktens hemliga data.
 export type HostState = {
   state: GameState
-  secrets: CardSecrets | null
+  secrets: CardSecrets | ImposterSecrets | null
 }
 
 export type RankedPlayer = PlayerInfo & {
@@ -152,14 +178,19 @@ export function initialState(game = 'gissa-priset'): GameState {
     gamesPlayed: {},
     leaderboard: {},
     cards: null,
+    imposter: null,
+    imposterSettings: IMPOSTER_DEFAULT_SETTINGS,
+    usedWordIds: [],
   }
 }
 
 export function roundOptionsFor(game: string): readonly number[] {
+  if (game === IMPOSTER_GAME) return IMPOSTER_ROUND_OPTIONS
   return cardRulesFor(game)?.roundOptions ?? ROUND_OPTIONS
 }
 
 export function defaultRoundsFor(game: string): number {
+  if (game === IMPOSTER_GAME) return IMPOSTER_DEFAULT_ROUNDS
   return cardRulesFor(game)?.defaultRounds ?? DEFAULT_ROUNDS
 }
 
@@ -207,6 +238,20 @@ export function setGame(state: GameState, game: string): GameState {
   if (state.game === game) return state.choosingGame ? { ...state, choosingGame: false } : state
   const sameOptions = roundOptionsFor(game).join() === roundOptionsFor(state.game).join()
   return { ...state, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
+}
+
+// Värdens val för Imposterjakten i väntrummet. Gäller bara i väntrummet, så inställningarna är låsta under matchen.
+// En kategori som inte finns i ordlistan ignoreras.
+export function setImposterSettings(state: GameState, settings: Partial<ImposterSettings>): GameState {
+  if (state.phase !== 'waiting') return state
+  const next: ImposterSettings = { ...state.imposterSettings }
+  if (settings.hard !== undefined) next.hard = settings.hard
+  if (settings.aloud !== undefined) next.aloud = settings.aloud
+  if (settings.category !== undefined && (settings.category === null || CATEGORIES.includes(settings.category))) {
+    next.category = settings.category
+  }
+  const same = (Object.keys(next) as (keyof ImposterSettings)[]).every((key) => next[key] === state.imposterSettings[key])
+  return same ? state : { ...state, imposterSettings: next }
 }
 
 // Värdens tempoval i väntrummet. Svarstider som spelet inte erbjuder ignoreras.
@@ -446,6 +491,7 @@ function resetMatch(state: GameState): GameState {
     choosingGame: false,
     notice: null,
     cards: null,
+    imposter: null,
   }
 }
 
@@ -593,14 +639,28 @@ type Random = () => number
 // Kör ett steg i ett kortspel. Tar matchen slut läggs den in i topplistan och hemligheterna släpps.
 function withCards(host: HostState, step: (host: CardHost, rules: CardGameRules) => CardHost): HostState {
   const rules = cardRulesFor(host.state.game)
-  if (!rules || !host.secrets || host.state.phase !== 'playing') return host
+  if (!rules || !host.secrets || isImposterSecrets(host.secrets) || host.state.phase !== 'playing') return host
   const next = step({ state: host.state, secrets: host.secrets }, rules)
   if (next.state === host.state && next.secrets === host.secrets) return host
   if (next.state.phase === 'finished') return { state: finishMatch(next.state), secrets: null }
   return next
 }
 
+// Kör ett steg i Imposterjakten, på samma sätt som withCards.
+function withImposter(host: HostState, step: (host: ImposterHost) => ImposterHost): HostState {
+  const { state, secrets } = host
+  if (state.game !== IMPOSTER_GAME || !isImposterSecrets(secrets) || state.phase !== 'playing') return host
+  const next = step({ state, secrets })
+  if (next.state === state && next.secrets === secrets) return host
+  if (next.state.phase === 'finished') return { state: finishMatch(next.state), secrets: null }
+  return next
+}
+
 export function hostStart(host: HostState, onlineIds: string[], now: number, random: Random = Math.random): HostState {
+  if (host.state.game === IMPOSTER_GAME) {
+    const ready = matchPlayers(host.state, onlineIds)
+    return ready ? startImposterMatch(ready, random) : host
+  }
   const rules = cardRulesFor(host.state.game)
   if (!rules) {
     const state = startGame(host.state, onlineIds, now)
@@ -684,16 +744,32 @@ export function hostAdvance(host: HostState, now: number, round: number, activeI
 export function hostMove(
   host: HostState,
   playerId: string,
-  move: CardMove,
+  move: CardMove | ImposterMove,
   activeIds: string[],
   now: number,
   random: Random = Math.random,
 ): HostState {
+  if (isImposterMove(move)) return withImposter(host, (game) => imposterMove(game, playerId, move, activeIds, now))
   return withCards(host, (cards, rules) => cardMove(cards, rules, playerId, move, activeIds, now, random))
 }
 
 export function hostPresence(host: HostState, activeIds: string[], now: number, random: Random = Math.random): HostState {
+  if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterPresence(game, activeIds))
   return withCards(host, (cards, rules) => cardPresence(cards, rules, activeIds, now, random))
+}
+
+// Värdens knappar i Imposterjakten: Starta ändå (alla har inte läst sitt kort), Nytt ord (innan första
+// associationen) och Nästa omgång (efter diskussionen).
+export function hostImposterStartAnyway(host: HostState): HostState {
+  return withImposter(host, imposterStartAnyway)
+}
+
+export function hostImposterNewWord(host: HostState, activeIds: string[], random: Random = Math.random): HostState {
+  return withImposter(host, (game) => imposterNewWord(game, activeIds, random))
+}
+
+export function hostImposterNextRound(host: HostState, activeIds: string[], random: Random = Math.random): HostState {
+  return withImposter(host, (game) => imposterNextRound(game, activeIds, random))
 }
 
 // Värdens sparade lobby efter en omladdning (se saveHostLobby). Fält som inte fanns när den sparades

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, Info } from 'lucide-react'
+import { ArrowRight, Info, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { playersLabel, type GameInfo } from '@/lib/games'
 import { gamePageFor } from '@/lib/spelsidor'
@@ -53,6 +53,25 @@ const PREVIEWS: Record<string, ReactNode> = {
       <div className="rotate-6 rounded-md border bg-card px-3 py-3 whitespace-nowrap shadow-soft-sm motion-safe:group-hover:translate-x-2 motion-safe:group-hover:-translate-y-1 motion-safe:group-hover:rotate-12 motion-safe:group-data-[play=true]:translate-x-2 motion-safe:group-data-[play=true]:-translate-y-1 motion-safe:group-data-[play=true]:rotate-12">
         <p className="font-heading text-sm leading-tight font-bold">Farsans strumpor</p>
       </div>
+    </div>
+  ),
+  imposterjakten: (
+    // Tre ordkort i rad, två med samma ord och ett med frågetecken. Korten glider isär, frågetecknet vickar till och
+    // ett förstoringsglas glider fram och stannar över det. Då får kortet en korallröd kant, som att impostern hittats.
+    <div className="relative flex items-center gap-1.5 [&>div]:transition-[translate,border-color] [&>div]:duration-300 [&>div]:ease-out">
+      <div className="-rotate-6 rounded-md border bg-card px-2.5 py-2 shadow-soft-sm motion-safe:group-hover:-translate-x-2 motion-safe:group-data-[play=true]:-translate-x-2">
+        <p className="font-heading text-xs font-bold">Paraply</p>
+      </div>
+      <div className="rounded-md border bg-card px-2.5 py-2 shadow-soft-sm motion-safe:group-hover:-translate-y-1 motion-safe:group-data-[play=true]:-translate-y-1">
+        <p className="font-heading text-xs font-bold">Paraply</p>
+      </div>
+      <div className="rotate-6 rounded-md border-2 bg-card px-3 py-1.5 shadow-soft-sm delay-200 group-hover:border-primary group-data-[play=true]:border-primary motion-safe:group-hover:translate-x-2 motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:translate-x-2 motion-safe:group-data-[play=true]:animate-wiggle">
+        <p className="font-heading text-sm font-bold text-primary">???</p>
+      </div>
+      <Search
+        className="absolute -right-12 -bottom-4 size-8 rotate-12 opacity-0 transition-[translate,rotate,opacity] delay-150 duration-500 ease-out motion-safe:group-hover:-translate-x-9 motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:rotate-0 motion-safe:group-hover:opacity-100 motion-safe:group-data-[play=true]:-translate-x-9 motion-safe:group-data-[play=true]:-translate-y-2 motion-safe:group-data-[play=true]:rotate-0 motion-safe:group-data-[play=true]:opacity-100"
+        strokeWidth={2.5}
+      />
     </div>
   ),
 }

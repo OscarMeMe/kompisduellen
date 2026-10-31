@@ -4,6 +4,7 @@
 // att bevisa vem som skickat något utan inloggning, men det stoppar trasiga meddelanden och enkla försök att
 // låtsas vara värd. Rena funktioner, så att de är lätta att testa.
 
+import type { ImposterCard, ImposterMove, ImposterTable, MyImposterCard } from '@/lib/imposterjakten'
 import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
 import { initialState, type GameState, type RoundResult } from '@/lib/match'
@@ -64,6 +65,26 @@ const isCardTable = (value: unknown): value is CardTable =>
     wins: listOf(shape({ round: isNumber, prompt: isString, text: isString, player: isString, asleep: isBoolean })),
   })(value)
 
+const isImposterTable = (value: unknown): value is ImposterTable =>
+  shape({
+    step: (step) => isString(step) && ['kort', 'ledtradar', 'diskussion'].includes(step),
+    order: listOf(isString),
+    turn: isNumber,
+    clues: listOf(
+      shape({
+        player: isString,
+        kind: (kind) => isString(kind) && ['ord', 'pass', 'sagt'].includes(kind),
+        word: orNull(isString),
+      }),
+    ),
+    read: listOf(isString),
+    category: orNull(isString),
+    hard: isBoolean,
+    aloud: isBoolean,
+  })(value)
+
+const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
+
 const isGameState = shape({
   game: isString,
   phase: (phase) => isString(phase) && PHASES.includes(phase),
@@ -93,6 +114,9 @@ const isGameState = shape({
   gamesPlayed: recordOf(isNumber),
   leaderboard: recordOf(isLeaderboardEntry),
   cards: orNull(isCardTable),
+  imposter: orNull(isImposterTable),
+  imposterSettings: isImposterSettings,
+  usedWordIds: listOf(isString),
 })
 
 export type StateMessage = { state: GameState; sentAt: number; from: string | null }
@@ -144,9 +168,15 @@ export function parseThrow(
   return { id, to, item: item.id }
 }
 
-export function parseMove(payload: unknown): { id: string; move: CardMove } | null {
+// Ett drag i ett kortspel eller i Imposterjakten. Ett skrivet ord får vara högst 100 tecken (värden kontrollerar det
+// närmare, se checkClue).
+export function parseMove(payload: unknown): { id: string; move: CardMove | ImposterMove } | null {
   if (!isObject(payload) || !isString(payload.id) || !isObject(payload.move)) return null
   const move = payload.move
+  if (move.type === 'read' || move.type === 'pass' || move.type === 'said') return { id: payload.id, move: { type: move.type } }
+  if (move.type === 'clue' && isString(move.word) && move.word.length <= 100) {
+    return { id: payload.id, move: { type: 'clue', word: move.word } }
+  }
   if (move.type === 'pick' && isPick(move.pick) && (move.done === undefined || isBoolean(move.done))) {
     return { id: payload.id, move: { type: 'pick', pick: move.pick, done: move.done } }
   }
@@ -162,6 +192,18 @@ export function parseHand(payload: unknown): { to: string; from: string | null; 
   if (!isObject(payload) || !isString(payload.to)) return null
   if (payload.hand !== null && !isMyHand(payload.hand)) return null
   return { to: payload.to, from: isString(payload.from) ? payload.from : null, hand: payload.hand as MyHand | null }
+}
+
+const isImposterCard = (value: unknown): value is ImposterCard =>
+  shape({ role: (role) => role === 'oskyldig', word: isString, category: orNull(isString) })(value) ||
+  shape({ role: (role) => role === 'imposter', hint: orNull(isString), category: orNull(isString) })(value)
+
+// Mitt kort i Imposterjakten (som hand i kortspelen). card null = inte med i omgången.
+export function parseImposterCard(payload: unknown): { to: string; from: string | null; card: MyImposterCard } | null {
+  if (!isObject(payload) || !isString(payload.to) || !isObject(payload.card)) return null
+  const { card, rejectedAt } = payload.card
+  if (!(card === null || isImposterCard(card)) || !orNull(isNumber)(rejectedAt)) return null
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt } }
 }
 
 export function parseHandover(payload: unknown): { to: string; from: string | null } | null {

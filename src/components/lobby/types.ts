@@ -1,4 +1,5 @@
 import type { OnlinePlayer } from '@/hooks/useLobby'
+import type { ImposterMove, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardMove, MyHand } from '@/lib/kort'
 import type { GameState } from '@/lib/match'
 import type { Player } from '@/lib/player'
@@ -37,4 +38,19 @@ export type CardViewProps = {
   onMove: (move: CardMove) => void
   // Värden går vidare från avslöjandet. round = rundan som visades.
   onNext: (round: number) => void
+}
+
+// Imposterjakten har en vy för hela omgången (kortet, ledtrådsvarven och det som kommer efter).
+export type ImposterViewProps = {
+  state: GameState
+  me: Player
+  online: OnlinePlayer[]
+  isHost: boolean
+  // Mitt kort, som bara jag får. null innan det har kommit.
+  imposterCard: MyImposterCard | null
+  onMove: (move: ImposterMove) => void
+  // Värdens knappar: Starta ändå, Nytt ord och Nästa omgång.
+  onStartAnyway: () => void
+  onNewWord: () => void
+  onNextRound: () => void
 }

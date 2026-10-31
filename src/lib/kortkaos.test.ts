@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES } from '@/lib/games'
-import { GAP, myHand } from '@/lib/kort'
+import { GAP, myHand, type CardSecrets } from '@/lib/kort'
 import kort from '@/lib/kortkaos.json'
 import { bestCard, kortkaosRules, sentence } from '@/lib/kortkaos'
 import {
@@ -32,12 +32,15 @@ function timeout(host: HostState, active = ABC): HostState {
   return hostDeadline(host, deadline, deadline, active, () => 0)
 }
 
+// Kortkaos hemliga data (värden har antingen ett kortspels eller Imposterjaktens).
+const cards = (host: HostState) => host.secrets as CardSecrets
+
 // En hel runda: alla utom domaren lägger sitt första kort, domaren väljer det första.
 function playRound(host: HostState, active = ABC): HostState {
   let next = timeout(host, active)
   for (const id of active) {
     if (id === next.state.cards!.judge) continue
-    const card = next.secrets!.hands[id][0]
+    const card = cards(next).hands[id][0]
     next = hostMove(next, id, { type: 'pick', pick: { kind: 'card', card }, done: true }, active, NOW, () => 0)
   }
   return hostMove(next, next.state.cards!.judge, { type: 'judge', key: 'k1' }, active, NOW)
@@ -86,7 +89,7 @@ describe('en match', () => {
     expect(host.state.deadline).toBe(NOW + 8_000)
     expect(kortkaosRules.promptText(host.state.cards!.prompt)).toContain(GAP)
     for (const id of ABC) {
-      const hand = myHand(host.secrets!, id)!
+      const hand = myHand(cards(host), id)!
       expect(hand.cards).toHaveLength(7)
       expect(hand.cards.every((card) => kortkaosRules.answerText(card))).toBe(true)
     }
@@ -140,7 +143,7 @@ describe('antal spelare', () => {
     let host = hostStart(lobby(ids, rounds), ids, NOW, () => 0)
     let smallest = Infinity
     for (let round = 1; round <= rounds && host.state.phase === 'playing'; round++) {
-      smallest = Math.min(smallest, ...ids.map((id) => host.secrets!.hands[id].length))
+      smallest = Math.min(smallest, ...ids.map((id) => cards(host).hands[id].length))
       host = playRound(host, ids)
       host = hostAdvance(host, NOW, round, ids)
     }

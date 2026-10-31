@@ -5,6 +5,7 @@ import {
   parseGuess,
   parseHand,
   parseHandover,
+  parseImposterCard,
   parseMove,
   parseRematchWish,
   parseStateMessage,
@@ -104,6 +105,16 @@ describe('gissningar och kortdrag', () => {
     expect(parseMove({ id: 'a', move: { type: 'vinn' } })).toBeNull()
     expect(parseMove({ id: 'a' })).toBeNull()
   })
+
+  it('godtar Imposterjaktens drag med rätt form', () => {
+    expect(parseMove({ id: 'a', move: { type: 'read' } })?.move).toEqual({ type: 'read' })
+    expect(parseMove({ id: 'a', move: { type: 'pass', extra: 1 } })?.move).toEqual({ type: 'pass' })
+    expect(parseMove({ id: 'a', move: { type: 'said' } })?.move).toEqual({ type: 'said' })
+    expect(parseMove({ id: 'a', move: { type: 'clue', word: 'regn' } })?.move).toEqual({ type: 'clue', word: 'regn' })
+    expect(parseMove({ id: 'a', move: { type: 'clue' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'clue', word: 5 } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'clue', word: 'x'.repeat(101) } })).toBeNull()
+  })
 })
 
 describe('händer och värdbyten', () => {
@@ -113,6 +124,18 @@ describe('händer och värdbyten', () => {
     expect(parseHand({ to: 'a', hand: null })).toEqual({ to: 'a', from: null, hand: null })
     expect(parseHand({ to: 'a', hand: { cards: 'x' } })).toBeNull()
     expect(parseHand({ hand })).toBeNull()
+  })
+
+  it('godtar mitt kort i Imposterjakten, eller inget kort', () => {
+    const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null }
+    expect(parseImposterCard({ to: 'a', from: 'b', card: innocent })).toEqual({ to: 'a', from: 'b', card: innocent })
+    const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12 }
+    expect(parseImposterCard({ to: 'a', card: imposter })?.card).toEqual(imposter)
+    expect(parseImposterCard({ to: 'a', card: { card: null, rejectedAt: null } })?.card.card).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { card: { role: 'kung' }, rejectedAt: null } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { card: { role: 'oskyldig', word: 3, category: null }, rejectedAt: null } })).toBeNull()
+    expect(parseImposterCard({ to: 'a', card: { card: null, rejectedAt: 'nu' } })).toBeNull()
+    expect(parseImposterCard({ card: innocent })).toBeNull()
   })
 
   it('godtar ett värdbyte med mottagare', () => {
@@ -182,5 +205,30 @@ describe('kast', () => {
     const { throwsAllowed: _throws, ...old } = lobby
     expect(parseStateMessage({ state: old, sentAt: 1 })?.state.throwsAllowed).toBe(true)
     expect(parseStateMessage({ state: { ...lobby, throwsAllowed: 'ja' }, sentAt: 1 })).toBeNull()
+  })
+})
+
+describe('Imposterjakten i läget', () => {
+  it('godtar läget med en omgång, och fyller i startvärden när en äldre värd inte skickar fälten', () => {
+    const imposter = {
+      step: 'ledtradar',
+      order: ['a', 'b', 'c'],
+      turn: 1,
+      clues: [{ player: 'a', kind: 'ord', word: 'regn' }],
+      read: ['a', 'b', 'c'],
+      category: null,
+      hard: false,
+      aloud: false,
+    }
+    expect(parseStateMessage({ state: { ...lobby, imposter }, sentAt: 1 })?.state.imposter).toEqual(imposter)
+    const { imposter: _i, imposterSettings: _s, usedWordIds: _u, ...old } = lobby
+    const parsed = parseStateMessage({ state: old, sentAt: 1 })?.state
+    expect(parsed).toMatchObject({ imposter: null, usedWordIds: [], imposterSettings: { hard: false, category: null, aloud: false } })
+  })
+
+  it('slänger läget när omgången har fel form', () => {
+    const bad = { step: 'rösta', order: [], turn: 0, clues: [], read: [], category: null, hard: false, aloud: false }
+    expect(parseStateMessage({ state: { ...lobby, imposter: bad }, sentAt: 1 })).toBeNull()
+    expect(parseStateMessage({ state: { ...lobby, imposterSettings: { hard: 'ja' } }, sentAt: 1 })).toBeNull()
   })
 })
