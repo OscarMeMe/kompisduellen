@@ -3,6 +3,8 @@
 // skärmen, alla andra ser en rad i reaktionsflödet. Spärrarna finns hos både avsändaren och mottagarna, så att en
 // modifierad klient inte kan fylla skärmarna. Rena funktioner, så att de är lätta att testa.
 
+import type { SplatPlace } from '@/lib/splatt'
+
 export type ThrowItemId = 'tomat' | 'paj' | 'agg' | 'toapapper'
 
 export type ThrowItem = {
@@ -57,8 +59,8 @@ export function throwTargets<T extends { id: string; noThrows?: boolean }>(onlin
   return online.filter((player) => player.id !== meId && !player.noThrows)
 }
 
-// En splatt som visas för den som träffas.
-export type Splat = { key: string; from: string; item: ThrowItemId }
+// En splatt som visas för den som träffas, och var på skärmen (splatt.ts).
+export type Splat = { key: string; from: string; item: ThrowItemId; place: SplatPlace }
 
 // En spelare visar högst en splatt åt gången. Kommer ett kast medan en splatt syns blir det bara en rad i flödet.
 export function nextSplat(current: Splat | null, incoming: Splat): { splat: Splat; shown: boolean } {

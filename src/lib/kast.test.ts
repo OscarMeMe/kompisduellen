@@ -42,8 +42,9 @@ describe('kast', () => {
   })
 
   it('visar en splatt åt gången, fler kast blir bara rader', () => {
-    const first = { key: 'a', from: 'Oscar', item: 'tomat' as const }
-    const second = { key: 'b', from: 'Lisa', item: 'paj' as const }
+    const place = { top: 60, size: 200 }
+    const first = { key: 'a', from: 'Oscar', item: 'tomat' as const, place }
+    const second = { key: 'b', from: 'Lisa', item: 'paj' as const, place }
     expect(nextSplat(null, first)).toEqual({ splat: first, shown: true })
     expect(nextSplat(first, second)).toEqual({ splat: first, shown: false })
   })
