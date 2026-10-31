@@ -119,7 +119,7 @@ export function ThrownConfirm() {
 }
 
 // Det som träffar mig: saken flyger in och träffar på sitt eget sätt i övre delen av skärmen, med "Oscar kastade en
-// tomat på dig!" under. Borta efter 2 sekunder och tar inga tryck. Platsen och storleken räknades ut när kastet kom
+// tomat på dig!" ovanför, som poppar fram vid träffen. Borta efter 2 sekunder och tar inga tryck. Platsen och storleken räknades ut när kastet kom
 // in (measureSplatPlace i splatt.ts): stor i lobbyn, och i spelet aldrig över svarsdelen eller korten.
 // Med "minska rörelse" står allt still i sitt slutläge och tonas bort.
 export function SplatOverlay() {
@@ -127,8 +127,9 @@ export function SplatOverlay() {
   const item = splat && findThrowItem(splat.item)
   if (!splat || !item) return null
   const { top, size } = splat.place
-  // Scenen för träffen, och raden med texten under.
-  const stage = Math.round(size * 0.84)
+  // Raden med texten överst, och scenen för träffen under på resten av platsen.
+  const big = size >= 400
+  const stage = Math.round(size - (big ? 48 : 36))
 
   return (
     <div
@@ -137,18 +138,25 @@ export function SplatOverlay() {
       className="pointer-events-none fixed inset-x-0 z-30 flex flex-col items-center motion-safe:animate-splat-life motion-reduce:animate-splat-fade"
       style={{ top, height: size }}
     >
-      {item.id === 'tomat' && <TomatoHit size={stage} />}
-      {item.id === 'paj' && <PieHit size={stage} />}
-      {item.id === 'agg' && <EggHit size={stage} />}
-      {item.id === 'toapapper' && <PaperHit size={stage} />}
       <p
         className={cn(
-          'mt-auto max-w-[90vw] rounded-full border bg-card px-4 py-1 text-center font-bold whitespace-nowrap shadow-soft',
-          size >= 400 ? 'text-lg' : 'text-sm sm:text-base',
+          'relative z-10 max-w-[90vw] rounded-full border bg-card px-4 py-1 text-center font-bold whitespace-nowrap shadow-soft motion-safe:animate-hit-label',
+          big ? 'text-lg' : 'text-sm sm:text-base',
         )}
       >
         {hitText(splat.from, item)}
       </p>
+      {/* Hela scenen får en kort stöt när saken slår i, och en ring slår ut från träffpunkten. */}
+      <div className="relative mt-auto motion-safe:animate-impact-shake">
+        <span
+          className="absolute top-1/2 left-1/2 rounded-full border-4 border-foreground/15 opacity-0 motion-safe:animate-impact-ring"
+          style={{ width: stage * 0.6, height: stage * 0.6 }}
+        />
+        {item.id === 'tomat' && <TomatoHit size={stage} />}
+        {item.id === 'paj' && <PieHit size={stage} />}
+        {item.id === 'agg' && <EggHit size={stage} />}
+        {item.id === 'toapapper' && <PaperHit size={stage} />}
+      </div>
     </div>
   )
 }
@@ -196,7 +204,21 @@ function TomatoHit({ size }: { size: number }) {
         <ellipse className="fill-sun-soft" cx="57" cy="53" rx="2.4" ry="1.4" transform="rotate(25 57 53)" />
         <ellipse className="fill-sun-soft" cx="48" cy="61" rx="2.4" ry="1.4" transform="rotate(-5 48 61)" />
         <ellipse className="fill-sun-soft" cx="61" cy="41" rx="2.4" ry="1.4" transform="rotate(40 61 41)" />
+        {/* Glansen gör fläcken blöt. */}
+        <ellipse className="fill-card opacity-40" cx="40" cy="36" rx="7" ry="3.5" transform="rotate(-25 40 36)" />
       </svg>
+      {[20, 65, 115, 160, 205, 250, 295, 340].map((angle, i) => (
+        <span
+          key={`strale-${angle}`}
+          className="absolute top-1/2 left-1/2 rounded-full bg-destructive motion-safe:animate-streak"
+          style={{
+            width: size * 0.025,
+            height: size * (i % 2 ? 0.1 : 0.14),
+            ...vars({ '--a': `${angle}deg`, '--d': `${size * (i % 2 ? 0.36 : 0.44)}px` }),
+            transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(${-size * (i % 2 ? 0.36 : 0.44)}px)`,
+          }}
+        />
+      ))}
       {drops.map((drop, i) => (
         <span
           key={i}
@@ -278,8 +300,11 @@ function EggHit({ size }: { size: number }) {
             strokeWidth="1.5"
             d="M50 26C64 22 78 32 76 46C80 58 70 70 56 68C46 76 30 70 28 58C18 50 26 34 38 32C42 28 46 27 50 26Z"
           />
-          <circle className="fill-sun" cx="50" cy="48" r="13" />
-          <circle className="fill-sun-soft" cx="45" cy="43" r="3.5" />
+          {/* Gulan dallrar till när den landar. */}
+          <g className="origin-center [transform-box:fill-box] motion-safe:animate-jiggle">
+            <circle className="fill-sun" cx="50" cy="48" r="13" />
+            <circle className="fill-sun-soft" cx="45" cy="43" r="3.5" />
+          </g>
         </svg>
         <Drips color="bg-sun" drips={[{ left: 48, top: 60, length: 24 }]} />
         <Drips color="border bg-card" drips={[{ left: 33, top: 64, length: 16, delay: 0.85 }]} />
@@ -374,10 +399,10 @@ function Drips({ color, drips }: { color: string; drips: { left: number; top: nu
   ))
 }
 
-// Det som glider neråt efter träffen (pajens fyllning, ägget). Stannar inom scenen.
+// Det som glider neråt efter träffen (pajens fyllning, ägget) och sträcks ut lite när det rinner. Stannar inom scenen.
 function Sliding({ size, children }: { size: number; children: ReactNode }) {
   return (
-    <div className="absolute inset-0 motion-safe:animate-slide-down" style={vars({ '--slide': `${size * 0.16}px` })}>
+    <div className="absolute inset-0 origin-top motion-safe:animate-slide-down" style={vars({ '--slide': `${size * 0.16}px` })}>
       {children}
     </div>
   )
