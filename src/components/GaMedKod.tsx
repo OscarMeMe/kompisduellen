@@ -26,8 +26,8 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
-  // Fel kod: fältet vickar en kort stund. Rätt kod: knappen studsar innan man skickas vidare.
-  const [wiggle, setWiggle] = useState(false)
+  // Fel kod: fältet skakar till. Rätt kod: knappen studsar innan man skickas vidare.
+  const [shake, setShake] = useState(false)
   const [found, setFound] = useState(false)
   const complete = code.length === 4
   const large = size === 'large'
@@ -52,8 +52,8 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
 
   function showError(message: string) {
     setError(message)
-    setWiggle(true)
-    setTimeout(() => setWiggle(false), 500)
+    setShake(true)
+    setTimeout(() => setShake(false), 300)
   }
 
   return (
@@ -61,7 +61,7 @@ export function GaMedKod({ label = 'Har du fått en kod?', size = 'normal', auto
       <Label htmlFor={fieldId} className="text-base font-bold">
         {label}
       </Label>
-      <div className={cn('flex gap-2', large && 'flex-col gap-3', wiggle && 'motion-safe:animate-wiggle')}>
+      <div className={cn('flex gap-2', large && 'flex-col gap-3', shake && 'motion-safe:animate-shake')}>
         <Input
           id={fieldId}
           value={code}
