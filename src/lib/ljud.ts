@@ -41,3 +41,30 @@ export function playPop() {
     // Inget ljud är inget fel.
   }
 }
+
+// Ljudet när något splattar mot en (kast.ts): ett kort, dovt "splatt" av brus som filtreras ner.
+export function playSplat() {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    const length = Math.floor(context.sampleRate * 0.25)
+    const buffer = context.createBuffer(1, length, context.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 2
+    const noise = context.createBufferSource()
+    noise.buffer = buffer
+    const filter = context.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(1800, now)
+    filter.frequency.exponentialRampToValueAtTime(300, now + 0.2)
+    const gain = context.createGain()
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25)
+    noise.connect(filter).connect(gain).connect(context.destination)
+    noise.start(now)
+    noise.stop(now + 0.26)
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
