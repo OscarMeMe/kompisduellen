@@ -145,8 +145,7 @@ describe('Imposterjakten: ord och roller', () => {
     const all = WORDS.map((word) => word.id)
     const restarted = pickWord(all, null, () => 0)
     expect(restarted.usedWordIds).toEqual(all.slice(-RECENT_AFTER_RESET))
-    // Ordlistan är kortare än spärren: allt utom det senaste ordet går bra.
-    expect(restarted.wordId).not.toBe(all.at(-1))
+    expect(restarted.usedWordIds).not.toContain(restarted.wordId)
   })
 
   it('väljer bara ord i kategorin när värden valt en', () => {
