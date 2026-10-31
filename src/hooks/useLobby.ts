@@ -130,7 +130,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // När jag tog över som värd. Den avgående värden syns en kort stund till, och då ska jag inte vika mig för den.
   const promotedAtRef = useRef(0)
   const rolesRef = useRef(roles)
-  rolesRef.current = roles
+  useEffect(() => {
+    rolesRef.current = roles
+  }, [roles])
   const reactionHistoryRef = useRef<Record<string, number[]>>({})
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
   const secretsRef = useRef<CardSecrets | null>(restored?.secrets ?? null)
