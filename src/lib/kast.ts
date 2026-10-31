@@ -45,10 +45,11 @@ export function canThrow(lastSent: number | null, now: number): boolean {
   return lastSent === null || now - lastSent >= THROW_COOLDOWN_MS
 }
 
-// Hela sekunder tills jag får kasta igen (0 = nu).
+// Hela sekunder tills jag får kasta igen (0 = nu). Aldrig mer än hela spärren, även om now är lite gammalt.
 export function throwCooldownSeconds(lastSent: number | null, now: number): number {
   if (lastSent === null) return 0
-  return Math.max(0, Math.ceil((THROW_COOLDOWN_MS - (now - lastSent)) / 1000))
+  const left = Math.ceil((THROW_COOLDOWN_MS - Math.max(0, now - lastSent)) / 1000)
+  return Math.max(0, left)
 }
 
 // Mottagarens spärr för en avsändare. lastAccepted = när ett kast från avsändaren släpptes igenom senast.
@@ -73,6 +74,16 @@ export function nextSplat(current: Splat | null, incoming: Splat): { splat: Spla
 export function hitText(name: string, item: ThrowItem): string {
   return `${name} kastade ${item.text} på dig!`
 }
+
+// Det jag nyss kastade, som en bekräftelse för mig: "Du kastade en tomat på Lisa!"
+export type Thrown = { key: string; item: ThrowItemId; to: string }
+
+export function thrownText(item: ThrowItem, to: string): string {
+  return `Du kastade ${item.text} på ${to}!`
+}
+
+// Så länge syns bekräftelsen för den som kastade (ms).
+export const THROWN_VISIBLE_MS = 1600
 
 // Valet att inte ta emot kast sparas i webbläsaren.
 const KEY = 'kd-kast'

@@ -9,7 +9,7 @@ import { FinishedView } from '@/components/lobby/FinishedView'
 import { AbortMatchDialog } from '@/components/lobby/AbortMatchDialog'
 import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
-import { SplatOverlay } from '@/components/lobby/Kast'
+import { SplatOverlay, ThrownConfirm } from '@/components/lobby/Kast'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { Throws } from '@/hooks/useReactions'
 import type { CardViewProps, GuessingViewProps, RevealViewProps } from '@/components/lobby/types'
@@ -179,7 +179,20 @@ function OnePlayerOneTab({ code, me, onJoinAsAnother }: { code: string; me: Play
 function Lobby({ code, me }: { code: string; me: Player }) {
   // Rollen kan byta under lobbyns gång: lämnar värden tar en annan över (se vardbyte.ts).
   const [isHost, setIsHost] = useState(() => hostedGame(code) !== null)
-  const { status, state, online, clockOffset, hand, floating, splat, lastThrowAt, acceptsThrows, hostMissing, actions } = useLobby(
+  const {
+    status,
+    state,
+    online,
+    clockOffset,
+    hand,
+    floating,
+    splat,
+    thrown,
+    lastThrowAt,
+    acceptsThrows,
+    hostMissing,
+    actions,
+  } = useLobby(
     code,
     me,
     isHost,
@@ -213,14 +226,15 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   const throws = useMemo<Throws>(
     () => ({
       allowed: state.throwsAllowed && othersPresent,
-      targets: throwTargets(online, me.id).map((p) => p.id),
+      targets: throwTargets(online, me.id).map(({ id, name, avatar }) => ({ id, name, avatar })),
       lastThrowAt,
       throwAt: actions.throwAt,
       acceptsThrows,
       setAcceptsThrows: actions.setAcceptsThrows,
       splat,
+      thrown,
     }),
-    [state.throwsAllowed, othersPresent, online, me.id, lastThrowAt, actions, acceptsThrows, splat],
+    [state.throwsAllowed, othersPresent, online, me.id, lastThrowAt, actions, acceptsThrows, splat, thrown],
   )
   const askBeforeLeaving = othersPresent
   function requestLeave(to: string) {
@@ -328,6 +342,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       />
       <ReactionFloaters />
       <SplatOverlay />
+      <ThrownConfirm />
       {hostMissing && (
         <p
           role="status"

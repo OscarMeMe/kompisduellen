@@ -5,7 +5,7 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
-import { AcceptThrowsChoice, ThrowTarget } from '@/components/lobby/Kast'
+import { AcceptThrowsChoice, ThrowBar } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -191,9 +191,7 @@ export function WaitingRoom({
           <h2 className="text-xl">Spelare</h2>
           <ul className="flex flex-wrap gap-2">
             {online.map((p) => (
-              <li key={p.id} className="max-w-full min-w-0 animate-pop">
-                {/* Går det att kasta på spelaren är chipet en knapp som öppnar kastmenyn. */}
-                <ThrowTarget player={p} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2">
+              <li key={p.id} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2 animate-pop">
                 {/* Figuren vinkar när spelaren dyker upp i listan. */}
                 <Emoji emoji={p.avatar} className="origin-bottom text-xl motion-safe:animate-wave motion-safe:[animation-delay:200ms]" />
                 <span className="truncate font-semibold">{p.name}</span>
@@ -201,14 +199,13 @@ export function WaitingRoom({
                   <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Du</span>
                 )}
                 {p.host && <Crown className="size-4 shrink-0 text-crown" aria-label="Värd" />}
-                </ThrowTarget>
               </li>
             ))}
           </ul>
           <ReactionBar className="pt-1" />
           {online.length > 1 && state.throwsAllowed && (
             <>
-              <p className="text-sm text-muted-foreground">Tryck på en kompis för att kasta något.</p>
+              <ThrowBar />
               <AcceptThrowsChoice />
             </>
           )}

@@ -37,7 +37,9 @@ import {
   saveAcceptsThrows,
   SPLAT_VISIBLE_MS,
   throwTargets,
+  THROWN_VISIBLE_MS,
   type Splat,
+  type Thrown,
   type ThrowItemId,
 } from '@/lib/kast'
 import type { FloatingReaction } from '@/hooks/useReactions'
@@ -157,6 +159,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const lastThrowRef = useRef<number | null>(null)
   const throwHistoryRef = useRef<Record<string, number>>({})
   const [splat, setSplat] = useState<Splat | null>(null)
+  const [thrown, setThrown] = useState<Thrown | null>(null)
   const splatRef = useRef<Splat | null>(null)
   // Tar jag emot kast? Sparas i webbläsaren och skickas i närvaron, så att de andra vet vem de kan kasta på.
   const [acceptsThrows, setAcceptsThrowsState] = useState(loadAcceptsThrows)
@@ -412,6 +415,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const item = findThrowItem(message.item)
         if (!from || !to || !item) return
         const key = `${message.id}-${now}-${Math.random()}`
+        // Mitt eget kast (kanalen skickar det tillbaka till mig): en större bekräftelse i stället för en rad.
+        if (message.id === myId) {
+          setThrown({ key, item: item.id, to: to.name })
+          setTimeout(() => setThrown((current) => (current?.key === key ? null : current)), THROWN_VISIBLE_MS)
+          return
+        }
         // I spelet får splatten inte täcka svarsdelen eller korten. Får den inte plats blir det en rad även för mig.
         // I lobbyn (väntrummet, facit, slutskärmen) får den bli stor.
         if (message.to === myId) {
@@ -776,6 +785,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     hand: state.phase === 'playing' ? hand : null,
     floating,
     splat,
+    thrown,
     lastThrowAt,
     acceptsThrows,
     hostMissing,

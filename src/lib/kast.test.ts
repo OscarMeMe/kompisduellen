@@ -26,6 +26,8 @@ describe('kast', () => {
     expect(throwCooldownSeconds(0, 2500)).toBe(8)
     expect(throwCooldownSeconds(0, 10_000)).toBe(0)
     expect(throwCooldownSeconds(0, 60_000)).toBe(0)
+    // Klockan som visar nedräkningen kan ligga lite före kastet.
+    expect(throwCooldownSeconds(5000, 4000)).toBe(10)
   })
 
   it('släpper igenom högst ett kast per avsändare inom spärren, med lite marginal för nätet', () => {
