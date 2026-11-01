@@ -1,8 +1,33 @@
 import { registerSW } from 'virtual:pwa-register'
-import { entryScript, isNewerBuild, markUpdatePending, shouldReloadFor } from '@/lib/uppdatering'
+import { entryScript, isNewerBuild, markUpdatePending, shouldReloadAfterLoadError, shouldReloadFor } from '@/lib/uppdatering'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RELOADED_FOR_KEY = 'kd-laddade-om-for'
+const LOAD_ERROR_KEY = 'kd-laddade-om-vid-fel'
+
+// När sidan senast laddades om efter ett laddningsfel. undefined = det går inte att läsa eller spara i fliken.
+function lastLoadErrorReload(): number | null | undefined {
+  try {
+    const saved = sessionStorage.getItem(LOAD_ERROR_KEY)
+    return saved === null ? null : Number(saved)
+  } catch {
+    return undefined
+  }
+}
+
+// Vite säger till när en del av sajten inte gick att ladda. Laddas sidan inte om visas felgränsen (FelGrans) som vanligt.
+function reloadOnLoadError() {
+  window.addEventListener('vite:preloadError', () => {
+    const now = Date.now()
+    if (!shouldReloadAfterLoadError({ pathname: location.pathname, online: navigator.onLine, now, lastReloadAt: lastLoadErrorReload() })) return
+    try {
+      sessionStorage.setItem(LOAD_ERROR_KEY, String(now))
+    } catch {
+      return
+    }
+    location.reload()
+  })
+}
 
 function reloadedFor(): string | null {
   try {
@@ -39,6 +64,7 @@ async function checkForNewBuild() {
 // Registrerar service workern och kollar efter en ny version när sidan öppnas, när fliken blir synlig igen, när
 // webbläsaren tar fram en sparad sida och annars en gång per dygn. Se uppdatering.ts för vad som händer sedan.
 export function startPwa() {
+  reloadOnLoadError()
   registerSW({
     immediate: true,
     // Utan den här laddar pluginet om sidan direkt, även mitt i en match.
