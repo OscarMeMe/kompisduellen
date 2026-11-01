@@ -70,7 +70,13 @@ export function HomePage() {
             {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
                 i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
             <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
-              Bra sällskap. <span className="inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">Dåliga förlorare.</span>
+              Bra sällskap. <span className="relative inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">
+                Dåliga förlorare.
+                {/* Ett handritat streck under orden. */}
+                <svg aria-hidden viewBox="0 0 200 12" preserveAspectRatio="none" className="absolute -bottom-1 left-0 h-2 w-full overflow-visible sm:-bottom-2 sm:h-3">
+                  <path d="M2 8 C40 2 70 11 104 6 S170 3 198 7" fill="none" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" className="stroke-sun" />
+                </svg>
+              </span>
             </h1>
           </div>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
