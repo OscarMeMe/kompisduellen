@@ -81,6 +81,6 @@ describe('exportReviews', () => {
       a: { verdict: 'godkand' as const, comment: '', reviewedAt: '' },
       b: { verdict: 'fixa' as const, comment: 'Fel år', reviewedAt: '' },
     }
-    expect(exportReviews(reviews)).toBe('a: Godkänd\nb: Behöver fixas – Fel år')
+    expect(exportReviews(reviews)).toBe('a: Godkänd\nb: Behöver fixas: Fel år')
   })
 })

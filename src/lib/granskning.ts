@@ -98,7 +98,7 @@ export function exportReviews(reviews: Reviews): string {
   return Object.entries(reviews)
     .map(([id, review]) => {
       const line = `${id}: ${VERDICT_LABELS[review.verdict]}`
-      return review.comment ? `${line} – ${review.comment}` : line
+      return review.comment ? `${line}: ${review.comment}` : line
     })
     .join('\n')
 }
