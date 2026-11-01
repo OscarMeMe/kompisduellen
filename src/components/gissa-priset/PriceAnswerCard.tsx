@@ -2,12 +2,12 @@ import { Lightbulb } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { CountingPrice } from '@/components/CountingPrice'
 import { CreditText } from '@/components/gissa-priset/ImageCredit'
-import { formatExactSek, formatSek } from '@/lib/belopp'
+import { formatSek } from '@/lib/belopp'
 import type { PriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
 
 // Svaret i Gissa priset: saken, rätt pris och (via children) hur det gick. Används i spelet och på /granska.
-// target är priset som poängen räknas mot (hela kronor från en krona). revealed = false ger ett suddigt pris.
+// Priset visas exakt, med ören (target används bara om saken saknas). revealed = false ger ett suddigt pris.
 export function PriceAnswerCard({
   item,
   target,
@@ -22,6 +22,7 @@ export function PriceAnswerCard({
   countUp?: boolean
   children?: ReactNode
 }) {
+  const price = item?.priceSek ?? target
   return (
     <div className="relative rounded-lg border bg-card p-4 text-center shadow-soft sm:p-8">
       <div className="flex items-center justify-center gap-3">
@@ -39,12 +40,8 @@ export function PriceAnswerCard({
           revealed ? 'text-primary' : 'scale-90 text-muted-foreground blur-md select-none',
         )}
       >
-        {revealed && countUp ? <CountingPrice target={target} /> : formatSek(target)}
+        {revealed && countUp ? <CountingPrice target={price} /> : formatSek(price)}
       </p>
-      {/* Poängen räknas mot priset i hela kronor, men det exakta priset står under. */}
-      {revealed && item && item.priceSek !== target && (
-        <p className="text-sm font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
-      )}
       {children}
       {/* Fotografens kredit i facit, så att namnet syns minst en gång per fråga. */}
       {item?.image && item.imageCredit && (

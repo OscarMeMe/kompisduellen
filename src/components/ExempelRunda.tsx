@@ -6,8 +6,8 @@ import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cleanTypedAmount, formatExactSek, formatSek, isValidPrice, parseTypedNumber, roundSek } from '@/lib/belopp'
-import { pricePoints } from '@/lib/gissa-priset'
+import { cleanTypedAmount, formatSek, isValidPrice, parseTypedNumber } from '@/lib/belopp'
+import { scoredPoints } from '@/lib/gissa-priset'
 import { EXAMPLE_ITEMS, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 import { cn } from '@/lib/utils'
@@ -41,8 +41,7 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
   const resultRef = useRef<HTMLDivElement>(null)
   const summaryRef = useRef<HTMLDivElement>(null)
   if (!item) return null
-  // Som i spelet räknas priset från en krona i hela kronor, och det exakta priset står under.
-  const target = roundSek(item.priceSek)
+  const price = item.priceSek
 
   function reveal(event: FormEvent) {
     event.preventDefault()
@@ -54,7 +53,7 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
     }
     setError(null)
     setGuess(value)
-    setScores((list) => [...list, pricePoints(value, target)])
+    setScores((list) => [...list, scoredPoints(value, price)])
     // Knappen försvinner, så fokus flyttas till svaret (eller resultatrutan efter sista frågan). Då läser skärmläsare upp det.
     requestAnimationFrame(() => (isLast ? summaryRef : resultRef).current?.focus())
   }
@@ -80,6 +79,9 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
   // Alla tre frågorna är besvarade: resultatrutan visas ovanpå kortet.
   const finished = isLast && guess !== null
   const total = scores.reduce((sum, points) => sum + points, 0)
+  // "Exakt rätt!" har redan sitt skiljetecken.
+  const differenceWords = guess === null ? '' : differenceText(guess, price)
+  const difference = differenceWords.endsWith('!') ? differenceWords : `${differenceWords}.`
 
   return (
     <section
@@ -163,22 +165,15 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
               className="relative rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
             >
               {/* Nära rätt pris (minst 85 poäng, ungefär inom 10 procent) ger ett litet konfettiregn. */}
-              {pricePoints(guess, target) >= CONFETTI_POINTS && <Konfetti />}
+              {scoredPoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
               <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
               <p className="font-heading text-3xl font-bold tabular-nums">
-                <CountingPrice target={target} />
-              </p>
-              {/* Raden finns alltid (osynlig när priset redan är exakt), så att facit har samma höjd för alla frågor. */}
-              <p
-                className={cn('text-xs font-semibold text-muted-foreground', item.priceSek === target && 'invisible')}
-                aria-hidden={item.priceSek === target || undefined}
-              >
-                exakt {formatExactSek(item.priceSek)}
+                <CountingPrice target={price} />
               </p>
               <p className="text-sm font-semibold">
-                Du gissade {formatSek(guess)}. {differenceText(guess, target)}.
+                Du gissade {formatSek(guess)}. {difference}
               </p>
-              <p className="text-sm text-muted-foreground">Det ger {pricePoints(guess, target)} av 100 poäng.</p>
+              <p className="text-sm text-muted-foreground">Det ger {scoredPoints(guess, price)} av 100 poäng.</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button size="lg" className="sm:flex-1" onClick={onPlay}>

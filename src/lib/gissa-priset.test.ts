@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pricePoints, priceRules, RECENT_AFTER_RESET } from '@/lib/gissa-priset'
+import { pricePoints, priceRules, RECENT_AFTER_RESET, scoredPoints } from '@/lib/gissa-priset'
 import { GAME_ITEMS } from '@/lib/prisdata'
 
 // Kontrollerar att förklaringen under "Så räknas poängen" stämmer med beräkningen.
@@ -64,6 +64,15 @@ describe('poängen i Gissa priset', () => {
   })
 
   it('räknar priser från 1 krona i hela kronor', () => {
+    // Örena ändrar inte poängen från en krona. Under en krona räknas de.
+    expect(scoredPoints(1.25, 1.25)).toBe(100)
+    expect(scoredPoints(1, 1.25)).toBe(100)
+    expect(scoredPoints(10, 1.25)).toBe(0)
+    expect(scoredPoints(4.5, 4.75)).toBe(100)
+    expect(scoredPoints(0.5, 0.5)).toBe(100)
+    expect(scoredPoints(0.25, 0.5)).toBe(25)
+    expect(priceRules.scoreRound({ a: 1.25 }, null, 1.25)).toEqual({ target: 1, points: { a: 100 } })
+    expect(priceRules.formatTarget?.(1, 'hemgymnastikbok-1902')).toBe('1,25 kr')
     // Kaffet 1930 kostade 2,44 kr: 2 kr ger fullpoäng.
     expect(priceRules.scoreRound({ a: 2 }, null, 2.44)).toEqual({ target: 2, points: { a: 100 } })
     // Mjölken 1930 kostade 24 öre, och där räknas ören.

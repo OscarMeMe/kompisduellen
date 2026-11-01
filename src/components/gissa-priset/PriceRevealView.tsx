@@ -8,7 +8,7 @@ import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
 import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
 import { formatSek } from '@/lib/belopp'
-import { pricePoints } from '@/lib/gissa-priset'
+import { scoredPoints } from '@/lib/gissa-priset'
 import { findPriceItem } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 import { roundStanding } from '@/lib/match'
@@ -73,7 +73,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
               name={row.name}
               avatar={row.avatar}
               guess={row.guess === undefined ? undefined : formatSek(row.guess)}
-              difference={row.guess === undefined ? undefined : priceDifference(row.guess, result.target)}
+              difference={row.guess === undefined ? undefined : priceDifference(row.guess, item?.priceSek ?? result.target)}
               points={row.points}
               total={state.scores[row.id] ?? 0}
               winner={result.winners.includes(row.id)}
@@ -100,8 +100,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
 }
 
 // "12 % för högt" med en pil uppåt. Fullpoäng räknas som rätt, även om det skiljer några procent.
-function priceDifference(guess: number, target: number): ResultRowProps['difference'] {
-  const text = differenceText(guess, target)
-  if (pricePoints(guess, target) === 100) return { text, direction: 'exact' }
-  return { text, direction: guess > target ? 'up' : 'down' }
+function priceDifference(guess: number, price: number): ResultRowProps['difference'] {
+  const text = differenceText(guess, price)
+  if (scoredPoints(guess, price) === 100) return { text, direction: 'exact' }
+  return { text, direction: guess > price ? 'up' : 'down' }
 }
