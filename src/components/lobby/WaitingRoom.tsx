@@ -260,7 +260,7 @@ export function WaitingRoom({
                         <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
                         <span className={cn('mt-1 block text-xs font-semibold', tooFew ? 'text-primary' : 'text-muted-foreground')}>
                           👥 {playersLabel(option)}
-                          {tooFew && ` · ni är ${online.length} just nu`}
+                          {tooFew && (online.length === 1 ? ' · Du är själv här just nu' : ` · ni är ${online.length} just nu`)}
                         </span>
                       </span>
                       {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}

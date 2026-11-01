@@ -220,7 +220,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     actions.start()
   }, [isHost, status, state.phase, meInLobby, actions, code])
 
-  // Finns andra med frågar vi först, oavsett om man klickar på "Tillbaka till alla spel", loggan eller profilen.
+  // Finns andra med frågar vi först, oavsett om man klickar på Lämna lobby, loggan eller profilen.
   // Lämnar värden tar en annan spelare över, så att lobbyn finns kvar. En deltagare kan komma tillbaka med koden.
   const navigate = useNavigate()
   const [leaveTo, setLeaveTo] = useState<string | null>(null)
