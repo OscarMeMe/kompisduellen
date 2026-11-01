@@ -66,14 +66,11 @@ export function pointingHand(from: Seat, to: Seat, away: number): { x: number; y
   }
 }
 
-// Lampan hänger längst upp i rummet, ovanför bordet (procent av bordets ruta).
-export const LAMP = { x: 50, y: -4 }
-
-// Ljuskäglan från lampan till en punkt: hur lång den är (procent) och hur många grader den vrids från rakt ner.
-export function beamTo(target: { x: number; y: number }): { length: number; degrees: number } {
-  const dx = target.x - LAMP.x
-  const dy = target.y - LAMP.y
-  return { length: round(Math.hypot(dx, dy)), degrees: round((Math.atan2(-dx, dy) * 180) / Math.PI) || 0 }
+// Allt en spelare sagt, på en rad: "regn · paraply · moln". Den som sagt sitt ord högt utan att skriva in det får en bock,
+// och har man inte hunnit längre står det "✓ sa sitt".
+export function clueLine(clues: readonly { kind: string; word: string | null }[]): string {
+  if (clues.length === 1 && clues[0].kind === 'sagt' && !clues[0].word) return '✓ sa sitt'
+  return clues.map((clue) => clue.word ?? (clue.kind === 'pass' ? 'pass' : '✓')).join(' · ')
 }
 
 function round(value: number): number {

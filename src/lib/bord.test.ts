@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beamTo, pointingHand, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+import { clueLine, pointingHand, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
 
 describe('handen i Peka ut', () => {
   const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
@@ -10,12 +10,11 @@ describe('handen i Peka ut', () => {
   })
 })
 
-describe('ljuskäglan', () => {
-  it('går rakt ner till bordets mitt och vrids åt det håll spelaren sitter', () => {
-    expect(beamTo({ x: 50, y: 50 })).toEqual({ length: 54, degrees: 0 })
-    expect(beamTo({ x: 93, y: 50 }).degrees).toBeLessThan(0)
-    expect(beamTo({ x: 7, y: 50 }).degrees).toBeGreaterThan(0)
-    expect(beamTo({ x: 93, y: 50 }).degrees).toBe(-beamTo({ x: 7, y: 50 }).degrees)
+describe('orden på en rad', () => {
+  it('samlar allt en spelare sagt', () => {
+    expect(clueLine([{ kind: 'ord', word: 'regn' }, { kind: 'pass', word: null }, { kind: 'sagt', word: 'moln' }])).toBe('regn · pass · moln')
+    expect(clueLine([{ kind: 'sagt', word: null }])).toBe('✓ sa sitt')
+    expect(clueLine([{ kind: 'sagt', word: null }, { kind: 'sagt', word: null }])).toBe('✓ · ✓')
   })
 })
 

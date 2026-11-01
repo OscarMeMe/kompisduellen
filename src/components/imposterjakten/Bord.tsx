@@ -5,8 +5,8 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { arrowBetween, beamTo, LAMP, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
-import { canAccuse, CLUE_ROUNDS, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
+import { arrowBetween, clueLine, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
@@ -56,13 +56,13 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   // Avslöjandet: lampan släcks, spotlight på impostern, sedan stämpeln. Inte när omgången avbröts.
   const revealImposter = outcome && outcome.kind !== 'avbruten' ? outcome.imposter : null
   const stampDelay = votesDrawnMs + STAMP_PAUSE_MS + (revealImposter ? LIGHTS_OUT_MS : 0)
-  const inset = small ? 9 : 11
-  // Ljuset faller på den som har tur, annars mitt på bordet.
+  const inset = small ? 10 : 12
+  // Ljuset faller på den som har tur, och vid avslöjandet på impostern.
   const lit = revealImposter ? byId[revealImposter] : turn ? byId[turn] : undefined
 
   return (
     <div className="space-y-2">
-      <div className="relative rounded-lg bg-room px-3 pt-4 pb-1 shadow-soft">
+      <div className="relative -mx-2 rounded-lg bg-room px-2 pt-13 pb-19 shadow-soft sm:mx-0 sm:px-3">
       {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
       {revealImposter && (
         <div
@@ -71,37 +71,34 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           style={{ '--d': `${votesDrawnMs}ms` } as CSSProperties}
         />
       )}
-      <div className="relative mx-auto mt-3 mb-8 aspect-square w-full max-w-[min(100%,46svh)] short:mt-1 short:mb-6 short:max-w-[min(100%,45svh)]">
+      {/* Bordet fyller rummet men får plats på skärmen tillsammans med svarsdelen. Många spelare får lite mer höjd på mobil. */}
+      <div className={cn('relative mx-auto w-full max-w-[min(100%,calc(100svh-20rem))] sm:max-w-[min(100%,calc(100svh-16rem))]', small ? 'aspect-[3/4] sm:aspect-square' : 'aspect-square')}>
         {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
-        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[20%]' : 'inset-[17%]')} />
+        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[24%]' : 'inset-[23%]')} />
         <div
           aria-hidden
           className={cn(
             'absolute flex flex-col items-center justify-center rounded-full bg-card px-3 text-center shadow-soft-sm transition-colors',
-            small ? 'inset-[29%]' : 'inset-[26%]',
+            small ? 'inset-[31%]' : 'inset-[30%]',
             revealing && 'bg-muted',
           )}
         >
           {center}
         </div>
 
-        <LampBeam target={lit ?? { x: 50, y: 50 }} wide={!lit} spotDelay={revealImposter ? votesDrawnMs + SPOT_AFTER_MS : null} />
+        <TurnLight target={lit} small={small} spotDelay={revealImposter ? votesDrawnMs + SPOT_AFTER_MS : null} />
 
-        {/* Stolarna, bakom spelarna. Rutan vrids mot bordet och flyttas utåt. */}
+        {/* Stolarna: en rund sits under varje figur. */}
         {seats.map((seat) => (
           <div
             key={seat.id}
             aria-hidden
-            className={cn('absolute rounded-md bg-chair shadow-soft-sm', small ? 'h-2.5 w-8' : 'h-3 w-11')}
-            style={{
-              left: `${seat.x}%`,
-              top: `${seat.y}%`,
-              transform: `translate(-50%, -50%) rotate(${seat.angle + 90}deg) translateY(${small ? -16 : -21}px)`,
-            }}
+            className={cn('absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-chair/30', small ? 'size-13 sm:size-17' : 'size-17 sm:size-21')}
+            style={{ left: `${seat.x}%`, top: `${seat.y}%` }}
           />
         ))}
 
-        <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full overflow-visible">
+        <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 size-full overflow-visible">
           <defs>
             <marker id="pil-rost" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
               <path d="M0 0 10 5 0 10z" className="fill-foreground" />
@@ -149,27 +146,6 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           )
         })}
 
-        {/* Ett kort med baksidan upp framför varje spelare. Mitt eget är större, som om jag håller det. */}
-        {seats.map((seat) => {
-          const mine = seat.id === meId
-          const toward = mine ? 0.7 : small ? 0.79 : 0.77
-          return (
-            <div
-              key={seat.id}
-              aria-hidden
-              className={cn(
-                'absolute rounded-[3px] border border-card/70 bg-foreground shadow-soft-sm',
-                mine ? 'h-9 w-6' : small ? 'h-4 w-3' : 'h-5 w-3.5',
-              )}
-              style={{
-                left: `${50 + (seat.x - 50) * toward}%`,
-                top: `${50 + (seat.y - 50) * toward}%`,
-                transform: `translate(-50%, -50%) rotate(${seat.angle + 90}deg)`,
-              }}
-            />
-          )
-        })}
-
         {/* Pratbubblorna med orden, inåt mot bordet från varje plats. */}
         {seats.map((seat) => (
           <Bubbles key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} />
@@ -186,7 +162,6 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             small={small}
             away={!present.has(seat.id)}
             turn={turn === seat.id}
-            typing={typing === seat.id}
             dim={highlighted.length > 0 && !highlighted.includes(seat.id)}
             lit={highlighted.includes(seat.id)}
             votes={revealing ? (counts[seat.id] ?? 0) : null}
@@ -199,66 +174,72 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
       </div>
       </div>
 
+      {small && <AllClues state={state} table={table} />}
+
       <TableForScreenReaders state={state} table={table} meId={meId} turn={turn} typing={typing} shownVotes={shownVotes ?? null} />
     </div>
   )
 }
 
-// Lampan och dess ljuskägla. Käglan glider över till den som har tur. Med "minska rörelse" hoppar den direkt.
-function LampBeam({ target, wide, spotDelay }: { target: { x: number; y: number }; wide: boolean; spotDelay: number | null }) {
-  const { length, degrees } = beamTo(target)
-  return (
-    <>
-      <div
-        aria-hidden
-        className={cn(
-          'pointer-events-none absolute w-1/4 origin-top bg-linear-to-b from-sun/70 to-sun/25 motion-safe:transition-[rotate,height] motion-safe:duration-500',
-          spotDelay !== null && 'z-[25] motion-safe:animate-spot-in motion-safe:[animation-delay:var(--d)]',
-        )}
-        style={{
-          '--d': `${spotDelay ?? 0}ms`,
-          left: `${LAMP.x}%`,
-          top: `${LAMP.y}%`,
-          height: `${length}%`,
-          translate: '-50% 0',
-          rotate: `${degrees}deg`,
-          clipPath: wide ? 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)' : 'polygon(44% 0, 56% 0, 80% 100%, 20% 100%)',
-        } as CSSProperties}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute h-3 w-12 -translate-x-1/2 rounded-t-full bg-foreground shadow-soft-sm"
-        style={{ left: `${LAMP.x}%`, top: `calc(${LAMP.y}% - 0.75rem)` }}
-      />
-    </>
-  )
-}
-
-function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boolean }) {
-  if (clues.length === 0) return null
-  // Bubblorna står en bit in mot mitten från platsen.
-  const toward = small ? 0.66 : 0.62
-  const x = 50 + (seat.x - 50) * toward
-  const y = 50 + (seat.y - 50) * toward
+// En mjuk ljusfläck på den som har tur. Den glider över när turen byts. Med "minska rörelse" hoppar den direkt.
+function TurnLight({ target, small, spotDelay }: { target: { x: number; y: number } | undefined; small: boolean; spotDelay: number | null }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
-      style={{ left: `${x}%`, top: `${y}%` }}
+      className={cn(
+        'pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--sun)_85%,transparent)_20%,transparent_70%)] motion-safe:transition-[left,top,opacity] motion-safe:duration-500',
+        small ? 'w-[38%]' : 'w-[48%]',
+        !target && 'opacity-0',
+        spotDelay !== null && 'z-[25] motion-safe:animate-spot-in motion-safe:[animation-delay:var(--d)]',
+      )}
+      style={{ left: `${target?.x ?? 50}%`, top: `${target?.y ?? 50}%`, '--d': `${spotDelay ?? 0}ms` } as CSSProperties}
+    />
+  )
+}
+
+// Allt spelaren sagt i en enda bubbla, utanför bordet: ovanför figuren på övre halvan och under namnet på nedre. Vid
+// sidorna av bordet är det trångt, så där blir bubblan smalare. Med många spelare finns bara plats för det senaste
+// ordet, och då står allas ord i en lista under bordet (AllClues). Bubblan flyttas då lite utåt från grannen.
+function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boolean }) {
+  if (clues.length === 0) return null
+  const above = seat.y < 50
+  const atSide = Math.abs(seat.x - 50) > 25
+  const nudge = small ? Math.sign(seat.x - 50) * 5 : 0
+  const left = Math.min(atSide ? 88 : 72, Math.max(atSide ? 12 : 28, seat.x + nudge))
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'pointer-events-none absolute z-10 w-max -translate-x-1/2 rounded-2xl border bg-sun-soft text-center font-heading leading-tight font-bold shadow-soft-sm motion-safe:animate-fade',
+        // --f = halva figuren och --n = namnet, så att bubblan börjar där de slutar.
+        small
+          ? 'max-w-[4.5rem] truncate px-1.5 py-0.5 text-xs [--f:1.375rem] [--n:1.1rem] sm:max-w-28 sm:text-sm sm:[--f:1.75rem] sm:[--n:1.4rem]'
+          : 'px-2 py-0.5 text-sm [--f:1.75rem] [--n:1.4rem] sm:text-base sm:[--f:2rem] sm:[--n:1.75rem]',
+        !small && (atSide ? 'max-w-[5.25rem] sm:max-w-28' : 'max-w-36'),
+      )}
+      style={{
+        left: `${left}%`,
+        top: above ? undefined : `calc(${seat.y}% + var(--f) + var(--n))`,
+        bottom: above ? `calc(${100 - seat.y}% + var(--f) + 0.25rem)` : undefined,
+      }}
     >
-      {clues.slice(0, CLUE_ROUNDS).map((clue, i) => (
-        <span
-          key={i}
-          className={cn(
-            'max-w-20 truncate rounded-full border px-2 py-0.5 font-heading leading-tight font-bold shadow-soft-sm motion-safe:animate-pop',
-            small ? 'max-w-14 px-1.5 text-[9px] sm:max-w-20 sm:text-[11px]' : 'text-xs',
-            clue.word ? 'bg-sun-soft' : clue.kind === 'pass' ? 'bg-muted text-muted-foreground' : 'bg-mint-soft',
-          )}
-        >
-          {clue.word ?? (clue.kind === 'pass' ? 'pass' : '✓ sa sitt')}
-        </span>
-      ))}
+      {clueLine(small ? clues.slice(-1) : clues)}
     </div>
+  )
+}
+
+// Allas ord under bordet, för många spelare där bubblorna bara rymmer det senaste ordet.
+function AllClues({ state, table }: { state: GameState; table: ImposterTable }) {
+  const rows = table.order.filter((id) => table.clues.some((clue) => clue.player === id))
+  if (rows.length === 0) return null
+  return (
+    <ul aria-hidden className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-md bg-card/80 px-3 py-2 text-sm sm:text-base">
+      {rows.map((id) => (
+        <li key={id} className="min-w-0">
+          <span className="font-bold">{state.players[id]?.name ?? 'Någon'}:</span> {clueLine(table.clues.filter((clue) => clue.player === id))}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -270,7 +251,6 @@ type SeatProps = {
   small: boolean
   away: boolean
   turn: boolean
-  typing: boolean
   dim: boolean
   lit: boolean
   votes: number | null
@@ -281,7 +261,7 @@ type SeatProps = {
   vote: BordProps['vote']
 }
 
-function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, lit, votes, voteDelay, stamp, onMove, vote }: SeatProps) {
+function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes, voteDelay, stamp, onMove, vote }: SeatProps) {
   const player = state.players[seat.id]
   const name = player?.name ?? 'Någon'
   const mine = seat.id === meId
@@ -296,14 +276,14 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
         key={turn ? `tur-${table.turn}` : 'vilar'}
         className={cn(
           'relative flex items-center justify-center rounded-full border-2 bg-card shadow-soft-sm transition',
-          small ? 'size-10' : 'size-12 sm:size-14',
+          small ? 'size-11 sm:size-14' : 'size-14 sm:size-16',
           turn && 'border-primary ring-4 ring-primary motion-safe:animate-turn-pulse',
           (chosen || lit) && 'border-primary ring-4 ring-sun',
           mine && !turn && 'border-primary/50',
           away && 'opacity-40',
         )}
       >
-        <Emoji emoji={player?.avatar ?? '🙂'} className={small ? 'text-xl' : 'text-2xl sm:text-3xl'} />
+        <Emoji emoji={player?.avatar ?? '🙂'} className={small ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'} />
         {votes !== null && votes > 0 && (
           <span
             className="absolute -top-1.5 -right-2 rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background tabular-nums motion-safe:animate-pop motion-safe:[animation-delay:var(--d)]"
@@ -313,12 +293,9 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
           </span>
         )}
       </span>
-      <span className={cn('relative max-w-16 truncate rounded-full bg-room/85 px-1 font-semibold', small ? 'text-[11px]' : 'text-xs sm:text-sm', mine && 'text-primary')}>
+      <span className={cn('relative max-w-20 truncate rounded-full bg-room/85 px-1 font-bold sm:max-w-28', small ? 'text-[13px] leading-tight sm:text-sm' : 'text-sm sm:text-base', mine && 'text-primary-button')}>
         {mine ? 'Du' : name}
       </span>
-      {turn && (
-        <span className="relative rounded-full bg-card px-1.5 text-[11px] font-semibold text-primary">{typing ? 'skriver…' : mine ? 'din tur' : table.aloud ? 'säger sitt ord' : 'funderar…'}</span>
-      )}
       {away && <span className="text-[11px] text-muted-foreground">borta</span>}
       {stamp !== null && (
         <span
@@ -342,7 +319,9 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
   )
 
   const position = cn(
-    'absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
+    // Figuren står mitt på platsen, och namnet under den.
+    'absolute flex -translate-x-1/2 flex-col items-center gap-0.5 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
+    small ? '-mt-[1.375rem] sm:-mt-7' : '-mt-7 sm:-mt-8',
     dim && 'opacity-50',
     stamp !== null && 'z-30',
   )
