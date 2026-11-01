@@ -5,15 +5,18 @@ import { PageHeader } from '@/components/PageHeader'
 import { PlayerSetup } from '@/components/PlayerSetup'
 import { Button } from '@/components/ui/button'
 import { findGame, GAMES, playersLabel } from '@/lib/games'
-import { generateLobbyCode, loadOrCreateGuest, markAsHost, requestPractice } from '@/lib/player'
+import { generateLobbyCode, loadOrCreateGuest, markAsHost, requestPractice, saveLobbyPreset } from '@/lib/player'
 import { rulesFor } from '@/lib/spelregler'
 import { track } from '@/lib/statistik'
+import { findTillfalle } from '@/lib/tillfallen'
 
 export function CreateLobbyPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const game = findGame(params.get('spel')) ?? GAMES.find((g) => g.playable)!
   // ?testa=1: en provomgång på egen hand, för spel som har det (Gissa priset).
+  // Tillfället från startsidan: dess förval följer med till lobbyn.
+  const aloud = findTillfalle(params.get('tillfalle'))?.aloud
   const practice = params.get('testa') === '1' && rulesFor(game.id).soloPractice === true
 
   // Testa själv går direkt: har man inget sparat namn blir man "Gäst" med en slumpad figur (kan ändras senare).
@@ -57,6 +60,7 @@ export function CreateLobbyPage() {
           onDone={() => {
             const code = generateLobbyCode()
             markAsHost(code, game.id)
+            if (aloud !== undefined) saveLobbyPreset(code, aloud)
             track('lobby_skapad', { spel: game.id })
             navigate(`/lobby/${code}`)
           }}

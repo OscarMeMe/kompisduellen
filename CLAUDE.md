@@ -39,6 +39,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
   - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
   - rummet runt Imposterjaktens bord: `room`, `felt` (bordsytan), `wood`, `wood-edge`, `chair`
+  - varje spels färg: `spel-yta`, `spel-text`, `spel-knapp` och `spel-knapp-text`. De följer `data-spel` på ett element (spelets id), och nytt spel får en rad i `src/index.css`. Spelkorten på startsidan går i spelets färg, och i lobbyn syns den som en rand högst upp och i väntrummets rubrik
   - `crown`: guld för kronan hos den som leder (`text-crown`)
   - `destructive`: rött, t.ex. tidsstapeln när tiden nästan är ute
   - `primary-button`: den mörkare korallen på korallknapparna (`Button`), så att den vita texten klarar WCAG AA. Loggan och övriga detaljer använder `primary`
@@ -95,6 +96,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
+  - `tillfallen.ts`: flikarna ovanför spelen på startsidan (Alla, Förfesten, Spelkvällen, Discordgänget). De sorterar spelen och gömmer inget. Valet följer med till lobbyn (`?tillfalle=`, `saveLobbyPreset`) och förväljer "Sitter ni tillsammans?". Drickreglerna finns bara under Förfesten, märkta 18+ och valfria
   - `games.ts`: listan över spel på startsidan
   - `guider.ts`: texterna på guiderna (`/forfestlekar`, `/spel-pa-discord`, `/gissningslekar`). Spelarantal och tid hämtas från spelen i `GuidePage`
   - `spelsidor.ts`: texterna på spelsidorna (`/spel/gissa-priset` …): titel, beskrivning, intro, Så spelar ni, tid och vanliga frågor

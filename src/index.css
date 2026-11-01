@@ -10,6 +10,29 @@
 /* Riktigt låga telefoner (högst 700 px). Imposterjaktens bord krymper så att svarsdelen får plats. */
 @custom-variant tiny (@media (max-height: 700px));
 
+/* Varje spel har sin färg. Sätt data-spel på ett element så gäller den där inne (bg-spel-yta, text-spel-text ...). */
+[data-spel] {
+  --spel-yta: var(--card);
+  --spel-text: var(--foreground);
+  --spel-knapp: var(--foreground);
+  --spel-knapp-text: var(--card);
+}
+[data-spel='gissa-priset'] {
+  --spel-yta: var(--sun);
+}
+[data-spel='narmast'] {
+  --spel-yta: oklch(0.82 0.1 30);
+}
+[data-spel='kortkaos'] {
+  --spel-yta: var(--lilac);
+}
+[data-spel='imposterjakten'] {
+  --spel-yta: var(--foreground);
+  --spel-text: var(--card);
+  --spel-knapp: var(--sun);
+  --spel-knapp-text: var(--foreground);
+}
+
 /* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
 @custom-variant low (@media (max-width: 639.98px) and (max-height: 779.98px));
 
@@ -49,6 +72,10 @@
     --color-felt: var(--felt);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
+    --color-spel-yta: var(--spel-yta);
+    --color-spel-text: var(--spel-text);
+    --color-spel-knapp: var(--spel-knapp);
+    --color-spel-knapp-text: var(--spel-knapp-text);
     --color-sun-soft: var(--sun-soft);
     --color-sky-soft: var(--sky-soft);
     /* Kronan för den som leder, t.ex. text-crown */
