@@ -52,12 +52,14 @@ export function HomePage() {
       {/* Hero */}
       <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
         <div className="space-y-6 text-center md:text-left">
-          {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
-              i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
-          <p className="-mb-4 text-sm font-bold text-muted-foreground">Gratis sällskapsspel online</p>
-          <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
-            Bra sällskap. <span className="inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">Dåliga förlorare.</span>
-          </h1>
+          <div className="space-y-2">
+            <p className="text-sm font-bold text-muted-foreground">Gratis sällskapsspel online</p>
+            {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
+                i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
+            <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
+              Bra sällskap. <span className="inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">Dåliga förlorare.</span>
+            </h1>
+          </div>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
