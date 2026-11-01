@@ -593,17 +593,17 @@ export function isCorrectGuess(guess: string, word: ImposterWord): boolean {
   return normalized.length > 0 && [word.ord, ...word.godkanda].map(normalizeWord).includes(normalized)
 }
 
-// Poängen för en omgång. Kommer impostern undan får den 2. Fångas den men gissar rätt får den 1. Gissar den fel eller
-// ger upp får alla oskyldiga som är kvar i omgången 2. En avbruten omgång ger inga poäng.
+// Poängen för en omgång. Kommer impostern undan får den 2. Fångas den får alla oskyldiga som är kvar i omgången 2, och
+// gissar impostern sedan rätt får den dessutom 1. En avbruten omgång ger inga poäng.
 export const IMPOSTER_ESCAPES = 2
 export const IMPOSTER_GUESSES_RIGHT = 1
 export const INNOCENTS_WIN = 2
 
 export function roundPoints(kind: OutcomeKind, imposter: string, order: readonly string[]): Record<string, number> {
   if (kind === 'undan') return { [imposter]: IMPOSTER_ESCAPES }
-  if (kind === 'gissade-ratt') return { [imposter]: IMPOSTER_GUESSES_RIGHT }
-  if (kind === 'gissade-fel' || kind === 'gav-upp') {
-    return Object.fromEntries(order.filter((id) => id !== imposter).map((id) => [id, INNOCENTS_WIN]))
+  if (kind === 'gissade-ratt' || kind === 'gissade-fel' || kind === 'gav-upp') {
+    const innocents = order.filter((id) => id !== imposter).map((id) => [id, INNOCENTS_WIN])
+    return { ...Object.fromEntries(innocents), ...(kind === 'gissade-ratt' ? { [imposter]: IMPOSTER_GUESSES_RIGHT } : {}) }
   }
   return {}
 }

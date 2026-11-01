@@ -170,7 +170,7 @@ export function GuessStep({ state, table, me, online, typing, onMove }: StepProp
     <>
       <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
       <p className="text-center text-sm text-muted-foreground" role="status">
-        {mine ? 'Gissa det hemliga ordet. Gissar du rätt får du ändå en poäng.' : `${name} gissar ordet. Gissar impostern rätt får den ändå en poäng.`}
+        {mine ? 'Gissa det hemliga ordet. Gissar du rätt får du en poäng.' : `${name} gissar ordet. Ni får era poäng ändå, och gissar impostern rätt får den en poäng.`}
       </p>
       {mine && (
         <div className="rounded-lg border bg-card p-4 shadow-soft">
@@ -231,7 +231,7 @@ const HEADLINES: Record<ImposterOutcome['kind'], { emoji: string; text: string; 
   'gissade-fel': { emoji: '🎉', text: 'De oskyldiga vann!', tone: 'bg-mint-soft' },
   'gav-upp': { emoji: '🎉', text: 'De oskyldiga vann!', tone: 'bg-mint-soft' },
   undan: { emoji: '🕵️', text: 'Impostern kom undan!', tone: 'bg-coral-soft' },
-  'gissade-ratt': { emoji: '🎯', text: 'Impostern gissade rätt!', tone: 'bg-sun-soft' },
+  'gissade-ratt': { emoji: '🎯', text: 'Fast, men impostern gissade rätt!', tone: 'bg-sun-soft' },
   avbruten: { emoji: '⏸️', text: 'Omgången avbröts', tone: 'bg-muted' },
 }
 

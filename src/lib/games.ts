@@ -95,7 +95,7 @@ export const GAMES: GameInfo[] = [
         'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in.',
         'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv.',
         'Diskutera och rösta fram vem ni tror är impostern.',
-        'Fångas impostern får den gissa ordet. Kommer den undan, eller gissar rätt, får den poäng. Annars får de oskyldiga poäng.',
+        'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer den undan får den poäng.',
       ],
     },
   },

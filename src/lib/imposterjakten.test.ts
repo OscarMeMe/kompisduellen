@@ -576,7 +576,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
 
   it('ger poäng för varje utfall', () => {
     expect(roundPoints('undan', 'a', ABCD)).toEqual({ a: IMPOSTER_ESCAPES })
-    expect(roundPoints('gissade-ratt', 'a', ABCD)).toEqual({ a: IMPOSTER_GUESSES_RIGHT })
+    expect(roundPoints('gissade-ratt', 'a', ABCD)).toEqual({ a: IMPOSTER_GUESSES_RIGHT, b: INNOCENTS_WIN, c: INNOCENTS_WIN, d: INNOCENTS_WIN })
     expect(roundPoints('gissade-fel', 'a', ABCD)).toEqual({ b: INNOCENTS_WIN, c: INNOCENTS_WIN, d: INNOCENTS_WIN })
     expect(roundPoints('gav-upp', 'a', ABCD)).toEqual({ b: 2, c: 2, d: 2 })
     expect(roundPoints('avbruten', 'a', ABCD)).toEqual({})
@@ -587,7 +587,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     const word = findWord(secretsOf(caught).wordId)!
     const right = hostMove(caught, 'a', { type: 'guess', word: ` ${word.ord.toUpperCase()} ` }, ABCD, NOW)
     expect(table(right).outcome).toMatchObject({ kind: 'gissade-ratt', word: word.ord, imposter: 'a', hint: word.ledtrad })
-    expect(right.state.scores).toMatchObject({ a: 1, b: 0, c: 0, d: 0 })
+    expect(right.state.scores).toMatchObject({ a: 1, b: 2, c: 2, d: 2 })
     expect(right.state.usedWordIds).toContain(word.id)
     const wrong = hostMove(caught, 'a', { type: 'guess', word: 'Ingenting' }, ABCD, NOW)
     expect(table(wrong).outcome).toMatchObject({ kind: 'gissade-fel', guess: 'Ingenting' })
