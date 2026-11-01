@@ -10,13 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cleanTypedAmount, formatSek, isValidPrice, parseTypedNumber } from '@/lib/belopp'
 import { hasFinePointer } from '@/lib/device'
-import { scoredPoints } from '@/lib/gissa-priset'
+import { pricePoints } from '@/lib/gissa-priset'
 import { EXAMPLE_ITEMS, questionText } from '@/lib/prisdata'
 import { differenceText } from '@/lib/skillnad'
 import { cn } from '@/lib/utils'
 
 // Så många poäng ger konfetti i exempelrundan.
-const CONFETTI_POINTS = 85
+const CONFETTI_POINTS = 90
 // Så länge står facit innan nästa fråga eller resultatet kommer av sig självt. Knappen går till nästa direkt.
 const FACIT_SECONDS = 5
 
@@ -75,7 +75,7 @@ export function ExempelRunda() {
     setError(null)
     setGuess(value)
     setFacitLeft(FACIT_SECONDS)
-    setScores((list) => [...list, scoredPoints(value, price)])
+    setScores((list) => [...list, pricePoints(value, price)])
     // Knappen försvinner, så fokus flyttas till svaret. Då läser skärmläsare upp det.
     requestAnimationFrame(() => resultRef.current?.focus())
   }
@@ -205,8 +205,8 @@ export function ExempelRunda() {
               tabIndex={-1}
               className="relative rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
             >
-              {/* Nära rätt pris (minst 85 poäng, ungefär inom 10 procent) ger ett litet konfettiregn. */}
-              {scoredPoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
+              {/* Nära rätt pris (minst 90 poäng, inom 10 procent) ger ett litet konfettiregn. */}
+              {pricePoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
               <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
               <p className="font-heading text-3xl font-bold tabular-nums">
                 <CountingPrice target={price} />
@@ -214,7 +214,7 @@ export function ExempelRunda() {
               <p className="text-sm font-semibold">
                 Du gissade {formatSek(guess)}. {difference}
               </p>
-              <p className="text-sm text-muted-foreground">Det ger {scoredPoints(guess, price)} av 100 poäng.</p>
+              <p className="text-sm text-muted-foreground">Det ger {pricePoints(guess, price)} av 100 poäng.</p>
             </div>
             <Button size="lg" variant="outline" className="w-full tabular-nums" onClick={advance}>
               {isLast ? 'Visa resultatet' : 'Nästa fråga'} om {facitLeft} s

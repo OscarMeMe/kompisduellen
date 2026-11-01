@@ -1,7 +1,6 @@
 // Belopp i Gissa priset: tolkning av gissningar och visning av kronor.
 // Man skriver alltid i kronor. Komma eller punkt ger ören, t.ex. 0,24 = 24 öre.
-// Gissningar och priser visas som de är (1,25 kr). Poängen räknas däremot i hela kronor från en krona (roundSek),
-// se scoredPoints i gissa-priset.ts.
+// Gissningar och priser visas och räknas som de är (1,25 kr).
 // Rena funktioner utan React, så att de är lätta att testa och läsa.
 
 // Högsta och lägsta gissning i kronor.
@@ -35,7 +34,7 @@ export function parseTypedNumber(text: string): number {
   return Number(`${whole || '0'}.${decimals || '0'}`)
 }
 
-// Hela kronor från en krona och uppåt, annars hela ören. Så räknas poängen i Gissa priset.
+// Hela kronor från en krona och uppåt, annars hela ören. Används när ett pris räknas upp.
 export function roundSek(value: number): number {
   return value >= 1 ? Math.round(value) : Math.round(value * 100) / 100
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pricePoints, priceRules, RECENT_AFTER_RESET, scoredPoints } from '@/lib/gissa-priset'
+import { pricePoints, priceRules, RECENT_AFTER_RESET } from '@/lib/gissa-priset'
 import { GAME_ITEMS } from '@/lib/prisdata'
 
 // Kontrollerar att förklaringen under "Så räknas poängen" stämmer med beräkningen.
@@ -13,19 +13,21 @@ describe('poängen i Gissa priset', () => {
     expect(pricePoints(92, 100)).toBeLessThan(100)
   })
 
-  it('går genom punkterna: 10 procent 85, 25 procent 60, 1,5 gånger 40, dubbla 25, tre gånger 10, fyra gånger 0', () => {
-    expect(pricePoints(110, 100)).toBe(85)
-    expect(pricePoints(125, 100)).toBe(60)
-    expect(pricePoints(150, 100)).toBe(40)
-    expect(pricePoints(200, 100)).toBe(25)
-    expect(pricePoints(300, 100)).toBe(10)
-    expect(pricePoints(400, 100)).toBe(0)
+  it('går genom punkterna: 10 procent 90, 25 procent 72, 1,5 gånger 55, dubbla 38, tre gånger 18, fyra gånger 8, fem gånger 0', () => {
+    expect(pricePoints(110, 100)).toBe(90)
+    expect(pricePoints(125, 100)).toBe(72)
+    expect(pricePoints(150, 100)).toBe(55)
+    expect(pricePoints(200, 100)).toBe(38)
+    expect(pricePoints(300, 100)).toBe(18)
+    expect(pricePoints(400, 100)).toBe(8)
+    expect(pricePoints(500, 100)).toBe(0)
   })
 
   it('räknar på hur många gånger fel, inte på kronor: halva ger lika mycket som dubbla', () => {
     expect(pricePoints(50, 100)).toBe(pricePoints(200, 100))
-    expect(pricePoints(100 / 3, 100)).toBe(10)
-    expect(pricePoints(25, 100)).toBe(0)
+    expect(pricePoints(100 / 3, 100)).toBe(18)
+    expect(pricePoints(25, 100)).toBe(8)
+    expect(pricePoints(20, 100)).toBe(0)
     expect(pricePoints(10_000, 100)).toBe(0)
     expect(pricePoints(1_000_000, 100)).toBe(0)
     // Samma förhållande ger samma poäng oavsett prisets storlek.
@@ -46,10 +48,10 @@ describe('poängen i Gissa priset', () => {
       under = points
     }
     // Mellan punkterna ligger poängen mellan punkternas värden.
-    expect(pricePoints(118, 100)).toBeLessThan(85)
-    expect(pricePoints(118, 100)).toBeGreaterThan(60)
-    expect(pricePoints(175, 100)).toBeLessThan(40)
-    expect(pricePoints(175, 100)).toBeGreaterThan(25)
+    expect(pricePoints(118, 100)).toBeLessThan(90)
+    expect(pricePoints(118, 100)).toBeGreaterThan(72)
+    expect(pricePoints(175, 100)).toBeLessThan(55)
+    expect(pricePoints(175, 100)).toBeGreaterThan(38)
   })
 
   it('ger alltid heltal mellan 0 och 100 och noll för ogiltiga gissningar', () => {
@@ -63,20 +65,14 @@ describe('poängen i Gissa priset', () => {
     expect(pricePoints(-5, 100)).toBe(0)
   })
 
-  it('räknar priser från 1 krona i hela kronor', () => {
-    // Örena ändrar inte poängen från en krona. Under en krona räknas de.
-    expect(scoredPoints(1.25, 1.25)).toBe(100)
-    expect(scoredPoints(1, 1.25)).toBe(100)
-    expect(scoredPoints(10, 1.25)).toBe(0)
-    expect(scoredPoints(4.5, 4.75)).toBe(100)
-    expect(scoredPoints(0.5, 0.5)).toBe(100)
-    expect(scoredPoints(0.25, 0.5)).toBe(25)
-    expect(priceRules.scoreRound({ a: 1.25 }, null, 1.25)).toEqual({ target: 1, points: { a: 100 } })
-    expect(priceRules.formatTarget?.(1, 'hemgymnastikbok-1902')).toBe('1,25 kr')
-    // Kaffet 1930 kostade 2,44 kr: 2 kr ger fullpoäng.
-    expect(priceRules.scoreRound({ a: 2 }, null, 2.44)).toEqual({ target: 2, points: { a: 100 } })
-    // Mjölken 1930 kostade 24 öre, och där räknas ören.
-    expect(priceRules.scoreRound({ a: 0.24 }, null, 0.24).points.a).toBe(100)
+  it('räknar på det exakta priset, med ören', () => {
+    expect(pricePoints(1.25, 1.25)).toBe(100)
+    expect(pricePoints(0.5, 0.5)).toBe(100)
+    // 2 kr på 1,25 kr är 1,6 gånger fel, inte dubbelt.
+    expect(pricePoints(2, 1.25)).toBeGreaterThan(pricePoints(2, 1))
+    expect(pricePoints(1, 1.25)).toBeLessThan(100)
+    expect(priceRules.scoreRound({ a: 1.25 }, null, 1.25)).toEqual({ target: 1.25, points: { a: 100 } })
+    expect(priceRules.formatValue(1.25)).toBe('1,25 kr')
   })
 
   it('har fullträff och avstånd som följer poängen', () => {

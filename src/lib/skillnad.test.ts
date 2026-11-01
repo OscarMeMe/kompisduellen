@@ -9,10 +9,10 @@ describe('skillnad mot rätt pris', () => {
     expect(differenceText(1, 0.5)).toBe('2 gånger för högt')
   })
 
-  it('säger rätt på kronan när kronan stämmer men inte örena', () => {
-    expect(differenceText(1, 1.25)).toBe('Rätt på kronan')
-    expect(differenceText(2, 2.44)).toBe('Rätt på kronan')
-    expect(differenceText(79.2, 79)).toBe('Rätt på kronan')
+  it('räknar örena även när kronan stämmer', () => {
+    expect(differenceText(1, 1.25)).toBe('20 % för lågt')
+    expect(differenceText(2, 2.44)).toBe('18 % för lågt')
+    expect(differenceText(2, 1.25)).toBe('60 % för högt')
   })
 
   it('visar procent när gissningen är nära', () => {
