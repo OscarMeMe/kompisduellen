@@ -111,6 +111,8 @@ describe('gissningar och kortdrag', () => {
     expect(parseMove({ id: 'a', move: { type: 'read' } })?.move).toEqual({ type: 'read' })
     expect(parseMove({ id: 'a', move: { type: 'pass', extra: 1 } })?.move).toEqual({ type: 'pass' })
     expect(parseMove({ id: 'a', move: { type: 'said' } })?.move).toEqual({ type: 'said' })
+    expect(parseMove({ id: 'a', move: { type: 'said', word: 'regn' } })?.move).toEqual({ type: 'said', word: 'regn' })
+    expect(parseMove({ id: 'a', move: { type: 'said', word: 5 } })?.move).toEqual({ type: 'said' })
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 'regn' } })?.move).toEqual({ type: 'clue', word: 'regn' })
     expect(parseMove({ id: 'a', move: { type: 'clue' } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 5 } })).toBeNull()

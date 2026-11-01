@@ -411,6 +411,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             imposterCard={imposterCard}
             onMove={actions.move}
             onStartAnyway={actions.imposterStartAnyway}
+            onSkipTurn={actions.imposterSkipTurn}
             onNewWord={actions.imposterNewWord}
             onNextRound={actions.imposterNextRound}
             onAbortRound={actions.imposterAbortRound}
