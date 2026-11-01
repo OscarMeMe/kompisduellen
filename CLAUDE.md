@@ -91,6 +91,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
   - `games.ts`: listan över spel på startsidan
+  - `guider.ts`: texterna på guiderna (`/forfestlekar`, `/spel-pa-discord`, `/gissningslekar`). Spelarantal och tid hämtas från spelen i `GuidePage`
   - `spelsidor.ts`: texterna på spelsidorna (`/spel/gissa-priset` …): titel, beskrivning, intro, Så spelar ni, tid och vanliga frågor
   - `sidinfo.ts`: taggarna i `<head>` per sida (`pageMeta`, `renderHeadTags`), vilka sidor som förrenderas (`PRERENDER_PATHS`) och vilka som bara får egna taggar (`HEAD_ONLY_PATHS`)
   - `player.ts`: gästspelare (namn + figur i localStorage, spelar-id i sessionStorage), lobbykoder, värdflagga (sessionStorage)
@@ -169,7 +170,8 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Appen startar alltid med `createRoot` och ritar om sidan, även när den är förrenderad. Därför behöver sidorna inte se exakt likadana ut i bygget och i webbläsaren (sparat namn och figur), och lobbyn fungerar som förut. Sidor som förrenderas får inte vara `lazy`, annars syns en snurra när appen tar över.
 - Taggarna i `<head>` ligger mellan `<!-- sidinfo -->` och `<!-- /sidinfo -->` i `index.html` och kommer från `sidinfo.ts`, både i bygget och i appen (`usePageMeta`). Startsidan och spelsidorna har kanonisk adress, Open Graph och JSON-LD (startsidan `WebSite` och `WebApplication`, spelsidorna `VideoGame` och `FAQPage`). Lobbyn och andra sidor har ingen kanonisk adress. Ändras startsidans beskrivning: uppdatera även manifestet i `vite.config.ts`.
 - Spelsidorna (`/spel/gissa-priset`, `/spel/narmast-vinner`, `/spel/kortkaos`, `/spel/imposterjakten`) har texterna i `spelsidor.ts`. De fasta sökvägarna går före `/spel/:code` i React Router, och lobbykoder har bara fyra bokstäver. Spelets namn på startsidans kort leder dit. Nytt spel med egen sida: en rad i `GAME_PAGES`, och sökvägen i `public/sitemap.xml` och som `Allow:` i `public/robots.txt` (testerna i `sidinfo.test.ts` kollar det).
-- `public/robots.txt` stänger ute `/lobby/`, `/spel/` (utom spelsidorna), `/resultat/` och `/granska`. `public/sitemap.xml` listar startsidan, spelsidorna, `/skapa` och `/ga-med`.
+- Guiderna (`guider.ts`, `GuidePage`) förrenderas som spelsidorna, med egen titel, beskrivning, Open Graph och FAQPage. Ny guide: en rad i `GUIDE_PAGES`, och sökvägen i `public/sitemap.xml` och som `Allow:` i `public/robots.txt` (testerna kollar det). Länkarna finns på startsidan och spelsidorna.
+- `public/robots.txt` stänger ute `/lobby/`, `/spel/` (utom spelsidorna), `/resultat/` och `/granska`. `public/sitemap.xml` listar startsidan, spelsidorna, guiderna, `/skapa` och `/ga-med`.
 - Service workern släpper igenom `robots.txt` och `sitemap.xml`, eftersom alla sidor hämtas från nätet.
 
 ## Routes
@@ -182,6 +184,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/skapa?spel=narmast` | Skapa lobby för ett visst spel (`narmast`, `gissa-priset`, `kortkaos`, `imposterjakten`) |
 | `/lobby/:code` | Väntrum, spel och prispall (allt i samma sida) |
 | `/spel/gissa-priset`, `/spel/narmast-vinner`, `/spel/kortkaos`, `/spel/imposterjakten` | Spelsidor (vad spelet är, så spelar ni, vanliga frågor) |
+| `/forfestlekar`, `/spel-pa-discord`, `/gissningslekar` | Guider (kort svar, jämförelse av spelen, startlänkar, vanliga frågor) |
 | `/spel/:code` | Skickar vidare till `/lobby/:code` |
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
 | `/profil` | Profil (ändra namn och figur, sparas i webbläsaren) |

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findGame } from '@/lib/games'
+import { GUIDE_PAGES } from '@/lib/guider'
 import { pageMeta, PRERENDER_PATHS, renderHeadTags, SITE_URL } from '@/lib/sidinfo'
 import { findGamePage, GAME_PAGES } from '@/lib/spelsidor'
 
@@ -56,6 +57,31 @@ describe('sidinfo', () => {
     for (const page of GAME_PAGES) {
       const types = pageMeta(`/spel/${page.slug}`).jsonLd.map((item) => item['@type'])
       expect(types, page.slug).toEqual(['VideoGame', 'FAQPage'])
+    }
+  })
+})
+
+describe('guiderna', () => {
+  it('förrenderas och finns i sajtkartan och robots.txt, med egen titel, beskrivning och FAQPage', () => {
+    for (const page of GUIDE_PAGES) {
+      const path = `/${page.slug}`
+      expect(PRERENDER_PATHS, path).toContain(path)
+      expect(sitemap, path).toContain(`<loc>${SITE_URL}${path}</loc>`)
+      expect(robots, path).toMatch(new RegExp(`^Allow: ${path}\\r?$`, 'm'))
+      const meta = pageMeta(path)
+      expect(meta.title, path).toBe(page.title)
+      expect(meta.path, path).toBe(path)
+      expect(meta.jsonLd.map((item) => item['@type']), path).toEqual(['FAQPage'])
+    }
+  })
+
+  it('har 2 till 3 vanliga frågor och bara spel som går att spela, utan tankstreck i texterna', () => {
+    for (const page of GUIDE_PAGES) {
+      expect(page.faq.length, page.slug).toBeGreaterThanOrEqual(2)
+      expect(page.faq.length, page.slug).toBeLessThanOrEqual(3)
+      for (const item of page.games) expect(findGame(item.gameId)?.playable, item.gameId).toBe(true)
+      expect(JSON.stringify(page), page.slug).not.toMatch(/\s[–—]\s/)
+      expect(page.slug, page.slug).not.toMatch(/^[a-z]{4}$/i)
     }
   })
 })

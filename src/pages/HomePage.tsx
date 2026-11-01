@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { ArrowDown, Check } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GaMedKod } from '@/components/GaMedKod'
@@ -9,6 +9,12 @@ import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { GAMES, type GameInfo } from '@/lib/games'
 import { cn } from '@/lib/utils'
+
+const GUIDE_LINKS = [
+  { to: '/forfestlekar', text: 'Förfestlekar på mobilen' },
+  { to: '/spel-pa-discord', text: 'Spel att spela på Discord' },
+  { to: '/gissningslekar', text: 'Gissningslekar online' },
+]
 
 const STEPS = [
   { title: 'Välj ett spel', text: 'Skapa en lobby med ditt namn.', color: 'bg-coral-soft' },
@@ -131,6 +137,22 @@ export function HomePage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* Guiderna, för den som vill läsa mer. */}
+      <section aria-labelledby="tips-rubrik" className="space-y-3">
+        <h2 id="tips-rubrik" className="text-xl">
+          Tips inför kvällen
+        </h2>
+        <ul className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-6">
+          {GUIDE_LINKS.map((guide) => (
+            <li key={guide.to}>
+              <Link to={guide.to} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 hover:text-primary">
+                {guide.text}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Kommande spel, diskret och utan knappar */}

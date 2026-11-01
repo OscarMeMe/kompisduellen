@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Clock, Play, Users } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { findGame, playersLabel } from '@/lib/games'
+import { GUIDE_PAGES } from '@/lib/guider'
 import { rulesFor } from '@/lib/spelregler'
 import { GAME_PAGES, type GamePageInfo } from '@/lib/spelsidor'
 import { cn } from '@/lib/utils'
@@ -113,6 +114,22 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Guiderna som tar upp det här spelet. */}
+      <section aria-labelledby="tips" className="space-y-2">
+        <h2 id="tips" className="text-2xl">
+          Tips inför kvällen
+        </h2>
+        <ul>
+          {GUIDE_PAGES.filter((guide) => guide.games.some((item) => item.gameId === game.id)).map((guide) => (
+            <li key={guide.slug}>
+              <Link to={`/${guide.slug}`} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 hover:text-primary">
+                {guide.heading}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section aria-labelledby="fler-spel" className="space-y-4 border-t pt-8">
