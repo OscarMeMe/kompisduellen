@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+import { beamTo, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+
+describe('ljuskäglan', () => {
+  it('går rakt ner till bordets mitt och vrids åt det håll spelaren sitter', () => {
+    expect(beamTo({ x: 50, y: 50 })).toEqual({ length: 54, degrees: 0 })
+    expect(beamTo({ x: 93, y: 50 }).degrees).toBeLessThan(0)
+    expect(beamTo({ x: 7, y: 50 }).degrees).toBeGreaterThan(0)
+    expect(beamTo({ x: 93, y: 50 }).degrees).toBe(-beamTo({ x: 7, y: 50 }).degrees)
+  })
+})
 
 describe('bordet i Imposterjakten', () => {
   it('sätter mig längst ner och de andra medurs i turordning', () => {

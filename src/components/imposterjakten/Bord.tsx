@@ -5,7 +5,7 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { arrowBetween, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { arrowBetween, beamTo, LAMP, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { CLUE_ROUNDS, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -50,6 +50,8 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   const revealing = shownVotes !== null && shownVotes !== undefined
   const stampDelay = voteArrows.length * VOTE_STEP_MS + STAMP_PAUSE_MS
   const inset = small ? 9 : 11
+  // Ljuset faller på den som har tur, annars mitt på bordet.
+  const lit = turn ? byId[turn] : undefined
 
   return (
     <div className="space-y-2">
@@ -67,6 +69,8 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
         >
           {center}
         </div>
+
+        <LampBeam target={lit ?? { x: 50, y: 50 }} wide={!lit} />
 
         {/* Stolarna, bakom spelarna. Rutan vrids mot bordet och flyttas utåt. */}
         {seats.map((seat) => (
@@ -147,6 +151,32 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
       <TableForScreenReaders state={state} table={table} meId={meId} turn={turn} typing={typing} shownVotes={shownVotes ?? null} />
     </div>
+  )
+}
+
+// Lampan och dess ljuskägla. Käglan glider över till den som har tur. Med "minska rörelse" hoppar den direkt.
+function LampBeam({ target, wide }: { target: { x: number; y: number }; wide: boolean }) {
+  const { length, degrees } = beamTo(target)
+  return (
+    <>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute w-1/4 origin-top bg-linear-to-b from-sun/70 to-sun/25 motion-safe:transition-[rotate,height] motion-safe:duration-500"
+        style={{
+          left: `${LAMP.x}%`,
+          top: `${LAMP.y}%`,
+          height: `${length}%`,
+          translate: '-50% 0',
+          rotate: `${degrees}deg`,
+          clipPath: wide ? 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)' : 'polygon(44% 0, 56% 0, 80% 100%, 20% 100%)',
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute h-3 w-12 -translate-x-1/2 rounded-t-full bg-foreground shadow-soft-sm"
+        style={{ left: `${LAMP.x}%`, top: `calc(${LAMP.y}% - 0.75rem)` }}
+      />
+    </>
   )
 }
 

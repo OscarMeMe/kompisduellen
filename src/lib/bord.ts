@@ -54,6 +54,16 @@ export function arrowBetween(from: Seat, to: Seat, inset: number): { x1: number;
   }
 }
 
+// Lampan hänger längst upp i rummet, ovanför bordet (procent av bordets ruta).
+export const LAMP = { x: 50, y: -4 }
+
+// Ljuskäglan från lampan till en punkt: hur lång den är (procent) och hur många grader den vrids från rakt ner.
+export function beamTo(target: { x: number; y: number }): { length: number; degrees: number } {
+  const dx = target.x - LAMP.x
+  const dy = target.y - LAMP.y
+  return { length: round(Math.hypot(dx, dy)), degrees: round((Math.atan2(-dx, dy) * 180) / Math.PI) || 0 }
+}
+
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }
