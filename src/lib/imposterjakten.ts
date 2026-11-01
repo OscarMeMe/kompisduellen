@@ -42,7 +42,7 @@ export const IMPOSTER_SCORING: string[] = [
   'Kommer impostern undan får den 2 poäng.',
   'Fångas impostern får alla oskyldiga 2 poäng.',
   'Gissar impostern sedan ordet rätt får den 1 poäng.',
-  'I Normal får impostern en vag ledtråd. I Svår får den ingenting.',
+  'I Normal får impostern en vag ledtråd. I Svår får den ingenting. I Lurig får den ett närliggande ord och vet inte om att den är impostern.',
 ]
 
 // När alla ord visats börjar listan om, men de senaste står kvar som använda (som i Gissa priset).
@@ -59,16 +59,17 @@ export const MAX_CLUE_LENGTH = 30
 // Nedräkningen till omröstningen när mer än hälften är redo.
 export const COUNTDOWN_SECONDS = 30
 
-// Värdens val i väntrummet. hard = Svår (impostern får ingen ledtråd). category = null för Blandat.
+// Värdens val i väntrummet. hard = Svår (impostern får ingen ledtråd). tricky = Lurig (impostern får ett närliggande ord
+// och vet inte om att den är impostern). Saknas tricky är det inte Lurig. category = null för Blandat.
 // aloud = ni sitter tillsammans och säger orden högt, i stället för att skriva dem i appen.
-export type ImposterSettings = { hard: boolean; category: string | null; aloud: boolean }
+export type ImposterSettings = { hard: boolean; tricky?: boolean; category: string | null; aloud: boolean }
 
 export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null, aloud: false }
 
 // Inställningarna i ord, för deltagarnas sammanfattning i väntrummet.
 export function imposterSettingsSummary(settings: ImposterSettings): [string, string][] {
   return [
-    ['Svårighet', settings.hard ? 'Svår' : 'Normal'],
+    ['Svårighet', settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'],
     ['Kategori', settings.category ?? 'Blandat'],
     ['Sitter ni tillsammans?', settings.aloud ? 'Ja, vi säger orden högt' : 'Nej, vi skriver orden'],
   ]
@@ -91,6 +92,8 @@ export type ImposterOutcome = {
   imposter: string
   hint: string | null
   guess: string | null
+  // Lurig: ordet impostern hade. Saknas i de andra lägena.
+  imposterWord?: string
   points: Record<string, number>
   reason: string | null
 }
@@ -111,6 +114,7 @@ export type ImposterTable = {
   // Kategorin om värden valt en, annars null. Den syns för alla, även impostern.
   category: string | null
   hard: boolean
+  tricky?: boolean
   aloud: boolean
   // Hur många som är redo att rösta och hur många som har röstat. Vilka syns inte.
   readyCount: number
@@ -157,6 +161,8 @@ export type ImposterSecrets = {
 export type ImposterCard =
   | { role: 'oskyldig'; word: string; category: string | null }
   | { role: 'imposter'; hint: string | null; category: string | null }
+  // Lurig: alla kort ser likadana ut, så att impostern inte vet om det. Rollen står inte ens i meddelandet.
+  | { role: 'lurig'; word: string; category: string | null }
 
 // Det en spelare får veta: sitt kort (null = inte med i omgången), när ens senaste ord avvisades, om man är redo att
 // rösta och vem man har röstat på.
@@ -241,6 +247,7 @@ export function dealRound(
       read: [],
       category: settings.category,
       hard: settings.hard,
+      tricky: settings.tricky === true,
       aloud: settings.aloud,
       readyCount: 0,
       votedCount: 0,
@@ -266,6 +273,9 @@ export function cardFor(secrets: ImposterSecrets, table: ImposterTable, playerId
   if (!table.order.includes(playerId)) return null
   const word = findWord(secrets.wordId)
   if (!word) return null
+  if (table.tricky) {
+    return { role: 'lurig', word: playerId === secrets.imposter ? word.nara : word.ord, category: table.category }
+  }
   if (playerId === secrets.imposter) {
     return { role: 'imposter', hint: table.hard ? null : word.ledtrad, category: table.category }
   }
@@ -454,14 +464,14 @@ export function imposterMove(
   if (move.type === 'said') {
     if (!table.aloud) return host
     // Ordet är redan sagt, så turen går vidare även om det inskrivna ordet inte går att visa (t.ex. det hemliga ordet).
-    const secret = findWord(host.secrets.wordId)
+    const secret = clueWordFor(host, playerId)
     const typed = move.word?.trim() && secret ? checkClue(move.word, secret, table.clues) : null
     return addClue(host, { player: playerId, kind: 'sagt', word: typed?.ok ? typed.word : null }, activeIds, now)
   }
   if (table.aloud) return host
   if (move.type === 'pass') return addClue(host, { player: playerId, kind: 'pass', word: null }, activeIds, now)
 
-  const word = findWord(host.secrets.wordId)
+  const word = clueWordFor(host, playerId)
   const checked = word ? checkClue(move.word, word, table.clues) : { ok: false as const }
   if (!checked.ok) {
     return { ...host, secrets: { ...host.secrets, rejected: { ...host.secrets.rejected, [playerId]: now } } }
@@ -495,6 +505,14 @@ export function imposterNewWord(host: ImposterHost, activeIds: readonly string[]
   if (state.phase !== 'playing' || !canChangeWord(state.imposter)) return host
   const players = state.imposter!.order.filter((id) => activeIds.includes(id))
   return startImposterRound(markUsed(state, secrets), state.round, players.length > 0 ? players : state.imposter!.order, random)
+}
+
+// Ordet som spelarens ledtråd kontrolleras mot. Lurig: impostern har ett annat ord, och får inte märka det. Den får
+// därför säga de andras ord, för annars skulle beskedet avslöja rollen.
+function clueWordFor(host: ImposterHost, playerId: string): ImposterWord | undefined {
+  const word = findWord(host.secrets.wordId)
+  if (!word || !host.state.imposter?.tricky || playerId !== host.secrets.imposter) return word
+  return { ...word, ord: word.nara, godkanda: [] }
 }
 
 // Spelarna i omgången som fortfarande är med.
@@ -551,7 +569,7 @@ export function imposterInstruction(
       if (me.vote) return { text: 'Väntar på de andra…', act: false }
       return { text: table.tied ? 'Tryck på den av de lika placerade du tror är impostern' : 'Tryck på den du tror är impostern', act: true }
     case 'gissning':
-      if (table.caught === me.id) return { text: 'Du är fast! Gissa det hemliga ordet', act: true }
+      if (table.caught === me.id) return { text: table.tricky ? 'Du hade ett annat ord! Gissa de andras ord' : 'Du är fast! Gissa det hemliga ordet', act: true }
       return { text: `${me.name(table.caught ?? '')} gissar ordet…`, act: false }
     case 'facit':
       return { text: table.outcome?.kind === 'avbruten' ? 'Omgången avbröts' : 'Omgången är slut', act: false }
@@ -815,8 +833,9 @@ function finishRound(
     kind,
     word: word?.ord ?? '',
     imposter: secrets.imposter,
-    hint: table.hard ? null : (word?.ledtrad ?? null),
+    hint: table.hard || table.tricky ? null : (word?.ledtrad ?? null),
     guess,
+    ...(table.tricky && word ? { imposterWord: word.nara } : {}),
     points,
     reason,
   }

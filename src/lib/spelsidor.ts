@@ -162,7 +162,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       {
         question: 'Kan impostern få hjälp?',
         answer:
-          'Värden väljer svårighet. I Normal får impostern en vag ledtråd och i Svår ingenting. Värden kan också välja en kategori, som alla ser.',
+          'Värden väljer svårighet. I Normal får impostern en vag ledtråd och i Svår ingenting. I Lurig får impostern ett liknande ord och vet inte om att den är impostern. Värden kan också välja en kategori, som alla ser.',
       },
     ],
   },

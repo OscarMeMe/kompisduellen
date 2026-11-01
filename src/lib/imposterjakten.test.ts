@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES, roundWords } from '@/lib/games'
+import { parseImposterCard } from '@/lib/meddelanden'
 import {
   CATEGORIES,
   canChangeWord,
@@ -20,6 +21,7 @@ import {
   IMPOSTER_ESCAPES,
   imposterInstruction,
   IMPOSTER_GUESSES_RIGHT,
+  imposterSettingsSummary,
   isCorrectGuess,
   moreThanHalf,
   myImposterCard,
@@ -136,7 +138,7 @@ describe('Imposterjakten: spelet och inställningarna', () => {
     const state = lobby().state
     expect(state.imposterSettings).toEqual(DEFAULT_SETTINGS)
     const chosen = setImposterSettings(state, { hard: true, category: CATEGORIES[1], aloud: true })
-    expect(chosen.imposterSettings).toEqual({ hard: true, category: CATEGORIES[1], aloud: true })
+    expect(chosen.imposterSettings).toMatchObject({ hard: true, category: CATEGORIES[1], aloud: true })
     expect(setImposterSettings(chosen, { category: null }).imposterSettings.category).toBeNull()
     expect(setImposterSettings(state, { category: 'Finns inte' })).toBe(state)
     const playing = start().state
@@ -566,6 +568,85 @@ describe('Imposterjakten: diskussionen och omröstningen', () => {
     const host = start(ABCD)
     expect(ready(host, 'a')).toBe(host)
     expect(vote(host, 'a', 'b')).toBe(host)
+  })
+})
+
+describe('Imposterjakten: läget Lurig', () => {
+  it('alla nara-ord är unika och skiljer sig från sitt eget ord', () => {
+    const norm = (text: string) => normalizeWord(text)
+    const nara = WORDS.map((item) => norm(item.nara))
+    expect(nara.every(Boolean)).toBe(true)
+    expect(new Set(nara).size).toBe(WORDS.length)
+    for (const item of WORDS) expect([item.ord, ...item.godkanda].map(norm), item.ord).not.toContain(norm(item.nara))
+  })
+
+  const lurig = () => readAll(start(ABCD, { tricky: true }), ABCD)
+  const word = (host: HostState) => findWord((host.secrets as ImposterSecrets).wordId)!
+  const imposterId = (host: HostState) => (host.secrets as ImposterSecrets).imposter
+
+  it('alla kort ser likadana ut, och bara orden skiljer sig', () => {
+    const host = lurig()
+    const secrets = host.secrets as ImposterSecrets
+    const cards = ABCD.map((id) => cardFor(secrets, table(host), id)!)
+    for (const card of cards) expect(card.role).toBe('lurig')
+    const words = cards.map((card) => (card as { word: string }).word)
+    expect(words.filter((one) => one === word(host).nara)).toHaveLength(1)
+    expect(words.filter((one) => one === word(host).ord)).toHaveLength(3)
+    expect(words[ABCD.indexOf(imposterId(host))]).toBe(word(host).nara)
+  })
+
+  it('ingen av orden står i det alla får se innan facit', () => {
+    const host = lurig()
+    const seen = JSON.stringify(host.state)
+    expect(seen).not.toContain(word(host).ord)
+    expect(seen).not.toContain(word(host).nara)
+  })
+
+  it('kontrollerar impostern mot sitt eget ord och de andra mot det hemliga', () => {
+    let host = lurig()
+    const turn = currentTurn(table(host))!
+    const own = turn === imposterId(host) ? word(host).nara : word(host).ord
+    host = hostMove(host, turn, { type: 'clue', word: own }, ABCD, NOW)
+    expect(table(host).clues).toHaveLength(0)
+    expect((host.secrets as ImposterSecrets).rejected[turn]).toBe(NOW)
+  })
+
+  it('impostern får säga de andras ord, annars skulle beskedet avslöja rollen', () => {
+    let host = lurig()
+    while (currentTurn(table(host)) !== imposterId(host)) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+    const secret = word(host).ord.replace(/\s/g, '')
+    host = hostMove(host, imposterId(host), { type: 'clue', word: secret }, ABCD, NOW)
+    expect(table(host).clues.at(-1)?.word).toBe(secret)
+    expect((host.secrets as ImposterSecrets).rejected[imposterId(host)]).toBeUndefined()
+  })
+
+  it('facit visar båda orden och ingen ledtråd, och raden säger att impostern hade ett annat ord', () => {
+    const host = voteOut(toVoting(lurig(), ABCD), imposterId(lurig()), ABCD)
+    const me = { id: imposterId(host), name: (id: string) => id, ready: false, vote: null, accuseVote: null, typing: null, secondsLeft: 0 }
+    expect(imposterInstruction(table(host), me).text).toBe('Du hade ett annat ord! Gissa de andras ord')
+    const done = hostMove(host, imposterId(host), { type: 'giveUp' }, ABCD, NOW)
+    expect(table(done).outcome?.imposterWord).toBe(word(done).nara)
+    expect(table(done).outcome?.word).toBe(word(done).ord)
+    expect(table(done).outcome?.hint).toBeNull()
+  })
+
+  it('sista gissningen är de andras ord, med samma poäng som i de andra lägena', () => {
+    const host = voteOut(toVoting(lurig(), ABCD), imposterId(lurig()), ABCD)
+    const done = hostMove(host, imposterId(host), { type: 'guess', word: word(host).ord }, ABCD, NOW)
+    expect(table(done).outcome?.kind).toBe('gissade-ratt')
+    expect(done.state.scores[imposterId(host)]).toBe(IMPOSTER_GUESSES_RIGHT)
+  })
+
+  it('de andra lägena är som förut', () => {
+    const host = readAll(start(ABCD), ABCD)
+    expect(cardFor(host.secrets as ImposterSecrets, table(host), imposterId(host))?.role).toBe('imposter')
+  })
+
+  it('kortet går genom kontrollen, och en värd utan fältet räknas inte som Lurig', () => {
+    const card = { card: { role: 'lurig', word: 'Regnjacka', category: null }, rejectedAt: null, ready: false, vote: null }
+    expect(parseImposterCard({ to: 'a', from: 'b', card })?.card.card?.role).toBe('lurig')
+    expect(imposterSettingsSummary({ hard: false, category: null, aloud: false })[0][1]).toBe('Normal')
+    expect(imposterSettingsSummary({ hard: false, tricky: true, category: null, aloud: false })[0][1]).toBe('Lurig')
   })
 })
 

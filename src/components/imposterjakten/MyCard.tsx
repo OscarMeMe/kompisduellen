@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, ShieldCheck, VenetianMask } from 'lucide-react'
+import { CircleHelp, Eye, EyeOff, ShieldCheck, VenetianMask } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { MyImposterCard } from '@/lib/imposterjakten'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,10 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
     </Button>
   )
 
-  const innocent = card.role === 'oskyldig'
+  const tricky = card.role === 'lurig'
+  // Lurig ser likadant ut för alla, så att ingen ser på färgen vem som är impostern.
+  const innocent = card.role !== 'imposter'
+  const trickyQuestion = 'En av er har ett annat ord. Kan det vara du?'
   if (compact) {
     return (
       <div
@@ -51,12 +54,12 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
         ) : (
           <div className="min-w-0 text-left motion-safe:animate-pop">
             <p className="flex items-center gap-1.5 text-sm font-bold">
-              {innocent ? <ShieldCheck className="size-4" aria-hidden /> : <VenetianMask className="size-4" aria-hidden />}
-              {innocent ? 'Du är oskyldig.' : 'Du är imposter.'}
+              {tricky ? <CircleHelp className="size-4 shrink-0" aria-hidden /> : innocent ? <ShieldCheck className="size-4" aria-hidden /> : <VenetianMask className="size-4" aria-hidden />}
+              {tricky ? 'Kan det vara du?' : innocent ? 'Du är oskyldig.' : 'Du är imposter.'}
               {card.category && <span className="font-normal text-muted-foreground">· {card.category}</span>}
             </p>
             <p className="truncate font-heading text-xl leading-tight font-bold">
-              {innocent ? card.word : card.hint ? `Ledtråd: ${card.hint}` : 'Smält in!'}
+              {card.role === 'imposter' ? (card.hint ? `Ledtråd: ${card.hint}` : 'Smält in!') : card.word}
             </p>
           </div>
         )}
@@ -84,10 +87,10 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
       )}
     >
       <p className="flex items-center justify-center gap-2 font-heading text-lg font-bold">
-        {innocent ? <ShieldCheck className="size-6" aria-hidden /> : <VenetianMask className="size-6" aria-hidden />}
-        {innocent ? 'Du är oskyldig.' : 'Du är imposter.'}
+        {tricky ? <CircleHelp className="size-6 shrink-0" aria-hidden /> : innocent ? <ShieldCheck className="size-6" aria-hidden /> : <VenetianMask className="size-6" aria-hidden />}
+        {tricky ? trickyQuestion : innocent ? 'Du är oskyldig.' : 'Du är imposter.'}
       </p>
-      {innocent ? (
+      {card.role !== 'imposter' ? (
         <p className="text-center">
           <span className="block text-sm font-semibold text-muted-foreground">Ditt hemliga ord är:</span>
           <span className={cn('block font-heading font-bold break-words', compact ? 'text-3xl' : 'text-4xl sm:text-5xl')}>

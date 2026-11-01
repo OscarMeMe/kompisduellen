@@ -153,6 +153,9 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   // Fälten för lika röster, sista gissningen och facit saknas hos en värd med en äldre version av sajten.
   if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, accusation: null, accusers: [], failedAccusation: null, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
+  // Lurig: ordet visas i facit, så en trasig text får inte komma med.
+  const outcome = (state as GameState).imposter?.outcome
+  if (outcome && outcome.imposterWord !== undefined && !isString(outcome.imposterWord)) return null
   const hands = isObject(payload.hands) && Object.values(payload.hands).every(isNumber) ? (payload.hands as Record<string, number>) : {}
   return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands, version: isNumber(payload.version) ? payload.version : null }
 }
@@ -250,7 +253,8 @@ export function parseHand(payload: unknown): { to: string; from: string | null; 
 
 const isImposterCard = (value: unknown): value is ImposterCard =>
   shape({ role: (role) => role === 'oskyldig', word: isString, category: orNull(isString) })(value) ||
-  shape({ role: (role) => role === 'imposter', hint: orNull(isString), category: orNull(isString) })(value)
+  shape({ role: (role) => role === 'imposter', hint: orNull(isString), category: orNull(isString) })(value) ||
+  shape({ role: (role) => role === 'lurig', word: isString, category: orNull(isString) })(value)
 
 // Mitt kort i Imposterjakten (som hand i kortspelen). card null = inte med i omgången.
 export function parseImposterCard(payload: unknown): { to: string; from: string | null; seq: number | null; card: MyImposterCard } | null {
