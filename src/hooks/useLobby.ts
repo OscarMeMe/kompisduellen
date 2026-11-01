@@ -17,7 +17,7 @@ import {
   wakeAction,
 } from '@/lib/anslutning'
 import { closeChannel, waitForChannel } from '@/lib/kanaler'
-import { addPendingMove, isSeenMove, newPendingMove, rememberMove, resendMoves, type PendingMove } from '@/lib/leverans'
+import { addPendingMove, isSeenMove, moveDelivery, newPendingMove, rememberMove, resendMoves, retryMoves, type Delivery, type PendingMove } from '@/lib/leverans'
 import {
   isFromHost,
   parseGuess,
@@ -162,6 +162,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   }, [hand, imposterCard])
   // Mina drag som läget ännu inte visar, och (hos värden) vilka drag som redan räknats (se leverans.ts).
   const pendingMovesRef = useRef<PendingMove[]>([])
+  const [delivery, setDelivery] = useState<Delivery>('ok')
   const moveCountRef = useRef(0)
   const seenMovesRef = useRef<Record<string, string[]>>({})
   // Reaktioner som syns på skärmen just nu.
@@ -727,16 +728,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   useEffect(() => {
     if (!playing) pendingMovesRef.current = []
     if (!connected || !playing || !meId) return
-    pendingMovesRef.current = pendingMovesRef.current.map((pending) => ({ ...pending, tries: 0 }))
+    pendingMovesRef.current = pendingMovesRef.current.map((pending) => ({ ...pending, tries: 0, failed: false }))
     const timer = setInterval(() => {
-      if (pendingMovesRef.current.length === 0) return
       const view = { state: stateRef.current, id: meId, hand: handRef.current, card: imposterCardRef.current }
       const { keep, send } = resendMoves(pendingMovesRef.current, view, Date.now())
       pendingMovesRef.current = keep
+      setDelivery(moveDelivery(keep))
       for (const { nr, move } of send) {
         void channelRef.current?.send({ type: 'broadcast', event: 'move', payload: { id: meId, nr, move } })
       }
-    }, 1000)
+    }, 250)
     return () => clearInterval(timer)
   }, [connected, playing, meId])
 
@@ -894,6 +895,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           payload: { id: me.id, nr, move },
         })
       },
+      // Tryck igen: drag som gett upp skickas igen.
+      retryMoves: () => {
+        if (!me) return
+        const { keep, send } = retryMoves(pendingMovesRef.current, Date.now())
+        pendingMovesRef.current = keep
+        setDelivery(moveDelivery(keep))
+        for (const { nr, move } of send) {
+          void channelRef.current?.send({ type: 'broadcast', event: 'move', payload: { id: me.id, nr, move } })
+        }
+      },
       // round = rundan som visades när värden klickade. Ett dubbelklick hoppar inte över en runda.
       skipReveal: (round: number) => {
         if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
@@ -992,6 +1003,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     state,
     online,
     clockOffset,
+    // Hur det går med mina drag. Spelar bara roll under en match.
+    delivery: state.phase === 'playing' ? delivery : 'ok',
     hand: state.phase === 'playing' ? hand : null,
     imposterCard: state.phase === 'playing' ? imposterCard : null,
     floating,

@@ -4,6 +4,7 @@ import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { SendStatus } from '@/components/lobby/SendStatus'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
@@ -18,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
   const [value, setValue] = useState(50)
-  const { locked, inGame, lockIn } = useMyGuess(state, me.id, onGuess)
+  const { locked, inGame, lockIn, delivery, retry } = useMyGuess(state, me.id, onGuess)
   const valid = isValidGuess(state.game, value)
   // Tydligare när tiden håller på att ta slut, bara medan jag gissar.
   const { warning, secondsLeft } = useTimeWarning(
@@ -37,6 +38,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
   return (
     <Wide>
       <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
+      <SendStatus delivery={delivery} onRetry={retry} />
       <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
 
       {/* Svarsdelen. En splatt från ett kast täcker den aldrig. */}

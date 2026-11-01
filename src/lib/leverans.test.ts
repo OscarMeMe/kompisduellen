@@ -4,13 +4,16 @@ import type { ImposterTable, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardTable, MyHand } from '@/lib/kort'
 import {
   addPendingMove,
+  guessDelivery,
   isSeenMove,
   moveArrived,
+  moveDelivery,
   newPendingMove,
   rememberMove,
   RESEND_MAX_TRIES,
   RESEND_MS,
   resendMoves,
+  retryMoves,
   type AnyMove,
   type MoveView,
 } from '@/lib/leverans'
@@ -150,7 +153,7 @@ describe('moveArrived: kortspel', () => {
 describe('resendMoves', () => {
   const before = view(imposterState({ step: 'kort' }))
 
-  it('väntar pausen ut, skickar igen och slutar vid gränsen', () => {
+  it('väntar pausen ut, skickar igen och ger upp vid gränsen', () => {
     let list = [newPendingMove('1', { type: 'read' }, before, NOW)]
     expect(resendMoves(list, before, NOW + RESEND_MS - 1).send).toEqual([])
     let sent = 0
@@ -162,7 +165,67 @@ describe('resendMoves', () => {
       list = result.keep
     }
     expect(sent).toBe(RESEND_MAX_TRIES)
-    expect(list).toEqual([])
+    expect(list).toHaveLength(1)
+    expect(list[0].failed).toBe(true)
+  })
+
+  function gaveUp() {
+    let list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    let now = NOW
+    for (let i = 0; i <= RESEND_MAX_TRIES; i++) {
+      now += RESEND_MS
+      list = resendMoves(list, before, now).keep
+    }
+    return { list, now }
+  }
+
+  it('visar inget först, Skickar… vid omsändning och beskedet när försöken tagit slut', () => {
+    const list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    expect(moveDelivery(list)).toBe('ok')
+    const resent = resendMoves(list, before, NOW + RESEND_MS).keep
+    expect(moveDelivery(resent)).toBe('sending')
+    expect(moveDelivery(gaveUp().list)).toBe('failed')
+    expect(moveDelivery([])).toBe('ok')
+  })
+
+  it('ett drag som gett upp skickas inte mer av sig självt, men släpps om läget visar att det kom fram', () => {
+    const { list, now } = gaveUp()
+    expect(resendMoves(list, before, now + RESEND_MS * 5).send).toEqual([])
+    const arrivedView = view(imposterState({ step: 'kort', read: ['a'] }))
+    expect(resendMoves(list, arrivedView, now + RESEND_MS).keep).toEqual([])
+  })
+
+  it('Tryck igen skickar direkt med samma nummer och ger nya försök', () => {
+    const { list, now } = gaveUp()
+    const { keep, send } = retryMoves(list, now)
+    expect(send.map((p) => p.nr)).toEqual(['1'])
+    expect(moveDelivery(keep)).toBe('sending')
+    expect(resendMoves(keep, before, now + RESEND_MS).send).toHaveLength(1)
+  })
+
+  it('Tryck igen skickar inte drag som fortfarande försöker', () => {
+    const list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    expect(retryMoves(list, NOW).send).toEqual([])
+  })
+
+  it('ett nytt val ersätter ett drag som gett upp, så att beskedet försvinner', () => {
+    const state = view(cardState())
+    let list = [newPendingMove('x', { type: 'done' }, state, NOW)]
+    let now = NOW
+    for (let i = 0; i <= RESEND_MAX_TRIES; i++) {
+      now += RESEND_MS
+      list = resendMoves(list, state, now).keep
+    }
+    expect(moveDelivery(list)).toBe('failed')
+    expect(moveDelivery(addPendingMove(list, newPendingMove('y', { type: 'done' }, state, now)))).toBe('ok')
+  })
+
+  it('en gissning: inget först, Skickar… vid omsändning, beskedet efter gränsen, inget när den syns i läget', () => {
+    expect(guessDelivery({ missing: true, tries: 0 })).toBe('ok')
+    expect(guessDelivery({ missing: true, tries: 1 })).toBe('sending')
+    expect(guessDelivery({ missing: true, tries: RESEND_MAX_TRIES })).toBe('sending')
+    expect(guessDelivery({ missing: true, tries: RESEND_MAX_TRIES + 1 })).toBe('failed')
+    expect(guessDelivery({ missing: false, tries: RESEND_MAX_TRIES + 1 })).toBe('ok')
   })
 
   it('släpper ett drag som kommit fram utan att skicka det', () => {

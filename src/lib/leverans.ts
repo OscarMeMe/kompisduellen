@@ -6,9 +6,10 @@ import type { ImposterMove, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardMove, MyHand } from '@/lib/kort'
 import type { GameState } from '@/lib/match'
 
-// Pausen mellan försöken (ms) och hur många gånger ett drag eller en gissning skickas igen. Tillsammans cirka 30 sekunder.
+// Pausen mellan försöken (ms) och hur många gånger ett drag eller en gissning skickas igen. En sista paus efter det sista
+// försöket, och sedan ges det upp: tillsammans cirka 30 sekunder.
 export const RESEND_MS = 3000
-export const RESEND_MAX_TRIES = 10
+export const RESEND_MAX_TRIES = 9
 // Så många dragnummer kommer värden ihåg per spelare.
 const SEEN_MOVES_KEPT = 30
 
@@ -20,7 +21,12 @@ export type MoveView = { state: GameState; id: string; hand: MyHand | null; card
 // Hur det såg ut när draget skickades, för att se när det har hänt något.
 type Sent = { scope: string; turn: number; rejectedAt: number | null; accusation: string | null }
 
-export type PendingMove = { nr: string; move: AnyMove; sent: Sent; sentAt: number; tries: number }
+// failed = försöken har tagit slut, och spelaren får välja att skicka igen. Draget ligger kvar, för läget kan ännu visa
+// att det kommit fram.
+export type PendingMove = { nr: string; move: AnyMove; sent: Sent; sentAt: number; tries: number; failed: boolean }
+
+// Vad spelaren ser: inget (ok), en diskret rad medan det skickas igen (sending) eller ett besked med en knapp (failed).
+export type Delivery = 'ok' | 'sending' | 'failed'
 
 // Omgången, rundan och (efter lika röster) den extra omröstningen. Ändras det gäller inte draget längre.
 function moveScope(state: GameState): string {
@@ -46,6 +52,7 @@ export function newPendingMove(nr: string, move: AnyMove, view: MoveView, now: n
     },
     sentAt: now,
     tries: 0,
+    failed: false,
   }
 }
 
@@ -117,15 +124,35 @@ export function resendMoves(list: readonly PendingMove[], view: MoveView, now: n
   const send: PendingMove[] = []
   for (const pending of list) {
     if (moveArrived(pending, view)) continue
-    if (now - pending.sentAt < RESEND_MS) {
+    if (pending.failed || now - pending.sentAt < RESEND_MS) {
       keep.push(pending)
     } else if (pending.tries < RESEND_MAX_TRIES) {
       const next = { ...pending, sentAt: now, tries: pending.tries + 1 }
       keep.push(next)
       send.push(next)
+    } else {
+      keep.push({ ...pending, failed: true })
     }
   }
   return { keep, send }
+}
+
+export function moveDelivery(list: readonly PendingMove[]): Delivery {
+  if (list.some((pending) => pending.failed)) return 'failed'
+  return list.some((pending) => pending.tries > 0) ? 'sending' : 'ok'
+}
+
+// Spelaren tryckte Tryck igen: drag som gett upp skickas direkt och får nya försök. Samma nummer, så att värden inte
+// räknar ett drag två gånger om det ändå kom fram.
+export function retryMoves(list: readonly PendingMove[], now: number): { keep: PendingMove[]; send: PendingMove[] } {
+  const keep = list.map((pending) => (pending.failed ? { ...pending, failed: false, tries: 1, sentAt: now } : pending))
+  return { keep, send: keep.filter((pending, i) => pending !== list[i]) }
+}
+
+// Min gissning: skickas den igen, eller har försöken tagit slut?
+export function guessDelivery(input: { missing: boolean; tries: number }): Delivery {
+  if (!input.missing || input.tries === 0) return 'ok'
+  return input.tries > RESEND_MAX_TRIES ? 'failed' : 'sending'
 }
 
 // Värden: har det här draget redan räknats? Bara drag som ändrat något sparas, så att ett drag som kom vid fel tillfälle
