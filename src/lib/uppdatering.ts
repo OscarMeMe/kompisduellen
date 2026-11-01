@@ -35,6 +35,18 @@ export function shouldReloadFor(latest: string, alreadyReloadedFor: string | nul
   return latest !== alreadyReloadedFor
 }
 
+// Så länge efter en automatisk omladdning laddas sidan inte om igen av samma skäl (ms).
+export const LOAD_ERROR_RELOAD_PAUSE_MS = 10 * 60 * 1000
+
+// En del av sajten gick inte att ladda, troligen en gammal fil som försvunnit efter en publicering. Då hjälper en
+// omladdning, men aldrig i en lobby, aldrig utan nät och aldrig två gånger i rad, så att det inte kan bli en slinga.
+// Går det inte att läsa när sidan senast laddades om (lastReloadAt är undefined) laddas den inte om alls.
+export function shouldReloadAfterLoadError(input: { pathname: string; online: boolean; now: number; lastReloadAt: number | null | undefined }): boolean {
+  const { pathname, online, now, lastReloadAt } = input
+  if (isLobbyPath(pathname) || !online || lastReloadAt === undefined) return false
+  return lastReloadAt === null || now - lastReloadAt >= LOAD_ERROR_RELOAD_PAUSE_MS
+}
+
 let pending = false
 const listeners = new Set<() => void>()
 
