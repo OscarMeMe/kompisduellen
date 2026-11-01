@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Check, CircleStop, RefreshCw, Send } from 'lucide-react'
 import { Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
-import { AccusationStep, DiscussionStep, FacitStep, GuessStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
+import { AccusationStep, DiscussionStep, FacitStep, GuessStep, VotingStep, TableCenter } from '@/components/imposterjakten/VoteSteps'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
@@ -20,6 +20,7 @@ import {
   ACCUSE_SECONDS,
   canAccuse,
   imposterInstruction,
+  voteCandidates,
   COUNTDOWN_SECONDS,
   currentTurn,
   MAX_CLUE_LENGTH,
@@ -36,6 +37,10 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound } = props
   const [confirmAbort, setConfirmAbort] = useState(false)
   const table = state.imposter
+  // Vem jag tänker rösta på. Valet gäller bara den omröstning det gjordes i.
+  const voteRound = `${table?.step}-${table?.tied?.join() ?? ''}-${state.round}`
+  const [picked, setPicked] = useState<{ round: string; id: string } | null>(null)
+  const choice = picked?.round === voteRound ? picked.id : null
   // Nedräkningen till omröstningen varnar på samma sätt som tiden i de andra spelen.
   const accusing = table?.accusation != null
   const totalSeconds = accusing ? ACCUSE_SECONDS : COUNTDOWN_SECONDS
@@ -55,6 +60,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         label="Omgång"
         totalSeconds={totalSeconds}
         warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
+        keepBarSpace
       />
       <MyCard mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
       <Instruction
@@ -69,6 +75,26 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         })}
       />
 
+      {/* Samma bord genom alla faser, så att det står still när de byts. Bara svarsdelen under tonas om. */}
+      {table.step !== 'kort' && (
+        <div className="motion-safe:animate-fade">
+          <Bord
+            state={state}
+            table={table}
+            meId={me.id}
+            online={props.online}
+            typing={props.typing}
+            center={table.step === 'ledtradar' && !accusing ? <CluesCenter table={table} state={state} meId={me.id} /> : <TableCenter {...stepProps} />}
+            onMove={props.onMove}
+            vote={
+              table.step === 'rostning' && !accusing && inRound && !imposterCard?.vote
+                ? { choice, candidates: voteCandidates(table, me.id, props.online.map((player) => player.id)), onChoose: (id) => setPicked({ round: voteRound, id }) }
+                : null
+            }
+          />
+        </div>
+      )}
+      
       {table.failedAccusation && !accusing && (
         <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
           Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.
@@ -78,8 +104,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {!accusing && table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
       {!accusing && table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
       {!accusing && table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
-      {table.step === 'rostning' && <VotingStep {...stepProps} />}
-      {table.step === 'gissning' && <GuessStep {...stepProps} />}
+      {table.step === 'rostning' && !accusing && <VotingStep {...stepProps} choice={choice} />}
+      {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
       {table.step === 'facit' && <FacitStep {...stepProps} />}
 
       {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
@@ -157,20 +183,12 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
   )
 }
 
-// Ett ord var i turordning, tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
-// trycker Klar. De andra ser vem som funderar.
-function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onMove, onTyping, onSkipTurn }: StepProps) {
+// Mitt på bordet under ledtrådsvarven: vilket varv det är och vems tur.
+function CluesCenter({ table, state, meId }: { table: ImposterTable; state: ImposterViewProps['state']; meId: string }) {
   const turn = currentTurn(table)
-  const myTurn = turn === me.id
+  const myTurn = turn === meId
   const thinker = turn ? state.players[turn] : undefined
-  useYourTurn(myTurn)
-
-  const line = (
-    <p className="text-center text-sm font-semibold text-muted-foreground">
-      Varv {clueRound(table)} av {CLUE_ROUNDS}
-    </p>
-  )
-  const center = (
+  return (
     <>
       <span className="text-sm font-semibold text-muted-foreground sm:text-base">
         Varv {clueRound(table)} av {CLUE_ROUNDS}
@@ -183,10 +201,22 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onM
       </span>
     </>
   )
+}
+
+// Ett ord var i turordning, tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
+// trycker Klar. De andra ser vem som funderar.
+function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onTyping, onSkipTurn }: StepProps) {
+  const myTurn = currentTurn(table) === me.id
+  useYourTurn(myTurn)
+
+  const line = (
+    <p className="text-center text-sm font-semibold text-muted-foreground">
+      Varv {clueRound(table)} av {CLUE_ROUNDS}
+    </p>
+  )
 
   return (
     <>
-      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
       {myTurn ? (
         <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={line}>
           {/* Ny ruta för varje tur, så att texten börjar om. */}

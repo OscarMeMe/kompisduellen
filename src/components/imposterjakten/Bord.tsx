@@ -72,7 +72,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
         />
       )}
       {/* Bordet fyller rummet men får plats på skärmen tillsammans med svarsdelen. Många spelare får lite mer höjd på mobil. */}
-      <div className={cn('relative mx-auto w-full max-w-[min(100%,calc(100svh-20rem))] sm:max-w-[min(100%,calc(100svh-16rem))]', small ? 'aspect-[3/4] sm:aspect-square' : 'aspect-square')}>
+      <div className={cn('relative mx-auto w-full max-w-[min(100%,calc(100svh-20rem))] sm:max-w-[min(100%,calc(100svh-22rem))]', small ? 'aspect-[3/4] sm:aspect-square' : 'aspect-square')}>
         {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
         <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[24%]' : 'inset-[23%]')} />
         <div
