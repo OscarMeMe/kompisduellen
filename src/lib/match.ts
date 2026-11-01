@@ -731,7 +731,7 @@ export function hostDeadline(
   random: Random = Math.random,
 ): HostState {
   if (host.state.phase === 'playing') {
-    if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterDeadline(game, now, deadline))
+    if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterDeadline(game, now, deadline, activeIds))
     return withCards(host, (cards, rules) => cardDeadline(cards, rules, now, deadline, activeIds, random))
   }
   const state = handleDeadline(host.state, now, deadline)

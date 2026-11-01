@@ -129,8 +129,9 @@ export const GAME_PAGES: GamePageInfo[] = [
     steps: [
       'En av er skapar en lobby och delar koden på fyra bokstäver. Ni behöver vara minst tre.',
       'Alla går med från sin egen mobil eller dator och läser sitt kort i hemlighet. En av er är impostern.',
-      'Ge varsin ledtråd med ett ord. Kör två varv. Skriv i spelet eller säg ledtrådarna högt.',
-      'Diskutera vem som bluffar och rösta. Omröstningen är hemlig och alla har en röst.',
+      'Ge varsin ledtråd med ett ord. Kör tre varv. Skriv i spelet eller säg ledtrådarna högt.',
+      'Efter andra varvet kan vem som helst trycka på en spelare och anklaga den. Då röstar de andra ja eller nej direkt.',
+      'Annars diskuterar ni efter tredje varvet vem som bluffar och röstar. Omröstningen är hemlig och alla har en röst.',
       'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer impostern undan får den poäng. Värden väljer 1, 2 eller 3 omgångar, och flest poäng efter sista omgången vinner.',
     ],
     time: '5–15 minuter',

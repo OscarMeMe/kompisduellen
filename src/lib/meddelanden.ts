@@ -88,6 +88,9 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     tied: orNull(listOf(isString)),
     tieVotes: orNull(recordOf(isString)),
     pointers: recordOf(isString),
+    accusation: orNull(shape({ accuser: isString, accused: isString, answered: isNumber, voters: isNumber })),
+    accusers: listOf(isString),
+    failedAccusation: orNull(isString),
     caught: orNull(isString),
     outcome: orNull(
       shape({
@@ -147,7 +150,7 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   if (!isString(payload.state.game)) return null
   const state = { ...initialState(payload.state.game), ...payload.state }
   // Fälten för lika röster, sista gissningen och facit saknas hos en värd med en äldre version av sajten.
-  if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, caught: null, outcome: null }, state.imposter)
+  if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, accusation: null, accusers: [], failedAccusation: null, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
   return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null }
 }
@@ -204,6 +207,8 @@ export function parseMove(payload: unknown): { id: string; move: CardMove | Impo
     const typed = isString(move.word) && move.word.length <= 100
     return { id: payload.id, move: typed ? { type: 'said', word: move.word as string } : { type: 'said' } }
   }
+  if (move.type === 'accuse' && isString(move.target)) return { id: payload.id, move: { type: 'accuse', target: move.target } }
+  if (move.type === 'accuseVote' && isBoolean(move.yes)) return { id: payload.id, move: { type: 'accuseVote', yes: move.yes } }
   if (move.type === 'ready' && isBoolean(move.on)) return { id: payload.id, move: { type: 'ready', on: move.on } }
   if (move.type === 'vote' && isString(move.target)) return { id: payload.id, move: { type: 'vote', target: move.target } }
   if (move.type === 'guess' && isString(move.word) && move.word.length <= 100) {
@@ -241,9 +246,10 @@ const isImposterCard = (value: unknown): value is ImposterCard =>
 export function parseImposterCard(payload: unknown): { to: string; from: string | null; card: MyImposterCard } | null {
   if (!isObject(payload) || !isString(payload.to) || !isObject(payload.card)) return null
   const { card, rejectedAt, ready, vote } = payload.card
+  const accuseVote = isBoolean(payload.card.accuseVote) ? payload.card.accuseVote : null
   if (!(card === null || isImposterCard(card)) || !orNull(isNumber)(rejectedAt)) return null
   if (!isBoolean(ready) || !orNull(isString)(vote)) return null
-  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt, ready, vote } }
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt, ready, vote, accuseVote } }
 }
 
 export function parseHandover(payload: unknown): { to: string; from: string | null } | null {

@@ -1,5 +1,5 @@
 // Imposterjakten: alla utom en får samma hemliga ord. Impostern får inte ordet (i Normal bara en vag ledtråd) och
-// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, två varv. Sedan diskuterar gruppen, och när
+// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, tre varv. Sedan diskuterar gruppen, och när
 // mer än hälften är redo börjar en nedräkning till omröstningen. Fångas impostern får den gissa ordet. Facit visar
 // ordet, impostern, allas röster och poängen.
 //
@@ -36,12 +36,12 @@ export function findWord(id: string): ImposterWord | undefined {
 
 // Förklaringen i väntrummet ("Så spelas det") och hur poängen räknas.
 export const IMPOSTER_HOW_TO =
-  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, två varv. Sedan diskuterar ni och röstar fram vem ni tror är impostern.'
+  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, tre varv. Efter andra varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter tredje varvet och röstar fram vem ni tror är impostern.'
 
 export const IMPOSTER_SCORING: string[] = [
   'Kommer impostern undan får den 2 poäng.',
-  'Fångas impostern men gissar ordet rätt får den 1 poäng.',
-  'Fångas impostern och gissar fel får alla oskyldiga 2 poäng.',
+  'Fångas impostern får alla oskyldiga 2 poäng.',
+  'Gissar impostern sedan ordet rätt får den 1 poäng.',
   'I Normal får impostern en vag ledtråd. I Svår får den ingenting.',
 ]
 
@@ -50,7 +50,11 @@ export const RECENT_AFTER_RESET = 20
 export const ROUND_OPTIONS = [1, 2, 3] as const
 export const DEFAULT_ROUNDS = 3
 // Varje spelare ger ett ord per varv.
-export const CLUE_ROUNDS = 2
+export const CLUE_ROUNDS = 3
+// Från det att så många varv är klara går det att anklaga någon.
+export const ACCUSE_AFTER_ROUNDS = 2
+// Så länge pågår den snabba omröstningen efter en anklagelse.
+export const ACCUSE_SECONDS = 20
 export const MAX_CLUE_LENGTH = 30
 // Nedräkningen till omröstningen när mer än hälften är redo.
 export const COUNTDOWN_SECONDS = 30
@@ -70,7 +74,7 @@ export function imposterSettingsSummary(settings: ImposterSettings): [string, st
   ]
 }
 
-// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, två varv. diskussion: allas ord syns kvar och man
+// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, tre varv. diskussion: allas ord syns kvar och man
 // markerar när man är redo att rösta. rostning: hemlig omröstning. gissning: impostern är fast och gissar ordet.
 // facit: ordet, impostern, rösterna och poängen.
 export type ImposterStep = 'kort' | 'ledtradar' | 'diskussion' | 'rostning' | 'gissning' | 'facit'
@@ -123,6 +127,12 @@ export type ImposterTable = {
   // Peka ut (vem → på vem) under diskussionen. Offentligt och skilt från den hemliga omröstningen. Försvinner när
   // omröstningen öppnas.
   pointers: Record<string, string>
+  // En pågående anklagelse: vem som anklagade, vem som är anklagad och hur många som svarat. Svaren är hemliga.
+  accusation: { accuser: string; accused: string; answered: number; voters: number } | null
+  // De som anklagat utan att få majoritet. De kan inte anklaga igen samma omgång.
+  accusers: string[]
+  // Den som senast anklagades utan majoritet, tills spelet gått vidare.
+  failedAccusation: string | null
   // Impostern som fick flest röster och nu gissar ordet. null innan dess.
   caught: string | null
   outcome: ImposterOutcome | null
@@ -139,6 +149,9 @@ export type ImposterSecrets = {
   votes: Record<string, string>
   // När diskussionen började, på värdens klocka. null innan den har börjat.
   discussionAt: number | null
+  // Svaren på en anklagelse, och hur lång nedräkning till omröstningen som var kvar när anklagelsen kom.
+  accuseVotes: Record<string, boolean>
+  resumeMs: number | null
 }
 
 export type ImposterCard =
@@ -147,13 +160,22 @@ export type ImposterCard =
 
 // Det en spelare får veta: sitt kort (null = inte med i omgången), när ens senaste ord avvisades, om man är redo att
 // rösta och vem man har röstat på.
-export type MyImposterCard = { card: ImposterCard | null; rejectedAt: number | null; ready: boolean; vote: string | null }
+export type MyImposterCard = {
+  card: ImposterCard | null
+  rejectedAt: number | null
+  ready: boolean
+  vote: string | null
+  // Mitt svar på en pågående anklagelse.
+  accuseVote: boolean | null
+}
 
 export type ImposterMove =
   | { type: 'read' }
   | { type: 'clue'; word: string }
   | { type: 'pass' }
   | { type: 'said'; word?: string }
+  | { type: 'accuse'; target: string }
+  | { type: 'accuseVote'; yes: boolean }
   | { type: 'ready'; on: boolean }
   | { type: 'vote'; target: string }
   | { type: 'point'; target: string | null }
@@ -169,7 +191,7 @@ export function isImposterSecrets(secrets: unknown): secrets is ImposterSecrets 
 }
 
 export function isImposterMove(move: { type: string }): move is ImposterMove {
-  return ['read', 'clue', 'pass', 'said', 'ready', 'vote', 'point', 'guess', 'giveUp'].includes(move.type)
+  return ['read', 'clue', 'pass', 'said', 'accuse', 'accuseVote', 'ready', 'vote', 'point', 'guess', 'giveUp'].includes(move.type)
 }
 
 // Ord jämförs utan hänsyn till stora och små bokstäver och onödiga mellanslag. Å, ä och ö skiljs åt.
@@ -227,10 +249,13 @@ export function dealRound(
       tied: null,
       tieVotes: null,
       pointers: {},
+      accusation: null,
+      accusers: [],
+      failedAccusation: null,
       caught: null,
       outcome: null,
     },
-    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {}, discussionAt: null },
+    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {}, discussionAt: null, accuseVotes: {}, resumeMs: null },
     usedWordIds: picked.usedWordIds,
   }
 }
@@ -253,6 +278,7 @@ export function myImposterCard(secrets: ImposterSecrets, table: ImposterTable, p
     rejectedAt: secrets.rejected[playerId] ?? null,
     ready: secrets.ready.includes(playerId),
     vote: secrets.votes[playerId] ?? null,
+    accuseVote: secrets.accuseVotes[playerId] ?? null,
   }
 }
 
@@ -369,7 +395,7 @@ function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[], n
   const table = host.state.imposter!
   const turn = table.turn + 1
   const step: ImposterStep = turn >= totalTurns(table) ? 'diskussion' : 'ledtradar'
-  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue] }), activeIds, now)
+  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue], failedAccusation: null }), activeIds, now)
 }
 
 // Diskussionen har börjat: tiden sparas, så att omröstningen inte kan öppnas förrän ni hunnit prata (MIN_DISCUSSION_SECONDS).
@@ -400,6 +426,10 @@ export function imposterMove(
 ): ImposterHost {
   const table = host.state.imposter
   if (host.state.phase !== 'playing' || !table || !table.order.includes(playerId)) return host
+  // Under en anklagelse står allt annat still.
+  if (table.accusation) return move.type === 'accuseVote' ? answerAccusation(host, playerId, move.yes, activeIds, now) : host
+  if (move.type === 'accuse') return accuse(host, playerId, move.target, activeIds, now)
+  if (move.type === 'accuseVote') return host
 
   if (move.type === 'read') {
     if (table.step !== 'kort' || table.read.includes(playerId)) return host
@@ -443,7 +473,7 @@ export function imposterMove(
 export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter
   const turn = table ? currentTurn(table) : null
-  if (!table || !table.aloud || !turn) return host
+  if (!table || !table.aloud || !turn || table.accusation) return host
   return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds, now)
 }
 
@@ -475,6 +505,74 @@ function present(table: ImposterTable, activeIds: readonly string[]): string[] {
 // Startar en nedräkning? Bara när mer än hälften av spelarna i omgången är redo. Exakt hälften räcker inte.
 export function moreThanHalf(count: number, players: number): boolean {
   return count * 2 > players
+}
+
+// Får spelaren anklaga någon nu? Från det att andra varvet är klart och fram till att omröstningen öppnas, en gång per
+// spelare om anklagelsen inte får majoritet.
+export function canAccuse(table: ImposterTable, playerId: string): boolean {
+  if (table.accusation || table.tied || !table.order.includes(playerId) || table.accusers.includes(playerId)) return false
+  if (table.step === 'diskussion') return true
+  return table.step === 'ledtradar' && table.turn >= table.order.length * ACCUSE_AFTER_ROUNDS
+}
+
+// Anklaga!: en snabb hemlig omröstning för alla utom den anklagade. Allt annat står still så länge.
+function accuse(host: ImposterHost, accuser: string, accused: string, activeIds: readonly string[], now: number): ImposterHost {
+  const table = host.state.imposter!
+  if (!canAccuse(table, accuser) || accuser === accused || !table.order.includes(accused) || !activeIds.includes(accused)) return host
+  const voters = present(table, activeIds).filter((id) => id !== accused).length
+  return {
+    state: {
+      ...host.state,
+      deadline: now + ACCUSE_SECONDS * 1000,
+      imposter: { ...table, accusation: { accuser, accused, answered: 0, voters }, failedAccusation: null },
+    },
+    secrets: { ...host.secrets, accuseVotes: {}, resumeMs: host.state.deadline === null ? null : Math.max(0, host.state.deadline - now) },
+  }
+}
+
+function answerAccusation(host: ImposterHost, voter: string, yes: boolean, activeIds: readonly string[], now: number): ImposterHost {
+  const accusation = host.state.imposter!.accusation!
+  if (voter === accusation.accused || !activeIds.includes(voter) || host.secrets.accuseVotes[voter] !== undefined) return host
+  return checkAccusation({ ...host, secrets: { ...host.secrets, accuseVotes: { ...host.secrets.accuseVotes, [voter]: yes } } }, activeIds, now)
+}
+
+// Har alla svarat? Annars uppdateras bara hur många som svarat.
+function checkAccusation(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  const table = host.state.imposter!
+  const accusation = table.accusation!
+  const voters = present(table, activeIds).filter((id) => id !== accusation.accused)
+  const answered = voters.filter((id) => host.secrets.accuseVotes[id] !== undefined).length
+  if (voters.length > 0 && answered === voters.length) return settleAccusation(host, activeIds, now)
+  if (answered === accusation.answered && voters.length === accusation.voters) return host
+  return withTable(host, { ...table, accusation: { ...accusation, answered, voters: voters.length } })
+}
+
+// Anklagelsen avgörs. Den som inte svarat räknas som nej. Majoritet ja: den anklagade är utpekad, som om omröstningen
+// valt den. Annars fortsätter spelet där det var, och den som anklagade kan inte anklaga igen samma omgång.
+function settleAccusation(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  const table = host.state.imposter!
+  const { accuser, accused } = table.accusation!
+  const players = present(table, activeIds)
+  const voters = players.filter((id) => id !== accused)
+  const yes = voters.filter((id) => host.secrets.accuseVotes[id] === true)
+  const secrets = { ...host.secrets, accuseVotes: {}, resumeMs: null }
+  if (moreThanHalf(yes.length, voters.length)) {
+    const votes = Object.fromEntries(yes.map((id) => [id, accused]))
+    const revealed: ImposterHost = {
+      state: { ...host.state, deadline: null, imposter: { ...table, accusation: null, votes, votedCount: yes.length, pointers: {} } },
+      secrets,
+    }
+    if (accused === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: accused })
+    return finishRound(revealed, 'undan', null, null, players)
+  }
+  return {
+    state: {
+      ...host.state,
+      deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
+      imposter: { ...table, accusation: null, accusers: [...table.accusers, accuser], failedAccusation: accused },
+    },
+    secrets,
+  }
 }
 
 // Så länge pågår diskussionen minst, även om alla blir redo direkt. Annars kan ett par snabba tryck hoppa över den.
@@ -515,6 +613,7 @@ function markReady(host: ImposterHost, playerId: string, on: boolean, activeIds:
   const table = host.state.imposter!
   if (table.step !== 'diskussion' || !activeIds.includes(playerId)) return host
   const has = host.secrets.ready.includes(playerId)
+  if (table.failedAccusation) host = withTable(host, { ...table, failedAccusation: null })
   if (has === on || (!on && table.countdownStarted)) return host
   const ready = on ? [...host.secrets.ready, playerId] : host.secrets.ready.filter((id) => id !== playerId)
   return checkReady({ ...host, secrets: { ...host.secrets, ready } }, activeIds, now)
@@ -654,7 +753,7 @@ function finishRound(
   }
   return {
     ...host,
-    state: { ...markUsed(state, secrets), scores, deadline: null, imposter: { ...table, step: 'facit', outcome } },
+    state: { ...markUsed(state, secrets), scores, deadline: null, imposter: { ...table, step: 'facit', outcome, accusation: null } },
   }
 }
 
@@ -667,9 +766,12 @@ export function imposterAbortRound(host: ImposterHost, reason = 'Värden avbröt
 
 // Värdens timer: nedräkningen är slut och omröstningen öppnas. Gör bara något om klockan som löpte ut fortfarande är
 // den som gäller.
-export function imposterDeadline(host: ImposterHost, now: number, deadline: number): ImposterHost {
+export function imposterDeadline(host: ImposterHost, now: number, deadline: number, activeIds: readonly string[]): ImposterHost {
   const { state } = host
   const table = state.imposter
+  if (state.phase === 'playing' && table?.accusation && state.deadline === deadline && now >= deadline) {
+    return settleAccusation(host, activeIds, now)
+  }
   if (state.phase !== 'playing' || table?.step !== 'diskussion' || !table.countdownStarted) return host
   if (state.deadline !== deadline || now < deadline) return host
   return openVoting(host)
@@ -715,6 +817,18 @@ export function imposterPresence(host: ImposterHost, activeIds: readonly string[
   }
   if (present(table, activeIds).length < MIN_PLAYERS) {
     return finishRound(host, 'avbruten', null, 'Omgången avbröts eftersom för få spelare är kvar.')
+  }
+  if (table.accusation) {
+    if (activeIds.includes(table.accusation.accused)) return checkAccusation(host, activeIds, now)
+    // Den anklagade har lämnat: anklagelsen faller, utan att den som anklagade förlorar något.
+    return {
+      state: {
+        ...host.state,
+        deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
+        imposter: { ...table, accusation: null },
+      },
+      secrets: { ...host.secrets, accuseVotes: {}, resumeMs: null },
+    }
   }
   if (table.step === 'kort') return everyoneRead(table, activeIds) ? toClues(host) : host
   if (table.step === 'ledtradar') return skipAway(host, activeIds, now)
