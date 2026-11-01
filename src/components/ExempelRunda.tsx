@@ -127,22 +127,22 @@ export function ExempelRunda() {
         aria-hidden={finished || undefined}
         inert={finished || undefined}
         className={cn(
-          'flex flex-1 flex-col p-4 motion-safe:transition-[filter,opacity] motion-safe:duration-300',
+          'flex flex-1 flex-col p-3 sm:p-4 motion-safe:transition-[filter,opacity] motion-safe:duration-300',
           finished && 'pointer-events-none opacity-40 select-none motion-safe:blur-sm',
         )}
       >
-        <div className="mb-3 flex items-center gap-3">
-          <Emoji emoji="🏷️" className="text-4xl" />
+        <div className="mb-2 flex items-center gap-2.5">
+          <Emoji emoji="🏷️" className="text-3xl" />
           <div className="min-w-0">
-            <h2 id={titleId} className="text-xl leading-tight">
+            <h2 id={titleId} className="text-lg leading-tight">
               Prova Gissa priset
             </h2>
             <p className="text-sm font-semibold text-muted-foreground">Tre frågor. Gissa vad det kostade.</p>
           </div>
         </div>
-        {/* Bilden. På bred skärm tar den all höjd som blir över, och hela föremålet visas (ingen uppklippt del). */}
+        {/* Bilden. På bred skärm tar den höjden som blir över när rutan är lika hög som vänstersidan. Hela föremålet visas. */}
         <figure className="flex min-h-0 flex-col md:flex-1">
-          <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-28 md:flex-1">
+          <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-20 md:flex-1">
             {item.image && <img src={item.image} alt="" className="absolute inset-0 size-full object-contain" />}
             <ImageCreditButton item={item} className="bottom-2 left-2" />
             <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">
@@ -151,20 +151,20 @@ export function ExempelRunda() {
           </div>
           {/* Raden finns alltid, även tom, så att alla frågor har samma höjd. Först vad bilden visar, om den inte visar
               just saken. Krediten ligger bakom ⓘ och står här i facit. */}
-          <figcaption className="mt-1 min-h-[1lh] truncate text-[11px] leading-tight text-muted-foreground/80">
+          <figcaption className="mt-0.5 min-h-[1lh] truncate text-[11px] leading-tight text-muted-foreground/80">
             {guess !== null ? <CreditText item={item} /> : item.imageNote}
           </figcaption>
         </figure>
 
         {/* Fasta minsta höjder på frågan och svarsdelen (formulär eller facit), så att kortet inte hoppar mellan frågorna.
-            Måtten är den längsta frågan och det högsta facit: på mobil står knapparna under varandra. */}
-        <div className="mt-3 min-h-32 sm:min-h-25">
-          <h3 className="text-xl leading-snug text-balance">{questionText(item)}</h3>
-          <p className="mt-1 text-sm text-muted-foreground italic">Ledtråd: {item.exempelLedtrad ?? item.clue}</p>
+            Måtten är den längsta frågan och det högsta facit. */}
+        <div className="mt-1 min-h-29 md:min-h-24">
+          <h3 className="text-lg leading-snug text-balance">{questionText(item)}</h3>
+          <p className="mt-0.5 text-sm leading-snug text-muted-foreground italic">Ledtråd: {item.exempelLedtrad ?? item.clue}</p>
         </div>
 
         {guess === null ? (
-          <form onSubmit={reveal} className="mt-3 min-h-52 space-y-2" noValidate>
+          <form onSubmit={reveal} className="mt-2 min-h-41 space-y-2" noValidate>
             <div className="space-y-1.5">
               <Label htmlFor={fieldId} className="text-sm font-bold">
                 Din gissning i kronor
@@ -199,16 +199,16 @@ export function ExempelRunda() {
             </Button>
           </form>
         ) : (
-          <div className="mt-3 min-h-52 space-y-2">
+          <div className="mt-2 min-h-41 space-y-2">
             <div
               ref={resultRef}
               tabIndex={-1}
-              className="relative rounded-lg bg-mint-soft p-3 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
+              className="relative rounded-lg bg-mint-soft px-3 py-2 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
             >
               {/* Nära rätt pris (minst 90 poäng, inom 10 procent) ger ett litet konfettiregn. */}
               {pricePoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
               <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
-              <p className="font-heading text-3xl font-bold tabular-nums">
+              <p className="font-heading text-2xl leading-tight font-bold tabular-nums">
                 <CountingPrice target={price} />
               </p>
               <p className="text-sm font-semibold">
@@ -216,7 +216,7 @@ export function ExempelRunda() {
               </p>
               <p className="text-sm text-muted-foreground">Det ger {pricePoints(guess, price)} av 100 poäng.</p>
             </div>
-            <Button size="lg" variant="outline" className="w-full tabular-nums" onClick={advance}>
+            <Button variant="outline" className="w-full tabular-nums" onClick={advance}>
               {isLast ? 'Visa resultatet' : 'Nästa fråga'} om {facitLeft} s
             </Button>
           </div>
