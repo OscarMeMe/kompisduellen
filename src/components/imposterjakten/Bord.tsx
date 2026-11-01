@@ -5,7 +5,7 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { clueLabels, clueLine, curvedArrow, listOnLowPhones, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { clueLabels, clueLine, curvedArrow, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -42,6 +42,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   const seats = seatLayout(table.order, meId)
   const small = smallSeats(seats.length)
   const listWhenLow = listOnLowPhones(seats.length)
+  const crowded = noWordsAtSeatsOnMobile(seats.length)
   const byId = Object.fromEntries(seats.map((seat) => [seat.id, seat]))
   const present = new Set(online.map((player) => player.id))
   const turn = table.step === 'ledtradar' && !table.accusation ? currentTurn(table) : null
@@ -63,7 +64,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
   return (
     <div className="space-y-2">
-      <div className={cn('relative -mx-2 overflow-hidden rounded-lg bg-room px-2 pt-10 shadow-soft tiny:pt-8 sm:mx-0 sm:px-3 sm:pt-8 sm:short:pt-7', small ? 'pb-14 tiny:pb-12 sm:pb-15' : 'pb-24 tiny:pb-20 sm:pb-28 sm:short:pb-24', listWhenLow && 'low:pb-16')}>
+      <div className={cn('relative -mx-2 overflow-hidden rounded-lg bg-room px-2 pt-10 shadow-soft tiny:pt-8 sm:mx-0 sm:px-3 sm:pt-8 sm:short:pt-7', small ? 'pb-14 tiny:pb-12 sm:pb-15' : 'pb-24 tiny:pb-20 sm:pb-28 sm:short:pb-24', listWhenLow && 'low:pb-16', crowded && 'max-sm:pb-8')}>
       {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
       {revealImposter && (
         <div
@@ -78,7 +79,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
         className={cn(
           'relative mx-auto h-[clamp(20rem,calc(100svh-30rem),calc(100vw-1.5rem))] w-full tiny:h-[clamp(17rem,calc(100svh-28.5rem),calc(100vw-1.5rem))]',
           // Med 5 och 6 spelare står orden över varandra vid sidorna, så där behövs mest höjd.
-          small ? 'sm:h-[clamp(21rem,calc(100svh-37rem),34rem)]' : seats.length <= 4 ? 'sm:h-80' : 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]',
+          crowded ? 'sm:h-[clamp(24rem,calc(100svh-37rem),34rem)]' : small ? 'sm:h-[clamp(21rem,calc(100svh-37rem),34rem)]' : seats.length <= 4 ? 'sm:h-80' : 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]',
         )}
       >
         {/* Bordet: en mjuk filtyta med träkant. Det som händer står direkt på filten. */}
@@ -156,7 +157,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
         {/* Orden under namnet på varje plats. */}
         {seats.map((seat) => (
-          <SeatWords key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} twoWhenLow={listWhenLow} />
+          <SeatWords key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} twoWhenLow={listWhenLow} hiddenOnMobile={crowded} />
         ))}
 
         {/* Platserna, som egna knappar så att de går att trycka på. */}
@@ -212,7 +213,7 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
 // Spelarens ord som etiketter under namnet, ett per rad och aldrig brutna. Det senaste är tydligast. Vid sidorna börjar de
 // vid figuren och går inåt, så att de inte hamnar utanför rummet. Längst upp finns ingen plats under namnet, för där står
 // bordet, så där står de bredvid figuren. Med många spelare ryms bara det senaste ordet (allas ord står i AllClues).
-function SeatWords({ seat, clues, small, twoWhenLow }: { seat: Seat; clues: Clue[]; small: boolean; twoWhenLow: boolean }) {
+function SeatWords({ seat, clues, small, twoWhenLow, hiddenOnMobile }: { seat: Seat; clues: Clue[]; small: boolean; twoWhenLow: boolean; hiddenOnMobile: boolean }) {
   const labels = clueLabels(clues)
   const shown = small ? labels.slice(-1) : labels
   if (shown.length === 0) return null
@@ -233,6 +234,7 @@ function SeatWords({ seat, clues, small, twoWhenLow }: { seat: Seat; clues: Clue
       data-ord
       className={cn(
         'pointer-events-none absolute z-10 flex w-max flex-col gap-0.5',
+        hiddenOnMobile && 'max-sm:hidden',
         // --f = halva figuren och --n = namnet, så att etiketterna börjar där de slutar. --s och --u = hur långt utanför platsen de
         // börjar vid sidorna, på övre och nedre halvan.
         small

@@ -45,6 +45,11 @@ export function listOnLowPhones(count: number): boolean {
   return count === 5 || count === 6
 }
 
+// 9 och 10 spelare sitter för tätt på mobil för ord vid platserna. Där står orden bara i listan under bordet.
+export function noWordsAtSeatsOnMobile(count: number): boolean {
+  return count >= 9
+}
+
 // En böjd pil mellan två platser, som ett SVG-spår. Den bågnar bort från bordets mitt, så att pilarna går runt bordet och
 // inte korsar varandra i onödan. Den börjar och slutar inset (procent) från platsens mitt, alltså vid figurens kant.
 export function curvedArrow(from: Seat, to: Seat, inset: number): string {
