@@ -57,7 +57,7 @@ export function HomePage() {
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
       <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
-        <div className="space-y-6 text-center md:text-left">
+        <div className="space-y-5 text-center md:space-y-6 md:text-left">
           <div className="space-y-2">
             <p className="text-sm font-bold text-muted-foreground">Gratis sällskapsspel online</p>
             {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
@@ -69,7 +69,7 @@ export function HomePage() {
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
-          <div className="space-y-3">
+          <div className="space-y-4 md:space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
               {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                   även när allt redan syns på skärmen. */}
@@ -82,8 +82,7 @@ export function HomePage() {
               <Check className="size-4 text-primary" aria-hidden />
               Gratis. Ingen app. Inget konto.
             </p>
-          </div>
-          <div className="border-t pt-5">
+            {/* Den andra vägen in, för den som blivit inbjuden. */}
             <GaMedKod className="mx-auto max-w-sm md:mx-0" />
           </div>
         </div>
