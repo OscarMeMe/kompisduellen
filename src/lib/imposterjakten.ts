@@ -508,6 +508,7 @@ export function moreThanHalf(count: number, players: number): boolean {
 }
 
 // Den stora raden ovanför bordet: vad JAG ska göra just nu. act = det är något jag ska göra, inte bara vänta på.
+// lap = vilket varv det är under ledtrådsvarven.
 export function imposterInstruction(
   table: ImposterTable,
   me: {
@@ -519,7 +520,7 @@ export function imposterInstruction(
     typing: string | null
     secondsLeft: number
   },
-): { text: string; act: boolean } {
+): { text: string; act: boolean; lap?: string } {
   const inRound = table.order.includes(me.id)
   if (!inRound && table.step !== 'facit') return { text: 'Du är med från nästa omgång', act: false }
   if (table.accusation) {
@@ -536,11 +537,11 @@ export function imposterInstruction(
     case 'ledtradar': {
       const lap = `Varv ${clueRound(table)} av ${CLUE_ROUNDS}`
       const turn = currentTurn(table)
-      if (turn === me.id) return { text: `${lap} · Din tur! ${table.aloud ? 'Säg ditt ord högt' : 'Skriv ett ord'}`, act: true }
+      if (turn === me.id) return { lap, text: `Din tur! ${table.aloud ? 'Säg ditt ord högt' : 'Skriv ett ord'}`, act: true }
       const name = turn ? me.name(turn) : 'Någon'
-      if (table.aloud) return { text: `${lap} · ${name} säger sitt ord`, act: false }
-      if (me.typing === turn) return { text: `${lap} · ${name} skriver…`, act: false }
-      return { text: `${lap} · ${name}${name.endsWith('s') ? '' : /\d$/.test(name) ? ':s' : 's'} tur`, act: false }
+      if (table.aloud) return { lap, text: `${name} säger sitt ord`, act: false }
+      if (me.typing === turn) return { lap, text: `${name} skriver…`, act: false }
+      return { lap, text: `${name}${name.endsWith('s') ? '' : /\d$/.test(name) ? ':s' : 's'} tur`, act: false }
     }
     case 'diskussion':
       if (table.countdownStarted) return { text: `Omröstningen börjar om ${me.secondsLeft} s`, act: false }

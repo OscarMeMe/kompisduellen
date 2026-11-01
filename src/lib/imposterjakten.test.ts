@@ -576,14 +576,14 @@ describe('Imposterjakten: raden om vad jag ska göra', () => {
 
   it('säger vems tur det är, olika när ni skriver och säger högt', () => {
     const turn = currentTurn(t)!
-    expect(imposterInstruction(t, { ...me, id: turn })).toEqual({ text: 'Varv 1 av 3 · Din tur! Skriv ett ord', act: true })
-    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: turn }).text).toBe('Varv 1 av 3 · Din tur! Säg ditt ord högt')
+    expect(imposterInstruction(t, { ...me, id: turn })).toEqual({ lap: 'Varv 1 av 3', text: 'Din tur! Skriv ett ord', act: true })
+    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: turn }).text).toBe('Din tur! Säg ditt ord högt')
     const other = ABCD.find((id) => id !== turn)!
-    expect(imposterInstruction(t, { ...me, id: other })).toEqual({ text: `Varv 1 av 3 · ${turn.toUpperCase()}s tur`, act: false })
-    expect(imposterInstruction(t, { ...me, id: other, name: () => 'Lars' }).text).toBe('Varv 1 av 3 · Lars tur')
-    expect(imposterInstruction(t, { ...me, id: other, name: () => 'Pöki 2' }).text).toBe('Varv 1 av 3 · Pöki 2:s tur')
-    expect(imposterInstruction(t, { ...me, id: other, typing: turn }).text).toBe(`Varv 1 av 3 · ${turn.toUpperCase()} skriver…`)
-    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: other }).text).toBe(`Varv 1 av 3 · ${turn.toUpperCase()} säger sitt ord`)
+    expect(imposterInstruction(t, { ...me, id: other })).toEqual({ lap: 'Varv 1 av 3', text: `${turn.toUpperCase()}s tur`, act: false })
+    expect(imposterInstruction(t, { ...me, id: other, name: () => 'Lars' }).text).toBe('Lars tur')
+    expect(imposterInstruction(t, { ...me, id: other, name: () => 'Pöki 2' }).text).toBe('Pöki 2:s tur')
+    expect(imposterInstruction(t, { ...me, id: other, typing: turn }).text).toBe(`${turn.toUpperCase()} skriver…`)
+    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: other }).text).toBe(`${turn.toUpperCase()} säger sitt ord`)
   })
 
   it('leder genom diskussionen och omröstningen', () => {

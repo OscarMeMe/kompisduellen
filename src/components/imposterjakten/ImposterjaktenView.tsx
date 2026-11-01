@@ -58,7 +58,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       <RoundTimer
         state={state}
         clockOffset={clockOffset}
-        label="Omgång"
+        hideLabel
         totalSeconds={totalSeconds}
         warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
         keepBarSpace
@@ -66,6 +66,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {/* Nytt kort är dolt igen, även om det förra visades (en avbruten omgång har samma nummer, men ett ord till är använt). */}
       <MyCard key={`${state.round}-${state.usedWordIds.length}`} mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
       <Instruction
+        round={state.round}
+        rounds={state.rounds}
         {...imposterInstruction(table, {
           id: me.id,
           name: (id) => state.players[id]?.name ?? 'Någon',
@@ -139,17 +141,27 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   )
 }
 
-// Den stora raden ovanför bordet om vad jag ska göra just nu. Fast höjd, så att bordet inte hoppar när texten byts.
-function Instruction({ text, act }: { text: string; act: boolean }) {
+// Den stora raden ovanför bordet: omgång, varv och vad jag ska göra just nu. På mobil två rader, med omgång och varv
+// först. Fast höjd, så att bordet inte hoppar när texten byts.
+function Instruction({ round, rounds, lap, text, act }: { round: number; rounds: number; lap?: string; text: string; act: boolean }) {
   return (
     <p
       role="status"
       className={cn(
-        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-10 sm:text-2xl',
+        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-10 sm:text-xl',
         act && 'text-primary-button',
       )}
     >
-      {text}
+      <span>
+        <span className="block text-sm sm:inline sm:text-xl">
+          Omgång {round} av {rounds}
+          {lap && ` · ${lap}`}
+        </span>
+        <span className="hidden sm:inline" aria-hidden>
+          {' · '}
+        </span>
+        <span className="block sm:inline">{text}</span>
+      </span>
     </p>
   )
 }
@@ -194,7 +206,7 @@ function CluesCenter({ table, state, meId }: { table: ImposterTable; state: Impo
   return (
     <span key={table.turn} className="flex max-w-full flex-col items-center motion-safe:animate-pop">
       <span className={cn('max-w-full font-heading leading-tight font-bold break-words', latest.text.length > 11 ? 'text-base sm:text-xl' : 'text-xl sm:text-3xl')}>{latest.text}</span>
-      <span className="max-w-full truncate text-xs font-semibold sm:text-sm">{latest.player === meId ? 'du' : (state.players[latest.player]?.name ?? 'Någon')}</span>
+      <span className="max-w-full truncate text-xs font-semibold sm:text-sm">{latest.player === meId ? 'Ditt ord' : (state.players[latest.player]?.name ?? 'Någon')}</span>
     </span>
   )
 }

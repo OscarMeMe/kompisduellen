@@ -31,7 +31,7 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
   }
 
   const toggle = (
-    <Button variant="outline" size={compact ? 'default' : 'lg'} className={cn(!compact && 'w-full')} onClick={() => setShown(!shown)}>
+    <Button variant="outline" size={compact ? 'default' : 'lg'} className={cn('text-foreground hover:text-foreground', !compact && 'w-full')} onClick={() => setShown(!shown)}>
       {shown ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
       {shown ? 'Dölj kortet' : 'Visa mitt kort'}
     </Button>
