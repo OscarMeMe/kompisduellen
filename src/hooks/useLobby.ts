@@ -749,7 +749,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (isHost) commit(hostImposterStartAnyway(current()))
       },
       imposterSkipTurn: () => {
-        if (isHost) commit(hostImposterSkipTurn(current(), activeIds()))
+        if (isHost) commit(hostImposterSkipTurn(current(), activeIds(), Date.now()))
       },
       imposterNewWord: () => {
         if (isHost) commit(hostImposterNewWord(current(), activeIds()))

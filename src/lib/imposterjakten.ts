@@ -137,6 +137,8 @@ export type ImposterSecrets = {
   rejected: Record<string, number>
   ready: string[]
   votes: Record<string, string>
+  // När diskussionen började, på värdens klocka. null innan den har börjat.
+  discussionAt: number | null
 }
 
 export type ImposterCard =
@@ -228,7 +230,7 @@ export function dealRound(
       caught: null,
       outcome: null,
     },
-    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {} },
+    secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {}, discussionAt: null },
     usedWordIds: picked.usedWordIds,
   }
 }
@@ -363,15 +365,21 @@ function toClues(host: ImposterHost): ImposterHost {
 }
 
 // En tur är gjord. Efter sista turen i andra varvet börjar diskussionen. Turer för spelare som lämnat hoppas över.
-function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[]): ImposterHost {
+function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter!
   const turn = table.turn + 1
   const step: ImposterStep = turn >= totalTurns(table) ? 'diskussion' : 'ledtradar'
-  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue] }), activeIds)
+  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue] }), activeIds, now)
+}
+
+// Diskussionen har börjat: tiden sparas, så att omröstningen inte kan öppnas förrän ni hunnit prata (MIN_DISCUSSION_SECONDS).
+function markDiscussion(host: ImposterHost, now: number): ImposterHost {
+  if (host.state.imposter?.step !== 'diskussion' || host.secrets.discussionAt) return host
+  return { ...host, secrets: { ...host.secrets, discussionAt: now } }
 }
 
 // Hoppar över turer för spelare som lämnat omgången.
-function skipAway(host: ImposterHost, activeIds: readonly string[]): ImposterHost {
+function skipAway(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   let table = host.state.imposter!
   let changed = false
   for (let turn = currentTurn(table); turn !== null && !activeIds.includes(turn); turn = currentTurn(table)) {
@@ -379,7 +387,7 @@ function skipAway(host: ImposterHost, activeIds: readonly string[]): ImposterHos
     table = { ...table, turn: next, step: next >= totalTurns(table) ? 'diskussion' : 'ledtradar' }
     changed = true
   }
-  return changed ? withTable(host, table) : host
+  return markDiscussion(changed ? withTable(host, table) : host, now)
 }
 
 // Ett drag från en spelare. Fel drag vid fel tillfälle ignoreras.
@@ -418,25 +426,25 @@ export function imposterMove(
     // Ordet är redan sagt, så turen går vidare även om det inskrivna ordet inte går att visa (t.ex. det hemliga ordet).
     const secret = findWord(host.secrets.wordId)
     const typed = move.word?.trim() && secret ? checkClue(move.word, secret, table.clues) : null
-    return addClue(host, { player: playerId, kind: 'sagt', word: typed?.ok ? typed.word : null }, activeIds)
+    return addClue(host, { player: playerId, kind: 'sagt', word: typed?.ok ? typed.word : null }, activeIds, now)
   }
   if (table.aloud) return host
-  if (move.type === 'pass') return addClue(host, { player: playerId, kind: 'pass', word: null }, activeIds)
+  if (move.type === 'pass') return addClue(host, { player: playerId, kind: 'pass', word: null }, activeIds, now)
 
   const word = findWord(host.secrets.wordId)
   const checked = word ? checkClue(move.word, word, table.clues) : { ok: false as const }
   if (!checked.ok) {
     return { ...host, secrets: { ...host.secrets, rejected: { ...host.secrets.rejected, [playerId]: now } } }
   }
-  return addClue(host, { player: playerId, kind: 'ord', word: checked.word }, activeIds)
+  return addClue(host, { player: playerId, kind: 'ord', word: checked.word }, activeIds, now)
 }
 
 // Värden, när ni säger orden högt: den som har tur har glömt att trycka Klar, så turen går vidare.
-export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[]): ImposterHost {
+export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter
   const turn = table ? currentTurn(table) : null
   if (!table || !table.aloud || !turn) return host
-  return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds)
+  return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds, now)
 }
 
 // Värden: alla har inte tryckt Jag har läst, men omgången går vidare ändå.
@@ -469,14 +477,26 @@ export function moreThanHalf(count: number, players: number): boolean {
   return count * 2 > players
 }
 
-// Diskussionen: räkna redo-markeringarna. Är alla redo öppnas omröstningen direkt. Är mer än hälften redo startar
-// nedräkningen, en gång per omgång.
+// Så länge pågår diskussionen minst, även om alla blir redo direkt. Annars kan ett par snabba tryck hoppa över den.
+export const MIN_DISCUSSION_SECONDS = 15
+
+// Diskussionen: räkna redo-markeringarna. Är alla redo öppnas omröstningen, men tidigast när diskussionen pågått
+// MIN_DISCUSSION_SECONDS (då går en kort nedräkning fram till dess). Är mer än hälften redo startar nedräkningen, en
+// gång per omgång.
 function checkReady(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter!
   const players = present(table, activeIds)
   const ready = host.secrets.ready.filter((id) => players.includes(id))
   const counted = withTable(host, { ...table, readyCount: ready.length })
-  if (players.length > 0 && ready.length === players.length) return openVoting(counted)
+  if (players.length > 0 && ready.length === players.length) {
+    const earliest = (host.secrets.discussionAt ?? 0) + MIN_DISCUSSION_SECONDS * 1000
+    // Efter lika röster har ni redan diskuterat, så då gäller ingen minsta tid.
+    if (table.tied || !host.secrets.discussionAt || now >= earliest) return openVoting(counted)
+    return {
+      ...counted,
+      state: { ...counted.state, deadline: earliest, imposter: { ...counted.state.imposter!, countdownStarted: true } },
+    }
+  }
   if (!table.countdownStarted && moreThanHalf(ready.length, players.length)) {
     return {
       ...counted,
@@ -697,7 +717,7 @@ export function imposterPresence(host: ImposterHost, activeIds: readonly string[
     return finishRound(host, 'avbruten', null, 'Omgången avbröts eftersom för få spelare är kvar.')
   }
   if (table.step === 'kort') return everyoneRead(table, activeIds) ? toClues(host) : host
-  if (table.step === 'ledtradar') return skipAway(host, activeIds)
+  if (table.step === 'ledtradar') return skipAway(host, activeIds, now)
   if (table.step === 'diskussion') {
     const kept = keepPointers(keepTied(table, activeIds), activeIds)
     const next = checkReady(kept === table ? host : withTable(host, kept), activeIds, now)

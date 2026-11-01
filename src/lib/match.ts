@@ -770,8 +770,8 @@ export function hostImposterStartAnyway(host: HostState): HostState {
 }
 
 // Nästa: den som har tur har glömt att trycka Klar (när ni säger orden högt).
-export function hostImposterSkipTurn(host: HostState, activeIds: string[]): HostState {
-  return withImposter(host, (game) => imposterSkipTurn(game, activeIds))
+export function hostImposterSkipTurn(host: HostState, activeIds: string[], now: number): HostState {
+  return withImposter(host, (game) => imposterSkipTurn(game, activeIds, now))
 }
 
 export function hostImposterNewWord(host: HostState, activeIds: string[], random: Random = Math.random): HostState {

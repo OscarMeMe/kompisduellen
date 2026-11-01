@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Check, Flag, Send, Vote, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Bord } from '@/components/imposterjakten/Bord'
@@ -56,6 +56,12 @@ function Center({ title, line, tone }: { title: string; line?: string; tone?: st
 export function DiscussionStep({ state, table, me, online, inRound, imposterCard, secondsLeft, typing, onMove }: StepProps) {
   const ready = imposterCard?.ready ?? false
   const players = presentIds(table, online).length
+  // En kort stund efter att diskussionen börjat går det inte att trycka, så att ett extra tryck på Klar inte räknas.
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 1000)
+    return () => clearTimeout(timer)
+  }, [])
   const center = table.countdownStarted ? (
     <Center title={`${secondsLeft} s`} line={`${table.readyCount} av ${players} är redo`} tone="text-primary text-xl sm:text-2xl" />
   ) : (
@@ -82,7 +88,7 @@ export function DiscussionStep({ state, table, me, online, inRound, imposterCard
         )}
         {inRound &&
           (!ready ? (
-            <Button size="lg" className="w-full" onClick={() => onMove({ type: 'ready', on: true })}>
+            <Button size="lg" className="w-full" disabled={!settled} onClick={() => onMove({ type: 'ready', on: true })}>
               <Check aria-hidden />
               Redo att rösta
             </Button>

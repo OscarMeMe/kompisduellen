@@ -10,6 +10,8 @@ import {
   dealRound,
   DEFAULT_SETTINGS,
   findWord,
+  COUNTDOWN_SECONDS,
+  MIN_DISCUSSION_SECONDS,
   INNOCENTS_WIN,
   IMPOSTER_ESCAPES,
   IMPOSTER_GUESSES_RIGHT,
@@ -46,6 +48,7 @@ import {
 } from '@/lib/match'
 
 const ABC = ['a', 'b', 'c']
+const ABCD = ['a', 'b', 'c', 'd']
 const NOW = 1_000_000
 const paraply = findWord('paraply')!
 
@@ -73,9 +76,9 @@ function readAll(host: HostState, ids = ABC): HostState {
   return ids.reduce((next, id) => hostMove(next, id, { type: 'read' }, ids, NOW), host)
 }
 
-// Alla blir redo att rösta.
+// Alla blir redo att rösta, när diskussionen har pågått länge nog.
 function readyAll(host: HostState, ids = ABC): HostState {
-  return ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW), host)
+  return ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW + MIN_DISCUSSION_SECONDS * 1000), host)
 }
 
 // Alla röstar på target, och target röstar på någon annan. target får då ensamt flest röster.
@@ -355,11 +358,49 @@ describe('Imposterjakten: en omgång', () => {
   it('låter värden gå vidare när den som har tur glömt Klar, bara när ni säger orden högt', () => {
     const aloud = readAll(start(ABC, { aloud: true }))
     const turn = currentTurn(table(aloud))!
-    const skipped = hostImposterSkipTurn(aloud, ABC)
+    const skipped = hostImposterSkipTurn(aloud, ABC, NOW)
     expect(table(skipped).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
     expect(currentTurn(table(skipped))).not.toBe(turn)
     const written = readAll(start())
-    expect(hostImposterSkipTurn(written, ABC)).toBe(written)
+    expect(hostImposterSkipTurn(written, ABC, NOW)).toBe(written)
+  })
+
+  it('går alltid till diskussionen efter varven, med fyra spelare och i båda lägena', () => {
+    for (const aloud of [true, false]) {
+      let discussion = readAll(start(ABCD, { aloud }), ABCD)
+      for (let i = 0; i < 40 && table(discussion).step === 'ledtradar'; i++) {
+        const turn = currentTurn(table(discussion))!
+        discussion = hostMove(discussion, turn, aloud ? { type: 'said' } : { type: 'pass' }, ABCD, NOW)
+      }
+      expect(table(discussion).step, String(aloud)).toBe('diskussion')
+      expect(table(discussion).readyCount).toBe(0)
+      expect(table(discussion).countdownStarted).toBe(false)
+      expect(discussion.state.deadline).toBeNull()
+      // Närvaron kan uppdateras hur ofta som helst utan att omröstningen öppnas.
+      const same = hostPresence(discussion, ABCD, NOW + 60_000)
+      expect(table(same).step).toBe('diskussion')
+    }
+  })
+
+  it('visar "2 av 4 är redo", och startar nedräkningen först när mer än hälften är redo', () => {
+    const discussion = playClues(readAll(start(ABCD), ABCD), ABCD)
+    const two = ['a', 'b'].reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW + 1000), discussion)
+    expect(table(two).readyCount).toBe(2)
+    expect(table(two).countdownStarted).toBe(false)
+    const three = hostMove(two, 'c', { type: 'ready', on: true }, ABCD, NOW + 2000)
+    expect(table(three).countdownStarted).toBe(true)
+    expect(three.state.deadline).toBe(NOW + 2000 + COUNTDOWN_SECONDS * 1000)
+    expect(table(three).step).toBe('diskussion')
+  })
+
+  it('hoppar inte över diskussionen även om alla blir redo direkt', () => {
+    const discussion = playClues(readAll(start(ABCD), ABCD), ABCD)
+    const quick = ABCD.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW + 500), discussion)
+    expect(table(quick).step).toBe('diskussion')
+    expect(table(quick).countdownStarted).toBe(true)
+    expect(quick.state.deadline).toBe(NOW + MIN_DISCUSSION_SECONDS * 1000)
+    const opened = hostDeadline(quick, NOW + MIN_DISCUSSION_SECONDS * 1000, quick.state.deadline!, ABCD)
+    expect(table(opened).step).toBe('rostning')
   })
 
   it('låter värden byta ord bara innan första associationen', () => {
@@ -648,7 +689,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     expect(table(host).step).toBe('diskussion')
     expect(table(host).clues.map((clue) => clue.player)).not.toContain(leaving)
     // Den som lämnade får inga poäng när impostern ger upp.
-    host = ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW), host)
+    host = readyAll(host, ids)
     host = voteOut(host, 'a', ids)
     host = hostMove(host, 'a', { type: 'giveUp' }, ids, NOW)
     expect(table(host).outcome?.points[leaving]).toBeUndefined()
