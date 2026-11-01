@@ -32,6 +32,7 @@ import {
   defaultRoundsFor,
   hostImposterAbortRound,
   hostImposterNewWord,
+  hostImposterSkipTurn,
   hostImposterNextRound,
   hostImposterStartAnyway,
   hostDeadline,
@@ -338,6 +339,27 @@ describe('Imposterjakten: en omgång', () => {
     const said = hostMove(host, turn, { type: 'said' }, ABC, NOW)
     expect(table(said).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
     expect(hostMove(readAll(start()), currentTurn(table(readAll(start())))!, { type: 'said' }, ABC, NOW).state.imposter!.clues).toHaveLength(0)
+  })
+
+  it('visar ett inskrivet ord i bubblan när man säger orden högt, men aldrig det hemliga ordet', () => {
+    const host = readAll(start(ABC, { aloud: true }))
+    const turn = currentTurn(table(host))!
+    const typed = hostMove(host, turn, { type: 'said', word: ' paraply ' }, ABC, NOW)
+    expect(table(typed).clues[0]).toMatchObject({ player: turn, kind: 'sagt' })
+    const secret = findWord(secretsOf(host).wordId)!.ord
+    const blocked = hostMove(host, turn, { type: 'said', word: secret }, ABC, NOW)
+    expect(table(blocked).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
+    expect(currentTurn(table(blocked))).not.toBe(turn)
+  })
+
+  it('låter värden gå vidare när den som har tur glömt Klar, bara när ni säger orden högt', () => {
+    const aloud = readAll(start(ABC, { aloud: true }))
+    const turn = currentTurn(table(aloud))!
+    const skipped = hostImposterSkipTurn(aloud, ABC)
+    expect(table(skipped).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
+    expect(currentTurn(table(skipped))).not.toBe(turn)
+    const written = readAll(start())
+    expect(hostImposterSkipTurn(written, ABC)).toBe(written)
   })
 
   it('låter värden byta ord bara innan första associationen', () => {

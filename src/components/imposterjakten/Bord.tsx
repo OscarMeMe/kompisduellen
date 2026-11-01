@@ -151,10 +151,10 @@ function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boo
           className={cn(
             'max-w-20 truncate rounded-full border px-2 py-0.5 font-heading leading-tight font-bold shadow-soft-sm motion-safe:animate-pop',
             small ? 'max-w-14 px-1.5 text-[9px] sm:max-w-20 sm:text-[11px]' : 'text-xs',
-            clue.kind === 'ord' ? 'bg-sun-soft' : clue.kind === 'pass' ? 'bg-muted text-muted-foreground' : 'bg-mint-soft',
+            clue.word ? 'bg-sun-soft' : clue.kind === 'pass' ? 'bg-muted text-muted-foreground' : 'bg-mint-soft',
           )}
         >
-          {clue.kind === 'ord' ? clue.word : clue.kind === 'pass' ? 'pass' : '✓ sa sitt'}
+          {clue.word ?? (clue.kind === 'pass' ? 'pass' : '✓ sa sitt')}
         </span>
       ))}
     </div>
@@ -216,7 +216,7 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
         {mine ? 'Du' : name}
       </span>
       {turn && (
-        <span className="text-[11px] font-semibold text-primary">{typing ? 'skriver…' : mine ? 'din tur' : 'funderar…'}</span>
+        <span className="text-[11px] font-semibold text-primary">{typing ? 'skriver…' : mine ? 'din tur' : table.aloud ? 'säger sitt ord' : 'funderar…'}</span>
       )}
       {away && <span className="text-[11px] text-muted-foreground">borta</span>}
       {stamp !== null && (
@@ -389,7 +389,7 @@ function TableForScreenReaders({
     <ol className="sr-only" aria-label="Spelarna runt bordet i turordning">
       {table.order.map((id) => {
         const clues = table.clues.filter((clue) => clue.player === id)
-        const words = clues.map((clue) => (clue.kind === 'ord' ? clue.word : clue.kind === 'pass' ? 'pass' : 'sa sitt ord'))
+        const words = clues.map((clue) => clue.word ?? (clue.kind === 'pass' ? 'pass' : 'sa sitt ord'))
         const parts = [
           state.players[id]?.name ?? 'Någon',
           id === meId ? '(du)' : '',

@@ -199,7 +199,11 @@ export function parseThrow(
 export function parseMove(payload: unknown): { id: string; move: CardMove | ImposterMove } | null {
   if (!isObject(payload) || !isString(payload.id) || !isObject(payload.move)) return null
   const move = payload.move
-  if (move.type === 'read' || move.type === 'pass' || move.type === 'said') return { id: payload.id, move: { type: move.type } }
+  if (move.type === 'read' || move.type === 'pass') return { id: payload.id, move: { type: move.type } }
+  if (move.type === 'said') {
+    const typed = isString(move.word) && move.word.length <= 100
+    return { id: payload.id, move: typed ? { type: 'said', word: move.word as string } : { type: 'said' } }
+  }
   if (move.type === 'ready' && isBoolean(move.on)) return { id: payload.id, move: { type: 'ready', on: move.on } }
   if (move.type === 'vote' && isString(move.target)) return { id: payload.id, move: { type: 'vote', target: move.target } }
   if (move.type === 'guess' && isString(move.word) && move.word.length <= 100) {

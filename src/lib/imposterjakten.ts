@@ -56,7 +56,7 @@ export const MAX_CLUE_LENGTH = 30
 export const COUNTDOWN_SECONDS = 30
 
 // Värdens val i väntrummet. hard = Svår (impostern får ingen ledtråd). category = null för Blandat.
-// aloud = associationerna sägs högt i stället för att skrivas i appen.
+// aloud = ni sitter tillsammans och säger orden högt, i stället för att skriva dem i appen.
 export type ImposterSettings = { hard: boolean; category: string | null; aloud: boolean }
 
 export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null, aloud: false }
@@ -66,7 +66,7 @@ export function imposterSettingsSummary(settings: ImposterSettings): [string, st
   return [
     ['Svårighet', settings.hard ? 'Svår' : 'Normal'],
     ['Kategori', settings.category ?? 'Blandat'],
-    ['Associationer', settings.aloud ? 'Säg högt' : 'Skriv i appen'],
+    ['Sitter ni tillsammans?', settings.aloud ? 'Ja, vi säger orden högt' : 'Nej, vi skriver orden'],
   ]
 }
 
@@ -91,7 +91,7 @@ export type ImposterOutcome = {
   reason: string | null
 }
 
-// En tur i ledtrådsvarven: ett skrivet ord, pass eller "sa sitt ord högt".
+// En tur i ledtrådsvarven: ett skrivet ord, pass eller "sa sitt ord högt" (då kan ordet också vara inskrivet).
 export type Clue = { player: string; kind: 'ord' | 'pass' | 'sagt'; word: string | null }
 
 // Det alla får se av omgången. Inställningarna låses när matchen startar och följer med i tabellen.
@@ -151,7 +151,7 @@ export type ImposterMove =
   | { type: 'read' }
   | { type: 'clue'; word: string }
   | { type: 'pass' }
-  | { type: 'said' }
+  | { type: 'said'; word?: string }
   | { type: 'ready'; on: boolean }
   | { type: 'vote'; target: string }
   | { type: 'point'; target: string | null }
@@ -414,7 +414,11 @@ export function imposterMove(
 
   if (currentTurn(table) !== playerId) return host
   if (move.type === 'said') {
-    return table.aloud ? addClue(host, { player: playerId, kind: 'sagt', word: null }, activeIds) : host
+    if (!table.aloud) return host
+    // Ordet är redan sagt, så turen går vidare även om det inskrivna ordet inte går att visa (t.ex. det hemliga ordet).
+    const secret = findWord(host.secrets.wordId)
+    const typed = move.word?.trim() && secret ? checkClue(move.word, secret, table.clues) : null
+    return addClue(host, { player: playerId, kind: 'sagt', word: typed?.ok ? typed.word : null }, activeIds)
   }
   if (table.aloud) return host
   if (move.type === 'pass') return addClue(host, { player: playerId, kind: 'pass', word: null }, activeIds)
@@ -425,6 +429,14 @@ export function imposterMove(
     return { ...host, secrets: { ...host.secrets, rejected: { ...host.secrets.rejected, [playerId]: now } } }
   }
   return addClue(host, { player: playerId, kind: 'ord', word: checked.word }, activeIds)
+}
+
+// Värden, när ni säger orden högt: den som har tur har glömt att trycka Klar, så turen går vidare.
+export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[]): ImposterHost {
+  const table = host.state.imposter
+  const turn = table ? currentTurn(table) : null
+  if (!table || !table.aloud || !turn) return host
+  return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds)
 }
 
 // Värden: alla har inte tryckt Jag har läst, men omgången går vidare ändå.

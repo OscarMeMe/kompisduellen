@@ -122,7 +122,7 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
 
 // Ett ord var i turordning, två varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
-function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onTyping }: StepProps) {
+function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onMove, onTyping, onSkipTurn }: StepProps) {
   const turn = currentTurn(table)
   const myTurn = turn === me.id
   const thinker = turn ? state.players[turn] : undefined
@@ -131,7 +131,7 @@ function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onT
   const line = (
     <p className="text-center text-sm font-semibold text-muted-foreground">
       Varv {clueRound(table)} av {CLUE_ROUNDS}
-      {myTurn ? ' · Din tur!' : thinker ? ` · ${thinker.name} ${typing === turn ? 'skriver' : 'funderar'}…` : ''}
+      {myTurn ? ' · Din tur!' : thinker ? ` · ${thinker.name} ${table.aloud ? 'säger sitt ord' : `${typing === turn ? 'skriver' : 'funderar'}…`}` : ''}
     </p>
   )
   const center = (
@@ -141,7 +141,12 @@ function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onT
       </span>
       <span
         key={table.turn}
-        className={cn('font-heading text-sm leading-tight font-bold sm:text-base motion-safe:animate-pop', myTurn && 'text-primary')}
+        className={cn(
+          // När ni sitter tillsammans ska det synas på långt håll vems tur det är.
+          'font-heading leading-tight font-bold motion-safe:animate-pop',
+          table.aloud ? 'text-lg sm:text-2xl' : 'text-sm sm:text-base',
+          myTurn && 'text-primary',
+        )}
       >
         {myTurn ? 'Din tur!' : `${thinker?.name ?? 'Någon'}s tur`}
       </span>
@@ -155,7 +160,7 @@ function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onT
         <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={line}>
           {/* Ny ruta för varje tur, så att texten börjar om. */}
           {table.aloud ? (
-            <SaidTurn onDone={() => onMove({ type: 'said' })} />
+            <SaidTurn key={table.turn} onDone={(word) => onMove(word ? { type: 'said', word } : { type: 'said' })} />
           ) : (
             <WriteTurn key={table.turn} onMove={onMove} onTyping={onTyping} rejectedAt={imposterCard?.rejectedAt ?? null} />
           )}
@@ -164,6 +169,12 @@ function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onT
         <div className="sr-only" role="status">
           {line}
         </div>
+      )}
+      {/* Om den som har tur har glömt att trycka Klar. */}
+      {isHost && table.aloud && !myTurn && (
+        <Button variant="outline" className="mx-auto h-11" onClick={onSkipTurn}>
+          Nästa
+        </Button>
       )}
     </>
   )
@@ -183,18 +194,46 @@ function useYourTurn(myTurn: boolean) {
   }, [myTurn, soundOn])
 }
 
-// Säg högt: appen visar bara vems tur det är, och den som har tur trycker Klar när ordet är sagt.
-function SaidTurn({ onDone }: { onDone: () => void }) {
+// Säg högt: den som har tur säger sitt ord och trycker Klar, eller var som helst på rutan utom i fältet. Vill man kan man
+// först skriva in ordet, så att det syns i bubblan vid ens plats. Annars står det "✓ sa sitt".
+function SaidTurn({ onDone }: { onDone: (word: string) => void }) {
+  const [text, setText] = useState('')
+  const sent = useRef(false)
+  function done() {
+    if (sent.current) return
+    sent.current = true
+    onDone(text.trim())
+  }
   return (
-    <div className="space-y-3 text-center">
+    <form
+      className="cursor-pointer space-y-3 text-center"
+      onSubmit={(event) => {
+        event.preventDefault()
+        done()
+      }}
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest('input')) done()
+      }}
+    >
       <p className="rounded-full bg-primary px-3 py-1 font-heading text-sm font-bold text-primary-foreground motion-safe:animate-pop">
         Din tur! Säg ditt ord högt.
       </p>
-      <Button size="lg" className="w-full" onClick={onDone}>
+      <Button type="button" size="lg" className="w-full">
         <Check aria-hidden />
         Klar
       </Button>
-    </div>
+      <Input
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="Skriv ordet om du vill"
+        aria-label="Ditt ord, om du vill skriva in det"
+        maxLength={MAX_CLUE_LENGTH}
+        autoComplete="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        className="text-center"
+      />
+    </form>
   )
 }
 

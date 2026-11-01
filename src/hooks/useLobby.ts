@@ -59,6 +59,7 @@ import {
   hostImposterNewWord,
   hostImposterAbortRound,
   hostImposterNextRound,
+  hostImposterSkipTurn,
   hostImposterStartAnyway,
   hostMove,
   hostPresence,
@@ -746,6 +747,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       imposterStartAnyway: () => {
         if (isHost) commit(hostImposterStartAnyway(current()))
+      },
+      imposterSkipTurn: () => {
+        if (isHost) commit(hostImposterSkipTurn(current(), activeIds()))
       },
       imposterNewWord: () => {
         if (isHost) commit(hostImposterNewWord(current(), activeIds()))

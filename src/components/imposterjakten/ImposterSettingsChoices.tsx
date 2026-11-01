@@ -1,7 +1,8 @@
 import { Choice } from '@/components/lobby/Choice'
 import { CATEGORIES, type ImposterSettings } from '@/lib/imposterjakten'
 
-// Värdens val för Imposterjakten i väntrummet: svårighet, kategori och om associationerna skrivs eller sägs högt.
+// Värdens val för Imposterjakten i väntrummet: svårighet, kategori och om ni sitter tillsammans (säger orden högt) eller
+// spelar på distans (skriver orden).
 // Antal omgångar väljs som antal rundor i de andra spelen.
 export function ImposterSettingsChoices({
   settings,
@@ -31,11 +32,11 @@ export function ImposterSettingsChoices({
         onSelect={(value) => onChange({ category: value === 0 ? null : CATEGORIES[value - 1] })}
       />
       <Choice
-        label="Associationer"
-        hint="Skriv orden i appen, eller säg dem högt när ni sitter tillsammans."
+        label="Sitter ni tillsammans?"
+        hint="Tillsammans säger ni orden högt. På distans skriver ni dem."
         options={[
-          { value: 0, label: 'Skriv i appen' },
-          { value: 1, label: 'Säg högt' },
+          { value: 1, label: 'Ja, vi sitter tillsammans' },
+          { value: 0, label: 'Nej, vi spelar på distans' },
         ]}
         selected={settings.aloud ? 1 : 0}
         onSelect={(value) => onChange({ aloud: value === 1 })}
