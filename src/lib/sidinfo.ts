@@ -4,6 +4,7 @@
 // i index.html.
 
 import { findGame } from '@/lib/games'
+import { GUIDE_PAGES, type GuideFaq } from '@/lib/guider'
 import { GAME_PAGES, type GamePageInfo } from '@/lib/spelsidor'
 
 export const SITE_URL = 'https://kompisduellen.se'
@@ -93,15 +94,19 @@ function gamePageMeta(page: GamePageInfo): PageMeta {
         offers: free,
         isPartOf: { '@id': WEBSITE_ID },
       },
-      {
-        '@type': 'FAQPage',
-        mainEntity: page.faq.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: { '@type': 'Answer', text: item.answer },
-        })),
-      },
+      faqPage(page.faq),
     ],
+  }
+}
+
+function faqPage(faq: GuideFaq[]): JsonLd {
+  return {
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
   }
 }
 
@@ -122,6 +127,13 @@ const PAGES: Record<string, PageMeta> = {
     jsonLd: [],
   },
   ...Object.fromEntries(GAME_PAGES.map((page) => [`/spel/${page.slug}`, gamePageMeta(page)])),
+  // Guiderna, med sina vanliga frågor som FAQPage.
+  ...Object.fromEntries(
+    GUIDE_PAGES.map((page) => [
+      `/${page.slug}`,
+      { title: page.title, description: page.description, path: `/${page.slug}`, jsonLd: [faqPage(page.faq)] },
+    ]),
+  ),
 }
 
 export function pageMeta(pathname: string): PageMeta {
@@ -130,7 +142,11 @@ export function pageMeta(pathname: string): PageMeta {
 }
 
 // Sidorna som förrenderas till färdig HTML i bygget. Övriga sökvägar får appskalet (app.html).
-export const PRERENDER_PATHS: string[] = ['/', ...GAME_PAGES.map((page) => `/spel/${page.slug}`)]
+export const PRERENDER_PATHS: string[] = [
+  '/',
+  ...GAME_PAGES.map((page) => `/spel/${page.slug}`),
+  ...GUIDE_PAGES.map((page) => `/${page.slug}`),
+]
 // Sidor som syns i sökmotorerna men visar sådant som bara finns i webbläsaren (sparat namn och figur). De får
 // appskalet med sina egna taggar i <head>.
 export const HEAD_ONLY_PATHS: string[] = ['/skapa', '/ga-med']

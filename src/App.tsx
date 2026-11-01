@@ -3,10 +3,12 @@ import { Route, Routes } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { Layout } from '@/components/Layout'
 import { GameInfoPage } from '@/pages/GameInfoPage'
+import { GuidePage } from '@/pages/GuidePage'
 import { GamePage } from '@/pages/GamePage'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ResultsPage } from '@/pages/ResultsPage'
+import { GUIDE_PAGES } from '@/lib/guider'
 import { GAME_PAGES } from '@/lib/spelsidor'
 
 // Startsidan ingår i första laddningen. Övriga sidor hämtas först när man går dit, så att startsidan laddar snabbt
@@ -50,6 +52,9 @@ export default function App() {
           <Route key={page.slug} path={`spel/${page.slug}`} element={<GameInfoPage page={page} />} />
         ))}
         <Route path="spel/:code" element={<GamePage />} />
+        {GUIDE_PAGES.map((page) => (
+          <Route key={page.slug} path={page.slug} element={<GuidePage page={page} />} />
+        ))}
         <Route path="resultat/:code" element={<ResultsPage />} />
         <Route path="profil" element={<Loading><ProfilePage /></Loading>} />
         {ReviewPage && (
