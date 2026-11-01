@@ -54,13 +54,27 @@ describe('korten', () => {
     expect(new Set(kort.svar).size).toBe(150)
   })
 
+  it('har mjuka bindestreck i alla ord på minst 10 bokstäver, så att de bara bryts mellan orddelarna', () => {
+    const SHY = '­'
+    for (const text of [...kort.fragor, ...kort.svar]) {
+      for (const word of text.split(/[^A-Za-zÅÄÖåäöéÉüÜ­]+/)) {
+        const letters = word.replaceAll(SHY, '')
+        if (letters.length >= 10) expect(word, text).toContain(SHY)
+        // Aldrig först eller sist i ett ord, och aldrig två i rad.
+        expect(word.startsWith(SHY) || word.endsWith(SHY) || word.includes(SHY + SHY), text).toBe(false)
+      }
+    }
+    expect(kort.svar).toContain('ett rump­avtryck i snön')
+  })
+
   it('har exakt en lucka i varje fråga och inga luckor i svaren', () => {
     expect(kort.fragor.filter((f) => f.split(GAP).length !== 2)).toEqual([])
     expect(kort.svar.filter((s) => s.includes('_') || s.trim() !== s || s.endsWith('.'))).toEqual([])
   })
 
   it('fyller i luckan så att man ser hela meningen', () => {
-    expect(sentence({ prompt: 'f7', text: 'en ensam inlagd sill' })).toBe(
+    // De mjuka bindestrecken syns inte och läses inte upp.
+    expect(sentence({ prompt: 'f7', text: 'en ensam inlagd sill' }).replaceAll('­', '')).toBe(
       'Hemligheten bakom farmors kanelbullar är en ensam inlagd sill.',
     )
   })

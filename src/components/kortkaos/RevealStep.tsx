@@ -40,7 +40,7 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
             </p>
           )}
           {/* Vinnarkortet vickar till när det avslöjas. */}
-          <p className="font-heading text-2xl leading-snug font-bold break-words hyphens-auto motion-safe:animate-wiggle motion-safe:[animation-delay:400ms] sm:text-3xl">
+          <p className="font-heading text-2xl leading-snug font-bold break-words hyphens-manual motion-safe:animate-wiggle motion-safe:[animation-delay:400ms] sm:text-3xl">
             <Sentence prompt={prompt} answer={winning.text} />
           </p>
           {winner && (
