@@ -41,8 +41,6 @@ export type GameRules = {
   isBullseye: (guess: number, target: number) => boolean
   // Ett värde som text, t.ex. "79 kr" eller "42".
   formatValue: (value: number) => string
-  // Rätt svar i text, om det kan skilja sig från värdet som poängen räknas mot. Annars används formatValue.
-  formatTarget?: (target: number, itemId: string | null) => string
   // Vad rundan gällde, t.ex. "Ikeas hjärtformade kudde med armar". null om rundan inte gällde en sak.
   itemName: (itemId: string | null) => string | null
 }

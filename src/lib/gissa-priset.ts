@@ -1,7 +1,7 @@
 // Spelregler för "Gissa priset": alla gissar vad något kostar, kostade förr eller såldes för,
 // sedan avslöjas priset.
 
-import { formatSek, isValidPrice, roundSek } from '@/lib/belopp'
+import { formatSek, isValidPrice } from '@/lib/belopp'
 import { findPriceItem, GAME_ITEMS } from '@/lib/prisdata'
 import type { GameRules } from '@/lib/spelregler'
 
@@ -16,16 +16,17 @@ export const RECENT_AFTER_RESET = 20
 // Poäng efter hur många GÅNGER fel man är, så att halva priset straffas lika hårt som dubbla priset.
 // Kurvan går genom de här punkterna (gånger fel, poäng). Däremellan räknas poängen mjukt ut med en
 // monoton kubisk kurva på logaritmen av "gånger fel", så att den aldrig svänger över eller under punkterna.
-// Inom 5 procent fel (åt vilket håll som helst) ger 100. Fyra gånger fel eller mer ger 0.
+// Inom 5 procent fel (åt vilket håll som helst) ger 100. Fem gånger fel eller mer ger 0.
 const CURVE: readonly (readonly [number, number])[] = [
   [1, 100],
   [1 / 0.95, 100], // 5 procent för lågt (och lite mer än 5 procent för högt är fortfarande 100)
-  [1.1, 85],
-  [1.25, 60],
-  [1.5, 40],
-  [2, 25],
-  [3, 10],
-  [4, 0],
+  [1.1, 90],
+  [1.25, 72],
+  [1.5, 55],
+  [2, 38],
+  [3, 18],
+  [4, 8],
+  [5, 0],
 ]
 const CURVE_X = CURVE.map(([times]) => Math.log(times))
 const CURVE_Y = CURVE.map(([, points]) => points)
@@ -70,12 +71,6 @@ export function pricePoints(guess: number, price: number): number {
   return Math.min(100, Math.max(0, Math.round(points)))
 }
 
-// Poängen i spelet: från en krona räknas både priset och gissningen i hela kronor, så 2 kr ger fullpoäng när priset
-// är 2,44 kr. Under en krona räknas ören.
-export function scoredPoints(guess: number, price: number): number {
-  return pricePoints(roundSek(guess), roundSek(price))
-}
-
 // Hur många tiopotenser fel gissningen är (0 = exakt, 1 = tio gånger fel). Används för att jämföra hur långt
 // ifrån olika gissningar var (insikterna), med samma ordning som poängen.
 export function priceDistance(guess: number, price: number): number {
@@ -92,10 +87,10 @@ export const priceRules: GameRules = {
   // Stämmer med CURVE i pricePoints. Testas i gissa-priset.test.ts.
   scoringDetails: [
     'Poängen räknas på hur många gånger fel du är, inte på antal kronor. Att gissa 200 kr när priset är 100 kr är lika fel som att gissa 50 kr.',
-    'Inom 5 procent fel ger 100 poäng. 10 procent fel ger 85 och 25 procent fel ger 60.',
-    'En och en halv gång fel ger 40. Halva eller dubbla priset ger 25, tre gånger fel ger 10 och fyra gånger fel eller mer ger 0.',
-    'Poängen räknas ut mjukt mellan de här stegen, så 20 procent fel ligger mellan 85 och 60.',
-    'Från 1 krona räknas priset och gissningen i hela kronor, så 2,44 kr räknas som 2 kr. Under 1 krona räknas ören.',
+    'Inom 5 procent fel ger 100 poäng. 10 procent fel ger 90 och 25 procent fel ger 72.',
+    'En och en halv gång fel ger 55. Halva eller dubbla priset ger 38, tre gånger fel ger 18, fyra gånger fel ger 8 och fem gånger fel eller mer ger 0.',
+    'Poängen räknas ut mjukt mellan de här stegen, så 20 procent fel ligger mellan 90 och 72.',
+    'Poängen räknas på det exakta priset, med ören.',
   ],
   isValidGuess: isValidPrice,
 
@@ -113,20 +108,16 @@ export const priceRules: GameRules = {
   },
 
   // Alla får 0–100 poäng efter hur nära priset på rundans sak de var.
-  // Från en krona räknas mot priset i hela kronor, så att 2 kr ger fullpoäng när priset är 2,44 kr.
   scoreRound(guesses, itemId, price = findPriceItem(itemId)?.priceSek ?? 0) {
-    const target = roundSek(price)
     const points: Record<string, number> = {}
-    for (const [id, guess] of Object.entries(guesses)) points[id] = scoredPoints(guess, target)
-    return { target, points }
+    for (const [id, guess] of Object.entries(guesses)) points[id] = pricePoints(guess, price)
+    return { target: price, points }
   },
 
-  distance: (guess, target) => priceDistance(roundSek(guess), roundSek(target)),
-  // Hälften eller dubbla priset (25 poäng) eller längre ifrån.
+  distance: priceDistance,
+  // Hälften eller dubbla priset (38 poäng) eller längre ifrån.
   notableMiss: Math.log10(2),
-  isBullseye: (guess, target) => scoredPoints(guess, target) === 100,
+  isBullseye: (guess, target) => pricePoints(guess, target) === 100,
   formatValue: formatSek,
-  // Rätt pris som det står i facit, med ören (target är i hela kronor från en krona).
-  formatTarget: (target, itemId) => formatSek(findPriceItem(itemId)?.priceSek ?? target),
   itemName: (itemId) => findPriceItem(itemId)?.name ?? null,
 }

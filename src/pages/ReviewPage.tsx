@@ -7,7 +7,6 @@ import { Wide } from '@/components/lobby/LobbyLayout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { roundSek } from '@/lib/belopp'
 import {
   exportReviews,
   missingFields,
@@ -217,7 +216,7 @@ export function ReviewPage() {
           )}
 
           <PriceQuestionCard item={entry.item} />
-          <PriceAnswerCard item={entry.item} target={roundSek(entry.item.priceSek)} revealed />
+          <PriceAnswerCard item={entry.item} target={entry.item.priceSek} revealed />
           <PriceFact item={entry.item} />
           {entry.item.source && (
             <a
