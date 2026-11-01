@@ -69,7 +69,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       ...commonFaq('Gissa priset', 2),
       {
         question: 'Kan jag testa själv först?',
-        answer: 'Ja. Tryck på Testa själv på startsidan, så får du köra en kort provomgång på egen hand.',
+        answer: 'Ja. Tryck på Testa själv högst upp på den här sidan, så får du köra en kort provomgång på egen hand.',
       },
     ],
   },
