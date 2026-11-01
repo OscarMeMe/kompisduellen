@@ -53,7 +53,9 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
             <Lock className="mx-auto size-6 text-primary motion-safe:animate-lock-snap sm:size-8" />
             <p className="text-muted-foreground">Din gissning</p>
             <p className="font-heading text-3xl font-bold break-all text-primary motion-safe:animate-pop sm:text-5xl">{formatSek(locked)}</p>
-            <p className="font-semibold text-muted-foreground">Väntar på de andra…</p>
+            <p className="font-semibold text-muted-foreground">
+              {state.practice ? 'Ditt svar är låst. Här kommer facit.' : 'Väntar på de andra…'}
+            </p>
             <WaitingStanding text={waitingStanding(state, me.id)} />
           </div>
         ) : (

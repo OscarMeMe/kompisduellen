@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, ArrowRight, Clock, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Clock, Play, Users } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { findGame, playersLabel } from '@/lib/games'
+import { rulesFor } from '@/lib/spelregler'
 import { GAME_PAGES, type GamePageInfo } from '@/lib/spelsidor'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +19,16 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
   }, [page.slug])
   if (!game) return null
   const others = GAME_PAGES.filter((other) => other.slug !== page.slug)
+  // Spel som går att prova på egen hand får två vägar in, och då säger huvudknappen vad skillnaden är.
+  const canTestAlone = rulesFor(game.id).soloPractice === true
+  const startButton = (
+    <Button asChild size="lg" className="w-full sm:w-auto">
+      <Link to={`/skapa?spel=${game.id}`}>
+        {canTestAlone ? 'Spela med kompisar' : 'Starta en lobby'}
+        <ArrowRight aria-hidden />
+      </Link>
+    </Button>
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 pt-2 sm:pt-4">
@@ -46,17 +57,25 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
             </li>
             {game.feel && <li className="rounded-full bg-muted px-3 py-1.5">{game.feel}</li>}
           </ul>
+          <div className="space-y-2">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {startButton}
+              {canTestAlone && (
+                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                  <Link to={`/skapa?spel=${game.id}&testa=1`}>
+                    <Play aria-hidden />
+                    Testa själv
+                  </Link>
+                </Button>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-muted-foreground">Gratis. Ingen app eller registrering behövs.</p>
+          </div>
           <div className="space-y-3 text-lg">
             {page.intro.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
           </div>
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link to={`/skapa?spel=${game.id}`}>
-              Starta en lobby
-              <ArrowRight aria-hidden />
-            </Link>
-          </Button>
         </div>
       </section>
 
@@ -79,6 +98,7 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
             </li>
           ))}
         </ol>
+        {startButton}
       </section>
 
       <section aria-labelledby="vanliga-fragor" className="space-y-4">
