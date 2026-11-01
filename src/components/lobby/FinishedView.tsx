@@ -43,7 +43,7 @@ type FinishedViewProps = {
   onToWaitingRoom: () => void
   // Till väntrummet med spelvalet i bild.
   onChangeGame: () => void
-  // Tillbaka till alla spel. Är andra med får man en fråga först.
+  // Lämna lobby. Är andra med får man en fråga först.
   onLeave: () => void
 }
 
@@ -264,7 +264,7 @@ export function FinishedView({
       />
 
       <Button size="lg" variant="ghost" onClick={onLeave}>
-        Tillbaka till alla spel
+        Lämna lobby
       </Button>
       {/* Plats för den fasta knappraden på mobil. */}
       {isHost && <div className="h-24 sm:hidden" aria-hidden />}
