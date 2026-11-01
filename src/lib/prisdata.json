@@ -2121,5 +2121,73 @@
     "image": "/prisbilder/fantomen-premiar-1950.webp",
     "imageSource": "https://commons.wikimedia.org/wiki/File:The_Phantom,_Australian_Woman%27s_Mirror.jpg",
     "imageNote": "Bilden visar en australisk Fantomen-tidning"
+  },
+  {
+    "id": "ragsiktslimpa-1964",
+    "emoji": "🍞",
+    "name": "En rågsiktslimpa på 800 gram",
+    "year": 1964,
+    "clue": "SCB:s redovisade medelpris i Sverige",
+    "priceSek": 1.67,
+    "fact": "SCB jämförde bestämda varor och förpackningsstorlekar, så här avsågs en hel limpa på 800 gram. Som jämförelse kostade en småfranska 27 öre i samma statistik: sex småfranskor blev bara fem öre billigare än limpan.",
+    "source": "https://share.scb.se/ov9993/data/historisk%20statistik/SOS%201911-/Statistisk%20%C3%A5rsbok%20(SOS)%201914-2014/Statistisk-arsbok-for-Sverige-1967.pdf",
+    "image": "/prisbilder/ragsiktslimpa-1964.webp",
+    "imageCredit": "Foto: Glane23, CC BY-SA 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Dark_rye_bread.JPG",
+    "imageNote": "Bilden visar ett mörkt rågbröd"
+  },
+  {
+    "id": "bilbesiktning-1965",
+    "emoji": "🔧",
+    "name": "En obligatorisk kontrollbesiktning av bilen",
+    "year": 1965,
+    "clue": "När den svenska bilprovningen blev obligatorisk",
+    "priceSek": 35,
+    "fact": "Den obligatoriska bilbesiktningen infördes vid årets början och avslöjade ibland häpnadsväckande lagningar. En besiktningsman berättar om bärande balkar som hade reparerats med betong, stora spikar och hönsnät.",
+    "source": "https://www.svt.se/nyheter/inrikes/50-arsjubileum-for-bilprovningen",
+    "image": "/prisbilder/bilbesiktning-1965.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Bilprovningen_Sollentuna_2014.jpg",
+    "imageNote": "Bilden visar Bilprovningen i dag"
+  },
+  {
+    "id": "fort-erlandsson-1966",
+    "emoji": "🤠",
+    "name": "Entré till fortet som blev High Chaparral",
+    "year": 1966,
+    "clue": "Big Bengts vilda västernbygge i Småland",
+    "priceSek": 5,
+    "fact": "Bengt Erlandsson tänkte först behålla fortet för sig själv, men nyfikna ortsbor fick honom att öppna för allmänheten. Det hette då Fort Erlandsson. Innanför palissaderna fanns inte bara salooner och hästar, utan även swimmingpool och finsk rökbastu.",
+    "source": "https://www.highchaparral.se/om-oss/historia/",
+    "image": "/prisbilder/fort-erlandsson-1966.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:High_Chaparral_Theme_Park.JPG",
+    "imageNote": "Bilden visar High Chaparral i dag"
+  },
+  {
+    "id": "stadrock-gekas-1967",
+    "emoji": "👗",
+    "name": "En städrock på Gekås",
+    "year": 1967,
+    "clue": "Storsäljare i det gamla stationshuset i Ullared",
+    "priceSek": 3.75,
+    "fact": "De billiga städrockarna blev en försäljningssuccé när Gekås flyttade in i byns gamla stationshus. Samtidigt började charterbussarna komma med shoppingsugna kunder, och begreppet ”busstanter” föddes.",
+    "source": "https://www.gekas.se/om-oss/var-historia/",
+    "image": "/prisbilder/stadrock-gekas-1967.webp",
+    "imageCredit": "Foto: Gaisjonke, CC BY 3.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Gek%C3%A5s_Ullared.jpg",
+    "imageNote": "Bilden visar Gekås i dag"
+  },
+  {
+    "id": "volvo-164-1968",
+    "emoji": "🚘",
+    "name": "En ny Volvo 164 i standardutförande",
+    "year": 1968,
+    "clue": "Volvos nya sexcylindriga prestigebil",
+    "priceSek": 25500,
+    "fact": "Volvo tog ett steg mot lyxbilsmarknaden med en större, sexcylindrig motor. För att få plats med den behövde bilen en längre nos än 140-serien. Priset gällde grundutförandet; exempelvis automatlåda kostade extra.",
+    "source": "https://www.volvocars.com/intl/media/press-releases/A129D19E7D4D7362/",
+    "image": "/prisbilder/volvo-164-1968.webp",
+    "imageCredit": "Foto: Niels de Wit, CC BY 2.0",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:1971_Volvo_164_E_(14297709776).jpg",
+    "imageNote": "Bilden visar en senare Volvo 164"
   }
 ]
