@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
+import { RESEND_MAX_TRIES, RESEND_MS } from '@/lib/leverans'
 import type { GameState } from '@/lib/match'
-
-const GUESS_RESEND_MS = 3000
 
 // Min gissning i rundan. Den räknas som inlåst direkt när den skickas, innan värden har bekräftat den.
 // Vyn får en ny key varje runda, så allt börjar om inför nästa fråga.
@@ -17,15 +16,19 @@ export function useMyGuess(state: GameState, myId: string, onGuess: (value: numb
   }
 
   // Skickade jag min gissning medan värden var borta (värdbyte), eller försvann meddelandet på vägen, har värden den
-  // inte. Då skickas den igen när ett nytt tillstånd kommer och var tredje sekund tills den syns i tillståndet.
+  // inte. Då skickas den igen var tredje sekund tills den syns i tillståndet, högst RESEND_MAX_TRIES gånger.
   // Värden ignorerar dubbletter.
   const missing = sent !== null && state.phase === 'guessing' && state.guesses[myId] === undefined
   useEffect(() => {
     if (!missing) return
-    onGuess(sent)
-    const timer = setInterval(() => onGuess(sent), GUESS_RESEND_MS)
+    let tries = 0
+    const timer = setInterval(() => {
+      tries += 1
+      if (tries > RESEND_MAX_TRIES) clearInterval(timer)
+      else onGuess(sent)
+    }, RESEND_MS)
     return () => clearInterval(timer)
-  }, [state, missing, sent, onGuess])
+  }, [missing, sent, onGuess])
 
   return { locked, inGame, lockIn }
 }
