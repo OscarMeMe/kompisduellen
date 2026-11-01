@@ -153,7 +153,10 @@ export function myHand(secrets: CardSecrets, playerId: string): MyHand | null {
 }
 
 export function startCardMatch(state: GameState, rules: CardGameRules, now: number, random: Random = Math.random) {
-  const order = Object.keys(state.players)
+  // Samma ordning runt bordet, men en slumpad första domare, så att det inte alltid blir värden som börjar.
+  const players = Object.keys(state.players)
+  const first = Math.floor(random() * players.length)
+  const order = [...players.slice(first), ...players.slice(0, first)]
   let answerPile = shuffle(rules.answers, random)
   const hands: Record<string, string[]> = {}
   const blank: Record<string, boolean> = {}
