@@ -320,9 +320,16 @@ function Lobby({ code, me }: { code: string; me: Player }) {
               : 'Kolla att koden stämmer. Lobbyn finns bara så länge värden är kvar. Har värden stängt sidan går det inte att fortsätta som tidigare spelare.'}
           </p>
         </div>
-        <Button asChild size="lg">
-          <Link to="/ga-med">Testa en annan kod</Link>
-        </Button>
+        {status === 'error' ? (
+          <Button size="lg" onClick={actions.reconnect}>
+            <RefreshCw aria-hidden />
+            Försök igen
+          </Button>
+        ) : (
+          <Button asChild size="lg">
+            <Link to="/ga-med">Testa en annan kod</Link>
+          </Button>
+        )}
         <Button asChild size="lg" variant="outline">
           <Link to="/#spel">Tillbaka till alla spel</Link>
         </Button>

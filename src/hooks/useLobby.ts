@@ -593,6 +593,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
       channel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          // Kanalen kan ansluta på nytt av sig själv efter ett nätfel, och då är felet borta.
+          setFailed(false)
           setConnected(true)
           // Gästen frågar efter läget direkt, och igen med jämna mellanrum tills det kommer (se nedan).
           if (!isHost) sendHello()
