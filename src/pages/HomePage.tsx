@@ -57,7 +57,7 @@ export function HomePage() {
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
       {/* Hero */}
       <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
-        <div className="space-y-5 text-center md:space-y-6 md:text-left">
+        <div className="space-y-5 text-center md:space-y-6 md:self-center md:text-left">
           <div className="space-y-2">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
             <p className="text-sm font-bold text-muted-foreground">

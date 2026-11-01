@@ -145,13 +145,13 @@ export function ExempelRunda() {
 
         {/* Fasta minsta höjder på frågan och svarsdelen, så att kortet inte hoppar mellan frågorna. Facit tar samma plats som
             fältet och knappen. Måtten är den längsta frågan och det högsta facit med vanliga gissningar. */}
-        <div className="mt-1 min-h-29 md:min-h-24">
+        <div className="mt-1 min-h-23 max-[380px]:min-h-29 md:min-h-34 lg:min-h-23">
           <h3 className="text-lg leading-snug text-balance">{questionText(item)}</h3>
           <p className="mt-0.5 text-sm leading-snug text-muted-foreground italic">Ledtråd: {item.exempelLedtrad ?? item.clue}</p>
         </div>
 
         {guess === null ? (
-          <form onSubmit={reveal} className="mt-2 flex min-h-35 flex-col justify-end gap-2" noValidate>
+          <form onSubmit={reveal} className="mt-2 flex min-h-31 flex-col justify-end gap-2 md:min-h-36 lg:min-h-31" noValidate>
             {/* Felet står ovanför fältet, på plats som redan finns, så att fältet och knappen inte flyttar sig. */}
             <p id={errorId} role="alert" className="text-sm font-semibold text-primary empty:hidden">
               {error}
@@ -182,11 +182,11 @@ export function ExempelRunda() {
             </Button>
           </form>
         ) : (
-          <div className="mt-2 min-h-35 space-y-2">
+          <div className="mt-2 min-h-31 space-y-1 md:min-h-36 lg:min-h-31">
             <div
               ref={resultRef}
               tabIndex={-1}
-              className="relative rounded-lg bg-mint-soft px-3 py-2 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
+              className="relative rounded-lg bg-mint-soft px-3 py-1 text-center outline-none motion-safe:animate-pop focus-visible:ring-4 focus-visible:ring-primary/30"
             >
               {/* Nära rätt pris (minst 90 poäng, inom 10 procent) ger ett litet konfettiregn. */}
               {pricePoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
