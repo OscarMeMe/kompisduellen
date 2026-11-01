@@ -18,6 +18,7 @@ import {
   MIN_DISCUSSION_SECONDS,
   INNOCENTS_WIN,
   IMPOSTER_ESCAPES,
+  imposterInstruction,
   IMPOSTER_GUESSES_RIGHT,
   isCorrectGuess,
   moreThanHalf,
@@ -565,6 +566,40 @@ describe('Imposterjakten: diskussionen och omröstningen', () => {
     const host = start(ABCD)
     expect(ready(host, 'a')).toBe(host)
     expect(vote(host, 'a', 'b')).toBe(host)
+  })
+})
+
+describe('Imposterjakten: raden om vad jag ska göra', () => {
+  const me = { id: 'a', name: (id: string) => id.toUpperCase(), ready: false, vote: null, accuseVote: null, typing: null, secondsLeft: 12 }
+  const base = readAll(start(ABCD), ABCD)
+  const t = table(base)
+
+  it('säger vems tur det är, olika när ni skriver och säger högt', () => {
+    const turn = currentTurn(t)!
+    expect(imposterInstruction(t, { ...me, id: turn })).toEqual({ text: 'Din tur! Skriv ett ord', act: true })
+    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: turn }).text).toBe('Din tur! Säg ditt ord högt')
+    const other = ABCD.find((id) => id !== turn)!
+    expect(imposterInstruction(t, { ...me, id: other })).toEqual({ text: `${turn.toUpperCase()} funderar…`, act: false })
+    expect(imposterInstruction(t, { ...me, id: other, typing: turn }).text).toBe(`${turn.toUpperCase()} skriver…`)
+    expect(imposterInstruction({ ...t, aloud: true }, { ...me, id: other }).text).toBe(`${turn.toUpperCase()} säger sitt ord`)
+  })
+
+  it('leder genom diskussionen och omröstningen', () => {
+    const d = { ...t, step: 'diskussion' as const }
+    expect(imposterInstruction(d, me).text).toBe('Diskutera. Tryck Redo när du hört nog')
+    expect(imposterInstruction(d, { ...me, ready: true }).act).toBe(false)
+    expect(imposterInstruction({ ...d, countdownStarted: true }, me).text).toBe('Omröstningen börjar om 12 s')
+    const v = { ...t, step: 'rostning' as const }
+    expect(imposterInstruction(v, me)).toEqual({ text: 'Tryck på den du tror är impostern', act: true })
+    expect(imposterInstruction(v, { ...me, vote: 'b' }).act).toBe(false)
+  })
+
+  it('frågar vid en anklagelse, utom den anklagade', () => {
+    const a = { ...t, accusation: { accuser: 'b', accused: 'c', answered: 0, voters: 3 } }
+    expect(imposterInstruction(a, me)).toEqual({ text: 'Röstar ni att C är impostern?', act: true })
+    expect(imposterInstruction(a, { ...me, id: 'c' }).text).toBe('Du är anklagad! De andra röstar')
+    expect(imposterInstruction(a, { ...me, accuseVote: true }).act).toBe(false)
+    expect(imposterInstruction(t, { ...me, id: 'z' }).text).toBe('Du är med från nästa omgång')
   })
 })
 

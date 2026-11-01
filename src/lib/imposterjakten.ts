@@ -507,6 +507,54 @@ export function moreThanHalf(count: number, players: number): boolean {
   return count * 2 > players
 }
 
+// Den stora raden ovanför bordet: vad JAG ska göra just nu. act = det är något jag ska göra, inte bara vänta på.
+export function imposterInstruction(
+  table: ImposterTable,
+  me: {
+    id: string
+    name: (id: string) => string
+    ready: boolean
+    vote: string | null
+    accuseVote: boolean | null
+    typing: string | null
+    secondsLeft: number
+  },
+): { text: string; act: boolean } {
+  const inRound = table.order.includes(me.id)
+  if (!inRound && table.step !== 'facit') return { text: 'Du är med från nästa omgång', act: false }
+  if (table.accusation) {
+    const { accused } = table.accusation
+    if (accused === me.id) return { text: 'Du är anklagad! De andra röstar', act: false }
+    if (me.accuseVote !== null) return { text: 'Väntar på de andra…', act: false }
+    return { text: `Röstar ni att ${me.name(accused)} är impostern?`, act: true }
+  }
+  switch (table.step) {
+    case 'kort':
+      return table.read.includes(me.id)
+        ? { text: 'Väntar på att alla läser sitt kort…', act: false }
+        : { text: 'Läs ditt kort i hemlighet. Tryck sedan Jag har läst', act: true }
+    case 'ledtradar': {
+      const turn = currentTurn(table)
+      if (turn === me.id) return { text: table.aloud ? 'Din tur! Säg ditt ord högt' : 'Din tur! Skriv ett ord', act: true }
+      const name = turn ? me.name(turn) : 'Någon'
+      if (table.aloud) return { text: `${name} säger sitt ord`, act: false }
+      return { text: `${name} ${me.typing === turn ? 'skriver' : 'funderar'}…`, act: false }
+    }
+    case 'diskussion':
+      if (table.countdownStarted) return { text: `Omröstningen börjar om ${me.secondsLeft} s`, act: false }
+      if (me.ready) return { text: 'Väntar på att fler blir redo…', act: false }
+      return { text: table.tied ? 'Lika röster! Diskutera igen. Tryck Redo när du hört nog' : 'Diskutera. Tryck Redo när du hört nog', act: true }
+    case 'rostning':
+      if (me.vote) return { text: 'Väntar på de andra…', act: false }
+      return { text: table.tied ? 'Tryck på den av de lika placerade du tror är impostern' : 'Tryck på den du tror är impostern', act: true }
+    case 'gissning':
+      if (table.caught === me.id) return { text: 'Du är fast! Gissa det hemliga ordet', act: true }
+      return { text: `${me.name(table.caught ?? '')} gissar ordet…`, act: false }
+    case 'facit':
+      return { text: table.outcome?.kind === 'avbruten' ? 'Omgången avbröts' : 'Omgången är slut', act: false }
+  }
+}
+
 // Får spelaren anklaga någon nu? Från det att andra varvet är klart och fram till att omröstningen öppnas, en gång per
 // spelare om anklagelsen inte får majoritet.
 export function canAccuse(table: ImposterTable, playerId: string): boolean {

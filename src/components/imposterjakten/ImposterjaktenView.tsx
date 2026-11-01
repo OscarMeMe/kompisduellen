@@ -19,6 +19,7 @@ import {
   CLUE_ROUNDS,
   ACCUSE_SECONDS,
   canAccuse,
+  imposterInstruction,
   COUNTDOWN_SECONDS,
   currentTurn,
   MAX_CLUE_LENGTH,
@@ -56,6 +57,17 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
       />
       <MyCard mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
+      <Instruction
+        {...imposterInstruction(table, {
+          id: me.id,
+          name: (id) => state.players[id]?.name ?? 'Någon',
+          ready: imposterCard?.ready ?? false,
+          vote: imposterCard?.vote ?? null,
+          accuseVote: imposterCard?.accuseVote ?? null,
+          typing: props.typing,
+          secondsLeft: countdown.secondsLeft,
+        })}
+      />
 
       {table.failedAccusation && !accusing && (
         <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
@@ -96,6 +108,21 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {/* Kasta något: tryck på en spelare vid bordet. */}
       <ReactionBar />
     </Wide>
+  )
+}
+
+// Den stora raden ovanför bordet om vad jag ska göra just nu. Fast höjd, så att bordet inte hoppar när texten byts.
+function Instruction({ text, act }: { text: string; act: boolean }) {
+  return (
+    <p
+      role="status"
+      className={cn(
+        'flex min-h-16 items-center justify-center text-center font-heading text-xl leading-tight font-bold text-balance sm:min-h-18 sm:text-3xl',
+        act && 'text-primary-button',
+      )}
+    >
+      {text}
+    </p>
   )
 }
 
@@ -141,22 +168,16 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onM
   const line = (
     <p className="text-center text-sm font-semibold text-muted-foreground">
       Varv {clueRound(table)} av {CLUE_ROUNDS}
-      {myTurn ? ' · Din tur!' : thinker ? ` · ${thinker.name} ${table.aloud ? 'säger sitt ord' : `${typing === turn ? 'skriver' : 'funderar'}…`}` : ''}
     </p>
   )
   const center = (
     <>
-      <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">
+      <span className="text-sm font-semibold text-muted-foreground sm:text-base">
         Varv {clueRound(table)} av {CLUE_ROUNDS}
       </span>
       <span
         key={table.turn}
-        className={cn(
-          // När ni sitter tillsammans ska det synas på långt håll vems tur det är.
-          'font-heading leading-tight font-bold motion-safe:animate-pop',
-          table.aloud ? 'text-lg sm:text-2xl' : 'text-sm sm:text-base',
-          myTurn && 'text-primary',
-        )}
+        className={cn('font-heading text-lg leading-tight font-bold break-words motion-safe:animate-pop sm:text-2xl', myTurn && 'text-primary-button')}
       >
         {myTurn ? 'Din tur!' : `${thinker?.name ?? 'Någon'}s tur`}
       </span>
@@ -176,9 +197,7 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onM
           )}
         </AnswerDock>
       ) : (
-        <div className="sr-only" role="status">
-          {line}
-        </div>
+        <div className="sr-only">{line}</div>
       )}
       {canAccuse(table, me.id) && (
         <p className="text-center text-sm font-semibold text-muted-foreground">Misstänker du någon? Tryck på spelaren och välj Anklaga!</p>
@@ -228,9 +247,6 @@ function SaidTurn({ onDone }: { onDone: (word: string) => void }) {
         if (!(event.target as HTMLElement).closest('input')) done()
       }}
     >
-      <p className="rounded-full bg-primary px-3 py-1 font-heading text-sm font-bold text-primary-foreground motion-safe:animate-pop">
-        Din tur! Säg ditt ord högt.
-      </p>
       <Button type="button" size="lg" className="w-full">
         <Check aria-hidden />
         Klar
