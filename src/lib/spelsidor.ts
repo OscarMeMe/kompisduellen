@@ -134,7 +134,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer impostern undan får den poäng. Värden väljer 1, 2 eller 3 omgångar, och flest poäng efter sista omgången vinner.',
     ],
     time: '5–15 minuter',
-    image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: en rad figurer där en har mask under en ljuskägla. Imposter-spel online på svenska för 3–10 spelare' },
+    image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: en rad figurer där en röd figur med glasögon står i spotlighten. Imposter-spel online på svenska för 3–10 spelare' },
     faq: [
       // Distansfrågan står med egna ord här, så den gemensamma hoppas över.
       ...commonFaq('Imposterjakten', 3).filter((item) => !item.question.includes('Discord')),
