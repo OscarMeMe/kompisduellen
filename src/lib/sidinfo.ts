@@ -23,6 +23,8 @@ export type PageMeta = {
   // Sökvägen som är sidans kanoniska adress. null för sidor som inte ska synas i sökresultaten (lobbyn, profilen …).
   path: string | null
   jsonLd: JsonLd[]
+  // Ska inte visas i sökresultaten, men länkarna på sidan får följas (noindex, follow). Så visar Google startsidan.
+  noindex?: boolean
   // Egen bild när sidan delas (Open Graph, 1200 × 630 i public/og). Saknas den visas loggan.
   image?: { path: string; alt: string }
 }
@@ -116,15 +118,17 @@ const PAGES: Record<string, PageMeta> = {
     title: 'Skapa en lobby | Kompisduellen',
     description:
       'Välj spel, skapa en lobby och bjud in kompisarna med en kod på fyra bokstäver. Gratis, utan konto och utan app.',
-    path: '/skapa',
+    path: null,
     jsonLd: [],
+    noindex: true,
   },
   '/ga-med': {
     title: 'Gå med i en lobby | Kompisduellen',
     description:
       'Har du fått en kod av en kompis? Skriv in den och hoppa in i spelet direkt från mobilen eller datorn.',
-    path: '/ga-med',
+    path: null,
     jsonLd: [],
+    noindex: true,
   },
   ...Object.fromEntries(GAME_PAGES.map((page) => [`/spel/${page.slug}`, gamePageMeta(page)])),
   // Guiderna, med sina vanliga frågor som FAQPage.
@@ -147,8 +151,8 @@ export const PRERENDER_PATHS: string[] = [
   ...GAME_PAGES.map((page) => `/spel/${page.slug}`),
   ...GUIDE_PAGES.map((page) => `/${page.slug}`),
 ]
-// Sidor som syns i sökmotorerna men visar sådant som bara finns i webbläsaren (sparat namn och figur). De får
-// appskalet med sina egna taggar i <head>.
+// Sidor som visar sådant som bara finns i webbläsaren (sparat namn och figur). De får appskalet med sina egna taggar i
+// <head>, men ska inte visas i sökresultaten.
 export const HEAD_ONLY_PATHS: string[] = ['/skapa', '/ga-med']
 
 function escapeHtml(text: string): string {
@@ -164,6 +168,7 @@ export function renderHeadTags(meta: PageMeta): string {
     `<title>${title}</title>`,
     `<meta name="description" content="${description}" />`,
     url && `<link rel="canonical" href="${url}" />`,
+    meta.noindex && `<meta name="robots" content="noindex, follow" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     `<meta property="og:locale" content="sv_SE" />`,
