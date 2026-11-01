@@ -1,3 +1,5 @@
+import type { GameState } from '@/lib/match'
+
 // Anslutningen till en lobby: hur kanaler öppnas och stängs, när en gäst frågar värden efter läget igen (hello),
 // vad som händer när fliken syns igen eller nätet kommer tillbaka, och vilken status sidan visar.
 // Rena funktioner och en liten kö för kanaler som håller på att stängas, så att det mesta går att testa.
@@ -9,12 +11,32 @@ export const STUCK_AFTER_MS = 12_000
 // Har så många hello gått utan svar ansluter gästen på nytt av sig själv, en gång, innan Försök igen visas.
 // En kanal kan se öppen ut men vara död (t.ex. efter en stund i bakgrunden), och då kommer inga hello fram.
 export const RECONNECT_AFTER_HELLOS = 2
-// Värden skickar läget igen så här ofta (ms). Ett meddelande i kanalen kan försvinna utan att anslutningen bryts, och
-// då står gästen kvar i ett gammalt läge. Har den som har tur missat det hänger hela matchen, eftersom inget nytt
+// Värden skickar läget igen högst så här ofta (ms). Ett meddelande i kanalen kan försvinna utan att anslutningen bryts,
+// och då står gästen kvar i ett gammalt läge. Har den som har tur missat det hänger hela matchen, eftersom inget nytt
 // läge kommer förrän den spelaren gjort något.
-export const STATE_RESEND_MS = 5000
-// Händerna och korten skickas igen vart fjärde varv. De är fler meddelanden och ändras sällan.
-export const HANDS_RESEND_EVERY = 4
+export const STATE_RESEND_MS = 10_000
+
+// Väntar spelet på att någon ska svara? Då får inte ett förlorat läge stå kvar, för då kan matchen hänga sig. Steg som
+// värdens klocka eller värdens knapp för vidare (frågekortet, facit, väntrummet) väntar inte på någon annan.
+export function awaitsAnswer(state: GameState): boolean {
+  if (state.phase === 'guessing') return true
+  if (state.phase !== 'playing') return false
+  if (state.imposter) return state.imposter.step !== 'facit'
+  return state.cards?.step === 'choosing' || state.cards?.step === 'judging'
+}
+
+// Ska värden skicka läget igen nu? Bara till andra, inte oftare än STATE_RESEND_MS, och bara om spelet väntar på ett svar
+// eller om läget ändrats och inte skickats igen än. En kvittens från varje gäst skulle kosta fler meddelanden än det
+// sparar, så en gäst säger bara till när den märker att den saknar något (hello, ett drag som skickas igen).
+export function shouldResendState(input: { awaiting: boolean; changed: boolean; others: boolean; now: number; lastSentAt: number }): boolean {
+  const { awaiting, changed, others, now, lastSentAt } = input
+  return others && (awaiting || changed) && now - lastSentAt >= STATE_RESEND_MS
+}
+
+// Läget säger vilket nummer min senaste hand eller mitt senaste kort har. Har jag inte det numret saknar jag den.
+export function handIsMissing(expected: number | undefined, mine: number | null): boolean {
+  return expected !== undefined && expected !== mine
+}
 
 // Samma innehåll som gästen redan har? Då behöver inget ritas om, och klockan ska inte heller ändras.
 export function isSameContent(a: unknown, b: unknown): boolean {

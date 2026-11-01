@@ -1,14 +1,69 @@
 import { describe, expect, it } from 'vitest'
+import { initialState, type GameState } from '@/lib/match'
+import type { ImposterTable } from '@/lib/imposterjakten'
+import type { CardTable } from '@/lib/kort'
 import {
+  awaitsAnswer,
   ClosingChannels,
+  handIsMissing,
   helloRetryAction,
   isSameContent,
   lobbyStatus,
   RECONNECT_AFTER_HELLOS,
+  shouldResendState,
   shouldRetryHello,
+  STATE_RESEND_MS,
   wakeAction,
   type StatusInput,
 } from '@/lib/anslutning'
+
+describe('när värden skickar läget igen', () => {
+  const imposter = (step: ImposterTable['step']): GameState => ({ ...initialState('imposterjakten'), phase: 'playing', imposter: { step } as ImposterTable })
+  const cards = (step: CardTable['step']): GameState => ({ ...initialState('kortkaos'), phase: 'playing', cards: { step } as CardTable })
+
+  it('spelet väntar på ett svar i alla Imposterjaktens steg utom facit', () => {
+    for (const step of ['kort', 'ledtradar', 'diskussion', 'rostning', 'gissning'] as const) expect(awaitsAnswer(imposter(step))).toBe(true)
+    expect(awaitsAnswer(imposter('facit'))).toBe(false)
+  })
+
+  it('kortspelen väntar medan man väljer och domaren väljer, inte under frågekortet och avslöjandet', () => {
+    expect(awaitsAnswer(cards('choosing'))).toBe(true)
+    expect(awaitsAnswer(cards('judging'))).toBe(true)
+    expect(awaitsAnswer(cards('question'))).toBe(false)
+    expect(awaitsAnswer(cards('reveal'))).toBe(false)
+  })
+
+  it('gissningar väntar på svar, men väntrummet, facit och slutskärmen gör det inte', () => {
+    const base = initialState('gissa-priset')
+    expect(awaitsAnswer({ ...base, phase: 'guessing' })).toBe(true)
+    for (const phase of ['waiting', 'reveal', 'finished'] as const) expect(awaitsAnswer({ ...base, phase })).toBe(false)
+  })
+
+  const input = { awaiting: true, changed: false, others: true, now: 100_000, lastSentAt: 100_000 - STATE_RESEND_MS }
+
+  it('skickar högst var tionde sekund', () => {
+    expect(STATE_RESEND_MS).toBe(10_000)
+    expect(shouldResendState(input)).toBe(true)
+    expect(shouldResendState({ ...input, lastSentAt: input.lastSentAt + 1 })).toBe(false)
+  })
+
+  it('skickar när spelet väntar på svar eller när läget ändrats, annars inte', () => {
+    expect(shouldResendState({ ...input, awaiting: false })).toBe(false)
+    expect(shouldResendState({ ...input, awaiting: false, changed: true })).toBe(true)
+  })
+
+  it('skickar inget när ingen annan är med', () => {
+    expect(shouldResendState({ ...input, others: false, changed: true })).toBe(false)
+  })
+
+  it('en spelare saknar sin hand när numret i läget inte är det den fått', () => {
+    expect(handIsMissing(3, 3)).toBe(false)
+    expect(handIsMissing(3, 2)).toBe(true)
+    expect(handIsMissing(1, 5)).toBe(true)
+    expect(handIsMissing(3, null)).toBe(true)
+    expect(handIsMissing(undefined, null)).toBe(false)
+  })
+})
 
 describe('kanaler som håller på att stängas', () => {
   it('en ny kanal väntar tills den gamla med samma namn är stängd', async () => {
