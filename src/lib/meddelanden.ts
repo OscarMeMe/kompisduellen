@@ -86,6 +86,8 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     countdownStarted: isBoolean,
     votes: orNull(recordOf(isString)),
     tied: orNull(listOf(isString)),
+    tieVotes: orNull(recordOf(isString)),
+    pointers: recordOf(isString),
     caught: orNull(isString),
     outcome: orNull(
       shape({
@@ -145,7 +147,7 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   if (!isString(payload.state.game)) return null
   const state = { ...initialState(payload.state.game), ...payload.state }
   // Fälten för lika röster, sista gissningen och facit saknas hos en värd med en äldre version av sajten.
-  if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, caught: null, outcome: null }, state.imposter)
+  if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
   return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null }
 }
@@ -165,6 +167,11 @@ const isPick = (value: unknown): value is Pick =>
 
 export function parseGuess(payload: unknown): { id: string; value: number } | null {
   return shape({ id: isString, value: isNumber })(payload) ? { id: payload.id as string, value: payload.value as number } : null
+}
+
+// Imposterjakten: den som har tur skriver på sitt ord (skickas högst varannan sekund, aldrig själva texten).
+export function parseTyping(payload: unknown): { id: string } | null {
+  return shape({ id: isString })(payload) ? { id: payload.id as string } : null
 }
 
 // En spelare önskar revansch eller ångrar sig (Jag vill ha revansch på slutskärmen).
@@ -199,6 +206,9 @@ export function parseMove(payload: unknown): { id: string; move: CardMove | Impo
     return { id: payload.id, move: { type: 'guess', word: move.word } }
   }
   if (move.type === 'giveUp') return { id: payload.id, move: { type: 'giveUp' } }
+  if (move.type === 'point' && (move.target === null || isString(move.target))) {
+    return { id: payload.id, move: { type: 'point', target: move.target } }
+  }
   if (move.type === 'clue' && isString(move.word) && move.word.length <= 100) {
     return { id: payload.id, move: { type: 'clue', word: move.word } }
   }

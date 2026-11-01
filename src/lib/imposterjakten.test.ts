@@ -621,3 +621,47 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     expect(done.state.scores.a).toBe(2)
   })
 })
+
+describe('Imposterjakten: peka ut och rösterna vid lika', () => {
+  const ABCD = ['a', 'b', 'c', 'd']
+  const discussion = () => playClues(readAll(start(ABCD), ABCD), ABCD)
+  const point = (host: HostState, id: string, target: string | null, ids = ABCD) =>
+    hostMove(host, id, { type: 'point', target }, ids, NOW)
+
+  it('låter spelarna peka ut, byta och ta bort sin pil under diskussionen', () => {
+    let host = point(discussion(), 'a', 'b')
+    expect(table(host).pointers).toEqual({ a: 'b' })
+    host = point(host, 'c', 'b')
+    host = point(host, 'a', 'd')
+    expect(table(host).pointers).toEqual({ a: 'd', c: 'b' })
+    host = point(host, 'a', null)
+    expect(table(host).pointers).toEqual({ c: 'b' })
+    expect(point(host, 'a', null)).toBe(host)
+  })
+
+  it('går inte att peka på sig själv, på någon utanför omgången eller vid fel tillfälle', () => {
+    const host = discussion()
+    expect(point(host, 'a', 'a')).toBe(host)
+    expect(point(host, 'a', 'z')).toBe(host)
+    const reading = start(ABCD)
+    expect(point(reading, 'a', 'b')).toBe(reading)
+  })
+
+  it('tar bort pilarna när omröstningen öppnas, och pilar från eller till den som lämnar', () => {
+    let host = point(point(point(discussion(), 'a', 'b'), 'b', 'c'), 'c', 'a')
+    host = hostPresence(host, ['a', 'b', 'd'], NOW)
+    expect(table(host).pointers).toEqual({ a: 'b' })
+    const voting = readyAll(host, ['a', 'b', 'd'])
+    expect(table(voting)).toMatchObject({ step: 'rostning', pointers: {} })
+    // Peka ut är skilt från rösterna.
+    expect(secretsOf(voting).votes).toEqual({})
+  })
+
+  it('sparar rösterna från en omröstning som blev lika, tills den extra omröstningen öppnas', () => {
+    const vote = (host: HostState, id: string, target: string) => hostMove(host, id, { type: 'vote', target }, ABCD, NOW)
+    const voting = readyAll(discussion(), ABCD)
+    const tied = vote(vote(vote(vote(voting, 'a', 'b'), 'b', 'a'), 'c', 'a'), 'd', 'b')
+    expect(table(tied)).toMatchObject({ step: 'diskussion', tieVotes: { a: 'b', b: 'a', c: 'a', d: 'b' }, votes: null })
+    expect(table(readyAll(tied, ABCD))).toMatchObject({ step: 'rostning', tieVotes: null })
+  })
+})

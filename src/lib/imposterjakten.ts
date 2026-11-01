@@ -117,6 +117,12 @@ export type ImposterTable = {
   votes: Record<string, string> | null
   // Efter lika röster: de lika placerade, de enda som går att rösta på i den extra omröstningen. null annars.
   tied: string[] | null
+  // Rösterna från den första omröstningen när det blev lika, så att bordet kan visa dem innan den nya diskussionen.
+  // Försvinner när den extra omröstningen öppnas.
+  tieVotes: Record<string, string> | null
+  // Peka ut (vem → på vem) under diskussionen. Offentligt och skilt från den hemliga omröstningen. Försvinner när
+  // omröstningen öppnas.
+  pointers: Record<string, string>
   // Impostern som fick flest röster och nu gissar ordet. null innan dess.
   caught: string | null
   outcome: ImposterOutcome | null
@@ -148,6 +154,7 @@ export type ImposterMove =
   | { type: 'said' }
   | { type: 'ready'; on: boolean }
   | { type: 'vote'; target: string }
+  | { type: 'point'; target: string | null }
   | { type: 'guess'; word: string }
   | { type: 'giveUp' }
 
@@ -160,7 +167,7 @@ export function isImposterSecrets(secrets: unknown): secrets is ImposterSecrets 
 }
 
 export function isImposterMove(move: { type: string }): move is ImposterMove {
-  return ['read', 'clue', 'pass', 'said', 'ready', 'vote', 'guess', 'giveUp'].includes(move.type)
+  return ['read', 'clue', 'pass', 'said', 'ready', 'vote', 'point', 'guess', 'giveUp'].includes(move.type)
 }
 
 // Ord jämförs utan hänsyn till stora och små bokstäver och onödiga mellanslag. Å, ä och ö skiljs åt.
@@ -216,6 +223,8 @@ export function dealRound(
       countdownStarted: false,
       votes: null,
       tied: null,
+      tieVotes: null,
+      pointers: {},
       caught: null,
       outcome: null,
     },
@@ -361,6 +370,7 @@ export function imposterMove(
   }
   if (move.type === 'ready') return markReady(host, playerId, move.on, activeIds, now)
   if (move.type === 'vote') return castVote(host, playerId, move.target, activeIds)
+  if (move.type === 'point') return pointAt(host, playerId, move.target, activeIds)
   if (move.type === 'guess' || move.type === 'giveUp') {
     if (table.step !== 'gissning' || table.caught !== playerId) return host
     // Poängen går bara till dem som fortfarande är med i omgången.
@@ -448,9 +458,33 @@ function markReady(host: ImposterHost, playerId: string, on: boolean, activeIds:
   return checkReady({ ...host, secrets: { ...host.secrets, ready } }, activeIds, now)
 }
 
+// Peka ut under diskussionen: en pil från spelaren till en annan spelare i omgången, eller ingen (target null). Går att
+// byta och ta bort när som helst fram till omröstningen.
+function pointAt(host: ImposterHost, playerId: string, target: string | null, activeIds: readonly string[]): ImposterHost {
+  const table = host.state.imposter!
+  if (table.step !== 'diskussion' || !activeIds.includes(playerId)) return host
+  if (target !== null && (target === playerId || !table.order.includes(target) || !activeIds.includes(target))) return host
+  if ((table.pointers[playerId] ?? null) === target) return host
+  const pointers = { ...table.pointers }
+  if (target === null) delete pointers[playerId]
+  else pointers[playerId] = target
+  return withTable(host, { ...table, pointers })
+}
+
+// Pilar från eller till någon som lämnat försvinner.
+function keepPointers(table: ImposterTable, activeIds: readonly string[]): ImposterTable {
+  const entries = Object.entries(table.pointers)
+  const kept = entries.filter(([from, to]) => activeIds.includes(from) && activeIds.includes(to))
+  return kept.length === entries.length ? table : { ...table, pointers: Object.fromEntries(kept) }
+}
+
+// Omröstningen öppnas. Pilarna och rösterna från en tidigare omröstning försvinner.
 function openVoting(host: ImposterHost): ImposterHost {
   const table = host.state.imposter!
-  return { ...host, state: { ...host.state, deadline: null, imposter: { ...table, step: 'rostning', votedCount: 0 } } }
+  return {
+    ...host,
+    state: { ...host.state, deadline: null, imposter: { ...table, step: 'rostning', votedCount: 0, pointers: {}, tieVotes: null } },
+  }
 }
 
 // Omröstningen: en röst var på en annan spelare i omgången (efter lika röster bara på de lika placerade). En bekräftad
@@ -485,7 +519,16 @@ function checkVotes(host: ImposterHost, activeIds: readonly string[]): ImposterH
       state: {
         ...host.state,
         deadline: null,
-        imposter: { ...table, step: 'diskussion', tied: top, readyCount: 0, votedCount: 0, countdownStarted: false, votes: null },
+        imposter: {
+          ...table,
+          step: 'diskussion',
+          tied: top,
+          tieVotes: votes,
+          readyCount: 0,
+          votedCount: 0,
+          countdownStarted: false,
+          votes: null,
+        },
       },
       secrets: { ...host.secrets, ready: [], votes: {} },
     }
@@ -614,7 +657,7 @@ export function imposterPresence(host: ImposterHost, activeIds: readonly string[
   if (table.step === 'kort') return everyoneRead(table, activeIds) ? toClues(host) : host
   if (table.step === 'ledtradar') return skipAway(host, activeIds)
   if (table.step === 'diskussion') {
-    const kept = keepTied(table, activeIds)
+    const kept = keepPointers(keepTied(table, activeIds), activeIds)
     const next = checkReady(kept === table ? host : withTable(host, kept), activeIds, now)
     const same =
       kept === table &&
