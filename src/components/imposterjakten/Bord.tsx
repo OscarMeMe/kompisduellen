@@ -62,7 +62,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
   return (
     <div className="space-y-2">
-      <div className="relative -mx-2 rounded-lg bg-room px-2 pt-13 pb-19 shadow-soft sm:mx-0 sm:px-3">
+      <div className="relative -mx-2 rounded-lg bg-room px-2 pt-10 pb-15 shadow-soft tiny:pt-8 tiny:pb-12 sm:mx-0 sm:px-3 sm:pt-13 sm:pb-19 sm:short:pt-9 sm:short:pb-12">
       {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
       {revealImposter && (
         <div
@@ -71,15 +71,16 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           style={{ '--d': `${votesDrawnMs}ms` } as CSSProperties}
         />
       )}
-      {/* Bordet fyller rummet men får plats på skärmen tillsammans med svarsdelen. Många spelare får lite mer höjd på mobil. */}
-      <div className={cn('relative mx-auto w-full max-w-[min(100%,calc(100svh-20rem))] sm:max-w-[min(100%,calc(100svh-22rem))]', small ? 'aspect-[3/4] sm:aspect-square' : 'aspect-square')}>
+      {/* Bordet fyller rummet men krymper så att allt får plats på skärmen tillsammans med svarsdelen. På mobil blir det
+          ovalt när höjden tar slut, och platserna följer med eftersom de ligger i procent. */}
+      <div className="relative mx-auto h-[clamp(11rem,calc(100svh-31.75rem),calc(100vw-1.5rem))] w-full tiny:h-[clamp(11rem,calc(100svh-28.5rem),calc(100vw-1.5rem))] sm:aspect-square sm:h-auto sm:max-w-[min(100%,max(15rem,calc(100svh-37rem)))]">
         {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
-        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[24%]' : 'inset-[23%]')} />
+        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[33%] border-4' : 'inset-x-[25%] inset-y-[31%] tiny:inset-x-[24%] tiny:inset-y-[33%] sm:inset-[25%] sm:short:inset-[31%]')} />
         <div
           aria-hidden
           className={cn(
-            'absolute flex flex-col items-center justify-center rounded-full bg-card px-3 text-center shadow-soft-sm transition-colors',
-            small ? 'inset-[31%]' : 'inset-[30%]',
+            'absolute flex flex-col items-center justify-center overflow-hidden rounded-full bg-card text-center shadow-soft-sm transition-colors',
+            small ? 'inset-[36%] px-0.5' : 'inset-x-[29%] inset-y-[35%] px-1 tiny:inset-x-[28%] tiny:inset-y-[36%] sm:inset-[29%] sm:short:inset-[34%]',
             revealing && 'bg-muted',
           )}
         >
@@ -93,7 +94,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           <div
             key={seat.id}
             aria-hidden
-            className={cn('absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-chair/30', small ? 'size-13 sm:size-17' : 'size-17 sm:size-21')}
+            className={cn('absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-chair/30', small ? 'size-12 tiny:size-9 sm:size-17 sm:short:size-11' : 'size-17 tiny:size-13 sm:size-21 sm:short:size-14')}
             style={{ left: `${seat.x}%`, top: `${seat.y}%` }}
           />
         ))}
@@ -201,24 +202,33 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
 }
 
 // Allt spelaren sagt i en enda bubbla, utanför bordet: ovanför figuren på övre halvan och under namnet på nedre. Vid
-// sidorna av bordet är det trångt, så där blir bubblan smalare. Med många spelare finns bara plats för det senaste
-// ordet, och då står allas ord i en lista under bordet (AllClues). Bubblan flyttas då lite utåt från grannen.
+// sidorna av bordet är det trångt, så där blir bubblan smalare. Med många spelare är bordet mindre och bubblan står i
+// gapet mellan figuren och bordet, med bara det senaste ordet, och på mobil finns ingen plats alls för den. Allas ord
+// står då i en lista under bordet (AllClues).
 function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boolean }) {
   if (clues.length === 0) return null
   const above = seat.y < 50
   const atSide = Math.abs(seat.x - 50) > 25
-  const nudge = small ? Math.sign(seat.x - 50) * 5 : 0
-  const left = Math.min(atSide ? 88 : 72, Math.max(atSide ? 12 : 28, seat.x + nudge))
+  const left = Math.min(atSide ? 86 : 72, Math.max(atSide ? 14 : 28, seat.x))
+  if (small) {
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none absolute z-10 max-w-24 -translate-x-1/2 -translate-y-1/2 truncate max-sm:hidden sm:short:hidden rounded-2xl border bg-sun-soft px-1.5 py-0.5 text-center font-heading text-xs leading-tight font-bold shadow-soft-sm motion-safe:animate-fade sm:text-sm"
+        style={{ left: `${50 + (seat.x - 50) * 0.62}%`, top: `${50 + (seat.y - 50) * 0.62}%` }}
+      >
+        {clueLine(clues.slice(-1))}
+      </div>
+    )
+  }
   return (
     <div
       aria-hidden
       className={cn(
         'pointer-events-none absolute z-10 w-max -translate-x-1/2 rounded-2xl border bg-sun-soft text-center font-heading leading-tight font-bold shadow-soft-sm motion-safe:animate-fade',
         // --f = halva figuren och --n = namnet, så att bubblan börjar där de slutar.
-        small
-          ? 'max-w-[4.5rem] truncate px-1.5 py-0.5 text-xs [--f:1.375rem] [--n:1.1rem] sm:max-w-28 sm:text-sm sm:[--f:1.75rem] sm:[--n:1.4rem]'
-          : 'px-2 py-0.5 text-sm [--f:1.75rem] [--n:1.4rem] sm:text-base sm:[--f:2rem] sm:[--n:1.75rem]',
-        !small && (atSide ? 'max-w-[5.25rem] sm:max-w-28' : 'max-w-36'),
+        'px-2 py-0.5 text-sm [--f:1.75rem] [--n:1.4rem] tiny:text-xs tiny:[--f:1.375rem] tiny:[--n:1.4rem] sm:text-base sm:[--f:2rem] sm:[--n:1.75rem] sm:short:text-sm sm:short:[--f:1.375rem] sm:short:[--n:1.4rem]',
+        atSide ? 'max-w-[5.25rem] sm:max-w-28 sm:short:max-w-24' : 'max-w-[75%]',
       )}
       style={{
         left: `${left}%`,
@@ -226,7 +236,7 @@ function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boo
         bottom: above ? `calc(${100 - seat.y}% + var(--f) + 0.25rem)` : undefined,
       }}
     >
-      {clueLine(small ? clues.slice(-1) : clues)}
+      {clueLine(clues)}
     </div>
   )
 }
@@ -279,14 +289,14 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
         key={turn ? `tur-${table.turn}` : 'vilar'}
         className={cn(
           'relative flex items-center justify-center rounded-full border-2 bg-card shadow-soft-sm transition',
-          small ? 'size-11 sm:size-14' : 'size-14 sm:size-16',
+          small ? 'size-10 tiny:size-8 sm:size-14 sm:short:size-9' : 'size-14 tiny:size-11 sm:size-16 sm:short:size-11',
           turn && 'border-primary ring-4 ring-primary motion-safe:animate-turn-pulse',
           (chosen || lit) && 'border-primary ring-4 ring-sun',
           mine && !turn && 'border-primary/50',
           away && 'opacity-40',
         )}
       >
-        <Emoji emoji={player?.avatar ?? '🙂'} className={small ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'} />
+        <Emoji emoji={player?.avatar ?? '🙂'} className={small ? 'text-xl tiny:text-lg sm:text-3xl sm:short:text-xl' : 'text-3xl tiny:text-2xl sm:text-4xl sm:short:text-2xl'} />
         {votes !== null && votes > 0 && (
           <span
             className="absolute -top-1.5 -right-2 rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background tabular-nums motion-safe:animate-pop motion-safe:[animation-delay:var(--d)]"
@@ -306,7 +316,7 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
           </span>
         )}
       </span>
-      <span className={cn('relative max-w-20 truncate rounded-full bg-room/85 px-1 font-bold sm:max-w-28', small ? 'text-[13px] leading-tight sm:text-sm' : 'text-sm sm:text-base', mine && 'text-primary-button')}>
+      <span className={cn('relative max-w-20 truncate rounded-full bg-room/85 px-1 font-bold sm:max-w-28', small ? 'text-[13px] leading-tight sm:text-sm' : 'text-sm sm:text-base sm:short:text-sm', mine && 'text-primary-button')}>
         {mine ? 'Du' : name}
       </span>
       {away && <span className="text-[11px] text-muted-foreground">borta</span>}
@@ -325,7 +335,7 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
   const position = cn(
     // Figuren står mitt på platsen, och namnet under den.
     'absolute flex -translate-x-1/2 flex-col items-center gap-0.5 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
-    small ? '-mt-[1.375rem] sm:-mt-7' : '-mt-7 sm:-mt-8',
+    small ? '-mt-5 tiny:-mt-4 sm:-mt-7 sm:short:-mt-[1.125rem]' : '-mt-7 tiny:-mt-[1.375rem] sm:-mt-8 sm:short:-mt-[1.375rem]',
     dim && 'opacity-50',
     stamp !== null && 'z-30',
   )

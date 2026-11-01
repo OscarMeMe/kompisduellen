@@ -9,8 +9,12 @@ export function Narrow({ children }: { children: ReactNode }) {
   return <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">{children}</div>
 }
 
-export function Wide({ children }: { children: ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2">{children}</div>
+export function Wide({ children, tight = false }: { children: ReactNode; tight?: boolean }) {
+  return (
+    <div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2', tight && 'max-sm:gap-1.5 max-sm:pt-0')}>
+      {children}
+    </div>
+  )
 }
 
 export function RoundBadge({ state }: { state: GameState }) {
