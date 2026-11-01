@@ -139,10 +139,10 @@ export function WaitingRoom({
 
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Spelet">
-        <div className="flex items-center gap-3">
+        <div data-spel={game.id} className="flex items-center gap-3 rounded-md bg-spel-yta px-3 py-2 text-spel-text">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl leading-tight">{game.name}</h1>
-            <p className="text-sm text-muted-foreground">👥 {online.length} i lobbyn</p>
+            <p className="text-sm opacity-80">👥 {online.length} i lobbyn</p>
           </div>
         </div>
 

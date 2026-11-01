@@ -39,7 +39,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
   - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
   - rummet runt Imposterjaktens bord: `room`, `felt` (bordsytan), `wood`, `wood-edge`, `chair`
-  - varje spels färg: `spel-yta`, `spel-text`, `spel-knapp` och `spel-knapp-text`. De följer `data-spel` på ett element (spelets id), och nytt spel får en rad i `src/index.css`. Spelkorten på startsidan går i spelets färg
+  - varje spels färg: `spel-yta`, `spel-text`, `spel-knapp` och `spel-knapp-text`. De följer `data-spel` på ett element (spelets id), och nytt spel får en rad i `src/index.css`. Spelkorten på startsidan går i spelets färg, och i lobbyn syns den som en rand högst upp och i väntrummets rubrik
   - `crown`: guld för kronan hos den som leder (`text-crown`)
   - `destructive`: rött, t.ex. tidsstapeln när tiden nästan är ute
   - `primary-button`: den mörkare korallen på korallknapparna (`Button`), så att den vita texten klarar WCAG AA. Loggan och övriga detaljer använder `primary`

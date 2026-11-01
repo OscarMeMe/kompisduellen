@@ -369,6 +369,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         }}
       />
       <ReactionFloaters />
+      {/* Spelets färg följer med in i lobbyn, som en rand högst upp. Den flyttar inget. */}
+      <div aria-hidden data-spel={state.game} className="pointer-events-none fixed inset-x-0 top-0 z-20 h-1.5 bg-spel-yta" />
       <SendStatus delivery={delivery} onRetry={actions.retryMoves} />
       <VersionNotice status={version} inMatch={state.phase !== 'waiting' && state.phase !== 'finished'} />
       <SplatOverlay />
