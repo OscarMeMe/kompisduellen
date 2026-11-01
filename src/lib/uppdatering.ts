@@ -29,6 +29,12 @@ export function isNewerBuild(running: string | null, latest: string | null): boo
   return running !== null && latest !== null && running !== latest
 }
 
+// Ska sidan ladda om för den här versionen? Bara en gång per version och flik. Visar sajten fortfarande en äldre sida
+// efter omladdningen (t.ex. en cache som inte hunnit med) blir det annars en oändlig loop.
+export function shouldReloadFor(latest: string, alreadyReloadedFor: string | null): boolean {
+  return latest !== alreadyReloadedFor
+}
+
 let pending = false
 const listeners = new Set<() => void>()
 
