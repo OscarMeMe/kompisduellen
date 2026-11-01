@@ -250,6 +250,7 @@ export function setImposterSettings(state: GameState, settings: Partial<Imposter
   if (state.phase !== 'waiting') return state
   const next: ImposterSettings = { ...state.imposterSettings }
   if (settings.hard !== undefined) next.hard = settings.hard
+  if (settings.tricky !== undefined) next.tricky = settings.tricky
   if (settings.aloud !== undefined) next.aloud = settings.aloud
   if (settings.category !== undefined && (settings.category === null || CATEGORIES.includes(settings.category))) {
     next.category = settings.category

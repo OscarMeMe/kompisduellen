@@ -16,13 +16,14 @@ export function ImposterSettingsChoices({
       <Choice
         label="Svårighet"
         hint="Välj hur mycket hjälp impostern får."
-        note="Normal: impostern får en vag ledtråd. Svår: ingen ledtråd alls."
+        note="Normal: impostern får en vag ledtråd. Svår: ingen ledtråd alls. Lurig: impostern får ett liknande ord och vet inte om att den är impostern."
         options={[
           { value: 0, label: 'Normal' },
           { value: 1, label: 'Svår' },
+          { value: 2, label: 'Lurig' },
         ]}
-        selected={settings.hard ? 1 : 0}
-        onSelect={(value) => onChange({ hard: value === 1 })}
+        selected={settings.tricky ? 2 : settings.hard ? 1 : 0}
+        onSelect={(value) => onChange({ hard: value === 1, tricky: value === 2 })}
       />
       <Choice
         label="Kategori"

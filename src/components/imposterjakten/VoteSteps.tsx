@@ -268,7 +268,7 @@ const HEADLINES: Record<ImposterOutcome['kind'], { emoji: string; text: string; 
 }
 
 // Facit: vem som vann omgången, ordet, impostern, ledtråden (i Normal), gissningen, allas röster och poängen.
-export function FacitStep({ state, table, isHost, onNextRound }: StepProps) {
+export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) {
   const outcome = table.outcome
   if (!outcome) return null
   const headline = HEADLINES[outcome.kind]
@@ -285,6 +285,8 @@ export function FacitStep({ state, table, isHost, onNextRound }: StepProps) {
           {headline.text}
         </p>
         {outcome.reason && <p className="mt-2 font-semibold">{outcome.reason} Ingen fick poäng.</p>}
+        {/* Lurig: impostern har inte vetat om det förrän nu. */}
+        {outcome.imposterWord && outcome.kind === 'undan' && outcome.imposter === me.id && <p className="mt-2 font-semibold">Det var du hela tiden!</p>}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -292,6 +294,7 @@ export function FacitStep({ state, table, isHost, onNextRound }: StepProps) {
           <p className="text-sm font-semibold text-muted-foreground">Det hemliga ordet</p>
           <p className="font-heading text-2xl font-bold">{outcome.word}</p>
           {outcome.hint && <p className="mt-1 text-sm text-muted-foreground">Imposterns ledtråd: {outcome.hint}</p>}
+          {outcome.imposterWord && <p className="mt-1 text-sm text-muted-foreground">Imposterns ord: {outcome.imposterWord}</p>}
         </div>
         <div className="rounded-lg border bg-card p-4 text-center shadow-soft-sm">
           <p className="text-sm font-semibold text-muted-foreground">Impostern var</p>

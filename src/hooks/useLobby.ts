@@ -768,6 +768,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Numret nollas också, så att jag ber om handen om den nya kom innan läget och därför rensades här.
   useEffect(() => {
     if (playing) return
+    // Handen kommer utifrån i ett eget meddelande, så den går inte att räkna ut under ritningen.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
     setHand(null)
     setImposterCard(null)
     myHandSeqRef.current = null
