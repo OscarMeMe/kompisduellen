@@ -143,47 +143,46 @@ export function ExempelRunda() {
           </figcaption>
         </figure>
 
-        {/* Fasta minsta höjder på frågan och svarsdelen (formulär eller facit), så att kortet inte hoppar mellan frågorna.
-            Måtten är den längsta frågan och det högsta facit. */}
+        {/* Fasta minsta höjder på frågan och svarsdelen, så att kortet inte hoppar mellan frågorna. Facit tar samma plats som
+            fältet och knappen. Måtten är den längsta frågan och det högsta facit med vanliga gissningar. */}
         <div className="mt-1 min-h-29 md:min-h-24">
           <h3 className="text-lg leading-snug text-balance">{questionText(item)}</h3>
           <p className="mt-0.5 text-sm leading-snug text-muted-foreground italic">Ledtråd: {item.exempelLedtrad ?? item.clue}</p>
         </div>
 
         {guess === null ? (
-          <form onSubmit={reveal} className="mt-2 min-h-41 space-y-2" noValidate>
-            <div className="space-y-1.5">
-              <div className="relative">
-                <Input
-                  aria-label="Din gissning i kronor"
-                  ref={inputRef}
-                  value={text}
-                  onChange={(event) => {
-                    // Bara siffror, mellanslag och decimaltecken (komma eller punkt, för ören som 0,50), även vid inklistring.
-                    setText(cleanTypedAmount(event.target.value))
-                    setError(null)
-                  }}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="T.ex. 10"
-                  aria-invalid={error !== null}
-                  aria-describedby={error ? errorId : undefined}
-                  className="pr-12 font-heading text-lg font-bold"
-                />
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center font-semibold text-muted-foreground" aria-hidden>
-                  kr
-                </span>
-              </div>
-              <p id={errorId} role="alert" className="text-sm font-semibold text-primary empty:hidden">
-                {error}
-              </p>
+          <form onSubmit={reveal} className="mt-2 flex min-h-35 flex-col justify-end gap-2" noValidate>
+            {/* Felet står ovanför fältet, på plats som redan finns, så att fältet och knappen inte flyttar sig. */}
+            <p id={errorId} role="alert" className="text-sm font-semibold text-primary empty:hidden">
+              {error}
+            </p>
+            <div className="relative">
+              <Input
+                aria-label="Din gissning i kronor"
+                ref={inputRef}
+                value={text}
+                onChange={(event) => {
+                  // Bara siffror, mellanslag och decimaltecken (komma eller punkt, för ören som 0,50), även vid inklistring.
+                  setText(cleanTypedAmount(event.target.value))
+                  setError(null)
+                }}
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="T.ex. 10"
+                aria-invalid={error !== null}
+                aria-describedby={error ? errorId : undefined}
+                className="pr-12 font-heading text-lg font-bold"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center font-semibold text-muted-foreground" aria-hidden>
+                kr
+              </span>
             </div>
             <Button type="submit" size="lg" className="w-full">
               Visa svaret
             </Button>
           </form>
         ) : (
-          <div className="mt-2 min-h-41 space-y-2">
+          <div className="mt-2 min-h-35 space-y-2">
             <div
               ref={resultRef}
               tabIndex={-1}
@@ -191,9 +190,11 @@ export function ExempelRunda() {
             >
               {/* Nära rätt pris (minst 90 poäng, inom 10 procent) ger ett litet konfettiregn. */}
               {pricePoints(guess, price) >= CONFETTI_POINTS && <Konfetti />}
-              <p className="text-sm font-semibold text-muted-foreground">Rätt pris</p>
-              <p className="font-heading text-2xl leading-tight font-bold tabular-nums">
-                <CountingPrice target={price} />
+              <p className="flex flex-wrap items-baseline justify-center gap-x-2">
+                <span className="text-sm font-semibold text-muted-foreground">Rätt pris</span>
+                <span className="font-heading text-2xl leading-tight font-bold tabular-nums">
+                  <CountingPrice target={price} />
+                </span>
               </p>
               <p className="text-sm font-semibold">
                 Du gissade {formatSek(guess)}. {difference}
