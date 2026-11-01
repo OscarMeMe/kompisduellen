@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Check, Flag, Send, Vote, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
-import { Bord } from '@/components/imposterjakten/Bord'
 import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,19 +43,41 @@ function Center({ title, line, tone }: { title: string; line?: string; tone?: st
   )
 }
 
+// Det som står mitt på bordet, för faserna efter ledtrådsvarven.
+export function TableCenter({ state, table, me, online, secondsLeft }: Omit<StepProps, 'inRound'>) {
+  const players = presentIds(table, online).length
+  if (table.accusation) {
+    const name = state.players[table.accusation.accused]?.name ?? 'Spelaren'
+    return <Center title={`Är ${name} impostern?`} line={`${table.accusation.answered} av ${table.accusation.voters} har svarat`} tone="text-primary-button" />
+  }
+  if (table.step === 'diskussion') {
+    if (table.countdownStarted) {
+      return <Center title={`${secondsLeft} s`} line={`${table.readyCount} av ${players} är redo`} tone="text-primary-button text-2xl sm:text-3xl" />
+    }
+    return <Center title={table.tied ? 'Lika röster!' : 'Diskutera!'} line={`${table.readyCount} av ${players} är redo`} />
+  }
+  if (table.step === 'rostning') {
+    return <Center title={table.tied ? 'Ny omröstning' : 'Rösta!'} line={`${table.votedCount} av ${players} har röstat`} />
+  }
+  if (table.step === 'gissning') {
+    const name = state.players[table.caught ?? '']?.name ?? 'Impostern'
+    return <Center title="Impostern är fast!" line={table.caught === me.id ? 'Gissa ordet' : `${name} gissar…`} tone="text-primary-button" />
+  }
+  if (table.step === 'facit' && table.outcome) return <Center title={table.outcome.word} line="var ordet" />
+  return null
+}
+
 // Anklaga!: alla utom den anklagade svarar i hemlighet ja eller nej, högst ACCUSE_SECONDS. Allt annat står still.
-export function AccusationStep({ state, table, me, online, inRound, imposterCard, secondsLeft, typing, onMove }: StepProps) {
+export function AccusationStep({ state, table, me, inRound, imposterCard, secondsLeft, onMove }: StepProps) {
   const accusation = table.accusation
   if (!accusation) return null
   const name = state.players[accusation.accused]?.name ?? 'Spelaren'
   const accuser = state.players[accusation.accuser]?.name ?? 'Någon'
   const answer = imposterCard?.accuseVote ?? null
   const accusedIsMe = accusation.accused === me.id
-  const center = <Center title={`Är ${name} impostern?`} line={`${accusation.answered} av ${accusation.voters} har svarat`} tone="text-primary-button" />
   return (
     <>
-      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
-      <section {...SPLAT_SHIELD} className="space-y-3 text-center">
+      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
         <p className="rounded-md bg-coral-soft px-4 py-3 font-semibold">
           {accuser} anklagar {accusedIsMe ? 'dig' : name}! {secondsLeft} s kvar.
         </p>
@@ -86,7 +107,7 @@ export function AccusationStep({ state, table, me, online, inRound, imposterCard
 // igen, och sedan röstar alla bara mellan de lika placerade. Man kan peka ut någon (tryck på spelaren), men det är
 // offentligt och ingen röst.
 
-export function DiscussionStep({ state, table, me, online, inRound, imposterCard, secondsLeft, typing, onMove }: StepProps) {
+export function DiscussionStep({ state, table, inRound, imposterCard, online, onMove }: StepProps) {
   const ready = imposterCard?.ready ?? false
   const players = presentIds(table, online).length
   // En kort stund efter att diskussionen börjat går det inte att trycka, så att ett extra tryck på Klar inte räknas.
@@ -95,16 +116,10 @@ export function DiscussionStep({ state, table, me, online, inRound, imposterCard
     const timer = setTimeout(() => setSettled(true), 1000)
     return () => clearTimeout(timer)
   }, [])
-  const center = table.countdownStarted ? (
-    <Center title={`${secondsLeft} s`} line={`${table.readyCount} av ${players} är redo`} tone="text-primary-button text-2xl sm:text-3xl" />
-  ) : (
-    <Center title={table.tied ? 'Lika röster!' : 'Diskutera!'} line={`${table.readyCount} av ${players} är redo`} />
-  )
   const tiedNames = (table.tied ?? []).map((id) => state.players[id]?.name ?? 'någon')
   return (
     <>
-      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
-      <section {...SPLAT_SHIELD} className="space-y-3 text-center">
+      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
         {table.countdownStarted ? (
           <p className="rounded-md bg-sun-soft px-4 py-3 font-semibold">Sista chansen att försvara dig!</p>
         ) : table.tied ? (
@@ -149,27 +164,13 @@ export function DiscussionStep({ state, table, me, online, inRound, imposterCard
 
 // Omröstningen: hemlig och utan tidsgräns. Var och en väljer en annan spelare och bekräftar. En bekräftad röst är låst.
 // Efter lika röster går det bara att rösta på de lika placerade.
-export function VotingStep({ state, table, me, online, inRound, imposterCard, typing, onMove }: StepProps) {
-  const [choice, setChoice] = useState<string | null>(null)
+export function VotingStep({ state, table, online, inRound, imposterCard, choice, onMove }: StepProps & { choice: string | null }) {
   const myVote = imposterCard?.vote ?? null
   const present = presentIds(table, online)
-  const candidates = (table.tied ?? table.order).filter((id) => id !== me.id && present.includes(id))
-  const canVote = inRound && !myVote
-  const center = <Center title={table.tied ? 'Ny omröstning' : 'Rösta!'} line={`${table.votedCount} av ${present.length} har röstat`} />
 
   return (
     <>
-      <Bord
-        state={state}
-        table={table}
-        meId={me.id}
-        online={online}
-        typing={typing}
-        center={center}
-        onMove={onMove}
-        vote={canVote ? { choice, candidates, onChoose: setChoice } : null}
-      />
-      <section {...SPLAT_SHIELD} className="space-y-3 text-center">
+      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
         {inRound &&
           (myVote ? (
             <p className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-mint-soft px-4 py-3 font-semibold">
@@ -196,14 +197,10 @@ export function VotingStep({ state, table, me, online, inRound, imposterCard, ty
 
 // Sista gissningen: impostern fick flest röster och gissar ordet. Ingen tidsgräns. De andra väntar. Bordet visar
 // rösterna som pilar.
-export function GuessStep({ state, table, me, online, typing, onMove }: StepProps) {
-  const caught = table.caught
-  const mine = caught === me.id
-  const name = state.players[caught ?? '']?.name ?? 'Impostern'
-  const center = <Center title="Impostern är fast!" line={mine ? 'Gissa ordet' : `${name} gissar…`} tone="text-primary-button" />
+export function GuessStep({ table, me, onMove }: StepProps) {
+  const mine = table.caught === me.id
   return (
     <>
-      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
       <p className="text-center text-sm text-muted-foreground">
         {mine ? 'Gissar du rätt får du en poäng.' : 'Ni får era poäng ändå, och gissar impostern rätt får den en poäng.'}
       </p>
@@ -271,7 +268,7 @@ const HEADLINES: Record<ImposterOutcome['kind'], { emoji: string; text: string; 
 }
 
 // Facit: vem som vann omgången, ordet, impostern, ledtråden (i Normal), gissningen, allas röster och poängen.
-export function FacitStep({ state, table, me, online, typing, isHost, onMove, onNextRound }: StepProps) {
+export function FacitStep({ state, table, isHost, onNextRound }: StepProps) {
   const outcome = table.outcome
   if (!outcome) return null
   const headline = HEADLINES[outcome.kind]
@@ -280,16 +277,8 @@ export function FacitStep({ state, table, me, online, typing, isHost, onMove, on
   const last = completed >= state.rounds
   const guessed = outcome.kind === 'gissade-ratt' || outcome.kind === 'gissade-fel'
 
-  const center = (
-    <>
-      <span className="text-sm font-semibold text-muted-foreground sm:text-base">Ordet var</span>
-      <span className="font-heading text-lg leading-tight font-bold break-words sm:text-2xl">{outcome.word}</span>
-    </>
-  )
-
   return (
-    <section className="space-y-4">
-      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
+    <section className="space-y-4 motion-safe:animate-fade">
       <div className={cn('rounded-lg border p-5 text-center shadow-soft motion-safe:animate-pop', headline.tone)}>
         <p className="font-heading text-3xl font-bold">
           <Emoji emoji={headline.emoji} className="mr-2 text-3xl" />

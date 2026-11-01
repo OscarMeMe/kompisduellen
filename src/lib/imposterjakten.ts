@@ -555,6 +555,11 @@ export function imposterInstruction(
   }
 }
 
+// De jag kan rösta på just nu. Efter lika röster bara de lika placerade.
+export function voteCandidates(table: ImposterTable, meId: string, activeIds: readonly string[]): string[] {
+  return (table.tied ?? table.order).filter((id) => id !== meId && activeIds.includes(id))
+}
+
 // Får spelaren anklaga någon nu? Från det att andra varvet är klart och fram till att omröstningen öppnas, en gång per
 // spelare om anklagelsen inte får majoritet.
 export function canAccuse(table: ImposterTable, playerId: string): boolean {

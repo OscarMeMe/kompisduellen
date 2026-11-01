@@ -39,6 +39,7 @@ export function RoundTimer({
   totalSeconds,
   warning = 'normal',
   label = 'Runda',
+  keepBarSpace = false,
 }: {
   state: GameState
   clockOffset: number
@@ -46,6 +47,8 @@ export function RoundTimer({
   warning?: TimeWarning
   // Vad en runda heter i spelet, t.ex. "Omgång" i Imposterjakten.
   label?: string
+  // Samma höjd med och utan tidsstapel, så att det under inte hoppar när en nedräkning börjar eller slutar.
+  keepBarSpace?: boolean
 }) {
   const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
 
@@ -58,6 +61,7 @@ export function RoundTimer({
         {label} {state.round}/{state.rounds}
         {state.practice && <PracticeChip />}
       </p>
+      {state.deadline === null && keepBarSpace && <div aria-hidden className="mt-1.5 h-1.5" />}
       {state.deadline !== null && (
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
           <div
