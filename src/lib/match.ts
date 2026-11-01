@@ -320,7 +320,16 @@ export function addPlayers(state: GameState, players: Record<string, PlayerInfo>
 
 // Kan en match starta med så här många i lobbyn? Spel med soloPractice får starta som provomgång
 // med en spelare. Annars krävs spelets minsta antal spelare.
+// Spel som inte går att starta med fler spelare än sajten anger. Bara Kortkaos: svarshögen räcker inte till fler.
+const CAPPED_GAMES = ['kortkaos']
+
+export function tooManyPlayers(game: string, playerCount: number): boolean {
+  const maxPlayers = findGame(game)?.maxPlayers
+  return CAPPED_GAMES.includes(game) && maxPlayers !== undefined && playerCount > maxPlayers
+}
+
 export function canStart(game: string, playerCount: number): boolean {
+  if (tooManyPlayers(game, playerCount)) return false
   const minPlayers = findGame(game)?.minPlayers ?? 2
   if (playerCount >= minPlayers) return true
   return playerCount === 1 && rulesFor(game).soloPractice === true

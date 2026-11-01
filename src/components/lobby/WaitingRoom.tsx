@@ -14,6 +14,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { GAMES, playersLabel, roundWords, type GameInfo } from '@/lib/games'
 import {
   canStart,
+  tooManyPlayers,
   guessSecondsFor,
   hasTempoSettings,
   rankLeaderboard,
@@ -102,6 +103,9 @@ export function WaitingRoom({
   // För få spelare för spelet som är valt, t.ex. Kortkaos med två. Kort, eftersom knappen redan säger att det väntar.
   const tooFewText = `Minst ${game.minPlayers} spelare behövs.`
   const canPractice = canStart(state.game, 1) && online.length === 1
+  // För många för spelet som är valt. Sajten säger t.ex. 3–9 spelare i Kortkaos.
+  const tooMany = tooManyPlayers(state.game, online.length)
+  const tooManyText = `${game.name} går att spela med högst ${game.maxPlayers} spelare. Ni är ${online.length} nu, så byt spel eller vänta tills någon lämnat.`
   const hostName = online.find((p) => p.host)?.name
   // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
   const rematching = state.rematchAt !== null
@@ -156,10 +160,15 @@ export function WaitingRoom({
               size="lg"
               className={cn('w-full', enoughPlayers && 'motion-safe:animate-wiggle')}
               onClick={onStartCountdown}
-              disabled={!enoughPlayers || rematching}
+              disabled={!enoughPlayers || tooMany || rematching}
             >
-              {enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
+              {tooMany ? 'För många spelare' : enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
+            {tooMany && (
+              <p className="text-center text-sm text-muted-foreground" role="status">
+                {tooManyText}
+              </p>
+            )}
             {!enoughPlayers && (
               <p className="text-center text-sm text-muted-foreground" role="status">
                 {tooFewText} Dela koden nedan.
@@ -189,6 +198,11 @@ export function WaitingRoom({
             {!enoughPlayers && (
               <p className="text-center text-sm text-muted-foreground" role="status">
                 {tooFewText}
+              </p>
+            )}
+            {tooMany && (
+              <p className="text-center text-sm text-muted-foreground" role="status">
+                {tooManyText}
               </p>
             )}
           </div>
@@ -242,6 +256,7 @@ export function WaitingRoom({
                   const selected = option.id === game.id
                   // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
                   const tooFew = online.length < option.minPlayers
+                  const tooManyHere = tooManyPlayers(option.id, online.length)
                   return (
                     <Button
                       key={option.id}
@@ -259,9 +274,10 @@ export function WaitingRoom({
                       <span className="min-w-0 flex-1">
                         <span className="block font-heading text-base font-bold">{option.name}</span>
                         <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
-                        <span className={cn('mt-1 block text-xs font-semibold', tooFew ? 'text-primary' : 'text-muted-foreground')}>
+                        <span className={cn('mt-1 block text-xs font-semibold', tooFew || tooManyHere ? 'text-primary' : 'text-muted-foreground')}>
                           👥 {playersLabel(option)}
                           {tooFew && (online.length === 1 ? ' · Du är själv här just nu' : ` · ni är ${online.length} just nu`)}
+                          {tooManyHere && ` · ni är ${online.length} just nu`}
                         </span>
                       </span>
                       {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}

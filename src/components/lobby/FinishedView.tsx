@@ -13,6 +13,7 @@ import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
+  tooManyPlayers,
   type GameState,
   guessSecondsFor,
   hasTempoSettings,
@@ -167,8 +168,9 @@ export function FinishedView({
               </div>
               {!canRematch && (
                 <p className="text-center text-xs text-muted-foreground sm:text-sm">
-                  Revansch i {game.name} kräver minst {game.minPlayers} spelare, och några har lämnat lobbyn. Byt spel eller
-                  vänta på att de kommer tillbaka.
+                  {tooManyPlayers(state.game, online.length)
+                    ? `${game.name} går att spela med högst ${game.maxPlayers} spelare. Byt spel eller vänta tills någon lämnat.`
+                    : `Revansch i ${game.name} kräver minst ${game.minPlayers} spelare, och några har lämnat lobbyn. Byt spel eller vänta på att de kommer tillbaka.`}
                 </p>
               )}
             </>
