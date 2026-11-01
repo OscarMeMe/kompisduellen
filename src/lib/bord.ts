@@ -39,19 +39,33 @@ export function smallSeats(count: number): boolean {
   return count >= SMALL_SEATS_FROM
 }
 
-// En pil mellan två platser, förkortad i båda ändar så att den inte går in i figurerna. inset i procent.
-export function arrowBetween(from: Seat, to: Seat, inset: number): { x1: number; y1: number; x2: number; y2: number } {
+// En böjd pil mellan två platser, som ett SVG-spår. Den bågnar bort från bordets mitt, så att pilarna går runt bordet och
+// inte korsar varandra i onödan. Den börjar och slutar inset (procent) från platsens mitt, alltså vid figurens kant.
+export function curvedArrow(from: Seat, to: Seat, inset: number): string {
   const dx = to.x - from.x
   const dy = to.y - from.y
   const length = Math.hypot(dx, dy) || 1
-  const ux = dx / length
-  const uy = dy / length
-  return {
-    x1: round(from.x + ux * inset),
-    y1: round(from.y + uy * inset),
-    x2: round(to.x - ux * inset),
-    y2: round(to.y - uy * inset),
+  const midX = (from.x + to.x) / 2
+  const midY = (from.y + to.y) / 2
+  // Normalen som pekar bort från mitten. Går pilen rakt över mitten bågnar den åt höger i färdriktningen.
+  let nx = -dy / length
+  let ny = dx / length
+  if (nx * (midX - 50) + ny * (midY - 50) < 0) {
+    nx = -nx
+    ny = -ny
   }
+  // Bågens topp ska hamna utanför bordet, som har en radie på knappt 30 procent. Toppen ligger halvvägs till kontrollpunkten.
+  const fromCenter = Math.hypot(midX - 50, midY - 50)
+  const offset = Math.max(length * 0.32, (31 - fromCenter) * 2)
+  const cx = midX + nx * offset
+  const cy = midY + ny * offset
+  const toward = (seat: Seat) => {
+    const distance = Math.hypot(cx - seat.x, cy - seat.y) || 1
+    return { x: round(seat.x + ((cx - seat.x) / distance) * inset), y: round(seat.y + ((cy - seat.y) / distance) * inset) }
+  }
+  const start = toward(from)
+  const end = toward(to)
+  return `M${start.x} ${start.y} Q${round(cx)} ${round(cy)} ${end.x} ${end.y}`
 }
 
 // Handen i Peka ut: en bit från den som pekar, i riktning mot den som pekas ut. degrees = vridning från rakt upp, medurs.

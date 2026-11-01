@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clueLine, pointingHand, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+import { clueLine, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
 
 describe('handen i Peka ut', () => {
   const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
@@ -48,11 +48,12 @@ describe('bordet i Imposterjakten', () => {
     expect(smallSeats(7)).toBe(true)
   })
 
-  it('kortar pilen i båda ändar', () => {
-    const [from, to] = [
-      { id: 'a', angle: 90, x: 50, y: 90 },
-      { id: 'b', angle: 270, x: 50, y: 10 },
-    ]
-    expect(arrowBetween(from, to, 10)).toEqual({ x1: 50, y1: 80, x2: 50, y2: 20 })
+  it('ritar en böjd pil som går runt bordet och börjar vid figurens kant', () => {
+    const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
+    const path = curvedArrow(seat(50, 92), seat(93, 50), 10)
+    expect(path).toMatch(/^M[\d.]+ [\d.]+ Q[\d.]+ [\d.]+ [\d.]+ [\d.]+$/)
+    const [, , cx, cy] = path.match(/M([\d.]+) [\d.]+ Q([\d.]+) ([\d.]+)/)!.map(Number)
+    // Kontrollpunkten ligger längre från bordets mitt än rakt mellan platserna.
+    expect(Math.hypot(cx - 50, cy - 50)).toBeGreaterThan(Math.hypot((50 + 93) / 2 - 50, (92 + 50) / 2 - 50))
   })
 })
