@@ -190,8 +190,7 @@
     "source": "https://www.allas.se/noje/glassnostalgi-vet-du-vilken-glass-som-fyller-50-i-ar/8361528",
     "image": "/prisbilder/piggelin-1972.webp",
     "imageCredit": "Foto: Catasa, CC BY-SA 3.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Piggelin.JPG",
-    "exempel": 2
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Piggelin.JPG"
   },
   {
     "id": "bigmac-1973",
@@ -702,6 +701,7 @@
   },
   {
     "id": "game-boy-1990",
+    "exempel": 2,
     "emoji": "🎮",
     "name": "En Nintendo Game Boy",
     "year": 1990,
@@ -712,8 +712,7 @@
     "source": "https://martinlindell.com/2025/03/11/hk-electronics-software-till-minne-av-spelpionjaren-heikki-karbing/",
     "image": "/prisbilder/game-boy-1990.webp",
     "imageCredit": "Foto: Raimond Spekking, CC BY-SA 4.0",
-    "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg",
-    "exempel": 3
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Nintendo_Game_Boy_DMG-01-0244.jpg"
   },
   {
     "id": "bingolott-1991",
@@ -1451,6 +1450,7 @@
   },
   {
     "id": "fortkorningsboter-1900",
+    "exempel": 1,
     "emoji": "🚓",
     "name": "Carl Oscar Henning Forslunds böter för fortkörning",
     "year": 1900,
@@ -1461,11 +1461,11 @@
     "source": "https://stockholmskallan.stockholm.se/post/27847",
     "image": "/prisbilder/fortkorningsboter-1900.webp",
     "imageCredit": "Foto: Tekniska museet, CC BY 2.0",
+    "imageNote": "Bilden visar en tidig bil",
     "imageSource": "https://commons.wikimedia.org/wiki/File:Automobil_-_21606049526.jpg"
   },
   {
     "id": "hemgymnastikbok-1902",
-    "exempel": 1,
     "emoji": "🤸",
     "name": "En häftad handbok i hemgymnastik",
     "year": 1902,
@@ -2611,6 +2611,7 @@
   },
   {
     "id": "prinsessan-lilians-svit-2008",
+    "exempel": 3,
     "emoji": "👑",
     "name": "Ett dygn i Prinsessan Lilians svit på Grand Hôtel",
     "year": 2008,

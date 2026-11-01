@@ -87,7 +87,7 @@ export function HomePage() {
         </div>
 
         {/* En liten spelbar exempelrunda, helt lokal. */}
-        <ExempelRunda onPlay={pointAtGames} />
+        <ExempelRunda />
       </section>
 
       {/* Alla spel */}
