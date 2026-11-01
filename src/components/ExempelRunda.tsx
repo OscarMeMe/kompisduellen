@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { CountingPrice } from '@/components/CountingPrice'
+import { CreditText, ImageCreditButton } from '@/components/gissa-priset/ImageCredit'
 import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -98,6 +99,7 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
         <figure className="flex min-h-0 flex-col md:flex-1">
           <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-28 md:flex-1">
             {item.image && <img src={item.image} alt="" className="absolute inset-0 size-full object-contain" />}
+            <ImageCreditButton item={item} className="bottom-2 left-2" />
             <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">
               Exempelrunda · {index + 1} av {order.length}
             </span>
@@ -105,9 +107,9 @@ export function ExempelRunda({ onPlay }: ExempelRundaProps) {
               Gissa priset
             </span>
           </div>
-          {/* Raden finns alltid, även tom (fri bild utan kredit), så att alla frågor har samma höjd. */}
+          {/* Raden finns alltid, även tom, så att alla frågor har samma höjd. Krediten ligger bakom ⓘ och står här i facit. */}
           <figcaption className="mt-1 min-h-[1lh] truncate text-[11px] leading-tight text-muted-foreground/80">
-            {item.imageCredit}
+            {guess !== null && <CreditText item={item} />}
           </figcaption>
         </figure>
 
