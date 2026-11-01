@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { entryScript, isLobbyPath, isNewerBuild, updateAction } from './uppdatering'
+import { entryScript, isLobbyPath, isNewerBuild, shouldReloadFor, updateAction } from './uppdatering'
 
 describe('isLobbyPath', () => {
   it('känner igen lobbyn och sökvägarna som skickar vidare dit', () => {
@@ -55,6 +55,14 @@ describe('entryScript', () => {
   it('ger null när det inte finns något', () => {
     expect(entryScript('<html><script type="module">inline()</script></html>')).toBeNull()
     expect(entryScript('')).toBeNull()
+  })
+})
+
+describe('shouldReloadFor', () => {
+  it('laddar om en gång per version, så att det aldrig blir en loop', () => {
+    expect(shouldReloadFor('/assets/b.js', null)).toBe(true)
+    expect(shouldReloadFor('/assets/b.js', '/assets/a.js')).toBe(true)
+    expect(shouldReloadFor('/assets/b.js', '/assets/b.js')).toBe(false)
   })
 })
 

@@ -1,7 +1,24 @@
 import { registerSW } from 'virtual:pwa-register'
-import { entryScript, isNewerBuild, markUpdatePending } from '@/lib/uppdatering'
+import { entryScript, isNewerBuild, markUpdatePending, shouldReloadFor } from '@/lib/uppdatering'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+const RELOADED_FOR_KEY = 'kd-laddade-om-for'
+
+function reloadedFor(): string | null {
+  try {
+    return sessionStorage.getItem(RELOADED_FOR_KEY)
+  } catch {
+    return null
+  }
+}
+
+function rememberReload(latest: string) {
+  try {
+    sessionStorage.setItem(RELOADED_FOR_KEY, latest)
+  } catch {
+    // Går det inte att spara kan vi inte skydda oss mot en loop, så då laddas sidan inte om alls.
+  }
+}
 
 // Jämför sidans huvudskript med det som ligger ute. Frågetecknet gör att frågan går till nätet och inte till service
 // workerns sparade appskal. Utan nät händer inget, då kollas det igen senare.
@@ -10,7 +27,10 @@ async function checkForNewBuild() {
     const response = await fetch(`/app.html?v=${Date.now()}`, { cache: 'no-store' })
     if (!response.ok) return
     const running = document.querySelector('script[type="module"][src]')?.getAttribute('src') ?? null
-    if (isNewerBuild(running, entryScript(await response.text()))) markUpdatePending()
+    const latest = entryScript(await response.text())
+    if (!latest || !isNewerBuild(running, latest) || !shouldReloadFor(latest, reloadedFor())) return
+    rememberReload(latest)
+    if (reloadedFor() === latest) markUpdatePending()
   } catch {
     // Inget nät.
   }
