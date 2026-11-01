@@ -1,6 +1,7 @@
 import { Lightbulb } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { CountingPrice } from '@/components/CountingPrice'
+import { CreditText } from '@/components/gissa-priset/ImageCredit'
 import { formatExactSek, formatSek } from '@/lib/belopp'
 import type { PriceItem } from '@/lib/prisdata'
 import { cn } from '@/lib/utils'
@@ -45,6 +46,12 @@ export function PriceAnswerCard({
         <p className="text-sm font-semibold text-muted-foreground">exakt {formatExactSek(item.priceSek)}</p>
       )}
       {children}
+      {/* Fotografens kredit i facit, så att namnet syns minst en gång per fråga. */}
+      {item?.image && item.imageCredit && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          <CreditText item={item} />
+        </p>
+      )}
     </div>
   )
 }

@@ -16,9 +16,11 @@ import items from './prisdata.json'
 //   Årtalet läggs till efter: "Hur stor var prissumman år 1901?"
 // image: valfri bild i public/prisbilder (webp, max 800 px bred). Visas liggande 2:1. Utan bild visas emojin.
 //   Bara bilder från Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA), Unsplash eller Pexels.
-// imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det.
+// imageCredit: fotograf och licens, t.ex. "Foto: Namn, CC BY-SA 4.0". Bara när licensen kräver det. Visas inte under
+//   bilden utan bakom en liten ⓘ-knapp i bildens hörn (tryck eller håll musen över), och i facit.
 // imageSource: bildens sida, där licensen går att kontrollera.
-// imageNote: valfri rad under bilden när den inte visar just saken, t.ex. "Bilden visar en annan vas från Höganäs".
+// imageNote: valfri rad under bilden när den inte visar just saken. Kort, högst cirka 6 ord och inga bisatser,
+//   t.ex. "Bilden visar en Playstation 2". Det enda som står under bilden.
 //
 // dold: true döljer frågan i spelet (den slumpas aldrig fram) utan att den tas bort. Den syns kvar i datan och på /granska.
 //
