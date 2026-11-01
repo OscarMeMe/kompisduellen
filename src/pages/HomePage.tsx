@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { ArrowDown, Check } from 'lucide-react'
+import { ArrowDown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
@@ -59,7 +59,14 @@ export function HomePage() {
       <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
         <div className="space-y-5 text-center md:space-y-6 md:text-left">
           <div className="space-y-2">
-            <p className="text-sm font-bold text-muted-foreground">Sällskapsspel online</p>
+            {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
+            <p className="text-sm font-bold text-muted-foreground">
+              <span className="block lg:inline">Sällskapsspel online</span>
+              <span className="hidden lg:inline" aria-hidden>
+                {' · '}
+              </span>
+              <span className="block lg:inline">Gratis · Ingen app · Inget konto</span>
+            </p>
             {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
                 i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
             <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
@@ -69,24 +76,18 @@ export function HomePage() {
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
-          <div className="space-y-4 md:space-y-5">
-            {/* De två vägarna in. På bred skärm i en rad, där knappen och "eller" börjar under rubriken "Har du fått en
-                kod?", så att knapparna och fältet ligger i linje även när ett felmeddelande visas under fältet. */}
-            <div className="mx-auto flex max-w-sm flex-col gap-2 md:mx-0 lg:max-w-none lg:flex-row lg:items-start lg:gap-3">
-              {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
-                  även när allt redan syns på skärmen. */}
-              <Button size="lg" onClick={pointAtGames} className="shrink-0 lg:mt-8">
-                Välj spel
-                <ArrowDown aria-hidden />
-              </Button>
-              <span className="text-center text-sm text-muted-foreground lg:mt-8 lg:flex lg:h-13 lg:items-center">eller</span>
-              {/* Den andra vägen in, för den som blivit inbjuden. */}
-              <GaMedKod className="min-w-0 flex-1 text-left" />
-            </div>
-            <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-muted-foreground md:justify-start">
-              <Check className="size-4 text-primary" aria-hidden />
-              Gratis. Ingen app. Inget konto.
-            </p>
+          {/* De två vägarna in. På bred skärm i en rad, där knappen och "eller" börjar under rubriken "Har du fått en
+              kod?", så att knapparna och fältet ligger i linje även när ett felmeddelande visas under fältet. */}
+          <div className="mx-auto flex max-w-sm flex-col gap-2 md:mx-0 lg:max-w-none lg:flex-row lg:items-start lg:gap-3">
+            {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
+                även när allt redan syns på skärmen. */}
+            <Button size="lg" onClick={pointAtGames} className="shrink-0 lg:mt-8">
+              Välj spel
+              <ArrowDown aria-hidden />
+            </Button>
+            <span className="text-center text-sm text-muted-foreground lg:mt-8 lg:flex lg:h-13 lg:items-center">eller</span>
+            {/* Den andra vägen in, för den som blivit inbjuden. */}
+            <GaMedKod className="min-w-0 flex-1 text-left" />
           </div>
         </div>
 
@@ -103,7 +104,7 @@ export function HomePage() {
           <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
         </div>
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {GAMES.filter((game) => game.playable).map((game) => (
             <SpelKort
               key={game.id}
