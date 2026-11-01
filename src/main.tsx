@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import './index.css'
 import App from './App.tsx'
+import { FelGrans } from '@/components/FelGrans'
 import { startPwa } from '@/lib/pwa'
 import { startStatistik } from '@/lib/statistik'
 
@@ -13,7 +14,9 @@ startPwa()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <FelGrans>
+        <App />
+      </FelGrans>
       {/* Vercel Web Analytics. Räknar även sidbyten inom appen, eftersom skriptet följer webbläsarens historik. */}
       <Analytics />
     </BrowserRouter>
