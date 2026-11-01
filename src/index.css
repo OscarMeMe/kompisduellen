@@ -98,6 +98,10 @@
     /* animate-frame-pulse: ramen runt spelvyn lyser upp en gång när tiden nästan är ute (TimeWarningFrame).
        Spelas en gång per sekund, aldrig oftare. */
     --animate-frame-pulse: frame-pulse 0.5s ease-out;
+    /* Avslöjandet vid Imposterjaktens bord: rummet mörknar en stund (lights-out) och ljuskäglan tänds på impostern
+       (spot-in). Med fördröjning (--d) så att rösterna hinner ritas först. */
+    --animate-lights-out: lights-out 1.5s ease-in-out both;
+    --animate-spot-in: spot-in 0.3s ease-out both;
     /* Kast (Kast.tsx). Saken flyger in på 0,45 s (animate-throw-smash: flyger in och plattas till) och träffar på
        sitt eget sätt: fläcken växer ut (splat-blob), stänk flyger (splash-drop), droppar rinner (drip), det som
        träffat glider neråt (slide-down), bitar faller (crumb-fall) och toapappret rullas ut (paper-roll,
@@ -173,6 +177,17 @@
         0% { opacity: 0; }
         10%, 85% { opacity: 1; }
         100% { opacity: 0; }
+    }
+
+    @keyframes lights-out {
+        0% { opacity: 0; }
+        20%, 75% { opacity: 0.6; }
+        100% { opacity: 0; }
+    }
+
+    @keyframes spot-in {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
     }
 
     @keyframes frame-pulse {
