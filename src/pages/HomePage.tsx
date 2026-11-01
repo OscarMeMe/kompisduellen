@@ -104,7 +104,7 @@ export function HomePage() {
           <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
         </div>
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {GAMES.filter((game) => game.playable).map((game) => (
             <SpelKort
               key={game.id}

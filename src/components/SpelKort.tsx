@@ -158,7 +158,8 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
           play()
         }}
       >
-        <div key={plays} aria-hidden className="flex w-full items-center justify-center pt-6">
+        {/* Med fyra kort i bredd är korten smalare, så bilderna krymper lite för att inte nå kanten. */}
+        <div key={plays} aria-hidden className="flex w-full origin-bottom items-center justify-center pt-6 xl:scale-85">
           {PREVIEWS[game.id]}
         </div>
       </div>
