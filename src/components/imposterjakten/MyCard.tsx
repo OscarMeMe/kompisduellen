@@ -5,7 +5,8 @@ import type { MyImposterCard } from '@/lib/imposterjakten'
 import { cn } from '@/lib/utils'
 
 // Mitt kort i Imposterjakten. Det är dolt från början, så att grannen inte ser, och kan visas och döljas igen när som
-// helst under omgången. Rollen syns med text och symbol, inte bara med färg. compact = mindre, under ledtrådsvarven.
+// helst under omgången. Rollen syns med text och symbol, inte bara med färg. compact = en enda rad, vid bordet, så att
+// bordet och knapparna får plats utan scrollning.
 // inRound = jag är med i omgången. Den som anslöt mitt i en omgång väntar till nästa.
 export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCard | null; inRound: boolean; compact?: boolean }) {
   const [shown, setShown] = useState(false)
@@ -36,6 +37,34 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
     </Button>
   )
 
+  const innocent = card.role === 'oskyldig'
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 shadow-soft-sm',
+          !shown ? 'border-foreground bg-foreground text-background' : innocent ? 'border-accent bg-mint-soft' : 'border-primary bg-coral-soft',
+        )}
+      >
+        {!shown ? (
+          <p className="font-heading font-bold">Ditt kort är dolt</p>
+        ) : (
+          <div className="min-w-0 text-left motion-safe:animate-pop">
+            <p className="flex items-center gap-1.5 text-sm font-bold">
+              {innocent ? <ShieldCheck className="size-4" aria-hidden /> : <VenetianMask className="size-4" aria-hidden />}
+              {innocent ? 'Du är oskyldig.' : 'Du är imposter.'}
+              {card.category && <span className="font-normal text-muted-foreground">· {card.category}</span>}
+            </p>
+            <p className="truncate font-heading text-xl leading-tight font-bold">
+              {innocent ? card.word : card.hint ? `Ledtråd: ${card.hint}` : 'Smält in!'}
+            </p>
+          </div>
+        )}
+        {toggle}
+      </div>
+    )
+  }
+
   if (!shown) {
     return (
       <div className={cn('space-y-3 rounded-lg border-2 border-foreground bg-foreground text-background shadow-soft', compact ? 'p-4' : 'p-6')}>
@@ -46,7 +75,6 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
     )
   }
 
-  const innocent = card.role === 'oskyldig'
   return (
     <div
       className={cn(

@@ -1,11 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Check, CircleStop, RefreshCw, Send } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
-import { ClueList } from '@/components/imposterjakten/ClueList'
+import { Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
 import { DiscussionStep, FacitStep, GuessStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
-import { ThrowBar } from '@/components/lobby/Kast'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import { ReactionBar } from '@/components/lobby/Reactions'
@@ -13,6 +11,7 @@ import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { useReactions } from '@/hooks/useReactions'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import {
   canChangeWord,
@@ -24,6 +23,7 @@ import {
   type ImposterTable,
 } from '@/lib/imposterjakten'
 import { hasFinePointer } from '@/lib/device'
+import { playTurn } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
 // Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
@@ -83,10 +83,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         }}
       />
 
-      <div className="space-y-3">
-        <ReactionBar />
-        <ThrowBar />
-      </div>
+      {/* Kasta något: tryck på en spelare vid bordet. */}
+      <ReactionBar />
     </Wide>
   )
 }
@@ -124,43 +122,65 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
 
 // Ett ord var i turordning, två varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
-function CluesStep({ state, table, me, online, imposterCard, onMove }: StepProps) {
+function CluesStep({ state, table, me, online, imposterCard, typing, onMove, onTyping }: StepProps) {
   const turn = currentTurn(table)
   const myTurn = turn === me.id
   const thinker = turn ? state.players[turn] : undefined
+  useYourTurn(myTurn)
 
   const line = (
     <p className="text-center text-sm font-semibold text-muted-foreground">
       Varv {clueRound(table)} av {CLUE_ROUNDS}
-      {myTurn ? ' · Din tur!' : thinker ? ` · ${thinker.name} funderar…` : ''}
+      {myTurn ? ' · Din tur!' : thinker ? ` · ${thinker.name} ${typing === turn ? 'skriver' : 'funderar'}…` : ''}
     </p>
+  )
+  const center = (
+    <>
+      <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">
+        Varv {clueRound(table)} av {CLUE_ROUNDS}
+      </span>
+      <span
+        key={table.turn}
+        className={cn('font-heading text-sm leading-tight font-bold sm:text-base motion-safe:animate-pop', myTurn && 'text-primary')}
+      >
+        {myTurn ? 'Din tur!' : `${thinker?.name ?? 'Någon'}s tur`}
+      </span>
+    </>
   )
 
   return (
     <>
-      <ClueList state={state} table={table} meId={me.id} />
+      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
       {myTurn ? (
         <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={line}>
           {/* Ny ruta för varje tur, så att texten börjar om. */}
           {table.aloud ? (
             <SaidTurn onDone={() => onMove({ type: 'said' })} />
           ) : (
-            <WriteTurn key={table.turn} onMove={onMove} rejectedAt={imposterCard?.rejectedAt ?? null} />
+            <WriteTurn key={table.turn} onMove={onMove} onTyping={onTyping} rejectedAt={imposterCard?.rejectedAt ?? null} />
           )}
         </AnswerDock>
       ) : (
-        <div className="space-y-1 text-center">
+        <div className="sr-only" role="status">
           {line}
-          {thinker && (
-            <p className="flex items-center justify-center gap-2 font-heading text-lg font-bold">
-              <Emoji emoji={thinker.avatar} className="text-2xl" />
-              {thinker.name} funderar…
-            </p>
-          )}
         </div>
       )}
     </>
   )
+}
+
+// När det blir min tur: en kort vibration där det går och ett kort ljud som följer ljudknappen. En gång per tur.
+function useYourTurn(myTurn: boolean) {
+  const reactions = useReactions()
+  const soundOn = reactions?.soundOn ?? false
+  const was = useRef(myTurn)
+  useEffect(() => {
+    if (myTurn && !was.current) {
+      if ('vibrate' in navigator) navigator.vibrate(80)
+      if (soundOn) playTurn()
+    }
+    was.current = myTurn
+  }, [myTurn, soundOn])
 }
 
 // Säg högt: appen visar bara vems tur det är, och den som har tur trycker Klar när ordet är sagt.
@@ -180,7 +200,15 @@ function SaidTurn({ onDone }: { onDone: () => void }) {
 
 // Skriv i appen: exakt ett ord, eller Pass. Värden kontrollerar ordet och säger bara till om det inte går
 // (rejectedAt ändras), utan att säga varför.
-function WriteTurn({ onMove, rejectedAt }: { onMove: StepProps['onMove']; rejectedAt: number | null }) {
+function WriteTurn({
+  onMove,
+  onTyping,
+  rejectedAt,
+}: {
+  onMove: StepProps['onMove']
+  onTyping: () => void
+  rejectedAt: number | null
+}) {
   const [text, setText] = useState('')
   // Ett avvisat ord som redan fanns när turen började, eller som man har börjat skriva om, visas inte.
   const [seenRejection, setSeenRejection] = useState(rejectedAt)
@@ -201,6 +229,8 @@ function WriteTurn({ onMove, rejectedAt }: { onMove: StepProps['onMove']; reject
         onChange={(event) => {
           setText(event.target.value)
           setSeenRejection(rejectedAt)
+          // De andra ser "skriver…" (skickas högst varannan sekund, aldrig texten).
+          if (event.target.value.trim()) onTyping()
         }}
         aria-invalid={rejected}
         placeholder="Ett ord som hör ihop med ordet"
