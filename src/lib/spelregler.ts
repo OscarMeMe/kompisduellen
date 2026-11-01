@@ -17,6 +17,8 @@ export type RoundOutcome = {
 export type GameRules = {
   // Standardtid för att gissa. Spel med guessSecondsOptions låter värden välja en annan.
   guessSeconds: number
+  // Varningen när tiden håller på att ta slut kommer så här många sekunder före slutet. Saknas: 10 sekunder.
+  warningSeconds?: number
   // Svarstider värden kan välja i lobbyn. Finns de kan värden också välja att gå vidare själv efter facit.
   guessSecondsOptions?: readonly number[]
   revealSeconds: number

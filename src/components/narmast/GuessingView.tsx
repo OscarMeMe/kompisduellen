@@ -13,6 +13,7 @@ import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { hasFinePointer } from '@/lib/device'
 import { guessSecondsFor, isValidGuess, waitingStanding } from '@/lib/match'
 import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
+import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
@@ -25,6 +26,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
     clockOffset,
     guessSecondsFor(state),
     locked !== null || !inGame,
+    rulesFor(state.game).warningSeconds,
   )
 
   function handleSubmit(event: FormEvent) {
