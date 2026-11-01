@@ -269,23 +269,53 @@ export function clueRound(table: ImposterTable): number {
   return Math.min(CLUE_ROUNDS, Math.floor(table.turn / Math.max(1, table.order.length)) + 1)
 }
 
-// Former som en ledtråd inte får likna: ordet, de godkända formerna och varje del på minst 4 bokstäver i ett ord med
-// mellanslag (så att "Skansen" spärras för Allsång på Skansen).
-export function blockedForms(word: ImposterWord): string[] {
-  const forms = [word.ord, ...word.godkanda].map(normalizeWord)
-  const parts = forms.flatMap((form) => form.split(' ')).filter((part) => part.length >= 4)
-  return [...new Set([...forms, ...parts])]
+// Hur en spärrad form jämförs med en ledtråd. anywhere: formen får inte finnas någonstans i ledtråden. start: ledtråden
+// får inte vara formen eller börja med den. whole: ledtråden får bara inte vara exakt formen.
+export type BlockRule = { form: string; how: 'anywhere' | 'start' | 'whole' }
+
+// Kortare former än så här spärras inte var de än står.
+const SHORT_FORM = 5
+
+// Ett personnamn: flera ord som alla börjar med stor bokstav (Charlotte Kalla, Carl XVI Gustaf). Titlar som Allsång på
+// Skansen och Beer pong räknas inte.
+function isPersonName(ord: string): boolean {
+  const parts = ord.trim().split(/\s+/)
+  return parts.length > 1 && parts.every((part) => /^\p{Lu}/u.test(part))
 }
 
-// Är ledtråden för lik en spärrad form? Former på minst 5 bokstäver får inte finnas någonstans i ledtråden. Kortare
-// former spärrar bara när ledtråden är exakt samma ord eller börjar med formen, så att "torgstånd" spärras för Torg men
-// "storgata" går igenom.
-function looksLike(clue: string, form: string): boolean {
-  return form.length >= 5 ? clue.includes(form) : clue === form || clue.startsWith(form)
+// Former som en ledtråd inte får likna: ordet, de godkända formerna och varje del på minst 4 bokstäver i ett ord med
+// mellanslag (så att "Skansen" spärras för Allsång på Skansen).
+// - Former på minst 5 bokstäver spärras var de än står (fredagsafterwork för Afterwork).
+// - Är själva ordet kort, som Torg, spärras dess korta former också i början av ledtråden (torgstånd, men inte storgata).
+// - Övriga korta former, som förkortningar och smeknamn (ps, qr, bea), spärras bara som exakt samma ord.
+// - Delar av personnamn och personens smeknamn (kalla, mede, håkan, carl) spärras bara som hela ord, så att kallare och
+//   medeltid går igenom.
+export function blockRules(word: ImposterWord): BlockRule[] {
+  const ord = normalizeWord(word.ord)
+  const shortWord = !ord.includes(' ') && ord.length < SHORT_FORM
+  const person = isPersonName(word.ord)
+  const forms = [...new Set([ord, ...word.godkanda.map(normalizeWord)])]
+  const parts = forms.flatMap((form) => form.split(' ')).filter((part) => part.length >= 4 && !forms.includes(part))
+  const rules = new Map<string, BlockRule['how']>()
+  for (const form of [...forms, ...parts]) {
+    const single = !form.includes(' ')
+    let how: BlockRule['how']
+    if (person && single) how = 'whole'
+    else if (form.length >= SHORT_FORM) how = 'anywhere'
+    else how = shortWord ? 'start' : 'whole'
+    if (!rules.has(form)) rules.set(form, how)
+  }
+  return [...rules].map(([form, how]) => ({ form, how }))
+}
+
+function looksLike(clue: string, { form, how }: BlockRule): boolean {
+  if (how === 'anywhere') return clue.includes(form)
+  if (how === 'start') return clue.startsWith(form)
+  return clue === form
 }
 
 // Kontroll av ett skrivet ord: exakt ett ord (sammansatta ord är okej), inte det hemliga ordet, en godkänd form av
-// det eller något som innehåller det (se looksLike), och inte ett ord som redan sagts i omgången.
+// det eller något som liknar det (se blockRules), och inte ett ord som redan sagts i omgången.
 export function checkClue(
   text: string,
   word: ImposterWord,
@@ -294,7 +324,7 @@ export function checkClue(
   const trimmed = text.trim()
   if (!trimmed || trimmed.length > MAX_CLUE_LENGTH || !/^[\p{L}\p{N}-]+$/u.test(trimmed)) return { ok: false }
   const normalized = normalizeWord(trimmed)
-  if (blockedForms(word).some((form) => looksLike(normalized, form))) return { ok: false }
+  if (blockRules(word).some((rule) => looksLike(normalized, rule))) return { ok: false }
   if (earlier.some((clue) => clue.word !== null && normalizeWord(clue.word) === normalized)) return { ok: false }
   return { ok: true, word: trimmed }
 }

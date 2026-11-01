@@ -236,6 +236,37 @@ describe('Imposterjakten: ledtrådarna', () => {
     expect(checkClue('fredagsafterwork', afterwork, [])).toEqual({ ok: false })
   })
 
+  it('spärrar förkortningar och smeknamn bara som exakt samma ord när själva ordet är långt', () => {
+    const playstation = findWord('playstation')!
+    expect(checkClue('ps', playstation, [])).toEqual({ ok: false })
+    expect(checkClue('psykolog', playstation, [])).toMatchObject({ ok: true })
+    const qr = findWord('qr-kod')!
+    expect(checkClue('QR', qr, [])).toEqual({ ok: false })
+    expect(checkClue('qrkoden', qr, [])).toEqual({ ok: false })
+    const bea = findWord('bearnaisesas')!
+    expect(checkClue('bea', bea, [])).toEqual({ ok: false })
+    expect(checkClue('beachvolley', bea, [])).toMatchObject({ ok: true })
+  })
+
+  it('spärrar delar av personnamn bara som hela ord', () => {
+    const kalla = findWord('charlotte-kalla')!
+    expect(checkClue('Kalla', kalla, [])).toEqual({ ok: false })
+    expect(checkClue('kallare', kalla, [])).toMatchObject({ ok: true })
+    const mede = findWord('petra-mede')!
+    expect(checkClue('Mede', mede, [])).toEqual({ ok: false })
+    expect(checkClue('medeltid', mede, [])).toMatchObject({ ok: true })
+    const hakan = findWord('hakan-hellstrom')!
+    expect(checkClue('Håkan', hakan, [])).toEqual({ ok: false })
+    expect(checkClue('Hellström', hakan, [])).toEqual({ ok: false })
+    expect(checkClue('håkansson', hakan, [])).toMatchObject({ ok: true })
+    const kungen = findWord('carl-xvi-gustaf')!
+    expect(checkClue('Carl', kungen, [])).toEqual({ ok: false })
+    expect(checkClue('carlsberg', kungen, [])).toMatchObject({ ok: true })
+    expect(checkClue('kungen', kungen, [])).toEqual({ ok: false })
+    // Titlar räknas inte som personnamn: Skansen spärras fortfarande i längre ord.
+    expect(checkClue('skansenbesök', findWord('allsang-pa-skansen')!, [])).toEqual({ ok: false })
+  })
+
   it('avvisar ett ord som redan sagts i omgången', () => {
     const earlier = [{ player: 'a', kind: 'ord' as const, word: 'Regn' }, { player: 'b', kind: 'pass' as const, word: null }]
     expect(checkClue('regn', paraply, earlier)).toEqual({ ok: false })
