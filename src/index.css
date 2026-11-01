@@ -10,6 +10,9 @@
 /* Riktigt låga telefoner (högst 700 px). Imposterjaktens bord krymper så att svarsdelen får plats. */
 @custom-variant tiny (@media (max-height: 700px));
 
+/* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
+@custom-variant low (@media (max-width: 639.98px) and (max-height: 779.98px));
+
 @theme inline {
     /* Rubriker och knappar i Syne, brödtext i Plus Jakarta Sans */
     --font-heading: 'Syne Variable', system-ui, sans-serif;

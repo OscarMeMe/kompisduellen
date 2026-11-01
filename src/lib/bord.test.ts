@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clueLabels, clueLine, latestClue, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
+import { clueLabels, clueLine, latestClue, listOnLowPhones, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
 
 describe('handen i Peka ut', () => {
   const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
@@ -19,6 +19,10 @@ describe('orden på en rad', () => {
 })
 
 describe('orden vid bordet', () => {
+  it('listan under bordet på låga telefoner gäller 5 och 6 spelare', () => {
+    expect([3, 4, 5, 6, 7].map(listOnLowPhones)).toEqual([false, false, true, true, false])
+  })
+
   const ord = { player: 'a', kind: 'ord', word: 'regn' }
   const pass = { player: 'b', kind: 'pass', word: null }
   const sagt = { player: 'c', kind: 'sagt', word: null }

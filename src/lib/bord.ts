@@ -39,6 +39,12 @@ export function smallSeats(count: number): boolean {
   return count >= SMALL_SEATS_FROM
 }
 
+// 5 och 6 spelare: orden står över varandra vid sidorna. På låga telefoner ryms bara de två senaste vid platsen, och allas
+// ord står i listan under bordet.
+export function listOnLowPhones(count: number): boolean {
+  return count === 5 || count === 6
+}
+
 // En böjd pil mellan två platser, som ett SVG-spår. Den bågnar bort från bordets mitt, så att pilarna går runt bordet och
 // inte korsar varandra i onödan. Den börjar och slutar inset (procent) från platsens mitt, alltså vid figurens kant.
 export function curvedArrow(from: Seat, to: Seat, inset: number): string {
