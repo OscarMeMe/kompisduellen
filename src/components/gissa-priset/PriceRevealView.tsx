@@ -3,6 +3,7 @@ import { Konfetti } from '@/components/Konfetti'
 import { Stjarnstank } from '@/components/Stjarnstank'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
+import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
 import { RoundStanding } from '@/components/lobby/RoundStanding'
@@ -14,7 +15,7 @@ import { differenceText } from '@/lib/skillnad'
 import { roundStanding } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
 
-export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
+export function PriceRevealView({ state, me, isHost, clockOffset, lostMove, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
   const item = findPriceItem(result?.itemId)
   const [revealed, setRevealed] = useState(false)
@@ -41,6 +42,7 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
   return (
     <Wide>
       <RoundBadge state={state} />
+      <LostMoveLine text={lostMove} />
 
       {/* Priset och poängen först, sedan faktatexten om saken och sist allas gissningar. */}
       <PriceAnswerCard item={item} target={result.target} revealed={revealed} countUp>
@@ -51,7 +53,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, onNext, onPaus
             <Stjarnstank delay={150} />
           </>
         )}
-        {revealed && (
+        {/* Har gissningen inte kommit fram står det raden ovanför, så då säger inte den här att jag inte hann. */}
+        {revealed && !lostMove && (
           <p className="mt-3 inline-block rounded-full bg-mint-soft px-5 py-2 font-heading text-xl font-bold sm:mt-5 sm:text-3xl">
             {myPoints === undefined
               ? 'Du hann inte gissa den här gången'

@@ -17,7 +17,21 @@ import {
   wakeAction,
 } from '@/lib/anslutning'
 import { closeChannel, waitForChannel } from '@/lib/kanaler'
-import { addPendingMove, isSeenMove, moveDelivery, newPendingMove, rememberMove, resendMoves, retryMoves, type Delivery, type PendingMove } from '@/lib/leverans'
+import {
+  addPendingMove,
+  isSeenMove,
+  lostMove,
+  lostMoveText,
+  moveArrived,
+  moveDelivery,
+  newPendingMove,
+  rememberMove,
+  resendMoves,
+  retryMoves,
+  type Delivery,
+  type LostMove,
+  type PendingMove,
+} from '@/lib/leverans'
 import {
   isFromHost,
   parseGuess,
@@ -163,6 +177,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Mina drag som läget ännu inte visar, och (hos värden) vilka drag som redan räknats (se leverans.ts).
   const pendingMovesRef = useRef<PendingMove[]>([])
   const [delivery, setDelivery] = useState<Delivery>('ok')
+  // Det som aldrig nådde värden, för raden i facit: rundan då jag gissade, och senaste kortet eller domarvalet.
+  const [guessRound, setGuessRound] = useState<number | null>(null)
+  const [lostCard, setLostCard] = useState<LostMove | null>(null)
   const moveCountRef = useRef(0)
   const seenMovesRef = useRef<Record<string, string[]>>({})
   // Reaktioner som syns på skärmen just nu.
@@ -722,6 +739,17 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return () => clearInterval(timer)
   }, [isHost, connected, sendState])
 
+  // Har tiden tagit slut för ett kort eller ett domarval som inte kommit fram? Kollas när läget ändras och inte på klockan,
+  // som kan gå långsamt när fliken ligger i bakgrunden.
+  useEffect(() => {
+    if (!meId) return
+    const view = { state, id: meId, hand, card: imposterCard }
+    for (const pending of pendingMovesRef.current) {
+      const lost = moveArrived(pending, view) ? lostMove(pending, view) : null
+      if (lost) setLostCard(lost)
+    }
+  }, [state, hand, imposterCard, meId])
+
   // Mina drag skickas igen tills läget visar att de kommit fram, med en kort paus och en gräns (se leverans.ts).
   // Klockan börjar om när kanalen anslutit på nytt, så att försök som gjordes utan anslutning inte räknas.
   const playing = state.phase === 'playing'
@@ -875,6 +903,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       guess: (value: number) => {
         if (!me) return
+        setGuessRound(stateRef.current.round)
         void channelRef.current?.send({
           type: 'broadcast',
           event: 'guess',
@@ -1005,6 +1034,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     clockOffset,
     // Hur det går med mina drag. Spelar bara roll under en match.
     delivery: state.phase === 'playing' ? delivery : 'ok',
+    // Raden i facit när min gissning, mitt kort eller mitt domarval aldrig nådde värden.
+    lostMove: me ? lostMoveText(state, me.id, guessRound, lostCard) : null,
     hand: state.phase === 'playing' ? hand : null,
     imposterCard: state.phase === 'playing' ? imposterCard : null,
     floating,

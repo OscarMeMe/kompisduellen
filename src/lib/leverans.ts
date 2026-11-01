@@ -155,6 +155,40 @@ export function guessDelivery(input: { missing: boolean; tries: number }): Deliv
   return input.tries > RESEND_MAX_TRIES ? 'failed' : 'sending'
 }
 
+// Ett kort eller ett domarval som aldrig nådde värden. Rundans tid tog slut medan det skickades.
+export type LostMove = { kind: 'card' | 'judge'; round: number; prompt: string }
+
+// Tiden tog slut innan läget visade att draget kommit fram. Kortet räknas som framme om jag syns bland dem som valt, även
+// om handen med valet aldrig kom. Domarens val gick förlorat om domaren räknas som somnad. Andra drag har antingen ingen
+// tidsgräns eller går att göra om. Bara samma frågekort räknas: i ett nytt läge går det inte att säga vad som hände med
+// draget, och det får inte visas i fel runda.
+export function lostMove(pending: PendingMove, view: MoveView): LostMove | null {
+  const { state, id } = view
+  const cards = state.cards
+  if (state.phase !== 'playing' || !cards) return null
+  if (moveScope(state) !== pending.sent.scope) return null
+  if (pending.move.type === 'pick') {
+    if (cards.step === 'choosing' || cards.chosen.includes(id)) return null
+    return { kind: 'card', round: state.round, prompt: cards.prompt }
+  }
+  if (pending.move.type === 'judge') {
+    if (cards.step === 'judging' || !cards.judgeAsleep) return null
+    return { kind: 'judge', round: state.round, prompt: cards.prompt }
+  }
+  return null
+}
+
+// Raden i facit. guessRound = rundan då jag skickade en gissning, lost = senaste kortet eller domarvalet som gick förlorat.
+export function lostMoveText(state: GameState, id: string, guessRound: number | null, lost: LostMove | null): string | null {
+  if (state.phase === 'reveal') {
+    const missing = guessRound === state.round && state.lastResult && state.lastResult.guesses[id] === undefined
+    return missing ? 'Din gissning kom inte fram' : null
+  }
+  const cards = state.cards
+  if (state.phase !== 'playing' || cards?.step !== 'reveal' || lost?.round !== state.round || lost.prompt !== cards.prompt) return null
+  return lost.kind === 'card' ? 'Ditt kort kom inte fram' : 'Ditt val kom inte fram'
+}
+
 // Värden: har det här draget redan räknats? Bara drag som ändrat något sparas, så att ett drag som kom vid fel tillfälle
 // (t.ex. under en anklagelse) kan räknas när det kommer igen.
 export function isSeenMove(seen: Readonly<Record<string, string[]>>, playerId: string, nr: string | null): boolean {

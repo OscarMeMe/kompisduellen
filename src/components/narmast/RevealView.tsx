@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
+import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
 import { RoundStanding } from '@/components/lobby/RoundStanding'
@@ -8,7 +9,7 @@ import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
 import { roundStanding } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
-export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, onResume }: RevealViewProps) {
+export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
   const [shownTarget, setShownTarget] = useState<number | null>(null)
 
@@ -46,6 +47,7 @@ export function RevealView({ state, me, isHost, clockOffset, onNext, onPause, on
   return (
     <Wide>
       <RoundBadge state={state} />
+      <LostMoveLine text={lostMove} />
 
       <div className="rounded-lg border bg-card p-8 text-center shadow-soft">
         <p className="font-semibold text-muted-foreground">Det rätta talet var</p>

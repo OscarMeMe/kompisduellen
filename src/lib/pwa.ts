@@ -1,5 +1,5 @@
 import { registerSW } from 'virtual:pwa-register'
-import { entryScript, isNewerBuild, markUpdatePending, shouldReloadAfterLoadError, shouldReloadFor } from '@/lib/uppdatering'
+import { entryScript, hasEnteredLobby, isNewerBuild, markUpdatePending, shouldReloadAfterLoadError, shouldReloadFor } from '@/lib/uppdatering'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const RELOADED_FOR_KEY = 'kd-laddade-om-for'
@@ -19,7 +19,14 @@ function lastLoadErrorReload(): number | null | undefined {
 function reloadOnLoadError() {
   window.addEventListener('vite:preloadError', () => {
     const now = Date.now()
-    if (!shouldReloadAfterLoadError({ pathname: location.pathname, online: navigator.onLine, now, lastReloadAt: lastLoadErrorReload() })) return
+    const reload = shouldReloadAfterLoadError({
+      pathname: location.pathname,
+      lobbyEntered: hasEnteredLobby(),
+      online: navigator.onLine,
+      now,
+      lastReloadAt: lastLoadErrorReload(),
+    })
+    if (!reload) return
     try {
       sessionStorage.setItem(LOAD_ERROR_KEY, String(now))
     } catch {

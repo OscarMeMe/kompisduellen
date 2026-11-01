@@ -59,16 +59,27 @@ describe('entryScript', () => {
 })
 
 describe('shouldReloadAfterLoadError', () => {
-  const input = { pathname: '/skapa', online: true, now: LOAD_ERROR_RELOAD_PAUSE_MS * 2, lastReloadAt: null }
+  const input = { pathname: '/skapa', lobbyEntered: false, online: true, now: LOAD_ERROR_RELOAD_PAUSE_MS * 2, lastReloadAt: null }
 
   it('laddar om en gång när en fil saknas', () => {
     expect(shouldReloadAfterLoadError(input)).toBe(true)
   })
 
-  it('laddar aldrig om i en lobby', () => {
-    expect(shouldReloadAfterLoadError({ ...input, pathname: '/lobby/ABCD' })).toBe(false)
-    expect(shouldReloadAfterLoadError({ ...input, pathname: '/spel/ABCD' })).toBe(false)
-    expect(shouldReloadAfterLoadError({ ...input, pathname: '/spel/kortkaos' })).toBe(true)
+  it('laddar aldrig om när man kommit in i en lobby', () => {
+    expect(shouldReloadAfterLoadError({ ...input, lobbyEntered: true, pathname: '/lobby/ABCD' })).toBe(false)
+    expect(shouldReloadAfterLoadError({ ...input, lobbyEntered: true, pathname: '/spel/ABCD' })).toBe(false)
+    expect(shouldReloadAfterLoadError({ ...input, lobbyEntered: true, pathname: '/spel/kortkaos' })).toBe(true)
+  })
+
+  it('laddar om när lobbyfilen saknas och man inte hunnit in, med samma skydd mot slingor', () => {
+    const lobby = { ...input, pathname: '/lobby/ABCD' }
+    expect(shouldReloadAfterLoadError(lobby)).toBe(true)
+    expect(shouldReloadAfterLoadError({ ...lobby, lastReloadAt: lobby.now - 1000 })).toBe(false)
+    expect(shouldReloadAfterLoadError({ ...lobby, online: false })).toBe(false)
+  })
+
+  it('har man lämnat lobbyn gäller vanliga sidor som vanligt', () => {
+    expect(shouldReloadAfterLoadError({ ...input, lobbyEntered: true, pathname: '/profil' })).toBe(true)
   })
 
   it('blir aldrig en slinga: inte igen direkt efter en omladdning', () => {
