@@ -38,6 +38,11 @@
     --color-lilac: var(--lilac);
     --color-coral-soft: var(--coral-soft);
     --color-mint-soft: var(--mint-soft);
+    /* Rummet runt Imposterjaktens bord: väggen, träskivan, dess kant och stolarna. */
+    --color-room: var(--room);
+    --color-wood: var(--wood);
+    --color-wood-edge: var(--wood-edge);
+    --color-chair: var(--chair);
     --color-sun-soft: var(--sun-soft);
     --color-sky-soft: var(--sky-soft);
     /* Kronan för den som leder, t.ex. text-crown */
@@ -371,6 +376,10 @@
     --lilac: oklch(0.85 0.06 300);
     --coral-soft: oklch(0.94 0.04 30);
     --mint-soft: oklch(0.955 0.04 165);
+    --room: oklch(0.885 0.03 65);
+    --wood: oklch(0.74 0.085 65);
+    --wood-edge: oklch(0.56 0.08 55);
+    --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);
     --sky-soft: oklch(0.955 0.03 235);
     /* Guld för kronan. Mörk nog att synas (minst 3:1) mot korten och pastellerna */
