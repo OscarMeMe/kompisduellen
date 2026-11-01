@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router'
-import { ArrowDown, Check, Play } from 'lucide-react'
+import { useLocation } from 'react-router'
+import { ArrowDown, Check } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
@@ -54,11 +54,12 @@ export function HomePage() {
         <div className="space-y-6 text-center md:text-left">
           {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
               i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
+          <p className="-mb-4 text-sm font-bold text-muted-foreground">Gratis sällskapsspel online</p>
           <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
             Bra sällskap. <span className="inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">Dåliga förlorare.</span>
           </h1>
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
-            Samla kompisarna, välj ett spel och dela koden. Alla spelar på sin egen mobil eller dator.
+            Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
           <div className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
@@ -68,17 +69,10 @@ export function HomePage() {
                 Välj spel
                 <ArrowDown aria-hidden />
               </Button>
-              {/* Det befintliga provläget i Gissa priset: en provrunda på egen hand. */}
-              <Button asChild size="lg" variant="outline" className="hover:bg-card hover:border-foreground/30">
-                <Link to="/skapa?spel=gissa-priset&testa=1">
-                  <Play aria-hidden />
-                  Testa själv
-                </Link>
-              </Button>
             </div>
             <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-muted-foreground md:justify-start">
               <Check className="size-4 text-primary" aria-hidden />
-              Inget konto behövs
+              Gratis. Ingen app. Inget konto.
             </p>
           </div>
           <div className="border-t pt-5">
