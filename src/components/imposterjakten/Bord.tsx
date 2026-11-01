@@ -120,6 +120,27 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           ))}
         </svg>
 
+        {/* Ett kort med baksidan upp framför varje spelare. Mitt eget är större, som om jag håller det. */}
+        {seats.map((seat) => {
+          const mine = seat.id === meId
+          const toward = mine ? 0.7 : small ? 0.79 : 0.77
+          return (
+            <div
+              key={seat.id}
+              aria-hidden
+              className={cn(
+                'absolute rounded-[3px] border border-card/70 bg-foreground shadow-soft-sm',
+                mine ? 'h-9 w-6' : small ? 'h-4 w-3' : 'h-5 w-3.5',
+              )}
+              style={{
+                left: `${50 + (seat.x - 50) * toward}%`,
+                top: `${50 + (seat.y - 50) * toward}%`,
+                transform: `translate(-50%, -50%) rotate(${seat.angle + 90}deg)`,
+              }}
+            />
+          )
+        })}
+
         {/* Pratbubblorna med orden, inåt mot bordet från varje plats. */}
         {seats.map((seat) => (
           <Bubbles key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} />
