@@ -24,7 +24,7 @@ export const GAMES: GameInfo[] = [
   {
     id: 'gissa-priset',
     name: 'Gissa priset',
-    tagline: 'Vad kostar det i dag? Och vad kostade det förr?',
+    tagline: 'Gissa vad saker kostar, nu och förr. Närmast får flest poäng.',
     quickRule: 'Gissa priset i kronor. Närmast rätt pris ger flest poäng.',
     emoji: '🏷️',
     color: 'bg-sun-soft',
@@ -46,7 +46,7 @@ export const GAMES: GameInfo[] = [
   {
     id: 'narmast',
     name: 'Närmast vinner',
-    tagline: 'Gissa ett tal mellan 1 och 100. Närmast vinner.',
+    tagline: 'Välj ett tal mellan 1 och 100. Sedan slumpas ett tal fram. Vem kom närmast?',
     quickRule: 'Gissa ett tal mellan 1 och 100. Närmast det dolda talet vinner rundan.',
     emoji: '🎯',
     color: 'bg-coral-soft',
@@ -68,7 +68,7 @@ export const GAMES: GameInfo[] = [
     // Arbetsnamn. Namnet visas bara härifrån, så det räcker att byta det här.
     id: 'kortkaos',
     name: 'Kortkaos',
-    tagline: 'Fyll luckan med det fräckaste kortet på handen. Domaren väljer sin favorit.',
+    tagline: 'Fyll luckan med ditt roligaste kort. Domaren väljer sin favorit.',
     quickRule: 'Lägg kortet som passar bäst i luckan. Domaren väljer sin favorit.',
     emoji: '🃏',
     color: 'bg-lilac/40',
@@ -80,7 +80,7 @@ export const GAMES: GameInfo[] = [
   {
     id: 'imposterjakten',
     name: 'Imposterjakten',
-    tagline: 'Vem är det som bluffar?',
+    tagline: 'Alla utom en får ett hemligt ord. Ge ledtrådar och avslöja den som bluffar.',
     quickRule: 'Alla utom en har samma ord. Ge ett ord var och lista ut vem som bluffar.',
     emoji: '🔍',
     color: 'bg-mint-soft',

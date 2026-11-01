@@ -106,7 +106,7 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-muted-foreground">
-            {[playersLabel(game), game.feel].filter(Boolean).join(' · ')}
+            {[playersLabel(game), page?.time, game.feel].filter(Boolean).join(' · ')}
           </p>
           <h3 className="text-xl leading-tight">
             {/* Namnet leder till spelets egen sida med mer om spelet. */}

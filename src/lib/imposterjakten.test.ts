@@ -107,7 +107,7 @@ function playClues(host: HostState, ids = ABC): HostState {
 describe('Imposterjakten: spelet och inställningarna', () => {
   it('finns i spellistan för 3–10 spelare och kräver minst tre', () => {
     const game = GAMES.find((g) => g.id === 'imposterjakten')
-    expect(game).toMatchObject({ name: 'Imposterjakten', tagline: 'Vem är det som bluffar?', minPlayers: 3, maxPlayers: 10 })
+    expect(game).toMatchObject({ name: 'Imposterjakten', tagline: 'Alla utom en får ett hemligt ord. Ge ledtrådar och avslöja den som bluffar.', minPlayers: 3, maxPlayers: 10 })
     expect(canStart('imposterjakten', 2)).toBe(false)
     expect(canStart('imposterjakten', 1)).toBe(false)
     expect(canStart('imposterjakten', 3)).toBe(true)
