@@ -5,7 +5,7 @@ import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type
 import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
-  HELLO_RETRY_MS,
+  HANDS_RESEND_EVERY, HELLO_RETRY_MS, isSameContent, STATE_RESEND_MS,
   helloRetryAction,
   lobbyStatus,
   shouldRetryHello,
@@ -408,6 +408,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       })
 
       function applyState({ state: next, sentAt }: StateMessage) {
+        // Värden skickar läget igen med jämna mellanrum. Är inget nytt behöver inget göras.
+        if (receivedRef.current && isSameContent(next, stateRef.current)) return
         stateRef.current = next
         setState(next)
         setReceived(true)
@@ -426,7 +428,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (message?.to !== myId) return
         if (isFromHost(message.from, hosts())) {
           pendingHandRef.current = null
-          setHand(message.hand)
+          setHand((prev) => (isSameContent(prev, message.hand) ? prev : message.hand))
         } else if (message.from !== null) {
           // Kanske innan närvarolistan visar värden (t.ex. efter en omladdning). Sparas tills den gör det.
           pendingHandRef.current = { from: message.from, hand: message.hand }
@@ -439,7 +441,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (message?.to !== myId) return
         if (isFromHost(message.from, hosts())) {
           pendingCardRef.current = null
-          setImposterCard(message.card)
+          setImposterCard((prev) => (isSameContent(prev, message.card) ? prev : message.card))
         } else if (message.from !== null) {
           pendingCardRef.current = { from: message.from, card: message.card }
         }
@@ -643,6 +645,26 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       if (opened) closeChannel(opened)
     }
   }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed, sendHello, connectKey])
+
+  // Värden: skickar läget igen med jämna mellanrum, och händerna och korten lite mer sällan, så att en gäst som missat
+  // ett meddelande inte står kvar i ett gammalt läge (se STATE_RESEND_MS).
+  useEffect(() => {
+    if (!isHost || !connected) return
+    let ticks = 0
+    const timer = setInterval(() => {
+      ticks += 1
+      void channelRef.current?.send({
+        type: 'broadcast',
+        event: 'state',
+        payload: { state: stateRef.current, sentAt: Date.now(), from: meId },
+      })
+      if (ticks % HANDS_RESEND_EVERY === 0) {
+        sentHandsRef.current = {}
+        sendHands()
+      }
+    }, STATE_RESEND_MS)
+    return () => clearInterval(timer)
+  }, [isHost, connected, meId, sendHands])
 
   // Gästen: frågar värden efter läget igen tills tillståndet kommer. Ett enstaka hello kan försvinna,
   // t.ex. om det skickas medan värdens flik ligger i bakgrunden. Får flera hello inget svar kan kanalen vara död
