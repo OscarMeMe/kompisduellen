@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils'
 
 // Spelkorten i kortspelen: svarta frågekort och vita svarskort. Samma rundning och skuggor som
 // övriga kort, men formade som riktiga kort.
+// Långa ord avstavas på svenska med bindestreck (hyphens-auto, sidan har lang="sv"). break-words finns kvar som
+// reserv för ord som inte går att avstava.
 
 type PromptCardProps = {
   prompt: string
@@ -22,7 +24,7 @@ export function PromptCard({ prompt, answer, footer, className }: PromptCardProp
         className,
       )}
     >
-      <p className="font-heading text-2xl leading-snug font-bold break-words sm:text-3xl">
+      <p className="font-heading text-2xl leading-snug font-bold break-words hyphens-auto sm:text-3xl">
         {answer ? <Sentence prompt={prompt} answer={answer} highlight="text-sun" /> : <WithGap prompt={prompt} />}
       </p>
       {footer && <div className="text-sm font-semibold opacity-70">{footer}</div>}
@@ -71,7 +73,7 @@ type AnswerCardProps = {
 
 export function AnswerCard({ children, onSelect, selected, disabled, footer, blank, className }: AnswerCardProps) {
   const classes = cn(
-    'flex h-full min-h-40 w-full flex-col justify-between gap-3 rounded-lg border-2 bg-card p-4 text-left font-heading text-lg leading-snug font-bold break-words shadow-soft transition',
+    'flex h-full min-h-40 w-full flex-col justify-between gap-3 rounded-lg border-2 bg-card p-4 text-left font-heading text-lg leading-snug font-bold break-words hyphens-auto shadow-soft transition',
     blank && 'border-dashed',
     selected ? 'border-primary ring-4 ring-primary/20 -translate-y-1' : 'border-border',
     onSelect && !disabled && 'cursor-pointer hover:-translate-y-0.5 hover:border-primary/50',
