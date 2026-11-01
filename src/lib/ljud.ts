@@ -45,6 +45,32 @@ export function playPop() {
   }
 }
 
+// Imposterjakten: det blev min tur. Två korta, ljusa toner.
+export function playTurn() {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    for (const [at, frequency] of [
+      [0, 660],
+      [0.12, 990],
+    ]) {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'triangle'
+      oscillator.frequency.setValueAtTime(frequency, now + at)
+      gain.gain.setValueAtTime(0.0001, now + at)
+      gain.gain.exponentialRampToValueAtTime(0.14, now + at + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.14)
+      oscillator.connect(gain).connect(context.destination)
+      oscillator.start(now + at)
+      oscillator.stop(now + at + 0.16)
+    }
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
 // Ljuden när något kastas på en (kast.ts). Ett svisch medan saken flyger, och träffen när den slår i skärmen efter
 // impactSeconds (samma tid som rörelsen i index.css). Allt läggs på ljudklockan direkt, så att det hamnar i takt.
 // Tomat: duns och blött splatt med små plask. Paj: djup duns och ett kladdigt squelch. Ägg: vasst knäck och ett plopp.

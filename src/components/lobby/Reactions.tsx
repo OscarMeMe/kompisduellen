@@ -16,18 +16,21 @@ import { cn } from '@/lib/utils'
 
 // Så många reaktioner syns samtidigt. De äldsta försvinner först.
 const MAX_VISIBLE = 6
+const NONE: readonly string[] = []
 
 type ReactionsProviderProps = {
   enabled: boolean
   floating: FloatingReaction[]
   send: (reactionId: string) => void
   throws: Throws
+  // Spelarna som sitter vid Imposterjaktens bord. Deras reaktioner visas vid platsen i stället för överst.
+  seatedIds?: readonly string[]
   children: ReactNode
 }
 
 // Håller reaktionerna, kasten och ljudvalet för lobbysidan, så att väntrummet, spelarlistorna och facitvyerna kan
 // visa knapparna utan att få dem som props. Ljudet spelas när en ny reaktion kommer in eller något splattar mot mig.
-export function ReactionsProvider({ enabled, floating, send, throws, children }: ReactionsProviderProps) {
+export function ReactionsProvider({ enabled, floating, send, throws, seatedIds = NONE, children }: ReactionsProviderProps) {
   const [soundOn, setSound] = useState(loadSoundOn)
   const lastKey = useRef<string | undefined>(floating.at(-1)?.key)
 
@@ -48,6 +51,7 @@ export function ReactionsProvider({ enabled, floating, send, throws, children }:
     () => ({
       enabled,
       floating,
+      seatedIds,
       send,
       throws,
       soundOn,
@@ -56,7 +60,7 @@ export function ReactionsProvider({ enabled, floating, send, throws, children }:
         saveSoundOn(on)
       },
     }),
-    [enabled, floating, send, throws, soundOn],
+    [enabled, floating, seatedIds, send, throws, soundOn],
   )
   return <ReactionsContext.Provider value={value}>{children}</ReactionsContext.Provider>
 }
@@ -107,11 +111,13 @@ export function ReactionBar({ className }: { className?: string }) {
 // De står bredvid varandra i stället för på varandra, och tar inga tryck.
 export function ReactionFloaters() {
   const reactions = useReactions()
-  if (!reactions || reactions.floating.length === 0) return null
+  // Reaktioner från den som sitter vid Imposterjaktens bord visas vid platsen (Bord.tsx).
+  const shown = reactions?.floating.filter((item) => !item.from || !reactions.seatedIds.includes(item.from)) ?? []
+  if (!reactions || shown.length === 0) return null
   return (
     <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-30 flex justify-center px-4" aria-hidden>
       <div className="flex max-w-xl flex-wrap justify-center gap-2">
-        {reactions.floating.slice(-MAX_VISIBLE).map((item) => (
+        {shown.slice(-MAX_VISIBLE).map((item) => (
           <div
             key={item.key}
             className="flex items-center gap-2 rounded-full border bg-card py-1 pr-3 pl-1.5 shadow-soft motion-safe:animate-reaction motion-reduce:animate-reaction-fade"
