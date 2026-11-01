@@ -48,12 +48,18 @@ describe('exempelfrågorna på startsidan', () => {
 describe('frågor och ledtrådar', () => {
   const HIDDEN = ['flygbiljett-amsterdam-1925', 'vigselplats-katrinetorp-2026']
 
-  it('har 145 frågor med unika id, och alla har en hel fråga och en ledtråd', () => {
-    expect(ALL_PRICE_ITEMS).toHaveLength(145)
-    expect(new Set(ALL_PRICE_ITEMS.map((item) => item.id)).size).toBe(145)
+  // Antalet frågor räknas inte, så att testerna inte behöver ändras varje gång en fråga godkänns på /granska.
+  it('har frågor med unika id, och alla har en hel fråga, en ledtråd och rätt format', () => {
+    expect(ALL_PRICE_ITEMS.length).toBeGreaterThan(0)
+    expect(new Set(ALL_PRICE_ITEMS.map((item) => item.id)).size).toBe(ALL_PRICE_ITEMS.length)
     for (const item of ALL_PRICE_ITEMS) {
-      expect(item.fraga, item.id).toMatch(/\?$/)
-      expect(item.clue.trim(), item.id).not.toBe('')
+      expect(item.id, item.id).toMatch(/^[a-z0-9-]+$/)
+      for (const text of [item.emoji, item.name, item.clue, item.fact]) expect(text.trim(), item.id).not.toBe('')
+      // Frågan som den visas (fraga, eller byggd av namn och år när fraga saknas, se questionText).
+      expect(questionText(item), item.id).toMatch(/\?$/)
+      expect(Number.isInteger(item.year), item.id).toBe(true)
+      expect(item.priceSek, item.id).toBeGreaterThan(0)
+      expect(item.source, item.id).toMatch(/^https?:\/\//)
     }
   })
 
@@ -84,7 +90,7 @@ describe('frågor och ledtrådar', () => {
 
   it('frågar efter auktionspris med "för på auktion" för alla som såldes', () => {
     const sold = ALL_PRICE_ITEMS.filter((item) => item.fraga?.startsWith('Vad såldes'))
-    expect(sold).toHaveLength(13)
+    expect(sold.length).toBeGreaterThan(0)
     for (const item of sold) {
       expect(item.fraga, item.id).toMatch(/ för på (auktion|välgörenhetsauktion) \d{4}\?$/)
       expect(item.fraga, item.id).toContain(` ${item.year}?`)
@@ -103,7 +109,7 @@ describe('frågor och ledtrådar', () => {
 
   it('döljer två frågor i spelet utan att ta bort dem', () => {
     expect(ALL_PRICE_ITEMS.filter((item) => item.dold).map((item) => item.id).sort()).toEqual(HIDDEN)
-    expect(PRICE_ITEMS).toHaveLength(143)
+    expect(PRICE_ITEMS).toHaveLength(ALL_PRICE_ITEMS.length - HIDDEN.length)
     for (const id of HIDDEN) {
       expect(PRICE_ITEMS.some((item) => item.id === id)).toBe(false)
       expect(findPriceItem(id)).toBeDefined()
@@ -118,7 +124,7 @@ describe('frågor och ledtrådar', () => {
   })
 
   it('har exempelfrågorna bland de synliga, men slumpar aldrig fram dem i spelet', () => {
-    expect(GAME_ITEMS).toHaveLength(140)
+    expect(GAME_ITEMS).toHaveLength(PRICE_ITEMS.length - EXAMPLE_ITEMS.length)
     let used: string[] = []
     for (const example of EXAMPLE_ITEMS) {
       expect(PRICE_ITEMS).toContain(example)
