@@ -56,6 +56,7 @@ import {
   hostAdvance,
   hostDeadline,
   hostImposterNewWord,
+  hostImposterAbortRound,
   hostImposterNextRound,
   hostImposterStartAnyway,
   hostMove,
@@ -726,6 +727,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       imposterNextRound: () => {
         if (isHost) commit(hostImposterNextRound(current(), activeIds()))
+      },
+      imposterAbortRound: () => {
+        if (isHost) commit(hostImposterAbortRound(current()))
       },
       setTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => {
         if (isHost) publish(setTempo(stateRef.current, tempo))

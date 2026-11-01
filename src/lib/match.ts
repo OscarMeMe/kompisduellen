@@ -27,6 +27,8 @@ import {
   imposterDeadline,
   imposterMove,
   imposterNewWord,
+  canStartNextRound,
+  imposterAbortRound,
   imposterNextRound,
   imposterPresence,
   imposterStartAnyway,
@@ -761,7 +763,7 @@ export function hostPresence(host: HostState, activeIds: string[], now: number, 
 }
 
 // Värdens knappar i Imposterjakten: Starta ändå (alla har inte läst sitt kort), Nytt ord (innan första
-// associationen) och Nästa omgång (efter diskussionen).
+// associationen), Nästa omgång (efter facit) och Avbryt omgången.
 export function hostImposterStartAnyway(host: HostState): HostState {
   return withImposter(host, imposterStartAnyway)
 }
@@ -770,8 +772,20 @@ export function hostImposterNewWord(host: HostState, activeIds: string[], random
   return withImposter(host, (game) => imposterNewWord(game, activeIds, random))
 }
 
+// Är färre än tre kvar i lobbyn när en ny omgång ska börja går alla tillbaka till väntrummet. Matchen räknas inte.
 export function hostImposterNextRound(host: HostState, activeIds: string[], random: Random = Math.random): HostState {
-  return withImposter(host, (game) => imposterNextRound(game, activeIds, random))
+  const next = withImposter(host, (game) => imposterNextRound(game, activeIds, random))
+  const { state } = host
+  if (next !== host || state.game !== IMPOSTER_GAME || state.phase !== 'playing' || state.imposter?.step !== 'facit') return next
+  if (canStartNextRound(state, activeIds)) return next
+  return {
+    state: { ...resetMatch(state), notice: 'För få spelare är kvar för att fortsätta. Matchen räknas inte i kvällens ställning.' },
+    secrets: null,
+  }
+}
+
+export function hostImposterAbortRound(host: HostState): HostState {
+  return withImposter(host, (game) => imposterAbortRound(game))
 }
 
 // Värdens sparade lobby efter en omladdning (se saveHostLobby). Fält som inte fanns när den sparades

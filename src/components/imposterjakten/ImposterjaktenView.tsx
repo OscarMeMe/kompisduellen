@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Check, RefreshCw, Send } from 'lucide-react'
+import { Check, CircleStop, RefreshCw, Send } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { ClueList } from '@/components/imposterjakten/ClueList'
 import { MyCard } from '@/components/imposterjakten/MyCard'
-import { DiscussionStep, ResultStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
+import { DiscussionStep, FacitStep, GuessStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { ThrowBar } from '@/components/lobby/Kast'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
@@ -11,6 +11,7 @@ import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import {
@@ -26,10 +27,11 @@ import { hasFinePointer } from '@/lib/device'
 import { cn } from '@/lib/utils'
 
 // Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
-// varv. Sedan diskuterar gruppen och röstar. Kortet går att visa och dölja hela tiden. Avslöjandet, sista gissningen
-// och poängen kommer i nästa steg, så efter omröstningen visas rösterna och värden går vidare till nästa omgång.
+// varv. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
+// poängen. Kortet går att visa och dölja hela tiden. Värden kan avbryta omgången (inga poäng, den räknas inte).
 export function ImposterjaktenView(props: ImposterViewProps) {
-  const { state, me, isHost, imposterCard, clockOffset, onNewWord } = props
+  const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound } = props
+  const [confirmAbort, setConfirmAbort] = useState(false)
   const table = state.imposter
   // Nedräkningen till omröstningen varnar på samma sätt som tiden i de andra spelen.
   const countdown = useTimeWarning(state.deadline, clockOffset, COUNTDOWN_SECONDS, false)
@@ -55,7 +57,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
       {table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
       {table.step === 'rostning' && <VotingStep {...stepProps} />}
-      {table.step === 'resultat' && <ResultStep {...stepProps} />}
+      {table.step === 'gissning' && <GuessStep {...stepProps} />}
+      {table.step === 'facit' && <FacitStep {...stepProps} />}
 
       {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
       {isHost && canChangeWord(table) && (
@@ -64,6 +67,21 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           Nytt ord
         </Button>
       )}
+      {/* Om någon dröjer eller ordet avslöjas av misstag. Omgången ger inga poäng och räknas inte. */}
+      {isHost && table.step !== 'facit' && (
+        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => setConfirmAbort(true)}>
+          <CircleStop aria-hidden />
+          Avbryt omgången
+        </Button>
+      )}
+      <AbortRoundDialog
+        open={confirmAbort}
+        onStay={() => setConfirmAbort(false)}
+        onAbort={() => {
+          setConfirmAbort(false)
+          onAbortRound()
+        }}
+      />
 
       <div className="space-y-3">
         <ReactionBar />
@@ -210,5 +228,29 @@ function WriteTurn({ onMove, rejectedAt }: { onMove: StepProps['onMove']; reject
         </Button>
       </div>
     </form>
+  )
+}
+
+// Frågan innan värden avbryter omgången.
+function AbortRoundDialog({ open, onStay, onAbort }: { open: boolean; onStay: () => void; onAbort: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onStay()}>
+      <DialogContent className="gap-5 sm:max-w-sm" showCloseButton={false}>
+        <div className="space-y-2 text-center">
+          <DialogTitle className="text-2xl leading-tight font-bold">Avbryta omgången?</DialogTitle>
+          <DialogDescription className="text-base text-foreground">
+            Ingen får poäng och omgången räknas inte. Ni kör en ny omgång med ett nytt ord.
+          </DialogDescription>
+        </div>
+        <DialogFooter className="grid gap-2 sm:grid-cols-2">
+          <Button size="lg" onClick={onStay}>
+            Fortsätt spela
+          </Button>
+          <Button size="lg" variant="outline" onClick={onAbort}>
+            Avbryt omgången
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

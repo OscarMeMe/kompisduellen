@@ -121,6 +121,10 @@ describe('gissningar och kortdrag', () => {
     expect(parseMove({ id: 'a', move: { type: 'vote', target: 'b' } })?.move).toEqual({ type: 'vote', target: 'b' })
     expect(parseMove({ id: 'a', move: { type: 'vote' } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'vote', target: 2 } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'guess', word: 'Paraply' } })?.move).toEqual({ type: 'guess', word: 'Paraply' })
+    expect(parseMove({ id: 'a', move: { type: 'guess' } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'guess', word: 'x'.repeat(101) } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'giveUp' } })?.move).toEqual({ type: 'giveUp' })
   })
 })
 
@@ -233,10 +237,23 @@ describe('Imposterjakten i läget', () => {
       votedCount: 0,
       countdownStarted: false,
       votes: null,
+      tied: null,
+      caught: null,
+      outcome: null,
     }
     expect(parseStateMessage({ state: { ...lobby, imposter }, sentAt: 1 })?.state.imposter).toEqual(imposter)
-    const revealed = { ...imposter, step: 'resultat', votes: { a: 'b', b: 'c', c: 'b' } }
+    const outcome = { kind: 'undan', word: 'Paraply', imposter: 'a', hint: 'Väder', guess: null, points: { a: 2 }, reason: null }
+    const revealed = { ...imposter, step: 'facit', votes: { a: 'b', b: 'c', c: 'b' }, outcome }
     expect(parseStateMessage({ state: { ...lobby, imposter: revealed }, sentAt: 1 })?.state.imposter).toEqual(revealed)
+    const tie = { ...imposter, step: 'diskussion', tied: ['b', 'c'] }
+    expect(parseStateMessage({ state: { ...lobby, imposter: tie }, sentAt: 1 })?.state.imposter).toEqual(tie)
+    const guessing = { ...imposter, step: 'gissning', caught: 'a' }
+    expect(parseStateMessage({ state: { ...lobby, imposter: guessing }, sentAt: 1 })?.state.imposter).toEqual(guessing)
+    expect(parseStateMessage({ state: { ...lobby, imposter: { ...revealed, outcome: { ...outcome, kind: 'vann' } } }, sentAt: 1 })).toBeNull()
+    expect(parseStateMessage({ state: { ...lobby, imposter: { ...imposter, tied: 'b' } }, sentAt: 1 })).toBeNull()
+    // En värd med en äldre version skickar inte fälten för lika röster och facit.
+    const { tied: _t, caught: _c, outcome: _o, ...older } = imposter
+    expect(parseStateMessage({ state: { ...lobby, imposter: older }, sentAt: 1 })?.state.imposter).toEqual(imposter)
     expect(parseStateMessage({ state: { ...lobby, imposter: { ...imposter, votes: { a: 1 } } }, sentAt: 1 })).toBeNull()
     const { imposter: _i, imposterSettings: _s, usedWordIds: _u, ...old } = lobby
     const parsed = parseStateMessage({ state: old, sentAt: 1 })?.state
