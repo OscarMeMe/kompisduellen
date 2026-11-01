@@ -802,5 +802,12 @@ export function restoreHostState(saved: unknown): HostState | null {
   if (!state || typeof state.phase !== 'string' || typeof state.game !== 'string') return null
   const restored: GameState = { ...initialState(state.game), ...state }
   if (restored.phase === 'playing' && !secrets) return null
+  // Sparat av en äldre version av sajten: Imposterjaktens nya fält får sina startvärden, så att omgången kan fortsätta.
+  if (restored.imposter) {
+    restored.imposter = Object.assign({ accusation: null, accusers: [], failedAccusation: null }, restored.imposter)
+  }
+  if (isImposterSecrets(secrets)) {
+    return { state: restored, secrets: Object.assign({ discussionAt: null, accuseVotes: {}, resumeMs: null }, secrets) }
+  }
   return { state: restored, secrets: secrets ?? null }
 }

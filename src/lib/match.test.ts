@@ -262,6 +262,13 @@ describe('omladdning hos värden', () => {
 
   it('börjar om när datan är trasig eller ett kortspel saknar sin hemliga data', () => {
     expect(restoreHostState(null)).toBeNull()
+    // En sparad Imposterjakten-omgång från en äldre version får de nya fälten.
+    const older = restoreHostState({
+      state: { ...initialState('imposterjakten'), phase: 'playing', imposter: { step: 'ledtradar', order: ['a'], turn: 0 } },
+      secrets: { kind: 'imposter', wordId: 'paraply', imposter: 'a', rejected: {}, ready: [], votes: {} },
+    })
+    expect(older?.state.imposter).toMatchObject({ accusation: null, accusers: [], failedAccusation: null })
+    expect(older?.secrets).toMatchObject({ accuseVotes: {}, resumeMs: null, discussionAt: null })
     expect(restoreHostState({ state: { phase: 1 } })).toBeNull()
     const playing = { ...initialState('narmast'), phase: 'playing' }
     expect(restoreHostState({ state: playing, secrets: null })).toBeNull()
