@@ -763,6 +763,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return () => clearInterval(timer)
   }, [isHost, connected, sendState])
 
+  const playing = state.phase === 'playing'
+  // Handen och kortet gäller en match. Utan det här kan den gamla handen synas ett ögonblick när nästa match börjar.
+  // Numret nollas också, så att jag ber om handen om den nya kom innan läget och därför rensades här.
+  useEffect(() => {
+    if (playing) return
+    setHand(null)
+    setImposterCard(null)
+    myHandSeqRef.current = null
+  }, [playing])
+
   // Har tiden tagit slut för ett kort eller ett domarval som inte kommit fram? Kollas när läget ändras och inte på klockan,
   // som kan gå långsamt när fliken ligger i bakgrunden.
   useEffect(() => {
@@ -776,7 +786,6 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
   // Mina drag skickas igen tills läget visar att de kommit fram, med en kort paus och en gräns (se leverans.ts).
   // Klockan börjar om när kanalen anslutit på nytt, så att försök som gjordes utan anslutning inte räknas.
-  const playing = state.phase === 'playing'
   useEffect(() => {
     if (!playing) pendingMovesRef.current = []
     if (!connected || !playing || !meId) return
