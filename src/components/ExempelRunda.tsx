@@ -2,12 +2,10 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw } from 'lucide-react'
 import { CountingPrice } from '@/components/CountingPrice'
-import { Emoji } from '@/components/Emoji'
-import { CreditText, ImageCreditButton } from '@/components/gissa-priset/ImageCredit'
+import { CreditText } from '@/components/gissa-priset/ImageCredit'
 import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { cleanTypedAmount, formatSek, isValidPrice, parseTypedNumber } from '@/lib/belopp'
 import { hasFinePointer } from '@/lib/device'
 import { pricePoints } from '@/lib/gissa-priset'
@@ -33,7 +31,6 @@ export function ExempelRunda() {
   const [scores, setScores] = useState<number[]>([])
   const item = order[index]
   const isLast = index >= order.length - 1
-  const fieldId = useId()
   const errorId = useId()
   const titleId = useId()
   const [text, setText] = useState('')
@@ -131,28 +128,18 @@ export function ExempelRunda() {
           finished && 'pointer-events-none opacity-40 select-none motion-safe:blur-sm',
         )}
       >
-        <div className="mb-2 flex items-center gap-2.5">
-          <Emoji emoji="🏷️" className="text-3xl" />
-          <div className="min-w-0">
-            <h2 id={titleId} className="text-lg leading-tight">
-              Prova Gissa priset
-            </h2>
-            <p className="text-sm font-semibold text-muted-foreground">Tre frågor. Gissa vad det kostade.</p>
+        <h2 id={titleId} className="mb-2 text-lg leading-tight">
+          Gissa priset
+        </h2>
+        {/* Bilden fyller kortets bredd med samma höjd för alla frågor. Den beskärs, men dras aldrig ut. */}
+        <figure className="flex min-h-0 flex-col">
+          <div className="relative aspect-video max-h-44 w-full overflow-hidden rounded-md bg-muted/60 md:max-h-52">
+            {item.image && <img src={item.image} alt={item.imageNote ?? ''} className="absolute inset-0 size-full object-cover" />}
+            <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">Exempel</span>
           </div>
-        </div>
-        {/* Bilden. På bred skärm tar den höjden som blir över när rutan är lika hög som vänstersidan. Hela föremålet visas. */}
-        <figure className="flex min-h-0 flex-col md:flex-1">
-          <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-md bg-muted/60 md:h-auto md:min-h-20 md:flex-1">
-            {item.image && <img src={item.image} alt="" className="absolute inset-0 size-full object-contain" />}
-            <ImageCreditButton item={item} className="bottom-2 left-2" />
-            <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">
-              Exempelrunda
-            </span>
-          </div>
-          {/* Raden finns alltid, även tom, så att alla frågor har samma höjd. Först vad bilden visar, om den inte visar
-              just saken. Krediten ligger bakom ⓘ och står här i facit. */}
+          {/* Raden finns alltid, även tom, så att alla frågor har samma höjd. Licensen kräver att krediten finns kvar. */}
           <figcaption className="mt-0.5 min-h-[1lh] truncate text-[11px] leading-tight text-muted-foreground/80">
-            {guess !== null ? <CreditText item={item} /> : item.imageNote}
+            <CreditText item={item} />
           </figcaption>
         </figure>
 
@@ -166,12 +153,9 @@ export function ExempelRunda() {
         {guess === null ? (
           <form onSubmit={reveal} className="mt-2 min-h-41 space-y-2" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor={fieldId} className="text-sm font-bold">
-                Din gissning i kronor
-              </Label>
               <div className="relative">
                 <Input
-                  id={fieldId}
+                  aria-label="Din gissning i kronor"
                   ref={inputRef}
                   value={text}
                   onChange={(event) => {
