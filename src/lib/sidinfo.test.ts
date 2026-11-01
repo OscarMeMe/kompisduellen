@@ -4,7 +4,7 @@ import { GUIDE_PAGES } from '@/lib/guider'
 import { pageMeta, PRERENDER_PATHS, renderHeadTags, SITE_URL } from '@/lib/sidinfo'
 import { findGamePage, GAME_PAGES } from '@/lib/spelsidor'
 
-const publicFiles = import.meta.glob(['/public/sitemap.xml', '/public/robots.txt'], {
+const publicFiles = import.meta.glob(['/public/sitemap.xml', '/public/robots.txt', '/index.html'], {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -13,12 +13,31 @@ const ogImages = Object.keys(import.meta.glob('/public/og/*.png'))
 const sitemap = publicFiles['/public/sitemap.xml']
 const robots = publicFiles['/public/robots.txt']
 
+describe('sökresultaten och ikonen', () => {
+  it('/skapa och /ga-med är inte med i sajtkartan och ber Google att inte visa dem', () => {
+    for (const path of ['/skapa', '/ga-med']) {
+      expect(sitemap, path).not.toContain(`${SITE_URL}${path}<`)
+      expect(pageMeta(path).path, path).toBeNull()
+      const tags = renderHeadTags(pageMeta(path))
+      expect(tags, path).toContain('<meta name="robots" content="noindex, follow" />')
+      expect(tags, path).not.toContain('canonical')
+    }
+  })
+
+  it('startsidan och spelsidorna får visas i sökresultaten', () => {
+    for (const path of PRERENDER_PATHS) expect(renderHeadTags(pageMeta(path)), path).not.toContain('noindex')
+  })
+
+  it('sidan länkar ikonen i 48, 96 och 192 px', () => {
+    for (const size of [48, 96, 192]) expect(publicFiles['/index.html']).toContain(`sizes="${size}x${size}"`)
+  })
+})
+
 describe('sidinfo', () => {
   it('ger startsidan och spelsidorna en egen kanonisk adress', () => {
     expect(pageMeta('/').path).toBe('/')
     expect(pageMeta('/spel/gissa-priset').path).toBe('/spel/gissa-priset')
     expect(pageMeta('/spel/gissa-priset/').path).toBe('/spel/gissa-priset')
-    expect(pageMeta('/skapa').path).toBe('/skapa')
   })
 
   it('ger lobbyn, lobbykoder under /spel/ och okända sidor ingen kanonisk adress', () => {
