@@ -708,6 +708,21 @@ describe('Imposterjakten: Anklaga', () => {
     expect(canAccuse(table(voting), 'b')).toBe(false)
   })
 
+  it('hoppar över turen om den som har tur lämnade medan anklagelsen pågick', () => {
+    // Impostern (a) har första turen i varvet och passar, så att det är en oskyldig som lämnar.
+    const third = hostMove(toThirdRound(), 'a', { type: 'pass' }, ABCD, NOW)
+    const turn = currentTurn(table(third))!
+    const [accused, accuser] = ABCD.filter((id) => id !== turn && id !== 'a').concat('a')
+    let host = hostMove(third, accuser, { type: 'accuse', target: accused }, ABCD, NOW)
+    const left = ABCD.filter((id) => id !== turn)
+    host = hostPresence(host, left, NOW + 500)
+    expect(table(host).accusation?.voters).toBe(2)
+    host = left.filter((id) => id !== accused).reduce((next, id) => hostMove(next, id, { type: 'accuseVote', yes: false }, left, NOW + 1000), host)
+    expect(table(host).accusation).toBeNull()
+    expect(currentTurn(table(host))).not.toBe(turn)
+    expect(left).toContain(currentTurn(table(host)))
+  })
+
   it('faller om den anklagade lämnar, och räknar om när någon som ska svara lämnar', () => {
     const host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)
     const gone = hostPresence(host, ['a', 'b', 'd'], NOW + 1000)
