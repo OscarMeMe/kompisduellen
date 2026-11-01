@@ -145,14 +145,15 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
     <article
       ref={ref}
       data-play={playing}
+      data-spel={game.id}
       className={cn(
         // Lyfter lite med större skugga när musen är över kortet (hover gäller bara enheter med mus).
-        'group flex h-full flex-col overflow-hidden rounded-lg border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-lift motion-safe:hover:-translate-y-1',
+        'group flex h-full flex-col overflow-hidden rounded-lg bg-spel-yta text-spel-text shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-lift motion-safe:hover:-translate-y-1',
         highlight && 'motion-safe:animate-pop ring-4 ring-primary/40',
       )}
     >
       <div
-        className={cn('relative flex h-28 items-center justify-center', game.color)}
+        className="relative flex h-28 items-center justify-center"
         onClick={() => {
           setPlays((n) => n + 1)
           play()
@@ -168,7 +169,7 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-muted-foreground">
+          <p className="text-sm font-semibold opacity-80">
             {[playersLabel(game), page?.time].filter(Boolean).join(' · ')}
           </p>
           <h3 className="text-xl leading-tight">
@@ -182,13 +183,13 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
             )}
           </h3>
         </div>
-        <p className="leading-snug text-muted-foreground">{game.tagline}</p>
+        <p className="leading-snug opacity-90">{game.tagline}</p>
         <div className="mt-auto flex flex-col gap-1 pt-1">
-          <Button variant="link" className="h-11 w-fit px-0 text-muted-foreground" onClick={onShowRules}>
+          <Button variant="link" className="h-11 w-fit px-0 text-spel-text" onClick={onShowRules}>
             <Info aria-hidden />
             Så spelar man
           </Button>
-          <Button asChild size="lg" className="w-full">
+          <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp/90">
             <Link to={`/skapa?spel=${game.id}`}>
               Skapa lobby
               <ArrowRight aria-hidden />
