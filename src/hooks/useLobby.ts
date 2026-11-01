@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
-import { isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
+import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
@@ -23,6 +23,7 @@ import {
   parseRematchWish,
   parseStateMessage,
   parseThrow,
+  parseTyping,
   type StateMessage,
 } from '@/lib/meddelanden'
 import { measureSplatPlace } from '@/lib/splatt'
@@ -107,6 +108,9 @@ const NO_HOST_GRACE_MS = 4000
 // Så länge räknas en spelare som tappat nätet (eller laddar om) fortfarande som med i ett kortspel,
 // så att domaren inte byts och matchen inte tar slut i onödan.
 const AWAY_GRACE_MS = 10_000
+// Imposterjakten: "skriver…" skickas högst så här ofta och syns så länge efter senaste tecknet.
+const TYPING_EVERY_MS = 2000
+const TYPING_VISIBLE_MS = 3500
 
 // game används bara av värden. Övriga får spelet från värdens tillstånd.
 // onPromote / onDemote: sidan byter roll när jag tar över som värd eller lämnar över till en annan värd.
@@ -152,6 +156,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const onlineRef = useRef<OnlinePlayer[]>([])
   // Reaktioner: när jag skickade senast, och vad som släppts igenom från varje spelare (se reaktioner.ts).
   const lastReactionRef = useRef<number | null>(null)
+  // Imposterjakten: vem som skriver på sitt ord just nu (bara den som har tur), och när jag senast skickade det.
+  const [typing, setTyping] = useState<{ id: string; at: number } | null>(null)
+  const lastTypingRef = useRef(0)
   // Värdbyte: skillnaden mellan min och förra värdens klocka, och att jag precis tagit över (tillståndet skickas ut när jag anslutit som värd).
   const clockOffsetRef = useRef(0)
   const takeoverRef = useRef<{ offset: number } | null>(null)
@@ -452,9 +459,21 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           key: `${id}-${now}-${Math.random()}`,
           name: who.name,
           emoji: def.emoji,
+          from: id,
         }
         setFloating((list) => [...list.slice(-7), item])
         setTimeout(() => setFloating((list) => list.filter((other) => other.key !== item.key)), REACTION_VISIBLE_MS)
+      })
+
+      // Imposterjakten: den som har tur skriver. Visas bara för den som har tur just nu, och försvinner efter en stund
+      // utan nya tecken.
+      channel.on('broadcast', { event: 'skriver' }, ({ payload }) => {
+        const message = parseTyping(payload)
+        const table = stateRef.current.imposter
+        if (!message || message.id === myId || !table || currentTurn(table) !== message.id) return
+        const at = Date.now()
+        setTyping({ id: message.id, at })
+        setTimeout(() => setTyping((now) => (now?.at === at ? null : now)), TYPING_VISIBLE_MS)
       })
 
       // Ett kast på en spelare. Kontrolleras i meddelanden.ts, och högst ett kast per avsändare släpps igenom
@@ -493,7 +512,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
             return
           }
         }
-        const line: FloatingReaction = { key, name: from.name, emoji: item.emoji, target: to.id === myId ? 'dig' : to.name }
+        const line: FloatingReaction = {
+          key,
+          name: from.name,
+          emoji: item.emoji,
+          target: to.id === myId ? 'dig' : to.name,
+          from: from.id,
+        }
         setFloating((list) => [...list.slice(-7), line])
         setTimeout(() => setFloating((list) => list.filter((other) => other.key !== key)), REACTION_VISIBLE_MS)
       })
@@ -767,6 +792,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       skipReveal: (round: number) => {
         if (isHost) commit(hostAdvance(current(), Date.now(), round, activeIds()))
       },
+      // Imposterjakten: jag skriver på mitt ord. Skickas högst varannan sekund och aldrig med texten.
+      typing: () => {
+        const now = Date.now()
+        if (!me || now - lastTypingRef.current < TYPING_EVERY_MS) return
+        lastTypingRef.current = now
+        void channelRef.current?.send({ type: 'broadcast', event: 'skriver', payload: { id: me.id } })
+      },
       // En liten reaktion till alla i lobbyn. Knapparna väntar en stund efter varje tryck.
       react: (reactionId: string) => {
         if (!me || !findReaction(reactionId)) return
@@ -857,6 +889,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     hand: state.phase === 'playing' ? hand : null,
     imposterCard: state.phase === 'playing' ? imposterCard : null,
     floating,
+    // Vem som skriver på sitt ord just nu i Imposterjakten (bara den som har tur), annars null.
+    typing: typing && state.imposter && currentTurn(state.imposter) === typing.id ? typing.id : null,
     splat,
     thrown,
     lastThrowAt,

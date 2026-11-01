@@ -6,7 +6,8 @@ import type { Splat, Thrown, ThrowItemId } from '@/lib/kast'
 
 // En reaktion som visas överst på skärmen en kort stund.
 // target = den som träffades av ett kast ("Oscar 🍅 → Lisa"). Saknas för vanliga reaktioner.
-export type FloatingReaction = { key: string; name: string; emoji: string; target?: string }
+// from = avsändarens id, så att Imposterjaktens bord kan visa reaktionen vid avsändarens plats.
+export type FloatingReaction = { key: string; name: string; emoji: string; target?: string; from?: string }
 
 // Kasten (kast.ts, Kast.tsx). allowed = värden har inte stängt av dem och fler än en är med. targets = de jag kan
 // kasta på just nu. splat = det som splattar mot mig just nu. thrown = det jag nyss kastade (bekräftelsen).
