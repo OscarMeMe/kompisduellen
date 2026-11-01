@@ -104,7 +104,6 @@ export function HomePage() {
             <SpelKort
               key={game.id}
               game={game}
-              recommended={game.id === 'gissa-priset'}
               highlight={highlightGames}
               onShowRules={() => showIntro(game)}
             />
