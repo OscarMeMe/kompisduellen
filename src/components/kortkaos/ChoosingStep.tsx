@@ -13,14 +13,14 @@ import { kortkaosRules } from '@/lib/kortkaos'
 type ChoosingStepProps = {
   prompt: string
   hand: MyHand
-  // Värden har tagit emot mitt Klar.
+  // Värden har tagit emot att jag tryckt Spela kortet.
   done: boolean
   footer?: ReactNode
   onMove: (move: CardMove) => void
 }
 
-// Välj kort: varje val skickas direkt till värden, så att det räknas även utan Klar.
-// Valet går att byta tills man klickar Klar eller tiden tar slut.
+// Välj kort: varje val skickas direkt till värden, så att det räknas även utan Spela kortet.
+// Valet går att byta tills man trycker på Spela kortet eller tiden tar slut.
 export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingStepProps) {
   // Mitt senaste val, innan värden hunnit bekräfta det i handen.
   const [picked, setPicked] = useState<Pick | null>(null)
@@ -55,7 +55,7 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
         <div className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <h2 className="text-xl">Välj ett kort</h2>
-            <span className="text-sm text-muted-foreground">Du kan byta tills du klickar Klar</span>
+            <span className="text-sm text-muted-foreground">Du kan byta kort tills du trycker på Spela kortet.</span>
           </div>
 
           {hand.cards.length === 0 && !hand.blank ? (
@@ -102,7 +102,7 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
 
           <div {...SPLAT_SHIELD}>
             <Button size="lg" className="w-full" disabled={!current} onClick={finish}>
-              Klar
+              Spela kortet
             </Button>
           </div>
         </div>

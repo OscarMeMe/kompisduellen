@@ -57,7 +57,7 @@ export type CardTable = {
   prompt: string
   // Rundan görs om med ett nytt frågekort eftersom för få kort kom in.
   retried: boolean
-  // Vilka som har valt ett kort (men inte vilket) och vilka som har klickat Klar.
+  // Vilka som har valt ett kort (men inte vilket) och vilka som har tryckt Spela kortet.
   chosen: string[]
   done: string[]
   // Korten i slumpad ordning under judging och reveal.
@@ -251,7 +251,7 @@ function validPick(secrets: CardSecrets, rules: CardGameRules, playerId: string,
   return text ? { kind: 'blank', text } : null
 }
 
-// Har alla som är med (utom domaren) klickat Klar?
+// Har alla som är med (utom domaren) tryckt Spela kortet?
 function everyoneDone(host: CardHost, activeIds: readonly string[]): boolean {
   const table = host.state.cards!
   const players = activeIds.filter((id) => id !== table.judge && host.secrets.hands[id])
