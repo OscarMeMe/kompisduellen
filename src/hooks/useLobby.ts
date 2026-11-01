@@ -13,6 +13,7 @@ import {
   wakeAction,
 } from '@/lib/anslutning'
 import { closeChannel, waitForChannel } from '@/lib/kanaler'
+import { addPendingMove, isSeenMove, newPendingMove, rememberMove, resendMoves, type PendingMove } from '@/lib/leverans'
 import {
   isFromHost,
   parseGuess,
@@ -149,6 +150,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [hand, setHand] = useState<MyHand | null>(null)
   // Imposterjakten: mitt eget kort, som värden skickar bara till mig (på samma sätt som handen).
   const [imposterCard, setImposterCard] = useState<MyImposterCard | null>(null)
+  const handRef = useRef<MyHand | null>(null)
+  const imposterCardRef = useRef<MyImposterCard | null>(null)
+  useEffect(() => {
+    handRef.current = hand
+    imposterCardRef.current = imposterCard
+  }, [hand, imposterCard])
+  // Mina drag som läget ännu inte visar, och (hos värden) vilka drag som redan räknats (se leverans.ts).
+  const pendingMovesRef = useRef<PendingMove[]>([])
+  const moveCountRef = useRef(0)
+  const seenMovesRef = useRef<Record<string, string[]>>({})
   // Reaktioner som syns på skärmen just nu.
   const [floating, setFloating] = useState<FloatingReaction[]>([])
 
@@ -545,8 +556,22 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       channel.on('broadcast', { event: 'move' }, ({ payload }) => {
         const message = parseMove(payload)
         if (!isHost || !message) return
-        const { id, move } = message
-        commit(hostMove(current(), id, move, activeIds(), Date.now()))
+        const { id, nr, move } = message
+        const before = current()
+        const next = isSeenMove(seenMovesRef.current, id, nr) ? before : hostMove(before, id, move, activeIds(), Date.now())
+        if (next.state !== before.state || next.secrets !== before.secrets) {
+          rememberMove(seenMovesRef.current, id, nr)
+          commit(next)
+          return
+        }
+        // Inget ändrades: spelaren har troligen missat vad som hände, eftersom draget skickades igen. Svara som på hello.
+        void channel.send({
+          type: 'broadcast',
+          event: 'state',
+          payload: { state: stateRef.current, sentAt: Date.now(), from: myId },
+        })
+        delete sentHandsRef.current[id]
+        sendHands()
       })
 
       // Värden lämnar med Lämna och pekar ut vem som tar över, så att lobbyn byter värd direkt.
@@ -665,6 +690,25 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     }, STATE_RESEND_MS)
     return () => clearInterval(timer)
   }, [isHost, connected, meId, sendHands])
+
+  // Mina drag skickas igen tills läget visar att de kommit fram, med en kort paus och en gräns (se leverans.ts).
+  // Klockan börjar om när kanalen anslutit på nytt, så att försök som gjordes utan anslutning inte räknas.
+  const playing = state.phase === 'playing'
+  useEffect(() => {
+    if (!playing) pendingMovesRef.current = []
+    if (!connected || !playing || !meId) return
+    pendingMovesRef.current = pendingMovesRef.current.map((pending) => ({ ...pending, tries: 0 }))
+    const timer = setInterval(() => {
+      if (pendingMovesRef.current.length === 0) return
+      const view = { state: stateRef.current, id: meId, hand: handRef.current, card: imposterCardRef.current }
+      const { keep, send } = resendMoves(pendingMovesRef.current, view, Date.now())
+      pendingMovesRef.current = keep
+      for (const { nr, move } of send) {
+        void channelRef.current?.send({ type: 'broadcast', event: 'move', payload: { id: meId, nr, move } })
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [connected, playing, meId])
 
   // Gästen: frågar värden efter läget igen tills tillståndet kommer. Ett enstaka hello kan försvinna,
   // t.ex. om det skickas medan värdens flik ligger i bakgrunden. Får flera hello inget svar kan kanalen vara död
@@ -810,10 +854,14 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       // skriva ett ord, passa eller säga sitt ord högt.
       move: (move: CardMove | ImposterMove) => {
         if (!me) return
+        moveCountRef.current += 1
+        const nr = `${me.id}-${Date.now()}-${moveCountRef.current}`
+        const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current }
+        pendingMovesRef.current = addPendingMove(pendingMovesRef.current, newPendingMove(nr, move, view, Date.now()))
         void channelRef.current?.send({
           type: 'broadcast',
           event: 'move',
-          payload: { id: me.id, move },
+          payload: { id: me.id, nr, move },
         })
       },
       // round = rundan som visades när värden klickade. Ett dubbelklick hoppar inte över en runda.

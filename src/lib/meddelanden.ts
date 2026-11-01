@@ -199,7 +199,15 @@ export function parseThrow(
 
 // Ett drag i ett kortspel eller i Imposterjakten. Ett skrivet ord får vara högst 100 tecken (värden kontrollerar det
 // närmare, se checkClue).
-export function parseMove(payload: unknown): { id: string; move: CardMove | ImposterMove } | null {
+// nr = dragets eget nummer, så att värden kan känna igen ett drag som skickats igen. Saknas hos äldre versioner av sajten.
+export function parseMove(payload: unknown): { id: string; nr: string | null; move: CardMove | ImposterMove } | null {
+  const parsed = parseMoveBody(payload)
+  if (!parsed) return null
+  const { nr } = payload as Unknown
+  return { ...parsed, nr: isString(nr) ? nr : null }
+}
+
+function parseMoveBody(payload: unknown): { id: string; move: CardMove | ImposterMove } | null {
   if (!isObject(payload) || !isString(payload.id) || !isObject(payload.move)) return null
   const move = payload.move
   if (move.type === 'read' || move.type === 'pass') return { id: payload.id, move: { type: move.type } }

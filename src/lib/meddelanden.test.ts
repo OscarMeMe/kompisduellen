@@ -87,7 +87,10 @@ describe('gissningar och kortdrag', () => {
   })
 
   it('godtar bara kortdrag med rätt form', () => {
+    expect(parseMove({ id: 'a', nr: '7', move: { type: 'read' } })?.nr).toBe('7')
+    expect(parseMove({ id: 'a', nr: 7, move: { type: 'read' } })?.nr).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'pick', pick: { kind: 'card', card: 'x' } } })).toEqual({
+      nr: null,
       id: 'a',
       move: { type: 'pick', pick: { kind: 'card', card: 'x' }, done: undefined },
     })
