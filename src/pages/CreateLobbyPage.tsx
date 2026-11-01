@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { PlayerSetup } from '@/components/PlayerSetup'
+import { Button } from '@/components/ui/button'
 import { findGame, GAMES, playersLabel } from '@/lib/games'
 import { generateLobbyCode, loadOrCreateGuest, markAsHost, requestPractice } from '@/lib/player'
 import { rulesFor } from '@/lib/spelregler'
@@ -40,10 +41,15 @@ export function CreateLobbyPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">
       <PageHeader title="Skapa lobby" description="Du blir värd och startar spelet när alla är med." />
-      <div className="rounded-lg border bg-card p-4 shadow-soft">
-        <p className="text-sm font-semibold text-muted-foreground">Du skapar en lobby för</p>
-        <p className="font-heading text-xl font-bold">{game.name}</p>
-        <p className="text-sm text-muted-foreground">{[playersLabel(game), game.feel].filter(Boolean).join(' · ')}</p>
+      <div className="flex items-start justify-between gap-3 rounded-lg border bg-card p-4 shadow-soft">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-muted-foreground">Du skapar en lobby för</p>
+          <p className="font-heading text-xl font-bold">{game.name}</p>
+          <p className="text-sm text-muted-foreground">{[playersLabel(game), game.feel].filter(Boolean).join(' · ')}</p>
+        </div>
+        <Button asChild variant="outline" className="shrink-0">
+          <Link to="/#spel">Byt spel</Link>
+        </Button>
       </div>
       <div className="rounded-lg border bg-card p-5 shadow-soft">
         <PlayerSetup
