@@ -1,8 +1,8 @@
-// Ljudeffekterna för reaktioner (ett kort "plopp") och kast (playThrow). Allt ritas upp med Web Audio, så inga
-// ljudfiler behövs.
+// Ljudeffekterna för reaktioner och kast (playReaction, playThrow). Allt ritas upp med Web Audio, så inga ljudfiler
+// behövs.
 // Valet att stänga av ljudet sparas i webbläsaren. Ljudet är på från början.
 
-import type { ThrowItemId } from '@/lib/kast'
+import { THROW_ITEMS, type ThrowItemId } from '@/lib/kast'
 
 const KEY = 'kd-ljud'
 
@@ -40,6 +40,55 @@ export function playPop() {
     oscillator.connect(gain).connect(context.destination)
     oscillator.start(now)
     oscillator.stop(now + 0.2)
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
+// Reaktionernas egna korta ljud. Andras kast ("Oscar 🍅 → Lisa") låter som träffen, utan svischet.
+const REACTION_SOUNDS: Record<string, (ctx: AudioContext, now: number) => void> = {
+  // Skratt: tre korta "ha" som går neråt.
+  '😂': (ctx, now) => {
+    for (const [delay, pitch] of [
+      [0, 620],
+      [0.11, 560],
+      [0.22, 500],
+    ]) {
+      tone(ctx, now + delay, pitch, pitch * 0.72, 0.08, 0.13)
+    }
+  },
+  // Eld: ett fräs som växer.
+  '🔥': (ctx, now) => noise(ctx, now, 0.32, 'bandpass', 400, 2200, 0.16, { q: 0.8, rise: true, wobble: 24 }),
+  // Applåd: fyra klapp.
+  '👏': (ctx, now) => {
+    for (const delay of [0, 0.09, 0.2, 0.3]) noise(ctx, now + delay, 0.045, 'bandpass', 1900, 1300, 0.4, { q: 0.9 })
+  },
+  // Chock: en ton som faller.
+  '😱': (ctx, now) => tone(ctx, now, 920, 300, 0.34, 0.12),
+  // Arg: ett lågt morr.
+  '😡': (ctx, now) => {
+    tone(ctx, now, 150, 92, 0.28, 0.2)
+    noise(ctx, now, 0.26, 'lowpass', 500, 220, 0.14, { wobble: 32 })
+  },
+}
+
+function throwItemFor(emoji: string) {
+  return THROW_ITEMS.find((item) => item.emoji === emoji)
+}
+
+export function hasOwnSound(emoji: string): boolean {
+  return emoji in REACTION_SOUNDS || throwItemFor(emoji) !== undefined
+}
+
+export function playReaction(emoji: string) {
+  const item = throwItemFor(emoji)
+  const sound = REACTION_SOUNDS[emoji]
+  if (!item && !sound) return playPop()
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    if (item) throwHit(context, item.id, context.currentTime)
+    else sound(context, context.currentTime)
   } catch {
     // Inget ljud är inget fel.
   }
@@ -105,7 +154,15 @@ export function playThrow(item: ThrowItemId, impactSeconds: number) {
     const hit = now + impactSeconds
     // Svischet medan saken flyger: brus som stiger i tonhöjd och blir starkare mot slutet.
     noise(ctx, now, impactSeconds, 'bandpass', 300, 1600, 0.05, { rise: true, q: 1.2 })
-    if (item === 'tomat') {
+    throwHit(ctx, item, hit)
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
+// Själva träffen, olika för varje sak.
+function throwHit(ctx: AudioContext, item: ThrowItemId, hit: number) {
+  if (item === 'tomat') {
       tone(ctx, hit, 180, 70, 0.12, 0.22)
       noise(ctx, hit, 0.3, 'lowpass', 2200, 280, 0.28)
       for (const [delay, pitch] of [
@@ -137,9 +194,6 @@ export function playThrow(item: ThrowItemId, impactSeconds: number) {
       noise(ctx, hit - 0.05, 0.6, 'bandpass', 600, 2600, 0.12, { q: 1.5, wobble: 22 })
       tone(ctx, hit + 0.65, 150, 90, 0.12, 0.12)
       noise(ctx, hit + 0.65, 0.15, 'lowpass', 800, 200, 0.08)
-    }
-  } catch {
-    // Inget ljud är inget fel.
   }
 }
 

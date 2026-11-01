@@ -10,7 +10,7 @@ import {
   type Throws,
 } from '@/hooks/useReactions'
 import { IMPACT_MS } from '@/lib/kast'
-import { loadSoundOn, playPop, playThrow, saveSoundOn } from '@/lib/ljud'
+import { loadSoundOn, playReaction, playThrow, saveSoundOn } from '@/lib/ljud'
 import { REACTION_COOLDOWN_MS, REACTIONS } from '@/lib/reaktioner'
 import { cn } from '@/lib/utils'
 
@@ -35,9 +35,9 @@ export function ReactionsProvider({ enabled, floating, send, throws, seatedIds =
   const lastKey = useRef<string | undefined>(floating.at(-1)?.key)
 
   useEffect(() => {
-    const key = floating.at(-1)?.key
-    if (key && key !== lastKey.current && soundOn) playPop()
-    lastKey.current = key
+    const latest = floating.at(-1)
+    if (latest && latest.key !== lastKey.current && soundOn) playReaction(latest.emoji)
+    lastKey.current = latest?.key
   }, [floating, soundOn])
 
   // Ljudet för det som kastas på mig: svischet medan det flyger och träffen när det slår i skärmen.
