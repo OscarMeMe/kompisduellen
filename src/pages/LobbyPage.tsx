@@ -409,6 +409,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             onStartAnyway={actions.imposterStartAnyway}
             onNewWord={actions.imposterNewWord}
             onNextRound={actions.imposterNextRound}
+            onAbortRound={actions.imposterAbortRound}
           />
         )
       }

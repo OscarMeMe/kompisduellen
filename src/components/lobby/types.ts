@@ -50,8 +50,9 @@ export type ImposterViewProps = {
   // Mitt kort, som bara jag får. null innan det har kommit.
   imposterCard: MyImposterCard | null
   onMove: (move: ImposterMove) => void
-  // Värdens knappar: Starta ändå, Nytt ord och Nästa omgång.
+  // Värdens knappar: Starta ändå, Nytt ord, Nästa omgång och Avbryt omgången.
   onStartAnyway: () => void
   onNewWord: () => void
   onNextRound: () => void
+  onAbortRound: () => void
 }
