@@ -31,7 +31,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div className="space-y-2">
         <Label htmlFor="player-name" className="text-base font-bold">
-          Vad heter du?
+          Vad vill du heta i spelet?
         </Label>
         <Input
           id="player-name"
