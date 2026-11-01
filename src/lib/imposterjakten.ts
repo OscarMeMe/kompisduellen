@@ -618,14 +618,27 @@ function settleAccusation(host: ImposterHost, activeIds: readonly string[], now:
     if (accused === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: accused })
     return finishRound(revealed, 'undan', null, null, players)
   }
-  return {
-    state: {
-      ...host.state,
-      deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
-      imposter: { ...table, accusation: null, accusers: [...table.accusers, accuser], failedAccusation: accused },
+  return resumeAfterAccusation(
+    {
+      state: {
+        ...host.state,
+        deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
+        imposter: { ...table, accusation: null, accusers: [...table.accusers, accuser], failedAccusation: accused },
+      },
+      secrets,
     },
-    secrets,
-  }
+    activeIds,
+    now,
+  )
+}
+
+// Spelet fortsätter efter en anklagelse. Allt stod still under tiden, så den som lämnat medan den pågick räknas nu: en
+// tur hoppas över, och är alla som är kvar redo går diskussionen vidare.
+function resumeAfterAccusation(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  const { step } = host.state.imposter!
+  if (step === 'ledtradar') return skipAway(host, activeIds, now)
+  if (step === 'diskussion') return checkReady(host, activeIds, now)
+  return host
 }
 
 // Så länge pågår diskussionen minst, även om alla blir redo direkt. Annars kan ett par snabba tryck hoppa över den.
@@ -874,14 +887,18 @@ export function imposterPresence(host: ImposterHost, activeIds: readonly string[
   if (table.accusation) {
     if (activeIds.includes(table.accusation.accused)) return checkAccusation(host, activeIds, now)
     // Den anklagade har lämnat: anklagelsen faller, utan att den som anklagade förlorar något.
-    return {
-      state: {
-        ...host.state,
-        deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
-        imposter: { ...table, accusation: null },
+    return resumeAfterAccusation(
+      {
+        state: {
+          ...host.state,
+          deadline: host.secrets.resumeMs === null ? null : now + host.secrets.resumeMs,
+          imposter: { ...table, accusation: null },
+        },
+        secrets: { ...host.secrets, accuseVotes: {}, resumeMs: null },
       },
-      secrets: { ...host.secrets, accuseVotes: {}, resumeMs: null },
-    }
+      activeIds,
+      now,
+    )
   }
   if (table.step === 'kort') return everyoneRead(table, activeIds) ? toClues(host) : host
   if (table.step === 'ledtradar') return skipAway(host, activeIds, now)
