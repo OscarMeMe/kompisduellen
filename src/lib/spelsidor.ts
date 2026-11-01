@@ -55,7 +55,7 @@ export const GAME_PAGES: GamePageInfo[] = [
     heading: 'Gissa priset med kompisarna',
     intro: [
       'Vad kostade en Piggelin 1972? Och vad fick man betala för en Game Boy när den kom? I Gissa priset ser alla samma sak och gissar priset i kronor. Den som hamnar närmast får flest poäng.',
-      'Det är ett quiz med kompisar där ingen kan plugga in svaren. Det finns över 140 saker att gissa på, från vardagsvaror och biljetter till udda auktionsfynd. Gamla priser gäller i dåtidens kronor, och diskussionen efteråt brukar ta längre tid än själva frågan.',
+      'Ett prisquiz för kompisar. Ni behöver inte kunna svaret, det räcker att gissa. Det finns över 140 saker att gissa på, från vardagsvaror och biljetter till udda auktionsfynd. Gamla priser gäller i dåtidens kronor, och diskussionen efteråt brukar ta längre tid än själva frågan.',
     ],
     steps: [
       'En av er skapar en lobby och delar koden på fyra bokstäver med resten av gänget.',
@@ -79,10 +79,10 @@ export const GAME_PAGES: GamePageInfo[] = [
     title: 'Närmast vinner: gissningslek för kompisgänget | Kompisduellen',
     description:
       'Gissa ett tal mellan 1 och 100. Den som hamnar närmast vinner rundan. En snabb och gratis gissningslek för 2–12 spelare på mobilen.',
-    heading: 'Närmast vinner: gissningsleken där alla har samma chans',
+    heading: 'Närmast vinner: gissa ett tal och hoppas på tur',
     intro: [
       'Alla gissar i hemlighet ett tal mellan 1 och 100. När tiden är ute slumpas rätt tal fram, och den som var närmast tar rundan.',
-      'Det finns inga ledtrådar och inget att kunna, så den som aldrig vinner frågesporter har precis lika stor chans som alla andra. Perfekt som uppvärmning på förfesten, eller när ni vill avgöra vem som ska diska.',
+      'Inga ledtrådar och inga faktakunskaper behövs. Välj ett tal och se vem som kommer närmast. Perfekt som uppvärmning på förfesten, eller när ni vill avgöra vem som ska diska.',
     ],
     steps: [
       'En av er skapar en lobby och delar koden på fyra bokstäver.',
@@ -129,7 +129,7 @@ export const GAME_PAGES: GamePageInfo[] = [
     steps: [
       'En av er skapar en lobby och delar koden på fyra bokstäver. Ni behöver vara minst tre.',
       'Alla går med från sin egen mobil eller dator och läser sitt kort i hemlighet. En av er är impostern.',
-      'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv. Orden skrivs i appen eller sägs högt.',
+      'Ge varsin ledtråd med ett ord. Kör två varv. Skriv i spelet eller säg ledtrådarna högt.',
       'Diskutera vem som bluffar och rösta. Omröstningen är hemlig och alla har en röst.',
       'Fångas impostern får den gissa ordet. Kommer impostern undan, eller gissar rätt, får den poäng. Annars får de oskyldiga poäng. Flest poäng efter sista omgången vinner.',
     ],

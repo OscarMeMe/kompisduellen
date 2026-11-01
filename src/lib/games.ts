@@ -35,7 +35,7 @@ export const GAMES: GameInfo[] = [
     intro: {
       emoji: '💸',
       pitch:
-        'Spelet där det snabbt avslöjas vilka kompisar som är helt verklighetsfrånvända och vilka som faktiskt har fötterna på jorden.',
+        'Vem har bäst koll på vad saker kostar? Gissa och se hur långt ifrån ni är.',
       steps: [
         'Alla ser samma sak: en pryl, en biljett eller något från förr, och vilket år priset gällde.',
         'Gissa priset i kronor innan tiden tar slut. Gamla priser gäller i dåtidens kronor.',
@@ -56,7 +56,7 @@ export const GAMES: GameInfo[] = [
     playable: true,
     intro: {
       emoji: '🍀',
-      pitch: 'Ren tur förklädd till strategi. Alla har exakt lika stor chans, så ingen har något att skylla på.',
+      pitch: 'Välj ditt lyckotal och hoppas att det räcker. Närmast det slumpade talet vinner rundan.',
       steps: [
         'Alla gissar i hemlighet ett tal mellan 1 och 100.',
         'När tiden är ute slumpas rätt tal fram.',
