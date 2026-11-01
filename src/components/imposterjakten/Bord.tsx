@@ -11,7 +11,7 @@ import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
-// Imposterjakten vid bordet: spelarna sitter i en ring runt ett runt bord, sett ovanifrån, i turordning. Jag sitter
+// Imposterjakten vid bordet: spelarna sitter på stolar i en ring runt ett träbord i ett dämpat rum, sett ovanifrån, i turordning. Jag sitter
 // längst ner. Vid varje plats står spelarens ord som små pratbubblor (varv 1 överst). I mitten står vad som händer
 // just nu. Under diskussionen syns pilarna från Peka ut, och vid avslöjandet ritas rösterna som pilar en i taget innan
 // impostern stämplas. Själva bordet är dolt för skärmläsare. De får samma information i en lista under.
@@ -53,18 +53,34 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
   return (
     <div className="space-y-2">
+      <div className="relative rounded-lg bg-room px-3 pt-4 pb-1 shadow-soft">
       <div className="relative mx-auto mt-3 mb-8 aspect-square w-full max-w-[min(100%,46svh)] short:mt-1 short:mb-6 short:max-w-[min(100%,45svh)]">
-        {/* Bordsskivan. Den dimmas lite när rösterna visas. */}
+        {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
+        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[20%]' : 'inset-[17%]')} />
         <div
           aria-hidden
           className={cn(
-            'absolute flex flex-col items-center justify-center rounded-full border bg-card px-3 text-center shadow-soft transition-colors',
-            small ? 'inset-[27%]' : 'inset-[23%]',
+            'absolute flex flex-col items-center justify-center rounded-full bg-card px-3 text-center shadow-soft-sm transition-colors',
+            small ? 'inset-[29%]' : 'inset-[26%]',
             revealing && 'bg-muted',
           )}
         >
           {center}
         </div>
+
+        {/* Stolarna, bakom spelarna. Rutan vrids mot bordet och flyttas utåt. */}
+        {seats.map((seat) => (
+          <div
+            key={seat.id}
+            aria-hidden
+            className={cn('absolute rounded-md bg-chair shadow-soft-sm', small ? 'h-2.5 w-8' : 'h-3 w-11')}
+            style={{
+              left: `${seat.x}%`,
+              top: `${seat.y}%`,
+              transform: `translate(-50%, -50%) rotate(${seat.angle + 90}deg) translateY(${small ? -16 : -21}px)`,
+            }}
+          />
+        ))}
 
         <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full overflow-visible">
           <defs>
@@ -126,6 +142,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             vote={vote}
           />
         ))}
+      </div>
       </div>
 
       <TableForScreenReaders state={state} table={table} meId={meId} turn={turn} typing={typing} shownVotes={shownVotes ?? null} />
@@ -212,11 +229,11 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
           </span>
         )}
       </span>
-      <span className={cn('max-w-16 truncate font-semibold', small ? 'text-[11px]' : 'text-xs sm:text-sm', mine && 'text-primary')}>
+      <span className={cn('relative max-w-16 truncate rounded-full bg-room/85 px-1 font-semibold', small ? 'text-[11px]' : 'text-xs sm:text-sm', mine && 'text-primary')}>
         {mine ? 'Du' : name}
       </span>
       {turn && (
-        <span className="text-[11px] font-semibold text-primary">{typing ? 'skriver…' : mine ? 'din tur' : table.aloud ? 'säger sitt ord' : 'funderar…'}</span>
+        <span className="relative rounded-full bg-card px-1.5 text-[11px] font-semibold text-primary">{typing ? 'skriver…' : mine ? 'din tur' : table.aloud ? 'säger sitt ord' : 'funderar…'}</span>
       )}
       {away && <span className="text-[11px] text-muted-foreground">borta</span>}
       {stamp !== null && (
