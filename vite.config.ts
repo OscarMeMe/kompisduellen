@@ -18,7 +18,10 @@ export default defineConfig(({ isSsrBuild }) => ({
     // Serverdelen som förrenderingen använder (dist-ssr) behöver ingen service worker.
     !isSsrBuild &&
       VitePWA({
+        // En ny service worker tar över direkt. Vad sidan gör sedan bestäms i src/lib/pwa.ts och uppdatering.ts.
         registerType: 'autoUpdate',
+        // Registreras i src/lib/pwa.ts.
+        injectRegister: false,
         includeAssets: ['favicon.png', 'apple-touch-icon.png', 'emoji/*.png'],
         manifest: {
           name: 'Kompisduellen',
@@ -40,10 +43,20 @@ export default defineConfig(({ isSsrBuild }) => ({
           ],
         },
         workbox: {
-          // Appskalet (se vite-plugin-forrendera.ts). index.html är den förrenderade startsidan.
-          navigateFallback: '/app.html',
-          // robots.txt och sajtkartan ska visas som filer, inte som appen.
-          navigateFallbackDenylist: [/^\/(robots\.txt|sitemap\.xml)$/],
+          // Pluginet sätter bara de här själv när det registrerar service workern, och det gör vi i pwa.ts.
+          skipWaiting: true,
+          clientsClaim: true,
+          // Skript och stilar sparas, men av HTML-sidorna bara appskalet (se vite-plugin-forrendera.ts).
+          globPatterns: ['**/*.{js,css}', 'app.html'],
+          // Sidorna hämtas alltid från nätet, så att man får den senaste versionen. Utan nät visas det sparade appskalet.
+          navigateFallback: null,
+          runtimeCaching: [
+            {
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkOnly',
+              options: { precacheFallback: { fallbackURL: '/app.html' } },
+            },
+          ],
         },
       }),
   ],

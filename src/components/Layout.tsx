@@ -1,6 +1,7 @@
 import { useCallback, useState, type MouseEvent } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { Emoji } from '@/components/Emoji'
+import { useAppUpdate } from '@/hooks/useAppUpdate'
 import type { LayoutContext } from '@/hooks/useLayout'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { loadPlayer } from '@/lib/player'
@@ -23,6 +24,8 @@ export function Layout() {
   }
   // Titel, beskrivning och övrigt i <head> för sidan man är på.
   usePageMeta()
+  // Laddar om vid en ny version, utom i en lobby. Där står det en rad i stället.
+  const { showNotice } = useAppUpdate()
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   useLocation()
   const player = loadPlayer()
@@ -71,6 +74,11 @@ export function Layout() {
           </nav>
         </div>
       </header>
+      {showNotice && (
+        <p role="status" className="px-4 pb-2 text-center text-xs font-semibold text-muted-foreground">
+          Det finns en ny version. Den laddas när ni är klara.
+        </p>
+      )}
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
         <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard } satisfies LayoutContext} />
       </main>
