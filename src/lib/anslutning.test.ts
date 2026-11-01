@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ClosingChannels,
   helloRetryAction,
+  isSameContent,
   lobbyStatus,
   RECONNECT_AFTER_HELLOS,
   shouldRetryHello,
@@ -127,5 +128,14 @@ describe('försök igen', () => {
     expect(helloRetryAction({ tries: RECONNECT_AFTER_HELLOS, autoReconnected: false })).toBe('reconnect')
     expect(helloRetryAction({ tries: RECONNECT_AFTER_HELLOS, autoReconnected: true })).toBe('hello')
     expect(helloRetryAction({ tries: 10, autoReconnected: true })).toBe('hello')
+  })
+})
+
+describe('isSameContent', () => {
+  it('ser när värdens läge är samma som gästen redan har', () => {
+    const state = { phase: 'playing', players: { a: { name: 'Bea' } }, deadline: null }
+    expect(isSameContent(state, JSON.parse(JSON.stringify(state)))).toBe(true)
+    expect(isSameContent(state, { ...state, deadline: 5 })).toBe(false)
+    expect(isSameContent(null, state)).toBe(false)
   })
 })

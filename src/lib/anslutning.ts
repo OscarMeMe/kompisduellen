@@ -9,6 +9,17 @@ export const STUCK_AFTER_MS = 12_000
 // Har så många hello gått utan svar ansluter gästen på nytt av sig själv, en gång, innan Försök igen visas.
 // En kanal kan se öppen ut men vara död (t.ex. efter en stund i bakgrunden), och då kommer inga hello fram.
 export const RECONNECT_AFTER_HELLOS = 2
+// Värden skickar läget igen så här ofta (ms). Ett meddelande i kanalen kan försvinna utan att anslutningen bryts, och
+// då står gästen kvar i ett gammalt läge. Har den som har tur missat det hänger hela matchen, eftersom inget nytt
+// läge kommer förrän den spelaren gjort något.
+export const STATE_RESEND_MS = 5000
+// Händerna och korten skickas igen vart fjärde varv. De är fler meddelanden och ändras sällan.
+export const HANDS_RESEND_EVERY = 4
+
+// Samma innehåll som gästen redan har? Då behöver inget ritas om, och klockan ska inte heller ändras.
+export function isSameContent(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
 
 // supabase.channel() ger tillbaka en befintlig kanal med samma namn, även en som håller på att stängas.
 // Öppnar man lobbyn igen precis då (omladdning, kodkontrollen på startsidan) får man den döende kanalen, som
