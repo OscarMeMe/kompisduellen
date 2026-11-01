@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, Info, Search } from 'lucide-react'
+import { ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { playersLabel, type GameInfo } from '@/lib/games'
 import { gamePageFor } from '@/lib/spelsidor'
@@ -55,23 +55,31 @@ const PREVIEWS: Record<string, ReactNode> = {
     </div>
   ),
   imposterjakten: (
-    // Tre ordkort i rad, två med samma ord och ett med frågetecken. Korten glider isär, frågetecknet vickar till och
-    // ett förstoringsglas glider fram och stannar över det. Då får kortet en korallröd kant, som att impostern hittats.
-    <div className="relative flex items-center gap-1.5 [&>div]:transition-[translate,border-color] [&>div]:duration-300 [&>div]:ease-out">
-      <div className="-rotate-6 rounded-md border bg-card px-2.5 py-2 shadow-soft-sm motion-safe:group-hover:-translate-x-2 motion-safe:group-data-[play=true]:-translate-x-2">
-        <p className="font-heading text-xs font-bold">Paraply</p>
-      </div>
-      <div className="rounded-md border bg-card px-2.5 py-2 shadow-soft-sm motion-safe:group-hover:-translate-y-1 motion-safe:group-data-[play=true]:-translate-y-1">
-        <p className="font-heading text-xs font-bold">Paraply</p>
-      </div>
-      <div className="rotate-6 rounded-md border-2 bg-card px-3 py-1.5 shadow-soft-sm delay-200 group-hover:border-primary group-data-[play=true]:border-primary motion-safe:group-hover:translate-x-2 motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:translate-x-2 motion-safe:group-data-[play=true]:animate-wiggle">
-        <p className="font-heading text-sm font-bold text-primary">???</p>
-      </div>
-      <Search
-        className="absolute -right-12 -bottom-4 size-8 rotate-12 opacity-0 transition-[translate,rotate,opacity] delay-150 duration-500 ease-out motion-safe:group-hover:-translate-x-9 motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:rotate-0 motion-safe:group-hover:opacity-100 motion-safe:group-data-[play=true]:-translate-x-9 motion-safe:group-data-[play=true]:-translate-y-2 motion-safe:group-data-[play=true]:rotate-0 motion-safe:group-data-[play=true]:opacity-100"
-        strokeWidth={2.5}
-      />
-    </div>
+    // En mörk scen med en rad figurer. Ljuskäglan står på den med masken, som vickar till.
+    <svg viewBox="0 0 220 84" className="h-22 w-auto">
+      <rect width="220" height="84" rx="14" className="fill-foreground" />
+      <path d="M126 0 H150 L184 84 H92 Z" className="fill-sun" opacity="0.45" />
+      {[
+        [34, 'fill-sky'],
+        [80, 'fill-mint'],
+        [188, 'fill-lilac'],
+      ].map(([x, color]) => (
+        <g key={x} className={String(color)} opacity="0.75">
+          <circle cx={Number(x)} cy="42" r="13" />
+          <path d={`M${Number(x) - 19} 84 a19 22 0 0 1 38 0 Z`} />
+        </g>
+      ))}
+      <g className="origin-[138px_60px] motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:animate-wiggle">
+        <circle cx="138" cy="42" r="14" className="fill-primary" />
+        <path d="M117 84 a21 24 0 0 1 42 0 Z" className="fill-primary" />
+        <path
+          d="M122 38 Q130 33 138 38 Q146 33 154 38 Q155 48 146 48 Q140 48 138 44 Q136 48 130 48 Q121 48 122 38 Z"
+          className="fill-foreground"
+        />
+        <circle cx="131" cy="41" r="2.4" className="fill-card" />
+        <circle cx="145" cy="41" r="2.4" className="fill-card" />
+      </g>
+    </svg>
   ),
 }
 
