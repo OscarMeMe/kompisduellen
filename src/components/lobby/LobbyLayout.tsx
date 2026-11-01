@@ -44,6 +44,7 @@ export function RoundTimer({
   warning = 'normal',
   label = 'Runda',
   keepBarSpace = false,
+  hideLabel = false,
 }: {
   state: GameState
   clockOffset: number
@@ -53,6 +54,8 @@ export function RoundTimer({
   label?: string
   // Samma höjd med och utan tidsstapel, så att det under inte hoppar när en nedräkning börjar eller slutar.
   keepBarSpace?: boolean
+  // Bara tidsstapeln. Vyn säger själv vilken runda det är, som Imposterjaktens rad ovanför bordet.
+  hideLabel?: boolean
 }) {
   const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds ?? guessSecondsFor(state))
 
@@ -61,10 +64,12 @@ export function RoundTimer({
       {...SPLAT_CEILING}
       className="sticky top-0 z-10 -mx-4 bg-background/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-sm sm:-mx-6 sm:px-6"
     >
-      <p className="flex items-center justify-center gap-2 font-heading text-sm font-bold tabular-nums">
-        {label} {state.round}/{state.rounds}
-        {state.practice && <PracticeChip />}
-      </p>
+      {!hideLabel && (
+        <p className="flex items-center justify-center gap-2 font-heading text-sm font-bold tabular-nums">
+          {label} {state.round}/{state.rounds}
+          {state.practice && <PracticeChip />}
+        </p>
+      )}
       {state.deadline === null && keepBarSpace && <div aria-hidden className="mt-1.5 h-1.5" />}
       {state.deadline !== null && (
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">

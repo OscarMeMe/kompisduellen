@@ -12,6 +12,7 @@ export function Layout() {
   // Hur många gånger figuren uppe till höger har klickats (för hoppet).
   const [hops, setHops] = useState(0)
   const [leaveInMatch, setLeaveInMatch] = useState(false)
+  const [versionNotice, setVersionNotice] = useState(false)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
   const setLeaveGuard = useCallback((guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard), [])
@@ -75,13 +76,13 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      {showNotice && (
+      {showNotice && !versionNotice && (
         <p role="status" className="px-4 pb-2 text-center text-xs font-semibold text-muted-foreground">
           Det finns en ny version. Den laddas när ni är klara.
         </p>
       )}
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
-        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard } satisfies LayoutContext} />
+        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice } satisfies LayoutContext} />
       </main>
     </div>
   )
