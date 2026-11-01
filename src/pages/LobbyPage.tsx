@@ -11,6 +11,7 @@ import { AbortMatchDialog } from '@/components/lobby/AbortMatchDialog'
 import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
 import { SplatOverlay, ThrownConfirm } from '@/components/lobby/Kast'
+import { SendStatus } from '@/components/lobby/SendStatus'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { Throws } from '@/hooks/useReactions'
 import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps } from '@/components/lobby/types'
@@ -24,6 +25,7 @@ import { useWakeLock } from '@/hooks/useWakeLock'
 import { useLobby } from '@/hooks/useLobby'
 import { useNoIndex } from '@/hooks/useNoIndex'
 import { useOneTab } from '@/hooks/useOneTab'
+import { markLobbyEntered } from '@/lib/uppdatering'
 import { findGame, GAMES } from '@/lib/games'
 import { throwTargets } from '@/lib/kast'
 import {
@@ -61,6 +63,8 @@ const GAME_VIEWS: Record<string, GameViews> = {
 export function LobbyPage() {
   // Lobbyer ska inte synas i sökresultaten.
   useNoIndex()
+  // Från och med nu laddas sidan aldrig om av sig själv vid ett laddningsfel (se shouldReloadAfterLoadError).
+  useEffect(() => markLobbyEntered(), [])
   const params = useParams()
   const code = normalizeCode(params.code ?? '')
   // Fliken minns vem den är i den här lobbyn. Annars gäller namnet och figuren som webbläsaren har sparat.
@@ -187,6 +191,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     state,
     online,
     clockOffset,
+    delivery,
+    lostMove,
     hand,
     imposterCard,
     typing,
@@ -356,6 +362,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         }}
       />
       <ReactionFloaters />
+      <SendStatus delivery={delivery} onRetry={actions.retryMoves} />
       <SplatOverlay />
       <ThrownConfirm />
       {hostMissing && (
@@ -438,6 +445,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           isHost={isHost}
           clockOffset={clockOffset}
           hand={hand}
+          lostMove={lostMove}
           onMove={actions.move}
           onNext={actions.skipReveal}
         />
@@ -463,6 +471,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           me={me}
           isHost={isHost}
           clockOffset={clockOffset}
+          lostMove={lostMove}
           onNext={actions.skipReveal}
           onPause={actions.pauseReveal}
           onResume={actions.resumeReveal}

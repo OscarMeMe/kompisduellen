@@ -1,4 +1,5 @@
 import { Gavel, Loader2 } from 'lucide-react'
+import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { Emoji } from '@/components/Emoji'
 import { Hand, HandSlot } from '@/components/kort/Hand'
 import { AnswerCard, PromptCard } from '@/components/kort/PlayingCard'
@@ -18,7 +19,7 @@ import { cn } from '@/lib/utils'
 
 // Kortkaos: hela rundan i en vy. Vilket steg som visas styrs av state.cards.step.
 // LobbyPage ger vyn en ny key för varje frågekort, så att val och utkast börjar om.
-export function KortkaosView({ state, me, online, isHost, clockOffset, hand, onMove, onNext }: CardViewProps) {
+export function KortkaosView({ state, me, online, isHost, clockOffset, hand, lostMove, onMove, onNext }: CardViewProps) {
   const table = state.cards
   // Tiden varnar bara när jag har något kvar att göra: lägga mitt kort, eller välja vinnare som domare.
   const myTurn =
@@ -79,6 +80,8 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, onM
       {table.step === 'judging' && (
         <JudgingStep state={state} prompt={prompt} isJudge={isJudge} clockOffset={clockOffset} onMove={onMove} />
       )}
+
+      <LostMoveLine text={lostMove} />
 
       {table.step === 'reveal' && (
         <RevealStep state={state} me={me} prompt={prompt} isHost={isHost} clockOffset={clockOffset} onNext={onNext} />

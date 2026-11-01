@@ -6,6 +6,7 @@ import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { SendStatus } from '@/components/lobby/SendStatus'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { GuessingViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
   const item = findPriceItem(state.itemId)
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const { locked, inGame, lockIn } = useMyGuess(state, me.id, onGuess)
+  const { locked, inGame, lockIn, delivery, retry } = useMyGuess(state, me.id, onGuess)
   // Det tolkade beloppet i kronor är det som skickas som gissning.
   const value = parseTypedNumber(text)
   const valid = isValidGuess(state.game, value)
@@ -40,6 +41,7 @@ export function PriceGuessingView({ state, me, online, clockOffset, onGuess }: G
   return (
     <Wide>
       <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
+      <SendStatus delivery={delivery} onRetry={retry} />
       <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
 
       <PriceQuestionCard item={item} />

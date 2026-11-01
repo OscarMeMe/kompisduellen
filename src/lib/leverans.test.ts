@@ -4,13 +4,18 @@ import type { ImposterTable, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardTable, MyHand } from '@/lib/kort'
 import {
   addPendingMove,
+  guessDelivery,
   isSeenMove,
+  lostMove,
+  lostMoveText,
   moveArrived,
+  moveDelivery,
   newPendingMove,
   rememberMove,
   RESEND_MAX_TRIES,
   RESEND_MS,
   resendMoves,
+  retryMoves,
   type AnyMove,
   type MoveView,
 } from '@/lib/leverans'
@@ -150,7 +155,7 @@ describe('moveArrived: kortspel', () => {
 describe('resendMoves', () => {
   const before = view(imposterState({ step: 'kort' }))
 
-  it('väntar pausen ut, skickar igen och slutar vid gränsen', () => {
+  it('väntar pausen ut, skickar igen och ger upp vid gränsen', () => {
     let list = [newPendingMove('1', { type: 'read' }, before, NOW)]
     expect(resendMoves(list, before, NOW + RESEND_MS - 1).send).toEqual([])
     let sent = 0
@@ -162,7 +167,67 @@ describe('resendMoves', () => {
       list = result.keep
     }
     expect(sent).toBe(RESEND_MAX_TRIES)
-    expect(list).toEqual([])
+    expect(list).toHaveLength(1)
+    expect(list[0].failed).toBe(true)
+  })
+
+  function gaveUp() {
+    let list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    let now = NOW
+    for (let i = 0; i <= RESEND_MAX_TRIES; i++) {
+      now += RESEND_MS
+      list = resendMoves(list, before, now).keep
+    }
+    return { list, now }
+  }
+
+  it('visar inget först, Skickar… vid omsändning och beskedet när försöken tagit slut', () => {
+    const list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    expect(moveDelivery(list)).toBe('ok')
+    const resent = resendMoves(list, before, NOW + RESEND_MS).keep
+    expect(moveDelivery(resent)).toBe('sending')
+    expect(moveDelivery(gaveUp().list)).toBe('failed')
+    expect(moveDelivery([])).toBe('ok')
+  })
+
+  it('ett drag som gett upp skickas inte mer av sig självt, men släpps om läget visar att det kom fram', () => {
+    const { list, now } = gaveUp()
+    expect(resendMoves(list, before, now + RESEND_MS * 5).send).toEqual([])
+    const arrivedView = view(imposterState({ step: 'kort', read: ['a'] }))
+    expect(resendMoves(list, arrivedView, now + RESEND_MS).keep).toEqual([])
+  })
+
+  it('Tryck igen skickar direkt med samma nummer och ger nya försök', () => {
+    const { list, now } = gaveUp()
+    const { keep, send } = retryMoves(list, now)
+    expect(send.map((p) => p.nr)).toEqual(['1'])
+    expect(moveDelivery(keep)).toBe('sending')
+    expect(resendMoves(keep, before, now + RESEND_MS).send).toHaveLength(1)
+  })
+
+  it('Tryck igen skickar inte drag som fortfarande försöker', () => {
+    const list = [newPendingMove('1', { type: 'read' }, before, NOW)]
+    expect(retryMoves(list, NOW).send).toEqual([])
+  })
+
+  it('ett nytt val ersätter ett drag som gett upp, så att beskedet försvinner', () => {
+    const state = view(cardState())
+    let list = [newPendingMove('x', { type: 'done' }, state, NOW)]
+    let now = NOW
+    for (let i = 0; i <= RESEND_MAX_TRIES; i++) {
+      now += RESEND_MS
+      list = resendMoves(list, state, now).keep
+    }
+    expect(moveDelivery(list)).toBe('failed')
+    expect(moveDelivery(addPendingMove(list, newPendingMove('y', { type: 'done' }, state, now)))).toBe('ok')
+  })
+
+  it('en gissning: inget först, Skickar… vid omsändning, beskedet efter gränsen, inget när den syns i läget', () => {
+    expect(guessDelivery({ missing: true, tries: 0 })).toBe('ok')
+    expect(guessDelivery({ missing: true, tries: 1 })).toBe('sending')
+    expect(guessDelivery({ missing: true, tries: RESEND_MAX_TRIES })).toBe('sending')
+    expect(guessDelivery({ missing: true, tries: RESEND_MAX_TRIES + 1 })).toBe('failed')
+    expect(guessDelivery({ missing: false, tries: RESEND_MAX_TRIES + 1 })).toBe('ok')
   })
 
   it('släpper ett drag som kommit fram utan att skicka det', () => {
@@ -184,6 +249,56 @@ describe('resendMoves', () => {
     const state = view(imposterState())
     const list = addPendingMove([newPendingMove('p', { type: 'pass' }, state, NOW)], newPendingMove('c', { type: 'clue', word: 'x' }, state, NOW))
     expect(list.map((p) => p.nr)).toEqual(['c'])
+  })
+})
+
+describe('raden i facit när något aldrig kom fram', () => {
+  const card: AnyMove = { type: 'pick', pick: { kind: 'card', card: 'x' } }
+  const choosing = view(cardState())
+
+  it('ett kort: förlorat när tiden tog slut och jag inte syns bland dem som valt', () => {
+    const pending = newPendingMove('1', card, choosing, NOW)
+    expect(lostMove(pending, choosing)).toBeNull()
+    expect(lostMove(pending, view(cardState({ step: 'judging' })))).toEqual({ kind: 'card', round: 1, prompt: 'p' })
+    expect(lostMove(pending, view(cardState({ step: 'judging', chosen: ['a'] })))).toBeNull()
+  })
+
+  it('ett drag från en tidigare runda visas aldrig i en ny runda', () => {
+    const pending = newPendingMove('1', card, choosing, NOW)
+    expect(lostMove(pending, view(cardState({ step: 'question', prompt: 'nytt', chosen: [] })))).toBeNull()
+    expect(lostMove(pending, view({ ...cardState({ step: 'reveal' }), round: 2 }))).toBeNull()
+  })
+
+  it('domarens val: förlorat bara om domaren räknas som somnad', () => {
+    const pending = newPendingMove('1', { type: 'judge', key: 'k1' }, view(cardState({ step: 'judging' })), NOW)
+    expect(lostMove(pending, view(cardState({ step: 'judging' })))).toBeNull()
+    expect(lostMove(pending, view(cardState({ step: 'reveal' })))).toBeNull()
+    expect(lostMove(pending, view(cardState({ step: 'reveal', judgeAsleep: true })))?.kind).toBe('judge')
+  })
+
+  it('andra drag och andra spel ger ingen rad', () => {
+    const pending = newPendingMove('1', { type: 'done' }, choosing, NOW)
+    expect(lostMove(pending, view(cardState({ step: 'judging' })))).toBeNull()
+    expect(lostMove(newPendingMove('1', { type: 'read' }, view(imposterState()), NOW), view(imposterState({ step: 'facit' })))).toBeNull()
+  })
+
+  it('texten för ett kort och ett domarval syns bara i avslöjandet av samma runda', () => {
+    const lost = { kind: 'card', round: 1, prompt: 'p' } as const
+    expect(lostMoveText(cardState({ step: 'reveal' }), 'a', null, lost)).toBe('Ditt kort kom inte fram')
+    expect(lostMoveText(cardState({ step: 'reveal' }), 'a', null, { ...lost, kind: 'judge' })).toBe('Ditt val kom inte fram')
+    expect(lostMoveText(cardState({ step: 'judging' }), 'a', null, lost)).toBeNull()
+    expect(lostMoveText(cardState({ step: 'reveal', prompt: 'nytt' }), 'a', null, lost)).toBeNull()
+    expect(lostMoveText({ ...cardState({ step: 'reveal' }), round: 2 }, 'a', null, lost)).toBeNull()
+    expect(lostMoveText(cardState({ step: 'reveal' }), 'a', null, null)).toBeNull()
+  })
+
+  it('en gissning: raden syns när jag skickade men inte finns i facit', () => {
+    const lastResult = { target: 5, guesses: { b: 3 }, winners: ['b'], points: {}, itemId: null }
+    const reveal: GameState = { ...initialState('narmast'), phase: 'reveal', round: 2, lastResult }
+    expect(lostMoveText(reveal, 'a', 2, null)).toBe('Din gissning kom inte fram')
+    expect(lostMoveText(reveal, 'b', 2, null)).toBeNull()
+    expect(lostMoveText(reveal, 'a', null, null)).toBeNull()
+    expect(lostMoveText(reveal, 'a', 1, null)).toBeNull()
   })
 })
 

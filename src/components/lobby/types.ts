@@ -19,6 +19,8 @@ export type RevealViewProps = {
   me: Player
   isHost: boolean
   clockOffset: number
+  // Raden i facit när min gissning aldrig nådde värden.
+  lostMove: string | null
   // Värden går vidare från facit. round = rundan som visades, så att ett dubbelklick inte hoppar över en runda.
   onNext: (round: number) => void
   // Värden pausar och fortsätter nedräkningen efter facit.
@@ -35,6 +37,8 @@ export type CardViewProps = {
   clockOffset: number
   // Min hand, som bara jag får. null om jag inte har fått några kort (än).
   hand: MyHand | null
+  // Raden i avslöjandet när mitt kort eller mitt domarval aldrig nådde värden.
+  lostMove: string | null
   onMove: (move: CardMove) => void
   // Värden går vidare från avslöjandet. round = rundan som visades.
   onNext: (round: number) => void

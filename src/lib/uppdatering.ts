@@ -39,12 +39,30 @@ export function shouldReloadFor(latest: string, alreadyReloadedFor: string | nul
 export const LOAD_ERROR_RELOAD_PAUSE_MS = 10 * 60 * 1000
 
 // En del av sajten gick inte att ladda, troligen en gammal fil som försvunnit efter en publicering. Då hjälper en
-// omladdning, men aldrig i en lobby, aldrig utan nät och aldrig två gånger i rad, så att det inte kan bli en slinga.
+// omladdning, men aldrig när man kommit in i en lobby (lobbyEntered), aldrig utan nät och aldrig två gånger i rad, så att
+// det inte kan bli en slinga. På en lobbysida går det bra så länge lobbysidan inte öppnats, för då avbryts ingen match.
 // Går det inte att läsa när sidan senast laddades om (lastReloadAt är undefined) laddas den inte om alls.
-export function shouldReloadAfterLoadError(input: { pathname: string; online: boolean; now: number; lastReloadAt: number | null | undefined }): boolean {
-  const { pathname, online, now, lastReloadAt } = input
-  if (isLobbyPath(pathname) || !online || lastReloadAt === undefined) return false
+export function shouldReloadAfterLoadError(input: {
+  pathname: string
+  lobbyEntered: boolean
+  online: boolean
+  now: number
+  lastReloadAt: number | null | undefined
+}): boolean {
+  const { pathname, lobbyEntered, online, now, lastReloadAt } = input
+  if ((isLobbyPath(pathname) && lobbyEntered) || !online || lastReloadAt === undefined) return false
   return lastReloadAt === null || now - lastReloadAt >= LOAD_ERROR_RELOAD_PAUSE_MS
+}
+
+// Lobbysidan säger till när den öppnats.
+let lobbyEntered = false
+
+export function markLobbyEntered() {
+  lobbyEntered = true
+}
+
+export function hasEnteredLobby() {
+  return lobbyEntered
 }
 
 let pending = false
