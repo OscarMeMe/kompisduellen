@@ -26,6 +26,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - React Router (paketet `react-router`, inte `react-router-dom`)
 - Supabase (`src/lib/supabase.ts`) för databas, inloggning och realtid
 - PWA via `vite-plugin-pwa` (manifestet ligger i `vite.config.ts`, ikonerna i `public/`: `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` och `icon-512-maskable.png`)
+- Nya versioner (`pwa.ts`, `uppdatering.ts`, `useAppUpdate`): sidorna (HTML) hämtas alltid från nätet, och utan nät visas det sparade appskalet. Skript, stilar och figurer sparas i service workern. Sajten kollar efter en ny version när sidan öppnas, när fliken blir synlig igen och en gång per dygn, genom att jämföra sitt huvudskript med det i `app.html`. Finns en ny version laddas sidan om direkt, utom i en lobby (`isLobbyPath`). Där står "Det finns en ny version. Den laddas när ni är klara." och omladdningen sker när man lämnat lobbyn. Vercel skickar redan `max-age=0, must-revalidate` på `sw.js` och HTML, så det behövs inga egna headers
 - Driftsätts på Vercel (`vercel.json` skickar alla sökvägar som inte är en fil till appskalet `app.html`)
 - Förrendering i bygget (`vite-plugin-forrendera.ts`, se Synlighet i sökmotorer)
 - GitHub Action `.github/workflows/keep-alive.yml` pingar Supabase varannan dag (och går att köra för hand), så att gratisprojektet inte pausas. URL och den publika nyckeln ligger som Secrets i repot (`SUPABASE_URL`, `SUPABASE_ANON_KEY`), aldrig i koden
@@ -163,12 +164,12 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 
 ## Synlighet i sökmotorer
 
-- Förrendering: `npm run build` bygger först serverdelen (`src/entry-server.ts` till `dist-ssr/`), sedan sajten. `vite-plugin-forrendera.ts` renderar startsidan och spelsidorna (`PRERENDER_PATHS`) till färdig HTML (`dist/index.html`, `dist/spel/x/index.html`) som en förstagångsbesökare ser dem. `/skapa` och `/ga-med` (`HEAD_ONLY_PATHS`) får appskalet med egna taggar. Allt annat får `dist/app.html`, det tomma appskalet, som Vercel och service workern (`navigateFallback`) pekar på.
+- Förrendering: `npm run build` bygger först serverdelen (`src/entry-server.ts` till `dist-ssr/`), sedan sajten. `vite-plugin-forrendera.ts` renderar startsidan och spelsidorna (`PRERENDER_PATHS`) till färdig HTML (`dist/index.html`, `dist/spel/x/index.html`) som en förstagångsbesökare ser dem. `/skapa` och `/ga-med` (`HEAD_ONLY_PATHS`) får appskalet med egna taggar. Allt annat får `dist/app.html`, det tomma appskalet, som Vercel pekar på. Service workern sparar bara appskalet av HTML-sidorna och visar det när nätet saknas.
 - Appen startar alltid med `createRoot` och ritar om sidan, även när den är förrenderad. Därför behöver sidorna inte se exakt likadana ut i bygget och i webbläsaren (sparat namn och figur), och lobbyn fungerar som förut. Sidor som förrenderas får inte vara `lazy`, annars syns en snurra när appen tar över.
 - Taggarna i `<head>` ligger mellan `<!-- sidinfo -->` och `<!-- /sidinfo -->` i `index.html` och kommer från `sidinfo.ts`, både i bygget och i appen (`usePageMeta`). Startsidan och spelsidorna har kanonisk adress, Open Graph och JSON-LD (startsidan `WebSite` och `WebApplication`, spelsidorna `VideoGame` och `FAQPage`). Lobbyn och andra sidor har ingen kanonisk adress. Ändras startsidans beskrivning: uppdatera även manifestet i `vite.config.ts`.
 - Spelsidorna (`/spel/gissa-priset`, `/spel/narmast-vinner`, `/spel/kortkaos`, `/spel/imposterjakten`) har texterna i `spelsidor.ts`. De fasta sökvägarna går före `/spel/:code` i React Router, och lobbykoder har bara fyra bokstäver. Spelets namn på startsidans kort leder dit. Nytt spel med egen sida: en rad i `GAME_PAGES`, och sökvägen i `public/sitemap.xml` och som `Allow:` i `public/robots.txt` (testerna i `sidinfo.test.ts` kollar det).
 - `public/robots.txt` stänger ute `/lobby/`, `/spel/` (utom spelsidorna), `/resultat/` och `/granska`. `public/sitemap.xml` listar startsidan, spelsidorna, `/skapa` och `/ga-med`.
-- Service workern släpper igenom `robots.txt` och `sitemap.xml` (`navigateFallbackDenylist` i `vite.config.ts`).
+- Service workern släpper igenom `robots.txt` och `sitemap.xml`, eftersom alla sidor hämtas från nätet.
 
 ## Routes
 

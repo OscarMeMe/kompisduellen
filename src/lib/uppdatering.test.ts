@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest'
+import { entryScript, isLobbyPath, isNewerBuild, updateAction } from './uppdatering'
+
+describe('isLobbyPath', () => {
+  it('känner igen lobbyn och sökvägarna som skickar vidare dit', () => {
+    expect(isLobbyPath('/lobby/ABCD')).toBe(true)
+    expect(isLobbyPath('/lobby/ABCD/')).toBe(true)
+    expect(isLobbyPath('/spel/ABCD')).toBe(true)
+    expect(isLobbyPath('/resultat/ABCD')).toBe(true)
+  })
+
+  it('räknar inte startsidan, spelsidorna eller andra sidor som lobby', () => {
+    for (const path of [
+      '/',
+      '/spel/gissa-priset',
+      '/spel/narmast-vinner',
+      '/spel/kortkaos',
+      '/spel/imposterjakten',
+      '/skapa',
+      '/ga-med',
+      '/profil',
+    ]) {
+      expect(isLobbyPath(path)).toBe(false)
+    }
+  })
+})
+
+describe('updateAction', () => {
+  it('gör inget utan en ny version', () => {
+    expect(updateAction(false, '/')).toBe('none')
+    expect(updateAction(false, '/lobby/ABCD')).toBe('none')
+  })
+
+  it('laddar om utanför en lobby', () => {
+    for (const path of ['/', '/spel/kortkaos', '/skapa', '/ga-med', '/profil']) {
+      expect(updateAction(true, path)).toBe('reload')
+    }
+  })
+
+  it('laddar aldrig om i en lobby, utan visar raden', () => {
+    expect(updateAction(true, '/lobby/ABCD')).toBe('notice')
+  })
+})
+
+describe('entryScript', () => {
+  it('hittar huvudskriptet i en byggd sida', () => {
+    const html = `<head>
+      <script defer src="/_vercel/insights/script.js"></script>
+      <script type="module" crossorigin src="/assets/index-AbC123.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/react-XyZ.js">
+    </head>`
+    expect(entryScript(html)).toBe('/assets/index-AbC123.js')
+  })
+
+  it('ger null när det inte finns något', () => {
+    expect(entryScript('<html><script type="module">inline()</script></html>')).toBeNull()
+    expect(entryScript('')).toBeNull()
+  })
+})
+
+describe('isNewerBuild', () => {
+  it('är sant bara när båda är kända och olika', () => {
+    expect(isNewerBuild('/assets/a.js', '/assets/b.js')).toBe(true)
+    expect(isNewerBuild('/assets/a.js', '/assets/a.js')).toBe(false)
+    expect(isNewerBuild(null, '/assets/b.js')).toBe(false)
+    expect(isNewerBuild('/assets/a.js', null)).toBe(false)
+  })
+})
