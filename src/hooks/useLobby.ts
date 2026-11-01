@@ -533,7 +533,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const { id, reaction } = (payload ?? {}) as { id?: string; reaction?: string }
         const def = findReaction(reaction)
         if (!id || !def) return
-        const who = onlineRef.current.find((p) => p.id === id) ?? stateRef.current.players[id]
+        const who = stateRef.current.players[id] ?? onlineRef.current.find((p) => p.id === id)
         if (!who) return
         const now = Date.now()
         const history = acceptReaction(reactionHistoryRef.current[id] ?? [], now)
@@ -568,8 +568,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const now = Date.now()
         if (!acceptThrow(throwHistoryRef.current[message.id], now)) return
         throwHistoryRef.current[message.id] = now
-        const from = onlineRef.current.find((p) => p.id === message.id)
-        const to = onlineRef.current.find((p) => p.id === message.to)
+        // Namnen från läget, där den som heter likadant som någon annan har fått en siffra.
+        const inLobby = (id: string) => {
+          const player = onlineRef.current.find((p) => p.id === id)
+          return player && { id: player.id, name: stateRef.current.players[id]?.name ?? player.name }
+        }
+        const from = inLobby(message.id)
+        const to = inLobby(message.to)
         const item = findThrowItem(message.item)
         if (!from || !to || !item) return
         const key = `${message.id}-${now}-${Math.random()}`
@@ -879,6 +884,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     versionBlockedRef.current = !isHost && version !== 'ok'
   }, [isHost, version])
 
+  // Namnen i närvarolistan är det spelaren valt. Värden bestämmer namnet i lobbyn (se addPlayers), så att ingen heter likadant.
+  const shownOnline = useMemo(
+    () => online.map((p) => (state.players[p.id] && state.players[p.id].name !== p.name ? { ...p, name: state.players[p.id].name } : p)),
+    [online, state.players],
+  )
+
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
   const hostMissing = !isHost && connected && received && !hostOnline
@@ -1061,7 +1072,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   return {
     status,
     state,
-    online,
+    online: shownOnline,
     clockOffset,
     version,
     // Hur det går med mina drag. Spelar bara roll under en match.

@@ -3,6 +3,7 @@ import {
   abortMatch,
   addGuess,
   addPlayers,
+  uniqueName,
   advanceFromReveal,
   backToWaiting,
   canStart,
@@ -60,6 +61,47 @@ function playRound(state: GameState, guesses: Record<string, number>, target: nu
   for (const [id, value] of Object.entries(guesses)) next = addGuess(next, id, value)
   return resolveRound(next, now, target)
 }
+
+describe('samma namn två gånger i en lobby', () => {
+  const lobby = initialState('gissa-priset')
+  const add = (state: GameState, id: string, name: string) => addPlayers(state, { [id]: { name, avatar: '🧙' } })
+
+  it('den som kommer sedan får en siffra', () => {
+    let state = add(lobby, 'a', 'Pöki')
+    state = add(state, 'b', 'Pöki')
+    state = add(state, 'c', 'Pöki')
+    expect([state.players.a.name, state.players.b.name, state.players.c.name]).toEqual(['Pöki', 'Pöki 2', 'Pöki 3'])
+  })
+
+  it('stora och små bokstäver räknas lika', () => {
+    expect(add(add(lobby, 'a', 'Pöki'), 'b', 'pöki').players.b.name).toBe('pöki 2')
+  })
+
+  it('samma figur eller ett annat namn gör inget', () => {
+    expect(add(add(lobby, 'a', 'Pöki'), 'b', 'Lisa').players.b.name).toBe('Lisa')
+  })
+
+  it('samma spelare igen behåller sitt namn och ger inget nytt läge', () => {
+    const state = add(add(lobby, 'a', 'Pöki'), 'b', 'Pöki')
+    expect(add(state, 'b', 'Pöki')).toBe(state)
+    expect(add(state, 'a', 'Pöki')).toBe(state)
+  })
+
+  it('byter en spelare namn gäller det nya', () => {
+    expect(add(add(lobby, 'a', 'Pöki'), 'a', 'Lisa').players.a.name).toBe('Lisa')
+  })
+
+  it('byter en spelare till ett taget namn får den en siffra', () => {
+    const state = add(add(lobby, 'a', 'Pöki'), 'b', 'Lisa')
+    expect(add(state, 'b', 'Pöki').players.b.name).toBe('Pöki 2')
+  })
+
+  it('ett namn som redan slutar på en siffra krockar inte med sig självt', () => {
+    expect(uniqueName('Pöki', ['Pöki', 'Pöki 2'])).toBe('Pöki 3')
+    expect(uniqueName('Pöki 2', ['Pöki'])).toBe('Pöki 2')
+  })
+})
+
 
 describe('kast i lobbyn', () => {
   it('är på från början och kan stängas av och på av värden, även under en match', () => {
