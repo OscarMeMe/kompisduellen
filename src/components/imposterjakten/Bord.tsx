@@ -33,6 +33,10 @@ type BordProps = {
 // Tid mellan rösterna när de ritas, och pausen innan stämpeln.
 const VOTE_STEP_MS = 250
 const STAMP_PAUSE_MS = 450
+// Efter rösterna: så länge efter att rummet börjat mörkna tänds ljuset på impostern.
+const SPOT_AFTER_MS = 450
+// Så mycket senare kommer stämpeln än utan släckningen.
+const LIGHTS_OUT_MS = 500
 
 export function Bord({ state, table, meId, online, typing, center, onMove, vote = null }: BordProps) {
   const seats = seatLayout(table.order, meId)
@@ -48,14 +52,25 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   const pointers = table.step === 'diskussion' ? Object.entries(table.pointers).filter(([from, to]) => byId[from] && byId[to]) : []
   const highlighted = table.tied && table.step === 'diskussion' ? table.tied : table.caught ? [table.caught] : []
   const revealing = shownVotes !== null && shownVotes !== undefined
-  const stampDelay = voteArrows.length * VOTE_STEP_MS + STAMP_PAUSE_MS
+  const votesDrawnMs = voteArrows.length * VOTE_STEP_MS
+  // Avslöjandet: lampan släcks, spotlight på impostern, sedan stämpeln. Inte när omgången avbröts.
+  const revealImposter = outcome && outcome.kind !== 'avbruten' ? outcome.imposter : null
+  const stampDelay = votesDrawnMs + STAMP_PAUSE_MS + (revealImposter ? LIGHTS_OUT_MS : 0)
   const inset = small ? 9 : 11
   // Ljuset faller på den som har tur, annars mitt på bordet.
-  const lit = turn ? byId[turn] : undefined
+  const lit = revealImposter ? byId[revealImposter] : turn ? byId[turn] : undefined
 
   return (
     <div className="space-y-2">
       <div className="relative rounded-lg bg-room px-3 pt-4 pb-1 shadow-soft">
+      {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
+      {revealImposter && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 rounded-lg bg-foreground opacity-0 motion-safe:animate-lights-out motion-safe:[animation-delay:var(--d)]"
+          style={{ '--d': `${votesDrawnMs}ms` } as CSSProperties}
+        />
+      )}
       <div className="relative mx-auto mt-3 mb-8 aspect-square w-full max-w-[min(100%,46svh)] short:mt-1 short:mb-6 short:max-w-[min(100%,45svh)]">
         {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
         <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[20%]' : 'inset-[17%]')} />
@@ -70,7 +85,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           {center}
         </div>
 
-        <LampBeam target={lit ?? { x: 50, y: 50 }} wide={!lit} />
+        <LampBeam target={lit ?? { x: 50, y: 50 }} wide={!lit} spotDelay={revealImposter ? votesDrawnMs + SPOT_AFTER_MS : null} />
 
         {/* Stolarna, bakom spelarna. Rutan vrids mot bordet och flyttas utåt. */}
         {seats.map((seat) => (
@@ -176,21 +191,25 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 }
 
 // Lampan och dess ljuskägla. Käglan glider över till den som har tur. Med "minska rörelse" hoppar den direkt.
-function LampBeam({ target, wide }: { target: { x: number; y: number }; wide: boolean }) {
+function LampBeam({ target, wide, spotDelay }: { target: { x: number; y: number }; wide: boolean; spotDelay: number | null }) {
   const { length, degrees } = beamTo(target)
   return (
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute w-1/4 origin-top bg-linear-to-b from-sun/70 to-sun/25 motion-safe:transition-[rotate,height] motion-safe:duration-500"
+        className={cn(
+          'pointer-events-none absolute w-1/4 origin-top bg-linear-to-b from-sun/70 to-sun/25 motion-safe:transition-[rotate,height] motion-safe:duration-500',
+          spotDelay !== null && 'z-[25] motion-safe:animate-spot-in motion-safe:[animation-delay:var(--d)]',
+        )}
         style={{
+          '--d': `${spotDelay ?? 0}ms`,
           left: `${LAMP.x}%`,
           top: `${LAMP.y}%`,
           height: `${length}%`,
           translate: '-50% 0',
           rotate: `${degrees}deg`,
           clipPath: wide ? 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)' : 'polygon(44% 0, 56% 0, 80% 100%, 20% 100%)',
-        }}
+        } as CSSProperties}
       />
       <div
         aria-hidden
@@ -311,6 +330,7 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, typing, dim, li
   const position = cn(
     'absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-primary/30',
     dim && 'opacity-50',
+    stamp !== null && 'z-30',
   )
   const style = { left: `${seat.x}%`, top: `${seat.y}%` }
   const label = `${name}${mine ? ' (du)' : ''}`
