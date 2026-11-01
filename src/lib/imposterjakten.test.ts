@@ -572,6 +572,14 @@ describe('Imposterjakten: diskussionen och omröstningen', () => {
 })
 
 describe('Imposterjakten: läget Lurig', () => {
+  it('alla nara-ord är unika och skiljer sig från sitt eget ord', () => {
+    const norm = (text: string) => normalizeWord(text)
+    const nara = WORDS.map((item) => norm(item.nara))
+    expect(nara.every(Boolean)).toBe(true)
+    expect(new Set(nara).size).toBe(WORDS.length)
+    for (const item of WORDS) expect([item.ord, ...item.godkanda].map(norm), item.ord).not.toContain(norm(item.nara))
+  })
+
   const lurig = () => readAll(start(ABCD, { tricky: true }), ABCD)
   const word = (host: HostState) => findWord((host.secrets as ImposterSecrets).wordId)!
   const imposterId = (host: HostState) => (host.secrets as ImposterSecrets).imposter
