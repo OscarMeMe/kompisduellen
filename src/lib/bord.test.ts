@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clueLine, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
+import { clueLabels, clueLine, latestClue, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
 
 describe('handen i Peka ut', () => {
   const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
@@ -15,6 +15,22 @@ describe('orden på en rad', () => {
     expect(clueLine([{ kind: 'ord', word: 'regn' }, { kind: 'pass', word: null }, { kind: 'sagt', word: 'moln' }])).toBe('regn · pass · moln')
     expect(clueLine([{ kind: 'sagt', word: null }])).toBe('✓ sa sitt')
     expect(clueLine([{ kind: 'sagt', word: null }, { kind: 'sagt', word: null }])).toBe('✓ · ✓')
+  })
+})
+
+describe('orden vid bordet', () => {
+  const ord = { player: 'a', kind: 'ord', word: 'regn' }
+  const pass = { player: 'b', kind: 'pass', word: null }
+  const sagt = { player: 'c', kind: 'sagt', word: null }
+
+  it('en etikett per ord, och pass och sagda ord står i ord', () => {
+    expect(clueLabels([ord, pass, sagt])).toEqual(['regn', 'pass', '✓ sa sitt'])
+  })
+
+  it('mitten visar det senaste ordet och vem som gav det, och inget innan första ordet', () => {
+    expect(latestClue([])).toBeNull()
+    expect(latestClue([pass, ord])).toEqual({ text: 'regn', player: 'a' })
+    expect(latestClue([ord, sagt])).toEqual({ text: '✓ sa sitt', player: 'c' })
   })
 })
 

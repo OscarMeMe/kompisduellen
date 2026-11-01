@@ -5,14 +5,14 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { clueLine, curvedArrow, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { clueLabels, clueLine, curvedArrow, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
 // Imposterjakten vid bordet: spelarna sitter på stolar i en ring runt ett träbord i ett dämpat rum, sett ovanifrån, i turordning. Jag sitter
-// längst ner. Vid varje plats står spelarens ord som små pratbubblor (varv 1 överst). I mitten står vad som händer
+// längst ner. Under varje namn står spelarens ord som små etiketter (varv 1 överst). I mitten står vad som händer
 // just nu. Under diskussionen syns pilarna från Peka ut, och vid avslöjandet ritas rösterna som pilar en i taget innan
 // impostern stämplas. Själva bordet är dolt för skärmläsare. De får samma information i en lista under.
 
@@ -62,7 +62,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
   return (
     <div className="space-y-2">
-      <div className="relative -mx-2 rounded-lg bg-room px-2 pt-10 pb-15 shadow-soft tiny:pt-8 tiny:pb-12 sm:mx-0 sm:px-3 sm:pt-13 sm:pb-19 sm:short:pt-9 sm:short:pb-12">
+      <div className={cn('relative -mx-2 overflow-hidden rounded-lg bg-room px-2 pt-10 shadow-soft tiny:pt-8 sm:mx-0 sm:px-3 sm:pt-8 sm:short:pt-7', small ? 'pb-14 tiny:pb-12 sm:pb-15' : 'pb-24 tiny:pb-20 sm:pb-28 sm:short:pb-24')}>
       {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
       {revealImposter && (
         <div
@@ -71,17 +71,21 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           style={{ '--d': `${votesDrawnMs}ms` } as CSSProperties}
         />
       )}
-      {/* Bordet fyller rummet men krymper så att allt får plats på skärmen tillsammans med svarsdelen. På mobil blir det
-          ovalt när höjden tar slut, och platserna följer med eftersom de ligger i procent. */}
-      <div className="relative mx-auto h-[clamp(11rem,calc(100svh-31.75rem),calc(100vw-1.5rem))] w-full tiny:h-[clamp(11rem,calc(100svh-28.5rem),calc(100vw-1.5rem))] sm:aspect-square sm:h-auto sm:max-w-[min(100%,max(15rem,calc(100svh-37rem)))]">
-        {/* Träskivan med sin kant. Det som händer står på en ljus skylt mitt på bordet, så att texten går att läsa. */}
-        <div aria-hidden className={cn('absolute rounded-full border-[6px] border-wood-edge bg-wood shadow-soft', small ? 'inset-[33%] border-4' : 'inset-x-[25%] inset-y-[31%] tiny:inset-x-[24%] tiny:inset-y-[33%] sm:inset-[25%] sm:short:inset-[31%]')} />
+      {/* Bordet fyller rummet men krymper så att allt får plats på skärmen tillsammans med svarsdelen. Det blir ovalt, och
+          platserna följer med eftersom de ligger i procent. På bred skärm får orden plats vid sidorna. */}
+      <div
+        className={cn(
+          'relative mx-auto h-[clamp(20rem,calc(100svh-30rem),calc(100vw-1.5rem))] w-full tiny:h-[clamp(17rem,calc(100svh-28.5rem),calc(100vw-1.5rem))]',
+          // Med 5 och 6 spelare står orden över varandra vid sidorna, så där behövs mest höjd.
+          small ? 'sm:h-[clamp(21rem,calc(100svh-37rem),34rem)]' : seats.length <= 4 ? 'sm:h-80' : 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]',
+        )}
+      >
+        {/* Bordet: en mjuk filtyta med träkant. Det som händer står direkt på filten. */}
         <div
           aria-hidden
           className={cn(
-            'absolute flex flex-col items-center justify-center overflow-hidden rounded-full bg-card text-center shadow-soft-sm transition-colors',
-            small ? 'inset-[36%] px-0.5' : 'inset-x-[29%] inset-y-[35%] px-1 tiny:inset-x-[28%] tiny:inset-y-[36%] sm:inset-[29%] sm:short:inset-[34%]',
-            revealing && 'bg-muted',
+            'absolute flex flex-col items-center justify-center overflow-hidden rounded-[50%] border-[6px] border-wood-edge bg-felt px-2 text-center shadow-soft',
+            small ? 'inset-[32%] border-4' : 'inset-x-[25%] inset-y-[31%] tiny:inset-x-[24%] tiny:inset-y-[33%] sm:inset-[27%]',
           )}
         >
           {center}
@@ -149,9 +153,9 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           )
         })}
 
-        {/* Pratbubblorna med orden, inåt mot bordet från varje plats. */}
+        {/* Orden under namnet på varje plats. */}
         {seats.map((seat) => (
-          <Bubbles key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} />
+          <SeatWords key={seat.id} seat={seat} clues={table.clues.filter((clue) => clue.player === seat.id)} small={small} />
         ))}
 
         {/* Platserna, som egna knappar så att de går att trycka på. */}
@@ -184,7 +188,8 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   )
 }
 
-// En mjuk ljusfläck på den som har tur. Den glider över när turen byts. Med "minska rörelse" hoppar den direkt.
+// En mjuk ljusfläck på den som har tur. Den glider över när turen byts och pulserar svagt så länge turen varar. Med
+// "minska rörelse" hoppar den direkt och står still.
 function TurnLight({ target, small, spotDelay }: { target: { x: number; y: number } | undefined; small: boolean; spotDelay: number | null }) {
   return (
     <div
@@ -192,8 +197,9 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
       className={cn(
         'pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--sun)_85%,transparent)_20%,transparent_70%)] motion-safe:transition-[left,top,opacity] motion-safe:duration-500',
         // Vid avslöjandet en mindre, tydligare fläck på impostern.
-        spotDelay !== null ? 'w-[26%]' : small ? 'w-[38%]' : 'w-[48%]',
+        spotDelay !== null ? 'size-24 sm:size-32' : small ? 'size-32 sm:size-44' : 'size-44 sm:size-56',
         !target && 'opacity-0',
+        target && spotDelay === null && 'motion-safe:animate-light-pulse',
         spotDelay !== null && 'z-[25] motion-safe:animate-spot-in motion-safe:[animation-delay:var(--d)]',
       )}
       style={{ left: `${target?.x ?? 50}%`, top: `${target?.y ?? 50}%`, '--d': `${spotDelay ?? 0}ms` } as CSSProperties}
@@ -201,42 +207,54 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
   )
 }
 
-// Allt spelaren sagt i en enda bubbla, utanför bordet: ovanför figuren på övre halvan och under namnet på nedre. Vid
-// sidorna av bordet är det trångt, så där blir bubblan smalare. Med många spelare är bordet mindre och bubblan står i
-// gapet mellan figuren och bordet, med bara det senaste ordet, och på mobil finns ingen plats alls för den. Allas ord
-// står då i en lista under bordet (AllClues).
-function Bubbles({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boolean }) {
-  if (clues.length === 0) return null
-  const above = seat.y < 50
-  const atSide = Math.abs(seat.x - 50) > 25
-  const left = Math.min(atSide ? 86 : 72, Math.max(atSide ? 14 : 28, seat.x))
-  if (small) {
-    return (
-      <div
-        aria-hidden
-        className="pointer-events-none absolute z-10 max-w-24 -translate-x-1/2 -translate-y-1/2 truncate max-sm:hidden sm:short:hidden rounded-2xl border bg-sun-soft px-1.5 py-0.5 text-center font-heading text-xs leading-tight font-bold shadow-soft-sm motion-safe:animate-fade sm:text-sm"
-        style={{ left: `${50 + (seat.x - 50) * 0.62}%`, top: `${50 + (seat.y - 50) * 0.62}%` }}
-      >
-        {clueLine(clues.slice(-1))}
-      </div>
-    )
-  }
+// Spelarens ord som etiketter under namnet, ett per rad och aldrig brutna. Det senaste är tydligast. Vid sidorna börjar de
+// vid figuren och går inåt, så att de inte hamnar utanför rummet. Längst upp finns ingen plats under namnet, för där står
+// bordet, så där står de bredvid figuren. Med många spelare ryms bara det senaste ordet (allas ord står i AllClues).
+function SeatWords({ seat, clues, small }: { seat: Seat; clues: Clue[]; small: boolean }) {
+  const labels = clueLabels(clues)
+  const shown = small ? labels.slice(-1) : labels
+  if (shown.length === 0) return null
+  const atTop = seat.y < 15
+  const side = seat.x < 35 ? 'left' : seat.x > 65 ? 'right' : 'center'
+  // Övre halvan av bordet: etiketterna börjar längre ut, så att de går fri från bordet.
+  const offset = seat.y < 35 ? 'var(--s)' : 'var(--u)'
+  const style: CSSProperties = atTop
+    ? { left: `calc(${seat.x}% + var(--f) + 0.25rem)`, top: `calc(${seat.y}% - var(--f))` }
+    : side === 'left'
+      ? { left: `max(0%, calc(${seat.x}% - ${offset}))`, top: `calc(${seat.y}% + var(--f) + var(--n))` }
+      : side === 'right'
+        ? { right: `max(0%, calc(${100 - seat.x}% - ${offset}))`, top: `calc(${seat.y}% + var(--f) + var(--n))` }
+        : { left: `${seat.x}%`, top: `calc(${seat.y}% + var(--f) + var(--n))` }
   return (
     <div
       aria-hidden
+      data-ord
       className={cn(
-        'pointer-events-none absolute z-10 w-max -translate-x-1/2 rounded-2xl border bg-sun-soft text-center font-heading leading-tight font-bold shadow-soft-sm motion-safe:animate-fade',
-        // --f = halva figuren och --n = namnet, så att bubblan börjar där de slutar.
-        'px-2 py-0.5 text-sm [--f:1.75rem] [--n:1.4rem] tiny:text-xs tiny:[--f:1.375rem] tiny:[--n:1.4rem] sm:text-base sm:[--f:2rem] sm:[--n:1.75rem] sm:short:text-sm sm:short:[--f:1.375rem] sm:short:[--n:1.4rem]',
-        atSide ? 'max-w-[5.25rem] sm:max-w-28 sm:short:max-w-24' : 'max-w-[75%]',
+        'pointer-events-none absolute z-10 flex w-max flex-col gap-0.5',
+        // --f = halva figuren och --n = namnet, så att etiketterna börjar där de slutar. --s och --u = hur långt utanför platsen de
+        // börjar vid sidorna, på övre och nedre halvan.
+        small
+          ? '[--f:1.25rem] [--n:1.2rem] [--s:4.5rem] [--u:4.5rem] tiny:[--f:1rem] sm:[--f:1.75rem] sm:[--n:1.4rem] sm:[--s:1.75rem] sm:[--u:1.75rem] sm:short:[--f:1.125rem]'
+          : '[--f:1.75rem] [--n:1.5rem] [--s:4.5rem] [--u:4.5rem] tiny:[--f:1.375rem] sm:[--f:2rem] sm:[--n:1.8rem] sm:[--s:6rem] sm:[--u:2rem] sm:short:[--f:1.375rem]',
+        atTop || side === 'left' ? 'items-start' : side === 'right' ? 'items-end' : 'items-center',
+        !atTop && side === 'center' && '-translate-x-1/2',
       )}
-      style={{
-        left: `${left}%`,
-        top: above ? undefined : `calc(${seat.y}% + var(--f) + var(--n))`,
-        bottom: above ? `calc(${100 - seat.y}% + var(--f) + 0.25rem)` : undefined,
-      }}
+      style={style}
     >
-      {clueLine(clues)}
+      {shown.map((label, i) => {
+        const latest = i === shown.length - 1
+        return (
+          <span
+            key={`${label}-${i}`}
+            className={cn(
+              'max-w-26 truncate rounded-full border px-2 py-px font-heading text-sm leading-snug whitespace-nowrap shadow-soft-sm motion-safe:animate-fade sm:max-w-40 sm:text-base',
+              latest ? 'bg-sun-soft font-bold text-foreground' : 'bg-card/85 font-semibold text-muted-foreground',
+            )}
+          >
+            {label}
+          </span>
+        )
+      })}
     </div>
   )
 }

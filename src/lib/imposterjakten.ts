@@ -534,11 +534,13 @@ export function imposterInstruction(
         ? { text: 'Väntar på att alla läser sitt kort…', act: false }
         : { text: 'Läs ditt kort i hemlighet. Tryck sedan Jag har läst', act: true }
     case 'ledtradar': {
+      const lap = `Varv ${clueRound(table)} av ${CLUE_ROUNDS}`
       const turn = currentTurn(table)
-      if (turn === me.id) return { text: table.aloud ? 'Din tur! Säg ditt ord högt' : 'Din tur! Skriv ett ord', act: true }
+      if (turn === me.id) return { text: `${lap} · Din tur! ${table.aloud ? 'Säg ditt ord högt' : 'Skriv ett ord'}`, act: true }
       const name = turn ? me.name(turn) : 'Någon'
-      if (table.aloud) return { text: `${name} säger sitt ord`, act: false }
-      return { text: `${name} ${me.typing === turn ? 'skriver' : 'funderar'}…`, act: false }
+      if (table.aloud) return { text: `${lap} · ${name} säger sitt ord`, act: false }
+      if (me.typing === turn) return { text: `${lap} · ${name} skriver…`, act: false }
+      return { text: `${lap} · ${name}${name.endsWith('s') ? '' : /\d$/.test(name) ? ':s' : 's'} tur`, act: false }
     }
     case 'diskussion':
       if (table.countdownStarted) return { text: `Omröstningen börjar om ${me.secondsLeft} s`, act: false }

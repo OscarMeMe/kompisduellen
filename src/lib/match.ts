@@ -275,14 +275,39 @@ export function setTempo(state: GameState, tempo: { guessSeconds?: number; autoA
 }
 
 // Lägger till spelare som anslutit. Befintliga poäng behålls.
+// Stora och små bokstäver räknas lika, så att Pöki och pöki inte kan vara med samtidigt.
+function sameName(a: string, b: string): boolean {
+  return a.trim().toLocaleLowerCase('sv') === b.trim().toLocaleLowerCase('sv')
+}
+
+// Ett namn som inte är taget: Pöki, annars Pöki 2, Pöki 3 och så vidare.
+export function uniqueName(name: string, taken: readonly string[]): string {
+  const free = (candidate: string) => !taken.some((other) => sameName(other, candidate))
+  if (free(name)) return name
+  let number = 2
+  while (!free(`${name} ${number}`)) number += 1
+  return `${name} ${number}`
+}
+
+// Namnet i lobbyn. Har spelaren redan namnet, med eller utan siffra, får den behålla det, så att ingen byter namn mitt i
+// en match för att en annan med samma namn lämnat.
+function lobbyName(wanted: string, current: string | undefined, taken: readonly string[]): string {
+  const keeps = current !== undefined && (sameName(current, wanted) || current.toLocaleLowerCase('sv').startsWith(`${wanted.trim().toLocaleLowerCase('sv')} `) && /\s\d+$/.test(current))
+  if (keeps && !taken.some((other) => sameName(other, current))) return current
+  return uniqueName(wanted, taken)
+}
+
+// Nya spelare och ändrade namn. Värden bestämmer namnen, så att alla ser samma och ingen heter likadant.
 export function addPlayers(state: GameState, players: Record<string, PlayerInfo>): GameState {
   let changed = false
   const nextPlayers = { ...state.players }
   const nextScores = { ...state.scores }
   for (const [id, info] of Object.entries(players)) {
     const existing = nextPlayers[id]
-    if (!existing || existing.name !== info.name || existing.avatar !== info.avatar) {
-      nextPlayers[id] = info
+    const taken = Object.entries(nextPlayers).filter(([other]) => other !== id).map(([, player]) => player.name)
+    const name = lobbyName(info.name, existing?.name, taken)
+    if (!existing || existing.name !== name || existing.avatar !== info.avatar) {
+      nextPlayers[id] = { ...info, name }
       changed = true
     }
     if (nextScores[id] === undefined) {
