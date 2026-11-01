@@ -22,6 +22,8 @@ export type PageMeta = {
   // Sökvägen som är sidans kanoniska adress. null för sidor som inte ska synas i sökresultaten (lobbyn, profilen …).
   path: string | null
   jsonLd: JsonLd[]
+  // Egen bild när sidan delas (Open Graph, 1200 × 630 i public/og). Saknas den visas loggan.
+  image?: { path: string; alt: string }
 }
 
 const WEBSITE_ID = `${SITE_URL}/#website`
@@ -69,6 +71,7 @@ function gamePageMeta(page: GamePageInfo): PageMeta {
     title: page.title,
     description: page.description,
     path,
+    ...(page.image && { image: page.image }),
     jsonLd: [
       {
         '@type': 'VideoGame',
@@ -151,11 +154,21 @@ export function renderHeadTags(meta: PageMeta): string {
     url && `<meta property="og:url" content="${url}" />`,
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:image" content="${SITE_URL}/icon-512.png" />`,
-    `<meta property="og:image:width" content="512" />`,
-    `<meta property="og:image:height" content="512" />`,
-    `<meta property="og:image:alt" content="Kompisduellens logga" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    ...(meta.image
+      ? [
+          `<meta property="og:image" content="${SITE_URL}${meta.image.path}" />`,
+          `<meta property="og:image:width" content="1200" />`,
+          `<meta property="og:image:height" content="630" />`,
+          `<meta property="og:image:alt" content="${escapeHtml(meta.image.alt)}" />`,
+          `<meta name="twitter:card" content="summary_large_image" />`,
+        ]
+      : [
+          `<meta property="og:image" content="${SITE_URL}/icon-512.png" />`,
+          `<meta property="og:image:width" content="512" />`,
+          `<meta property="og:image:height" content="512" />`,
+          `<meta property="og:image:alt" content="Kompisduellens logga" />`,
+          `<meta name="twitter:card" content="summary" />`,
+        ]),
     meta.jsonLd.length > 0 &&
       `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': meta.jsonLd }).replace(/</g, '\\u003c')}</script>`,
   ]

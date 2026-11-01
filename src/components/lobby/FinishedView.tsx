@@ -8,7 +8,7 @@ import { Wide } from '@/components/lobby/LobbyLayout'
 import { Podium } from '@/components/Podium'
 import { Button } from '@/components/ui/button'
 import type { OnlinePlayer } from '@/hooks/useLobby'
-import type { GameInfo } from '@/lib/games'
+import { roundWords, type GameInfo } from '@/lib/games'
 import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
@@ -83,7 +83,8 @@ export function FinishedView({
   const [editing, setEditing] = useState(false)
   // En provomgång har inga snabbval: lobbyns inställningar ligger kvar tills ni spelar på riktigt.
   const rematch = () => onRematch(state.practice ? {} : { rounds, ...(tempo ? { guessSeconds, autoAdvance } : {}) })
-  const settingsSummary = tempo ? `${rounds} rundor · ${guessSeconds} s` : `${rounds} rundor`
+  const words = roundWords(state.game)
+  const settingsSummary = tempo ? `${rounds} ${words.many} · ${guessSeconds} s` : `${rounds} ${words.many}`
 
   return (
     <Wide>
@@ -91,7 +92,11 @@ export function FinishedView({
         <h1 className="text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
           {game.name} ·{' '}
-          {endedEarly ? `slutade i runda ${state.round} av ${state.rounds}` : state.rounds === 1 ? '1 runda spelad' : `${state.rounds} rundor spelade`}
+          {endedEarly
+            ? `slutade i ${words.one} ${state.round} av ${state.rounds}`
+            : state.rounds === 1
+              ? `1 ${words.one} spelad`
+              : `${state.rounds} ${words.many} spelade`}
         </p>
       </div>
 
@@ -206,7 +211,7 @@ export function FinishedView({
           {editing && (
             <div className="space-y-4 rounded-lg border bg-card p-4 shadow-soft-sm animate-pop">
               <Choice
-                label="Antal rundor"
+                label={`Antal ${words.many}`}
                 options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
                 selected={rounds}
                 onSelect={setRounds}

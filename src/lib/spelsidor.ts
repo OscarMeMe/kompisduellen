@@ -16,6 +16,8 @@ export type GamePageInfo = {
   steps: string[]
   time: string
   faq: Faq[]
+  // Egen bild när sidan delas (1200 × 630 i public/og). Saknas den visas loggan.
+  image?: { path: string; alt: string }
 }
 
 // Gemensamma frågor, med spelets namn där det passar.
@@ -112,6 +114,56 @@ export const GAME_PAGES: GamePageInfo[] = [
     ],
     time: '10–20 minuter',
     faq: commonFaq('Kortkaos', 3),
+  },
+  {
+    slug: 'imposterjakten',
+    gameId: 'imposterjakten',
+    title: 'Imposterjakten: imposter-spel online på svenska | Kompisduellen',
+    description:
+      'Alla utom en har samma hemliga ord. Ge ett ord var, diskutera och rösta ut impostern. Ett gratis imposter-spel online på svenska för 3–10 spelare.',
+    heading: 'Imposterjakten: imposter-spelet på svenska',
+    intro: [
+      'Alla får samma hemliga ord, utom en. Impostern vet inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och sedan gäller det att lista ut vem som bluffar.',
+      'Det är ett imposter-spel online på svenska med över hundra ord, från Bokhylla och Systembolaget till Zlatan. Säg för lite och du blir misstänkt. Säg för mycket och impostern listar ut ordet. Alla spelar på sin egen mobil, så det funkar lika bra i soffan på förfesten som på Discord.',
+    ],
+    steps: [
+      'En av er skapar en lobby och delar koden på fyra bokstäver. Ni behöver vara minst tre.',
+      'Alla går med från sin egen mobil eller dator och läser sitt kort i hemlighet. En av er är impostern.',
+      'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv. Orden skrivs i appen eller sägs högt.',
+      'Diskutera vem som bluffar och rösta. Omröstningen är hemlig och alla har en röst.',
+      'Fångas impostern får den gissa ordet. Kommer impostern undan, eller gissar rätt, får den poäng. Annars får de oskyldiga poäng. Flest poäng efter sista omgången vinner.',
+    ],
+    time: '10–20 minuter',
+    image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: imposter-spel online på svenska för 3–10 spelare' },
+    faq: [
+      // Distansfrågan står med egna ord här, så den gemensamma hoppas över.
+      ...commonFaq('Imposterjakten', 3).filter((item) => !item.question.includes('Discord')),
+      {
+        question: 'Kan man spela på distans eller på Discord?',
+        answer:
+          'Ja. Alla har sitt eget kort på sin egen skärm, så ni kan sitta i samma soffa eller prata i Discord, Teams eller ett videosamtal. Dela koden i chatten, så är ni igång.',
+      },
+      {
+        question: 'Hur många kan spela?',
+        answer:
+          'Ni behöver vara minst tre, och spelet fungerar bäst för 3–10 spelare. Ju fler ni är, desto svårare blir det att hitta impostern.',
+      },
+      {
+        question: 'Vad är ett imposter-spel?',
+        answer:
+          'Ett spel där en av er i hemlighet har en annan roll och försöker smälta in, medan resten försöker avslöja den. I Imposterjakten är impostern den enda som inte vet det hemliga ordet.',
+      },
+      {
+        question: 'Vad händer om det blir lika röster?',
+        answer:
+          'Då diskuterar ni en gång till och röstar bara mellan dem som fick lika många röster. Blir det lika igen kommer impostern undan.',
+      },
+      {
+        question: 'Kan impostern få hjälp?',
+        answer:
+          'Värden väljer svårighet. I Normal får impostern en vag ledtråd och i Svår ingenting. Värden kan också välja en kategori, som alla ser.',
+      },
+    ],
   },
 ]
 

@@ -87,9 +87,7 @@ export const GAMES: GameInfo[] = [
     minPlayers: 3,
     maxPlayers: 10,
     feel: 'Bluffigt',
-    // Byggs i steg. Spelbart bara i utvecklingsläget tills omröstningen och poängen finns. På sajten syns det under
-    // Fler dueller är på väg.
-    playable: import.meta.env.DEV,
+    playable: true,
     intro: {
       emoji: '🔍',
       pitch: 'Alla vet ordet. Utom en. Lista ut vem som bluffar innan bluffaren listar ut ordet.',
@@ -97,6 +95,7 @@ export const GAMES: GameInfo[] = [
         'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in.',
         'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv.',
         'Diskutera och rösta fram vem ni tror är impostern.',
+        'Fångas impostern får den gissa ordet. Kommer den undan, eller gissar rätt, får den poäng. Annars får de oskyldiga poäng.',
       ],
     },
   },
@@ -122,6 +121,11 @@ export const GAMES: GameInfo[] = [
 
 export function findGame(id: string | null | undefined): GameInfo | undefined {
   return GAMES.find((game) => game.id === id)
+}
+
+// Vad en runda heter i spelet: omgång i Imposterjakten, runda i de andra.
+export function roundWords(gameId: string): { one: string; many: string } {
+  return gameId === 'imposterjakten' ? { one: 'omgång', many: 'omgångar' } : { one: 'runda', many: 'rundor' }
 }
 
 // "2–12 spelare" när det finns ett prövat största antal, annars "2+ spelare". Lobbyn har ingen hård gräns.

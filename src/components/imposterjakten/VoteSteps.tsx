@@ -45,9 +45,14 @@ function seconds(n: number): string {
 // Diskussionen: allas ord står kvar och var och en markerar när den har hört nog. Det är ingen röst. När mer än
 // hälften är redo börjar en nedräkning, och då går markeringen inte att ta tillbaka. Efter lika röster diskuterar man
 // igen, och sedan röstar alla bara mellan de lika placerade.
-export function DiscussionStep({ state, table, me, inRound, imposterCard, secondsLeft, onMove }: StepProps) {
+// Spelarna i omgången som är med just nu. Den som lämnat räknas inte och går inte att rösta på.
+function presentIds(table: ImposterTable, online: StepProps['online']): string[] {
+  return table.order.filter((id) => online.some((player) => player.id === id))
+}
+
+export function DiscussionStep({ state, table, me, online, inRound, imposterCard, secondsLeft, onMove }: StepProps) {
   const ready = imposterCard?.ready ?? false
-  const players = table.order.length
+  const players = presentIds(table, online).length
   return (
     <>
       {table.tied && (
@@ -98,10 +103,11 @@ export function DiscussionStep({ state, table, me, inRound, imposterCard, second
 
 // Omröstningen: hemlig och utan tidsgräns. Var och en väljer en annan spelare och bekräftar. En bekräftad röst är låst.
 // Efter lika röster går det bara att rösta på de lika placerade.
-export function VotingStep({ state, table, me, inRound, imposterCard, onMove }: StepProps) {
+export function VotingStep({ state, table, me, online, inRound, imposterCard, onMove }: StepProps) {
   const [choice, setChoice] = useState<string | null>(null)
   const myVote = imposterCard?.vote ?? null
-  const candidates = (table.tied ?? table.order).filter((id) => id !== me.id)
+  const present = presentIds(table, online)
+  const candidates = (table.tied ?? table.order).filter((id) => id !== me.id && present.includes(id))
 
   return (
     <section {...SPLAT_SHIELD} className="space-y-4">
@@ -140,7 +146,7 @@ export function VotingStep({ state, table, me, inRound, imposterCard, onMove }: 
           </>
         ))}
       <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums" role="status">
-        {table.votedCount} av {table.order.length} har röstat
+        {table.votedCount} av {present.length} har röstat
       </p>
     </section>
   )

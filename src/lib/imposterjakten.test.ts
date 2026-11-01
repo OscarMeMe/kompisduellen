@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES } from '@/lib/games'
+import { GAMES, roundWords } from '@/lib/games'
 import {
   CATEGORIES,
   canChangeWord,
@@ -111,6 +111,11 @@ describe('Imposterjakten: spelet och inställningarna', () => {
     expect(canStart('imposterjakten', 2)).toBe(false)
     expect(canStart('imposterjakten', 1)).toBe(false)
     expect(canStart('imposterjakten', 3)).toBe(true)
+  })
+
+  it('kallar rundorna omgångar, och de andra spelen säger rundor', () => {
+    expect(roundWords('imposterjakten')).toEqual({ one: 'omgång', many: 'omgångar' })
+    expect(roundWords('gissa-priset')).toEqual({ one: 'runda', many: 'rundor' })
   })
 
   it('har 3, 5 eller 7 omgångar med 3 som förval', () => {
@@ -589,6 +594,13 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     }
     expect(table(host).step).toBe('diskussion')
     expect(table(host).clues.map((clue) => clue.player)).not.toContain(leaving)
+    // Den som lämnade får inga poäng när impostern ger upp.
+    host = ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW), host)
+    host = voteOut(host, 'a', ids)
+    host = hostMove(host, 'a', { type: 'giveUp' }, ids, NOW)
+    expect(table(host).outcome?.points[leaving]).toBeUndefined()
+    expect(host.state.scores[leaving]).toBe(0)
+    for (const id of ids.filter((id) => id !== 'a')) expect(host.state.scores[id]).toBe(2)
   })
 
   it('stryker rösten från en oskyldig som lämnar, och låter den som röstat på spelaren rösta om', () => {
@@ -596,6 +608,8 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     host = hostPresence(host, ['a', 'b', 'd'], NOW)
     expect(table(host)).toMatchObject({ step: 'rostning', votedCount: 0 })
     expect(myImposterCard(secretsOf(host), table(host), 'b').vote).toBeNull()
+    // Den som lämnat går inte att rösta på.
+    expect(vote(host, 'b', 'c', ['a', 'b', 'd'])).toBe(host)
     host = vote(vote(vote(host, 'a', 'b', ['a', 'b', 'd']), 'b', 'a', ['a', 'b', 'd']), 'd', 'a', ['a', 'b', 'd'])
     expect(table(host)).toMatchObject({ step: 'gissning', caught: 'a' })
   })
