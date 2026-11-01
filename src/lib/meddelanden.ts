@@ -67,7 +67,7 @@ const isCardTable = (value: unknown): value is CardTable =>
 
 const isImposterTable = (value: unknown): value is ImposterTable =>
   shape({
-    step: (step) => isString(step) && ['kort', 'ledtradar', 'diskussion', 'rostning', 'resultat'].includes(step),
+    step: (step) => isString(step) && ['kort', 'ledtradar', 'diskussion', 'rostning', 'gissning', 'facit'].includes(step),
     order: listOf(isString),
     turn: isNumber,
     clues: listOf(
@@ -85,6 +85,19 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     votedCount: isNumber,
     countdownStarted: isBoolean,
     votes: orNull(recordOf(isString)),
+    tied: orNull(listOf(isString)),
+    caught: orNull(isString),
+    outcome: orNull(
+      shape({
+        kind: (kind) => isString(kind) && ['undan', 'gissade-ratt', 'gissade-fel', 'gav-upp', 'avbruten'].includes(kind),
+        word: isString,
+        imposter: isString,
+        hint: orNull(isString),
+        guess: orNull(isString),
+        points: recordOf(isNumber),
+        reason: orNull(isString),
+      }),
+    ),
   })(value)
 
 const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
@@ -131,6 +144,8 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   if (!isObject(payload) || !isObject(payload.state) || !isNumber(payload.sentAt)) return null
   if (!isString(payload.state.game)) return null
   const state = { ...initialState(payload.state.game), ...payload.state }
+  // Fälten för lika röster, sista gissningen och facit saknas hos en värd med en äldre version av sajten.
+  if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
   return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null }
 }
@@ -180,6 +195,10 @@ export function parseMove(payload: unknown): { id: string; move: CardMove | Impo
   if (move.type === 'read' || move.type === 'pass' || move.type === 'said') return { id: payload.id, move: { type: move.type } }
   if (move.type === 'ready' && isBoolean(move.on)) return { id: payload.id, move: { type: 'ready', on: move.on } }
   if (move.type === 'vote' && isString(move.target)) return { id: payload.id, move: { type: 'vote', target: move.target } }
+  if (move.type === 'guess' && isString(move.word) && move.word.length <= 100) {
+    return { id: payload.id, move: { type: 'guess', word: move.word } }
+  }
+  if (move.type === 'giveUp') return { id: payload.id, move: { type: 'giveUp' } }
   if (move.type === 'clue' && isString(move.word) && move.word.length <= 100) {
     return { id: payload.id, move: { type: 'clue', word: move.word } }
   }
