@@ -461,8 +461,7 @@ export function AcceptThrowsChoice() {
   return <AcceptThrowsToggle on={throws.acceptsThrows} onChange={throws.setAcceptsThrows} />
 }
 
-// Rubriken och en liten växlare med På och Av sida vid sida, på samma rad när det får plats. Används i väntrummet
-// och på profilsidan.
+// Rubriken och en liten växlare med På och Av sida vid sida, på samma rad när det får plats.
 export function AcceptThrowsToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   const labelId = useId()
   return (
