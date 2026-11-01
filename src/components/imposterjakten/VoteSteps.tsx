@@ -29,10 +29,6 @@ function joinNames(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} och ${names.at(-1)}`
 }
 
-function seconds(n: number): string {
-  return `${n} ${n === 1 ? 'sekund' : 'sekunder'}`
-}
-
 // Spelarna i omgången som är med just nu. Den som lämnat räknas inte och går inte att rösta på.
 function presentIds(table: ImposterTable, online: StepProps['online']): string[] {
   return table.order.filter((id) => online.some((player) => player.id === id))
@@ -42,8 +38,8 @@ function presentIds(table: ImposterTable, online: StepProps['online']): string[]
 function Center({ title, line, tone }: { title: string; line?: string; tone?: string }) {
   return (
     <>
-      <span className={cn('font-heading text-sm leading-tight font-bold sm:text-base', tone)}>{title}</span>
-      {line && <span className="text-[11px] font-semibold text-muted-foreground tabular-nums sm:text-xs">{line}</span>}
+      <span className={cn('font-heading text-lg leading-tight font-bold break-words sm:text-2xl', tone)}>{title}</span>
+      {line && <span className="text-sm font-semibold text-muted-foreground tabular-nums sm:text-base">{line}</span>}
     </>
   )
 }
@@ -56,11 +52,11 @@ export function AccusationStep({ state, table, me, online, inRound, imposterCard
   const accuser = state.players[accusation.accuser]?.name ?? 'Någon'
   const answer = imposterCard?.accuseVote ?? null
   const accusedIsMe = accusation.accused === me.id
-  const center = <Center title={`Är ${name} impostern?`} line={`${accusation.answered} av ${accusation.voters} har svarat`} tone="text-primary" />
+  const center = <Center title={`Är ${name} impostern?`} line={`${accusation.answered} av ${accusation.voters} har svarat`} tone="text-primary-button" />
   return (
     <>
       <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
-      <section {...SPLAT_SHIELD} className="space-y-3 text-center" role="status">
+      <section {...SPLAT_SHIELD} className="space-y-3 text-center">
         <p className="rounded-md bg-coral-soft px-4 py-3 font-semibold">
           {accuser} anklagar {accusedIsMe ? 'dig' : name}! {secondsLeft} s kvar.
         </p>
@@ -100,7 +96,7 @@ export function DiscussionStep({ state, table, me, online, inRound, imposterCard
     return () => clearTimeout(timer)
   }, [])
   const center = table.countdownStarted ? (
-    <Center title={`${secondsLeft} s`} line={`${table.readyCount} av ${players} är redo`} tone="text-primary text-xl sm:text-2xl" />
+    <Center title={`${secondsLeft} s`} line={`${table.readyCount} av ${players} är redo`} tone="text-primary-button text-2xl sm:text-3xl" />
   ) : (
     <Center title={table.tied ? 'Lika röster!' : 'Diskutera!'} line={`${table.readyCount} av ${players} är redo`} />
   )
@@ -110,9 +106,7 @@ export function DiscussionStep({ state, table, me, online, inRound, imposterCard
       <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
       <section {...SPLAT_SHIELD} className="space-y-3 text-center">
         {table.countdownStarted ? (
-          <p className="rounded-md bg-sun-soft px-4 py-3 font-semibold" role="status">
-            Omröstningen börjar om {seconds(secondsLeft)}. Sista chansen att försvara dig!
-          </p>
+          <p className="rounded-md bg-sun-soft px-4 py-3 font-semibold">Sista chansen att försvara dig!</p>
         ) : table.tied ? (
           <p className="rounded-md bg-sun-soft px-3 py-2 text-sm font-semibold" role="status">
             Lika röster mellan {joinNames(tiedNames)}. Diskutera igen, sedan röstar ni bara mellan dem.
@@ -185,12 +179,10 @@ export function VotingStep({ state, table, me, online, inRound, imposterCard, ty
             </p>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                {table.tied ? 'Tryck på den av de lika placerade' : 'Tryck på den'} du tror är impostern. Rösten är hemlig.
-              </p>
+              <p className="text-sm text-muted-foreground">Rösten är hemlig.</p>
               <Button size="lg" className="w-full" disabled={!choice} onClick={() => choice && onMove({ type: 'vote', target: choice })}>
                 <Vote aria-hidden />
-                {choice ? `Rösta på ${state.players[choice]?.name ?? 'spelaren'}` : 'Bekräfta röst'}
+                {choice ? `Bekräfta röst på ${state.players[choice]?.name ?? 'spelaren'}` : 'Bekräfta röst'}
               </Button>
             </>
           ))}
@@ -208,12 +200,12 @@ export function GuessStep({ state, table, me, online, typing, onMove }: StepProp
   const caught = table.caught
   const mine = caught === me.id
   const name = state.players[caught ?? '']?.name ?? 'Impostern'
-  const center = <Center title="Impostern är fast!" line={mine ? 'Gissa ordet' : `${name} gissar…`} tone="text-primary" />
+  const center = <Center title="Impostern är fast!" line={mine ? 'Gissa ordet' : `${name} gissar…`} tone="text-primary-button" />
   return (
     <>
       <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
-      <p className="text-center text-sm text-muted-foreground" role="status">
-        {mine ? 'Gissa det hemliga ordet. Gissar du rätt får du en poäng.' : `${name} gissar ordet. Ni får era poäng ändå, och gissar impostern rätt får den en poäng.`}
+      <p className="text-center text-sm text-muted-foreground">
+        {mine ? 'Gissar du rätt får du en poäng.' : 'Ni får era poäng ändå, och gissar impostern rätt får den en poäng.'}
       </p>
       {mine && (
         <div className="rounded-lg border bg-card p-4 shadow-soft">
@@ -290,8 +282,8 @@ export function FacitStep({ state, table, me, online, typing, isHost, onMove, on
 
   const center = (
     <>
-      <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">Ordet var</span>
-      <span className="font-heading text-sm leading-tight font-bold break-words sm:text-lg">{outcome.word}</span>
+      <span className="text-sm font-semibold text-muted-foreground sm:text-base">Ordet var</span>
+      <span className="font-heading text-lg leading-tight font-bold break-words sm:text-2xl">{outcome.word}</span>
     </>
   )
 
