@@ -162,11 +162,14 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
         <div key={plays} aria-hidden className="flex w-full origin-bottom items-center justify-center pt-6 xl:scale-85">
           {PREVIEWS[game.id]}
         </div>
+        {game.feel && (
+          <span className="absolute top-2 left-2 z-10 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">{game.feel}</span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-muted-foreground">
-            {[playersLabel(game), page?.time, game.feel].filter(Boolean).join(' · ')}
+            {[playersLabel(game), page?.time].filter(Boolean).join(' · ')}
           </p>
           <h3 className="text-xl leading-tight">
             {/* Namnet leder till spelets egen sida med mer om spelet. */}
