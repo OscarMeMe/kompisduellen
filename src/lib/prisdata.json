@@ -2350,5 +2350,18 @@
     "imageSource": "https://commons.wikimedia.org/wiki/File:10_kompaniets_kaserner,_Enk%C3%B6ping.jpg",
     "imageNote": "Bilden visar kaserner i Enköping",
     "fraga": "Hur mycket pengar fick man när lumpen var slut 1982?"
+  },
+  {
+    "id": "commodore-64-1983",
+    "emoji": "💻",
+    "name": "En Commodore 64 vid Sverigelanseringen",
+    "year": 1983,
+    "clue": "Hemdatorns introduktionspris på våren",
+    "priceSek": 5995,
+    "fact": "Introduktionspriset var 5 995 kronor, men till julhandeln hade det sjunkit till 3 995 kronor. Prissänkningen hjälpte datorn att konkurrera ut andra modeller och göra hemdatorn tillgänglig för fler familjer.",
+    "source": "https://www.expressen.se/nyheter/dokument/datorn-som-skapade-det-svenska-it-undret/",
+    "image": "/prisbilder/commodore-64-1983.webp",
+    "imageSource": "https://commons.wikimedia.org/wiki/File:Commodore-64-Computer-FL.jpg",
+    "fraga": "Vad kostade en Commodore 64 när den kom till Sverige 1983?"
   }
 ]
