@@ -26,6 +26,8 @@ export type ReactionsValue = {
   // Reaktioner kan skickas när fler än en är med i lobbyn.
   enabled: boolean
   floating: FloatingReaction[]
+  // Spelarna vid Imposterjaktens bord, vars reaktioner visas vid platsen.
+  seatedIds: readonly string[]
   send: (reactionId: string) => void
   throws: Throws
   soundOn: boolean
