@@ -93,8 +93,9 @@ export const GAMES: GameInfo[] = [
       pitch: 'Alla vet ordet. Utom en. Lista ut vem som bluffar innan bluffaren listar ut ordet.',
       steps: [
         'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in.',
-        'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv.',
-        'Diskutera och rösta fram vem ni tror är impostern.',
+        'Ni ger ett ord var som hör ihop med det hemliga ordet, tre varv.',
+        'Efter andra varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt.',
+        'Annars diskuterar ni efter tredje varvet och röstar fram vem ni tror är impostern.',
         'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer den undan får den poäng.',
       ],
     },

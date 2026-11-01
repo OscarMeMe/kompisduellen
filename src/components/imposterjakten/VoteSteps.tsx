@@ -48,6 +48,43 @@ function Center({ title, line, tone }: { title: string; line?: string; tone?: st
   )
 }
 
+// Anklaga!: alla utom den anklagade svarar i hemlighet ja eller nej, högst ACCUSE_SECONDS. Allt annat står still.
+export function AccusationStep({ state, table, me, online, inRound, imposterCard, secondsLeft, typing, onMove }: StepProps) {
+  const accusation = table.accusation
+  if (!accusation) return null
+  const name = state.players[accusation.accused]?.name ?? 'Spelaren'
+  const accuser = state.players[accusation.accuser]?.name ?? 'Någon'
+  const answer = imposterCard?.accuseVote ?? null
+  const accusedIsMe = accusation.accused === me.id
+  const center = <Center title={`Är ${name} impostern?`} line={`${accusation.answered} av ${accusation.voters} har svarat`} tone="text-primary" />
+  return (
+    <>
+      <Bord state={state} table={table} meId={me.id} online={online} typing={typing} center={center} onMove={onMove} />
+      <section {...SPLAT_SHIELD} className="space-y-3 text-center" role="status">
+        <p className="rounded-md bg-coral-soft px-4 py-3 font-semibold">
+          {accuser} anklagar {accusedIsMe ? 'dig' : name}! {secondsLeft} s kvar.
+        </p>
+        {inRound && !accusedIsMe && answer === null && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="lg" onClick={() => onMove({ type: 'accuseVote', yes: true })}>
+              Ja
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => onMove({ type: 'accuseVote', yes: false })}>
+              Nej
+            </Button>
+          </div>
+        )}
+        {inRound && !accusedIsMe && answer !== null && (
+          <p className="flex items-center justify-center gap-2 rounded-md bg-mint-soft px-4 py-3 font-semibold">
+            <Check className="size-5" aria-hidden />
+            Du har svarat. Väntar på de andra…
+          </p>
+        )}
+      </section>
+    </>
+  )
+}
+
 // Diskussionen: allas ord står kvar och var och en markerar när den har hört nog. Det är ingen röst. När mer än
 // hälften är redo börjar en nedräkning, och då går markeringen inte att ta tillbaka. Efter lika röster diskuterar man
 // igen, och sedan röstar alla bara mellan de lika placerade. Man kan peka ut någon (tryck på spelaren), men det är

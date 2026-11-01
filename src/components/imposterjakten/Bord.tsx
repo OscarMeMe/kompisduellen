@@ -6,7 +6,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { arrowBetween, beamTo, LAMP, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
-import { CLUE_ROUNDS, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
+import { canAccuse, CLUE_ROUNDS, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
@@ -43,14 +43,14 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
   const small = smallSeats(seats.length)
   const byId = Object.fromEntries(seats.map((seat) => [seat.id, seat]))
   const present = new Set(online.map((player) => player.id))
-  const turn = table.step === 'ledtradar' ? currentTurn(table) : null
+  const turn = table.step === 'ledtradar' && !table.accusation ? currentTurn(table) : null
   const outcome = table.step === 'facit' ? table.outcome : null
   // Rösterna som visas: efter lika röster de från den första omröstningen, och vid avslöjandet allas röster.
   const shownVotes = table.tied && table.step === 'diskussion' ? table.tieVotes : (table.step === 'gissning' || outcome ? table.votes : null)
   const voteArrows = Object.entries(shownVotes ?? {}).filter(([from, to]) => byId[from] && byId[to])
   const counts = shownVotes ? tallyVotes(shownVotes).counts : {}
   const pointers = table.step === 'diskussion' ? Object.entries(table.pointers).filter(([from, to]) => byId[from] && byId[to]) : []
-  const highlighted = table.tied && table.step === 'diskussion' ? table.tied : table.caught ? [table.caught] : []
+  const highlighted = table.accusation ? [table.accusation.accused] : table.tied && table.step === 'diskussion' ? table.tied : table.caught ? [table.caught] : []
   const revealing = shownVotes !== null && shownVotes !== undefined
   const votesDrawnMs = voteArrows.length * VOTE_STEP_MS
   // Avslöjandet: lampan släcks, spotlight på impostern, sedan stämpeln. Inte när omgången avbröts.
@@ -395,9 +395,10 @@ function SeatMenu({
   const throws = useThrows()
   const wait = useThrowWait(throws?.lastThrowAt ?? null)
   const canThrow = !!throws?.allowed && throws.targets.some((target) => target.id === seatId)
-  const canPoint = table.step === 'diskussion' && table.order.includes(meId)
+  const canPoint = table.step === 'diskussion' && table.order.includes(meId) && !table.accusation
+  const canAccuseHere = canAccuse(table, meId)
   const pointing = table.pointers[meId] === seatId
-  if (!canThrow && !canPoint) {
+  if (!canThrow && !canPoint && !canAccuseHere) {
     return (
       <div className={className} style={style} aria-label={name}>
         {children}
@@ -406,11 +407,23 @@ function SeatMenu({
   }
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className={className} style={style} aria-label={`${name}: kasta något${canPoint ? ' eller peka ut' : ''}`}>
+      <PopoverTrigger className={className} style={style} aria-label={`${name}: ${canAccuseHere ? 'anklaga, ' : ''}${canPoint ? 'peka ut, ' : ''}kasta något`}>
         {children}
       </PopoverTrigger>
       <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] p-3" side="top">
         <p className="text-center font-heading font-bold">{name}</p>
+        {canAccuseHere && (
+          <button
+            type="button"
+            className="mt-1 mb-2 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary-button px-3 font-heading font-bold text-primary-foreground shadow-soft-sm"
+            onClick={() => {
+              onMove({ type: 'accuse', target: seatId })
+              setOpen(false)
+            }}
+          >
+            Anklaga!
+          </button>
+        )}
         {canPoint && (
           <div className="space-y-1">
             <button

@@ -59,7 +59,7 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
       },
       {
         gameId: 'imposterjakten',
-        text: 'Alla utom en får samma hemliga ord. Ni säger ett ord var, två varv, och röstar sedan om vem som bluffar. Sitter ni tillsammans säger ni orden högt.',
+        text: 'Alla utom en får samma hemliga ord. Ni säger ett ord var, tre varv, och röstar sedan om vem som bluffar. Sitter ni tillsammans säger ni orden högt.',
       },
     ],
     faq: [

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Check, CircleStop, RefreshCw, Send } from 'lucide-react'
 import { Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
-import { DiscussionStep, FacitStep, GuessStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
+import { AccusationStep, DiscussionStep, FacitStep, GuessStep, VotingStep } from '@/components/imposterjakten/VoteSteps'
 import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
@@ -17,6 +17,8 @@ import {
   canChangeWord,
   clueRound,
   CLUE_ROUNDS,
+  ACCUSE_SECONDS,
+  canAccuse,
   COUNTDOWN_SECONDS,
   currentTurn,
   MAX_CLUE_LENGTH,
@@ -26,36 +28,44 @@ import { hasFinePointer } from '@/lib/device'
 import { playTurn } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
-// Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
-// varv. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
+// Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, tre
+// varv. Efter andra varvet kan vem som helst anklaga någon. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
 // poängen. Kortet går att visa och dölja hela tiden. Värden kan avbryta omgången (inga poäng, den räknas inte).
 export function ImposterjaktenView(props: ImposterViewProps) {
   const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound } = props
   const [confirmAbort, setConfirmAbort] = useState(false)
   const table = state.imposter
   // Nedräkningen till omröstningen varnar på samma sätt som tiden i de andra spelen.
-  const countdown = useTimeWarning(state.deadline, clockOffset, COUNTDOWN_SECONDS, false)
+  const accusing = table?.accusation != null
+  const totalSeconds = accusing ? ACCUSE_SECONDS : COUNTDOWN_SECONDS
+  const countdown = useTimeWarning(state.deadline, clockOffset, totalSeconds, false)
   if (!table) return null
   const inRound = table.order.includes(me.id)
   const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
 
   return (
     <Wide>
-      {table.countdownStarted && table.step === 'diskussion' && (
+      {(accusing || (table.countdownStarted && table.step === 'diskussion')) && (
         <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />
       )}
       <RoundTimer
         state={state}
         clockOffset={clockOffset}
         label="Omgång"
-        totalSeconds={COUNTDOWN_SECONDS}
-        warning={table.step === 'diskussion' ? countdown.warning : 'normal'}
+        totalSeconds={totalSeconds}
+        warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
       />
       <MyCard mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
 
-      {table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
-      {table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
-      {table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
+      {table.failedAccusation && !accusing && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
+          Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.
+        </p>
+      )}
+      {accusing && <AccusationStep {...stepProps} />}
+      {!accusing && table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
+      {!accusing && table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
+      {!accusing && table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
       {table.step === 'rostning' && <VotingStep {...stepProps} />}
       {table.step === 'gissning' && <GuessStep {...stepProps} />}
       {table.step === 'facit' && <FacitStep {...stepProps} />}
@@ -120,7 +130,7 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
   )
 }
 
-// Ett ord var i turordning, två varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
+// Ett ord var i turordning, tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
 function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onMove, onTyping, onSkipTurn }: StepProps) {
   const turn = currentTurn(table)
@@ -169,6 +179,9 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, typing, onM
         <div className="sr-only" role="status">
           {line}
         </div>
+      )}
+      {canAccuse(table, me.id) && (
+        <p className="text-center text-sm font-semibold text-muted-foreground">Misstänker du någon? Tryck på spelaren och välj Anklaga!</p>
       )}
       {/* Om den som har tur har glömt att trycka Klar. */}
       {isHost && table.aloud && !myTurn && (

@@ -10,6 +10,10 @@ import {
   dealRound,
   DEFAULT_SETTINGS,
   findWord,
+  ACCUSE_AFTER_ROUNDS,
+  ACCUSE_SECONDS,
+  canAccuse,
+  CLUE_ROUNDS,
   COUNTDOWN_SECONDS,
   MIN_DISCUSSION_SECONDS,
   INNOCENTS_WIN,
@@ -101,7 +105,7 @@ function playRound(host: HostState, ids = ABC): HostState {
 // Spelar alla turer med ett eget ord per tur.
 function playClues(host: HostState, ids = ABC): HostState {
   let next = host
-  for (let i = 0; i < ids.length * 2; i++) {
+  for (let i = 0; i < ids.length * CLUE_ROUNDS; i++) {
     const turn = currentTurn(table(next))!
     next = hostMove(next, turn, { type: 'clue', word: `ord${i}` }, ids, NOW)
   }
@@ -176,7 +180,7 @@ describe('Imposterjakten: ord och roller', () => {
   it('ger inget kort till den som inte är med i omgången', () => {
     const { table, secrets } = dealRound(ABC, DEFAULT_SETTINGS, [], () => 0)
     expect(cardFor(secrets, table, 'z')).toBeNull()
-    expect(myImposterCard(secrets, table, 'z')).toEqual({ card: null, rejectedAt: null, ready: false, vote: null })
+    expect(myImposterCard(secrets, table, 'z')).toEqual({ card: null, rejectedAt: null, ready: false, vote: null, accuseVote: null })
   })
 
   it('väljer ord som inte visats, och börjar om med de senaste spärrade när alla använts', () => {
@@ -299,21 +303,21 @@ describe('Imposterjakten: en omgång', () => {
     expect(table(host).step).toBe('ledtradar')
   })
 
-  it('går i turordning två varv från en slumpad startspelare', () => {
+  it('går i turordning tre varv från en slumpad startspelare', () => {
     // Slumptalen: ord, imposter, startspelare (0,4 av tre spelare = den andra).
     let host = readAll(start(ABC, {}, sequence(0, 0, 0.4)))
     expect(table(host).order).toEqual(['b', 'c', 'a'])
-    expect(totalTurns(table(host))).toBe(6)
+    expect(totalTurns(table(host))).toBe(9)
     const turns: string[] = []
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 9; i++) {
       const turn = currentTurn(table(host))!
       turns.push(turn)
-      expect(clueRound(table(host))).toBe(i < 3 ? 1 : 2)
+      expect(clueRound(table(host))).toBe(Math.floor(i / 3) + 1)
       host = hostMove(host, turn, i === 2 ? { type: 'pass' } : { type: 'clue', word: `ord${i}` }, ABC, NOW)
     }
-    expect(turns).toEqual(['b', 'c', 'a', 'b', 'c', 'a'])
+    expect(turns).toEqual(['b', 'c', 'a', 'b', 'c', 'a', 'b', 'c', 'a'])
     expect(table(host).step).toBe('diskussion')
-    expect(table(host).clues.map((clue) => clue.word)).toEqual(['ord0', 'ord1', null, 'ord3', 'ord4', 'ord5'])
+    expect(table(host).clues.map((clue) => clue.word)).toEqual(['ord0', 'ord1', null, 'ord3', 'ord4', 'ord5', 'ord6', 'ord7', 'ord8'])
     expect(table(host).clues[2].kind).toBe('pass')
   })
 
@@ -561,6 +565,121 @@ describe('Imposterjakten: diskussionen och omröstningen', () => {
     const host = start(ABCD)
     expect(ready(host, 'a')).toBe(host)
     expect(vote(host, 'a', 'b')).toBe(host)
+  })
+})
+
+describe('Imposterjakten: Anklaga', () => {
+  // Fram till tredje varvet, med fyra spelare. a är impostern (slumpen 0).
+  function toThirdRound(): HostState {
+    let host = readAll(start(ABCD), ABCD)
+    for (let i = 0; i < ABCD.length * ACCUSE_AFTER_ROUNDS; i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+    return host
+  }
+  const answer = (host: HostState, id: string, yes: boolean) => hostMove(host, id, { type: 'accuseVote', yes }, ABCD, NOW + 1000)
+
+  it('går inte förrän andra varvet är klart', () => {
+    let host = readAll(start(ABCD), ABCD)
+    for (let i = 0; i < ABCD.length * ACCUSE_AFTER_ROUNDS - 1; i++) {
+      expect(canAccuse(table(host), 'b')).toBe(false)
+      expect(hostMove(host, 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)).toBe(host)
+      host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+    }
+    host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+    expect(canAccuse(table(host), 'b')).toBe(true)
+    expect(clueRound(table(host))).toBe(3)
+  })
+
+  it('startar en snabb omröstning för alla utom den anklagade, och allt annat står still', () => {
+    const host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
+    expect(table(host).accusation).toEqual({ accuser: 'b', accused: 'a', answered: 0, voters: 3 })
+    expect(host.state.deadline).toBe(NOW + ACCUSE_SECONDS * 1000)
+    const turn = currentTurn(table(host))!
+    expect(hostMove(host, turn, { type: 'pass' }, ABCD, NOW)).toBe(host)
+    expect(answer(host, 'a', true)).toBe(host)
+    const once = answer(host, 'b', true)
+    expect(table(once).accusation?.answered).toBe(1)
+    expect(answer(once, 'b', false)).toBe(once)
+    expect(myImposterCard(secretsOf(once), table(once), 'b').accuseVote).toBe(true)
+    // Svaren är hemliga och finns inte i tillståndet.
+    expect(JSON.stringify(once.state)).not.toContain('accuseVotes')
+  })
+
+  it('leder till sista gissningen med majoritet ja på impostern', () => {
+    let host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
+    host = answer(answer(answer(host, 'b', true), 'c', true), 'd', false)
+    expect(table(host).step).toBe('gissning')
+    expect(table(host).caught).toBe('a')
+    expect(table(host).votes).toEqual({ b: 'a', c: 'a' })
+    expect(table(host).accusation).toBeNull()
+    expect(host.state.deadline).toBeNull()
+    const done = hostMove(host, 'a', { type: 'giveUp' }, ABCD, NOW)
+    expect(table(done).outcome?.points).toEqual({ b: 2, c: 2, d: 2 })
+  })
+
+  it('låter impostern komma undan med majoritet ja på en oskyldig', () => {
+    let host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)
+    host = answer(answer(answer(host, 'a', true), 'b', true), 'd', false)
+    expect(table(host).outcome?.kind).toBe('undan')
+    expect(table(host).outcome?.points).toEqual({ a: IMPOSTER_ESCAPES })
+  })
+
+  it('fortsätter där det var utan majoritet, och den som anklagade kan inte anklaga igen', () => {
+    const before = toThirdRound()
+    const turn = currentTurn(table(before))
+    let host = hostMove(before, 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
+    host = answer(answer(answer(host, 'b', true), 'c', false), 'd', false)
+    expect(table(host).accusation).toBeNull()
+    expect(table(host).step).toBe('ledtradar')
+    expect(currentTurn(table(host))).toBe(turn)
+    expect(table(host).failedAccusation).toBe('a')
+    expect(canAccuse(table(host), 'b')).toBe(false)
+    expect(canAccuse(table(host), 'c')).toBe(true)
+    expect(hostMove(host, 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)).toBe(host)
+  })
+
+  it('räknar den som inte svarat som nej när tiden är ute', () => {
+    let host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
+    host = answer(host, 'b', true)
+    const late = hostDeadline(host, host.state.deadline!, host.state.deadline!, ABCD)
+    expect(table(late).accusation).toBeNull()
+    expect(table(late).step).toBe('ledtradar')
+    expect(table(late).accusers).toEqual(['b'])
+  })
+
+  it('kräver mer än hälften: lika många ja som nej räcker inte', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e']
+    let host = readAll(start(ids), ids)
+    for (let i = 0; i < ids.length * ACCUSE_AFTER_ROUNDS; i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ids, NOW)
+    host = hostMove(host, 'b', { type: 'accuse', target: 'a' }, ids, NOW)
+    for (const [id, yes] of [['b', true], ['c', true], ['d', false], ['e', false]] as const) host = hostMove(host, id, { type: 'accuseVote', yes }, ids, NOW)
+    expect(table(host).step).toBe('ledtradar')
+    expect(table(host).failedAccusation).toBe('a')
+  })
+
+  it('går under diskussionen, pausar nedräkningen och fortsätter den efteråt', () => {
+    let host = playClues(readAll(start(ABCD), ABCD), ABCD)
+    host = ['a', 'b', 'c'].reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW), host)
+    const deadline = host.state.deadline!
+    host = hostMove(host, 'd', { type: 'accuse', target: 'b' }, ABCD, NOW + 10_000)
+    expect(host.state.deadline).toBe(NOW + 10_000 + ACCUSE_SECONDS * 1000)
+    host = ['a', 'c', 'd'].reduce((next, id) => hostMove(next, id, { type: 'accuseVote', yes: false }, ABCD, NOW + 12_000), host)
+    expect(table(host).step).toBe('diskussion')
+    expect(host.state.deadline).toBe(NOW + 12_000 + (deadline - (NOW + 10_000)))
+  })
+
+  it('går inte när omröstningen har öppnats eller efter lika röster', () => {
+    const voting = toVoting(start(ABCD), ABCD)
+    expect(table(voting).step).toBe('rostning')
+    expect(canAccuse(table(voting), 'b')).toBe(false)
+  })
+
+  it('faller om den anklagade lämnar, och räknar om när någon som ska svara lämnar', () => {
+    const host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)
+    const gone = hostPresence(host, ['a', 'b', 'd'], NOW + 1000)
+    expect(table(gone).accusation).toBeNull()
+    expect(table(gone).accusers).toEqual([])
+    const fewer = hostPresence(host, ['a', 'b', 'c'], NOW + 1000)
+    expect(table(fewer).accusation?.voters).toBe(2)
   })
 })
 

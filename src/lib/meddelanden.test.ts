@@ -113,6 +113,10 @@ describe('gissningar och kortdrag', () => {
     expect(parseMove({ id: 'a', move: { type: 'said' } })?.move).toEqual({ type: 'said' })
     expect(parseMove({ id: 'a', move: { type: 'said', word: 'regn' } })?.move).toEqual({ type: 'said', word: 'regn' })
     expect(parseMove({ id: 'a', move: { type: 'said', word: 5 } })?.move).toEqual({ type: 'said' })
+    expect(parseMove({ id: 'a', move: { type: 'accuse', target: 'b' } })?.move).toEqual({ type: 'accuse', target: 'b' })
+    expect(parseMove({ id: 'a', move: { type: 'accuse', target: 2 } })).toBeNull()
+    expect(parseMove({ id: 'a', move: { type: 'accuseVote', yes: true } })?.move).toEqual({ type: 'accuseVote', yes: true })
+    expect(parseMove({ id: 'a', move: { type: 'accuseVote', yes: 'ja' } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 'regn' } })?.move).toEqual({ type: 'clue', word: 'regn' })
     expect(parseMove({ id: 'a', move: { type: 'clue' } })).toBeNull()
     expect(parseMove({ id: 'a', move: { type: 'clue', word: 5 } })).toBeNull()
@@ -148,11 +152,11 @@ describe('händer och värdbyten', () => {
   })
 
   it('godtar mitt kort i Imposterjakten, eller inget kort', () => {
-    const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null, ready: false, vote: null }
+    const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null, ready: false, vote: null, accuseVote: null }
     expect(parseImposterCard({ to: 'a', from: 'b', card: innocent })).toEqual({ to: 'a', from: 'b', card: innocent })
-    const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12, ready: true, vote: 'b' }
+    const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12, ready: true, vote: 'b', accuseVote: null }
     expect(parseImposterCard({ to: 'a', card: imposter })?.card).toEqual(imposter)
-    const empty = { card: null, rejectedAt: null, ready: false, vote: null }
+    const empty = { card: null, rejectedAt: null, ready: false, vote: null, accuseVote: null }
     expect(parseImposterCard({ to: 'a', card: empty })?.card.card).toBeNull()
     expect(parseImposterCard({ to: 'a', card: { ...empty, card: { role: 'kung' } } })).toBeNull()
     expect(parseImposterCard({ to: 'a', card: { ...empty, card: { role: 'oskyldig', word: 3, category: null } } })).toBeNull()
@@ -250,6 +254,9 @@ describe('Imposterjakten i läget', () => {
       tied: null,
       tieVotes: null,
       pointers: {},
+      accusation: null,
+      accusers: [],
+      failedAccusation: null,
       caught: null,
       outcome: null,
     }
