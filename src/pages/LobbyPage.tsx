@@ -259,7 +259,12 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   }
 
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
-  const { setInMatch, setLeaveInMatch, setLeaveGuard } = useLayout()
+  const { setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice } = useLayout()
+  // Versionsbeskedet ersätter raden om en ny version i sidhuvudet.
+  useEffect(() => {
+    setVersionNotice(version !== 'ok')
+    return () => setVersionNotice(false)
+  }, [version, setVersionNotice])
   const inMatch =
     status === 'ready' && (state.phase === 'guessing' || state.phase === 'reveal' || state.phase === 'playing')
   // Testa själv: ensam i en provomgång går det att lämna via loggan, efter en fråga.
