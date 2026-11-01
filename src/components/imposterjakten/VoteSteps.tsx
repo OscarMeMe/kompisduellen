@@ -37,8 +37,8 @@ function presentIds(table: ImposterTable, online: StepProps['online']): string[]
 function Center({ title, line, tone }: { title: string; line?: string; tone?: string }) {
   return (
     <>
-      <span className={cn('font-heading text-lg leading-tight font-bold break-words sm:text-2xl', tone)}>{title}</span>
-      {line && <span className="text-sm font-semibold text-muted-foreground tabular-nums sm:text-base">{line}</span>}
+      <span className={cn('font-heading text-base leading-tight font-bold break-words sm:text-2xl sm:short:text-lg', tone)}>{title}</span>
+      {line && <span className="text-xs font-semibold text-muted-foreground tabular-nums sm:text-base sm:short:text-xs">{line}</span>}
     </>
   )
 }

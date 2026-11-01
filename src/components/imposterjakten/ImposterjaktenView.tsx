@@ -50,7 +50,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
 
   return (
-    <Wide>
+    <Wide tight>
       {(accusing || (table.countdownStarted && table.step === 'diskussion')) && (
         <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />
       )}
@@ -143,7 +143,7 @@ function Instruction({ text, act }: { text: string; act: boolean }) {
     <p
       role="status"
       className={cn(
-        'flex min-h-16 items-center justify-center text-center font-heading text-xl leading-tight font-bold text-balance sm:min-h-18 sm:text-3xl',
+        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-18 sm:text-3xl',
         act && 'text-primary-button',
       )}
     >
@@ -190,12 +190,12 @@ function CluesCenter({ table, state, meId }: { table: ImposterTable; state: Impo
   const thinker = turn ? state.players[turn] : undefined
   return (
     <>
-      <span className="text-sm font-semibold text-muted-foreground sm:text-base">
+      <span className="text-xs font-semibold text-muted-foreground sm:text-base sm:short:text-xs">
         Varv {clueRound(table)} av {CLUE_ROUNDS}
       </span>
       <span
         key={table.turn}
-        className={cn('font-heading text-lg leading-tight font-bold break-words motion-safe:animate-pop sm:text-2xl', myTurn && 'text-primary-button')}
+        className={cn('font-heading text-base leading-tight font-bold break-words motion-safe:animate-pop sm:text-2xl sm:short:text-lg', myTurn && 'text-primary-button')}
       >
         {myTurn ? 'Din tur!' : `${thinker?.name ?? 'Någon'}s tur`}
       </span>
@@ -218,7 +218,7 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onT
   return (
     <>
       {myTurn ? (
-        <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={line}>
+        <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={<span className="sr-only">{line}</span>}>
           {/* Ny ruta för varje tur, så att texten börjar om. */}
           {table.aloud ? (
             <SaidTurn key={table.turn} onDone={(word) => onMove(word ? { type: 'said', word } : { type: 'said' })} />
@@ -338,10 +338,10 @@ function WriteTurn({
         autoCapitalize="off"
         spellCheck={false}
         autoFocus={hasFinePointer()}
-        className="text-center font-heading text-2xl font-bold"
+        className="text-center font-heading text-xl font-bold placeholder:text-sm placeholder:font-semibold sm:text-2xl"
       />
       <p
-        className={cn('min-h-5 text-center text-sm', spaces || rejected ? 'font-semibold text-primary' : 'text-muted-foreground')}
+        className={cn('min-h-5 text-center text-sm', spaces || rejected ? 'font-semibold text-primary' : 'text-muted-foreground tiny:hidden')}
         role="status"
       >
         {spaces ? 'Skriv ett ord, utan mellanslag.' : rejected ? 'Det ordet går inte. Välj ett annat.' : 'Sammansatta ord går bra.'}

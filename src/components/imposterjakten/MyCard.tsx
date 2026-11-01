@@ -42,12 +42,12 @@ export function MyCard({ mine, inRound, compact = false }: { mine: MyImposterCar
     return (
       <div
         className={cn(
-          'flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 shadow-soft-sm',
+          'flex items-center justify-between gap-3 rounded-lg border-2 px-3 py-1 shadow-soft-sm sm:px-4 sm:py-2.5',
           !shown ? 'border-foreground bg-foreground text-background' : innocent ? 'border-accent bg-mint-soft' : 'border-primary bg-coral-soft',
         )}
       >
         {!shown ? (
-          <p className="font-heading font-bold">Ditt kort är dolt</p>
+          <p className="font-heading text-sm font-bold whitespace-nowrap sm:text-base">Ditt kort är dolt</p>
         ) : (
           <div className="min-w-0 text-left motion-safe:animate-pop">
             <p className="flex items-center gap-1.5 text-sm font-bold">

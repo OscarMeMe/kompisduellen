@@ -7,6 +7,8 @@
 @custom-variant dark (&:is(.dark *));
 /* Låg skärm (t.ex. en bärbar dator på 1366×768): mindre bild, rubrik och mellanrum i spelvyerna, så att svarsdelen syns. */
 @custom-variant short (@media (max-height: 860px));
+/* Riktigt låga telefoner (högst 700 px). Imposterjaktens bord krymper så att svarsdelen får plats. */
+@custom-variant tiny (@media (max-height: 700px));
 
 @theme inline {
     /* Rubriker och knappar i Syne, brödtext i Plus Jakarta Sans */

@@ -46,6 +46,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Rundning: knappar och fält `rounded-md` (1rem), kort `rounded-lg` (1.25rem), etiketter `rounded-full`.
 - Kort: `rounded-lg border bg-card shadow-soft`. Vinnare markeras med `bg-mint-soft`, ledare i topplistan med `bg-sun-soft`.
 - `Button` (`size="lg"` för stora knappar, 3.25rem hög) och `Input` har redan designens mått, så lägg inte till egna höjder eller rundningar på dem.
+- `tiny:` gäller riktigt låga telefoner (högst 700 px), där Imposterjaktens bord krymper mest. På mobil blir bordet ovalt när höjden tar slut, så att allt får plats ovanför svarsdelen.
 - `short:` gäller låga skärmar (högst 860 px, t.ex. en bärbar dator på 1366×768). Spelvyerna använder den för mindre bild, rubrik och mellanrum, så att svarsdelen (`AnswerDock`, fast i nederkant) och knappen Lås svaret alltid syns utan scrollning. Frågebildens storlek följer skärmhöjden, och bilden går att trycka på för att se den större.
 - `animate-pop` för saker som dyker upp. Små lekfulla rörelser: `animate-wiggle` (vickar, skakar inte), `animate-slot` (rullar in som på en spelautomat), `animate-hop`, `animate-wave`, `animate-grow` (staplar som växer upp, med `origin-bottom`) och `animate-confetti` (`Konfetti`, med `delay` för att vänta). `animate-frame-pulse` är ramens puls när tiden nästan är ute (`TimeWarningFrame`). Fler korta rörelser:
   - `animate-flip`: ett kort vänds från baksidan (`FlipCard` i `components/kort/`, Kortkaos insända kort vänds upp ett i taget)
