@@ -27,13 +27,12 @@ describe('bilderna i Gissa priset', () => {
 })
 
 describe('exempelfrågorna på startsidan', () => {
-  it('är tre frågor med en bild som visar just saken', () => {
+  it('är tre frågor med en bild, och en kort rad under bilden när den inte visar just saken', () => {
     expect(EXAMPLE_ITEMS).toHaveLength(3)
     for (const example of EXAMPLE_ITEMS) {
       expect(example.image, example.id).toMatch(/^\/prisbilder\/.+\.webp$/)
       expect(example.imageSource, example.id).toMatch(/^https:\/\//)
-      // Bilden ska visa just saken, så ingen anteckning om att den visar något annat.
-      expect(example.imageNote, example.id).toBeUndefined()
+      if (example.imageNote) expect(example.imageNote.split(' ').length, example.id).toBeLessThanOrEqual(7)
       // Exempelrundans ledtråd får inte avslöja priset.
       expect(example.exempelLedtrad ?? example.clue, example.id).not.toContain(String(example.priceSek))
     }
@@ -41,7 +40,7 @@ describe('exempelfrågorna på startsidan', () => {
 
   it('kommer i den ordning som exempel anger (1, 2, 3)', () => {
     expect(EXAMPLE_ITEMS.map((item) => item.exempel)).toEqual([1, 2, 3])
-    expect(EXAMPLE_ITEMS.map((item) => item.id)).toEqual(['hemgymnastikbok-1902', 'piggelin-1972', 'game-boy-1990'])
+    expect(EXAMPLE_ITEMS.map((item) => item.id)).toEqual(['fortkorningsboter-1900', 'game-boy-1990', 'prinsessan-lilians-svit-2008'])
   })
 })
 
