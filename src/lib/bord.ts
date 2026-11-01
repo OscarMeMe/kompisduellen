@@ -16,8 +16,8 @@ export type Seat = {
 export const SMALL_SEATS_FROM = 7
 
 // Ringens radie i procent av rutans bredd och höjd.
-const RADIUS_X = 40
-const RADIUS_Y = 39
+const RADIUS_X = 43
+const RADIUS_Y = 42
 
 export function seatLayout(order: readonly string[], meId: string): Seat[] {
   const start = Math.max(0, order.indexOf(meId))
