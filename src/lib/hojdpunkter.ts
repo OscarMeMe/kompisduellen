@@ -150,7 +150,7 @@ function furthestMiss(state: GameState, pick: Pick): Highlight | null {
     const name = nameOf(state, g.id)
     const item = lowerFirst(rules.itemName(g.round.itemId))
     const guessed = rules.formatValue(g.guess)
-    const answer = rules.formatValue(g.round.target)
+    const answer = rules.formatTarget?.(g.round.target, g.round.itemId) ?? rules.formatValue(g.round.target)
     text = item
       ? pick(
           [

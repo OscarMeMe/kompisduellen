@@ -22,17 +22,19 @@ describe('tolkning av det man skriver', () => {
     expect(parseTypedNumber('007')).toBe(7)
   })
 
-  it('komma eller punkt ger ören under en krona', () => {
+  it('komma eller punkt ger ören', () => {
     expect(parseTypedNumber('0,24')).toBe(0.24)
     expect(parseTypedNumber('0.24')).toBe(0.24)
     expect(parseTypedNumber(',5')).toBe(0.5)
     expect(parseTypedNumber('0,05')).toBe(0.05)
   })
 
-  it('från en krona avrundas till hela kronor', () => {
-    expect(parseTypedNumber('4,5')).toBe(5)
-    expect(parseTypedNumber('4,49')).toBe(4)
-    expect(parseTypedNumber('1,25')).toBe(1)
+  it('behåller örena från en krona och uppåt, med komma eller punkt', () => {
+    expect(parseTypedNumber('1,25')).toBe(1.25)
+    expect(parseTypedNumber('1.25')).toBe(1.25)
+    expect(parseTypedNumber('4,5')).toBe(4.5)
+    expect(parseTypedNumber('0,50')).toBe(0.5)
+    expect(parseTypedNumber('0.50')).toBe(0.5)
   })
 
   it('räknar bara två decimaler och ignorerar fler kommatecken', () => {
@@ -41,8 +43,8 @@ describe('tolkning av det man skriver', () => {
   })
 
   it('punkt räknas som decimaltecken, inte tusentalsavgränsare', () => {
-    // "1.500" blir 1,50 kr och avrundas till 2 kr. Rutan visar det direkt som "1,50", så man ser vad som hände.
-    expect(parseTypedNumber('1.500')).toBe(2)
+    // "1.500" blir 1,50 kr. Rutan visar det direkt som "1,50", så man ser vad som hände.
+    expect(parseTypedNumber('1.500')).toBe(1.5)
     expect(formatTypedNumber('1.500')).toBe('1,50')
   })
 
@@ -102,7 +104,11 @@ describe('giltiga gissningar', () => {
 describe('visning i kronor', () => {
   it('ören under en krona, annars hela kronor med tusental', () => {
     expect(formatSek(0.24)).toBe('24 öre')
-    expect(formatSek(4.75)).toBe('5 kr')
+    expect(formatSek(0.5)).toBe('50 öre')
+    expect(formatSek(1.25)).toBe('1,25 kr')
+    expect(formatSek(4.75)).toBe('4,75 kr')
+    expect(formatSek(13.7)).toBe('13,70 kr')
+    expect(formatSek(1)).toBe('1 kr')
     expect(plain(formatSek(67_000_000))).toBe('67 000 000 kr')
   })
 

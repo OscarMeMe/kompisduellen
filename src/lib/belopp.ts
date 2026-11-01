@@ -1,6 +1,7 @@
 // Belopp i Gissa priset: tolkning av gissningar och visning av kronor.
 // Man skriver alltid i kronor. Komma eller punkt ger ören, t.ex. 0,24 = 24 öre.
-// Ören räknas bara under en krona. Från en krona och uppåt avrundas till hela kronor (4,75 = 5 kr).
+// Gissningar och priser visas som de är (1,25 kr). Poängen räknas däremot i hela kronor från en krona (roundSek),
+// se scoredPoints i gissa-priset.ts.
 // Rena funktioner utan React, så att de är lätta att testa och läsa.
 
 // Högsta och lägsta gissning i kronor.
@@ -27,14 +28,14 @@ export function cleanTypedAmount(text: string): string {
   return text.replace(/[^\d\s.,]/g, '')
 }
 
-// "1 500" -> 1500, "4,5" -> 5 och "0.24" -> 0.24. Tom ruta ger NaN.
+// "1 500" -> 1500, "4,5" -> 4.5 och "0.24" -> 0.24. Tom ruta ger NaN.
 export function parseTypedNumber(text: string): number {
   const { whole, decimals } = splitTyped(text)
   if (!whole && !decimals) return Number.NaN
-  return roundSek(Number(`${whole || '0'}.${decimals || '0'}`))
+  return Number(`${whole || '0'}.${decimals || '0'}`)
 }
 
-// Hela kronor från en krona och uppåt, annars hela ören. Gäller både gissningar och rätt pris.
+// Hela kronor från en krona och uppåt, annars hela ören. Så räknas poängen i Gissa priset.
 export function roundSek(value: number): number {
   return value >= 1 ? Math.round(value) : Math.round(value * 100) / 100
 }
@@ -53,13 +54,14 @@ export function isValidPrice(value: number): boolean {
   return Number.isFinite(value) && value >= MIN_PRICE && value <= MAX_PRICE && hasMaxTwoDecimals
 }
 
-// "0.24" -> "24 öre", "4.75" -> "5 kr" och "67000000" -> "67 000 000 kr"
+// "0.24" -> "24 öre", "1.25" -> "1,25 kr", "13.7" -> "13,70 kr" och "67000000" -> "67 000 000 kr"
 export function formatSek(value: number): string {
   if (value < 1) return `${Math.round(value * 100)} öre`
-  return `${Math.round(value).toLocaleString('sv-SE')} kr`
+  if (!Number.isInteger(value)) return formatExactSek(value)
+  return `${value.toLocaleString('sv-SE')} kr`
 }
 
-// Det exakta priset med ören, t.ex. "2,44 kr". Visas under det avrundade priset.
+// Ett belopp med ören, t.ex. "2,44 kr".
 export function formatExactSek(value: number): string {
   return `${value.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`
 }

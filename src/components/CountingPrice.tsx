@@ -7,8 +7,8 @@ export function CountingPrice({ target }: { target: number }) {
   const value = useCountUp(target, 1000)
   return (
     <>
-      {/* Avrundas som priset (ören under en krona, annars hela kronor), så att det aldrig står 100 öre på vägen. */}
-      <span aria-hidden>{formatSek(roundSek(value))}</span>
+      {/* På vägen ören under en krona, annars hela kronor, så att det aldrig står 100 öre. Sist det exakta priset. */}
+      <span aria-hidden>{formatSek(value >= target ? target : roundSek(value))}</span>
       <span className="sr-only">{formatSek(target)}</span>
     </>
   )

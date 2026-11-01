@@ -70,6 +70,12 @@ export function pricePoints(guess: number, price: number): number {
   return Math.min(100, Math.max(0, Math.round(points)))
 }
 
+// Poängen i spelet: från en krona räknas både priset och gissningen i hela kronor, så 2 kr ger fullpoäng när priset
+// är 2,44 kr. Under en krona räknas ören.
+export function scoredPoints(guess: number, price: number): number {
+  return pricePoints(roundSek(guess), roundSek(price))
+}
+
 // Hur många tiopotenser fel gissningen är (0 = exakt, 1 = tio gånger fel). Används för att jämföra hur långt
 // ifrån olika gissningar var (insikterna), med samma ordning som poängen.
 export function priceDistance(guess: number, price: number): number {
@@ -89,7 +95,7 @@ export const priceRules: GameRules = {
     'Inom 5 procent fel ger 100 poäng. 10 procent fel ger 85 och 25 procent fel ger 60.',
     'En och en halv gång fel ger 40. Halva eller dubbla priset ger 25, tre gånger fel ger 10 och fyra gånger fel eller mer ger 0.',
     'Poängen räknas ut mjukt mellan de här stegen, så 20 procent fel ligger mellan 85 och 60.',
-    'Från 1 krona räknas priset i hela kronor, så 2,44 kr räknas som 2 kr. Under 1 krona räknas ören.',
+    'Från 1 krona räknas priset och gissningen i hela kronor, så 2,44 kr räknas som 2 kr. Under 1 krona räknas ören.',
   ],
   isValidGuess: isValidPrice,
 
@@ -111,14 +117,16 @@ export const priceRules: GameRules = {
   scoreRound(guesses, itemId, price = findPriceItem(itemId)?.priceSek ?? 0) {
     const target = roundSek(price)
     const points: Record<string, number> = {}
-    for (const [id, guess] of Object.entries(guesses)) points[id] = pricePoints(guess, target)
+    for (const [id, guess] of Object.entries(guesses)) points[id] = scoredPoints(guess, target)
     return { target, points }
   },
 
-  distance: priceDistance,
+  distance: (guess, target) => priceDistance(roundSek(guess), roundSek(target)),
   // Hälften eller dubbla priset (25 poäng) eller längre ifrån.
   notableMiss: Math.log10(2),
-  isBullseye: (guess, target) => pricePoints(guess, target) === 100,
+  isBullseye: (guess, target) => scoredPoints(guess, target) === 100,
   formatValue: formatSek,
+  // Rätt pris som det står i facit, med ören (target är i hela kronor från en krona).
+  formatTarget: (target, itemId) => formatSek(findPriceItem(itemId)?.priceSek ?? target),
   itemName: (itemId) => findPriceItem(itemId)?.name ?? null,
 }
