@@ -26,6 +26,7 @@ import {
   MAX_CLUE_LENGTH,
   type ImposterTable,
 } from '@/lib/imposterjakten'
+import { latestClue } from '@/lib/bord'
 import { hasFinePointer } from '@/lib/device'
 import { playTurn } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
@@ -144,7 +145,7 @@ function Instruction({ text, act }: { text: string; act: boolean }) {
     <p
       role="status"
       className={cn(
-        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-18 sm:text-3xl',
+        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-10 sm:text-2xl',
         act && 'text-primary-button',
       )}
     >
@@ -184,23 +185,17 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
   )
 }
 
-// Mitt på bordet under ledtrådsvarven: vilket varv det är och vems tur.
+// Mitt på bordet under ledtrådsvarven: det senaste ordet stort och vem som gav det. Varv och tur står ovanför bordet.
 function CluesCenter({ table, state, meId }: { table: ImposterTable; state: ImposterViewProps['state']; meId: string }) {
-  const turn = currentTurn(table)
-  const myTurn = turn === meId
-  const thinker = turn ? state.players[turn] : undefined
+  const latest = latestClue(table.clues)
+  if (!latest) {
+    return <span className="px-2 font-heading text-sm leading-tight font-bold text-balance sm:text-lg">Första ordet kommer snart</span>
+  }
   return (
-    <>
-      <span className="text-xs font-semibold text-muted-foreground sm:text-base sm:short:text-xs">
-        Varv {clueRound(table)} av {CLUE_ROUNDS}
-      </span>
-      <span
-        key={table.turn}
-        className={cn('font-heading text-base leading-tight font-bold break-words motion-safe:animate-pop sm:text-2xl sm:short:text-lg', myTurn && 'text-primary-button')}
-      >
-        {myTurn ? 'Din tur!' : `${thinker?.name ?? 'Någon'}s tur`}
-      </span>
-    </>
+    <span key={table.turn} className="flex max-w-full flex-col items-center motion-safe:animate-pop">
+      <span className={cn('max-w-full font-heading leading-tight font-bold break-words', latest.text.length > 11 ? 'text-base sm:text-xl' : 'text-xl sm:text-3xl')}>{latest.text}</span>
+      <span className="max-w-full truncate text-xs font-semibold sm:text-sm">{latest.player === meId ? 'du' : (state.players[latest.player]?.name ?? 'Någon')}</span>
+    </span>
   )
 }
 

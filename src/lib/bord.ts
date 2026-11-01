@@ -87,6 +87,17 @@ export function clueLine(clues: readonly { kind: string; word: string | null }[]
   return clues.map((clue) => clue.word ?? (clue.kind === 'pass' ? 'pass' : '✓')).join(' · ')
 }
 
+// Etiketterna under en spelares namn, en per ord. Den senaste är sist.
+export function clueLabels(clues: readonly { kind: string; word: string | null }[]): string[] {
+  return clues.map((clue) => clue.word ?? (clue.kind === 'pass' ? 'pass' : '✓ sa sitt'))
+}
+
+// Det senaste ordet i omgången och vem som gav det, för mitten av bordet. null innan första ordet.
+export function latestClue<C extends { player: string; kind: string; word: string | null }>(clues: readonly C[]): { text: string; player: string } | null {
+  const clue = clues.at(-1)
+  return clue ? { text: clueLabels([clue])[0], player: clue.player } : null
+}
+
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }

@@ -43,6 +43,7 @@
     /* Rummet runt Imposterjaktens bord: väggen, träskivan, dess kant och stolarna. */
     --color-room: var(--room);
     --color-wood: var(--wood);
+    --color-felt: var(--felt);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
     --color-sun-soft: var(--sun-soft);
@@ -92,6 +93,7 @@
     --animate-burst: star-burst 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) both;
     --animate-shake: impact-shake 0.25s ease-out;
     --animate-turn-pulse: turn-pulse 0.55s ease-out;
+    --animate-light-pulse: light-pulse 2.8s ease-in-out infinite;
     /* animate-arrow-draw: en pil ritas från den ena spelaren till den andra (Imposterjaktens bord). Linjen behöver
        pathLength="1" och stroke-dasharray 1. Med fördröjning (--d) ritas rösterna en i taget. */
     --animate-arrow-draw: arrow-draw 0.35s ease-out both;
@@ -370,6 +372,17 @@
         100% { stroke-dashoffset: 0; opacity: 1; }
     }
 
+    /* Ljuset på den som har tur pulserar svagt så länge turen varar. */
+    @keyframes light-pulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.65;
+      }
+    }
+
     @keyframes turn-pulse {
         0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-primary) 55%, transparent); }
         100% { box-shadow: 0 0 0 14px transparent; }
@@ -428,6 +441,7 @@
     --mint-soft: oklch(0.955 0.04 165);
     --room: oklch(0.885 0.03 65);
     --wood: oklch(0.74 0.085 65);
+    --felt: oklch(0.9 0.06 165);
     --wood-edge: oklch(0.56 0.08 55);
     --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);
