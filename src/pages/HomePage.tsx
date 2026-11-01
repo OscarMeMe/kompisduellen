@@ -76,18 +76,16 @@ export function HomePage() {
           <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
-          {/* De två vägarna in. På bred skärm i en rad, där knappen och "eller" börjar under rubriken "Har du fått en
-              kod?", så att knapparna och fältet ligger i linje även när ett felmeddelande visas under fältet. */}
-          <div className="mx-auto flex max-w-sm flex-col gap-2 md:mx-0 lg:max-w-none lg:flex-row lg:items-start lg:gap-3">
+          {/* De två vägarna in, under varandra. */}
+          <div className="mx-auto flex max-w-sm flex-col gap-5 md:mx-0">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames} className="shrink-0 lg:mt-8">
+            <Button size="lg" onClick={pointAtGames} className="md:self-start">
               Välj spel
               <ArrowDown aria-hidden />
             </Button>
-            <span className="text-center text-sm text-muted-foreground lg:mt-8 lg:flex lg:h-13 lg:items-center">eller</span>
             {/* Den andra vägen in, för den som blivit inbjuden. */}
-            <GaMedKod className="min-w-0 flex-1 text-left" />
+            <GaMedKod className="text-left" />
           </div>
         </div>
 

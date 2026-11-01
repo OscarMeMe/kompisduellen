@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw } from 'lucide-react'
 import { CountingPrice } from '@/components/CountingPrice'
-import { CreditText } from '@/components/gissa-priset/ImageCredit'
+import { CreditText, ImageCreditButton } from '@/components/gissa-priset/ImageCredit'
 import { Konfetti } from '@/components/Konfetti'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -136,10 +136,11 @@ export function ExempelRunda() {
           <div className="relative aspect-video max-h-44 w-full overflow-hidden rounded-md bg-muted/60 md:max-h-52">
             {item.image && <img src={item.image} alt={item.imageNote ?? ''} className="absolute inset-0 size-full object-cover" />}
             <span className="absolute top-2 left-2 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">Exempel</span>
+            <ImageCreditButton item={item} className="bottom-2 left-2" />
           </div>
-          {/* Raden finns alltid, även tom, så att alla frågor har samma höjd. Licensen kräver att krediten finns kvar. */}
+          {/* Raden finns alltid, även tom, så att kortet har samma höjd. Krediten ligger bakom ⓘ och står här i facit. */}
           <figcaption className="mt-0.5 min-h-[1lh] truncate text-[11px] leading-tight text-muted-foreground/80">
-            <CreditText item={item} />
+            {guess !== null && <CreditText item={item} />}
           </figcaption>
         </figure>
 
