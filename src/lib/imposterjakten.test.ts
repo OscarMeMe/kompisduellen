@@ -672,6 +672,45 @@ describe('Imposterjakten: Anklaga', () => {
     expect(hostMove(host, 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)).toBe(host)
   })
 
+  describe('majoriteten', () => {
+    // Fram till tredje varvet, med valfritt antal spelare. a är impostern (slumpen 0).
+    function accused(ids: string[], target: string, yes: string[]): HostState {
+      let host = readAll(start(ids), ids)
+      for (let i = 0; i < ids.length * ACCUSE_AFTER_ROUNDS; i++) {
+        host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ids, NOW)
+      }
+      const accuser = ids.find((id) => id !== target)!
+      host = hostMove(host, accuser, { type: 'accuse', target }, ids, NOW)
+      return ids
+        .filter((id) => id !== target)
+        .reduce((next, id) => hostMove(next, id, { type: 'accuseVote', yes: yes.includes(id) }, ids, NOW + 1000), host)
+    }
+    const SIX = ['a', 'b', 'c', 'd', 'e', 'f']
+    const FIVE = SIX.slice(0, 5)
+
+    it('tre ja av fem räcker, och pekar ut en oskyldig: impostern kommer undan', () => {
+      const host = accused(SIX, 'b', ['c', 'd', 'e'])
+      expect(table(host).step).toBe('facit')
+      expect(table(host).outcome?.imposter).toBe('a')
+      expect(host.state.scores.a).toBe(2)
+      expect(host.state.scores.c ?? 0).toBe(0)
+    })
+
+    it('tre ja av fem på impostern ger sista gissningen', () => {
+      expect(table(accused(SIX, 'a', ['b', 'c', 'd'])).step).toBe('gissning')
+    })
+
+    it('två ja av fem räcker inte', () => {
+      const host = accused(SIX, 'a', ['b', 'c'])
+      expect(table(host).step).toBe('ledtradar')
+      expect(table(host).failedAccusation).toBe('a')
+    })
+
+    it('precis hälften räcker inte', () => {
+      expect(table(accused(FIVE, 'a', ['b', 'c'])).step).toBe('ledtradar')
+    })
+  })
+
   it('räknar den som inte svarat som nej när tiden är ute', () => {
     let host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
     host = answer(host, 'b', true)
