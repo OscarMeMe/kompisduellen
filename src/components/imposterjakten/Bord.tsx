@@ -5,7 +5,7 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { arrowBetween, clueLine, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { clueLine, curvedArrow, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -105,18 +105,20 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             </marker>
           </defs>
           {pointers.map(([from, to]) => (
-            <line
+            <path
               key={`${from}-${to}`}
-              {...arrowBetween(byId[from], byId[to], inset)}
+              d={curvedArrow(byId[from], byId[to], inset)}
+              fill="none"
               strokeDasharray="1.2 1.6"
               className="stroke-primary/50"
               strokeWidth={0.5}
             />
           ))}
           {voteArrows.map(([from, to], i) => (
-            <line
+            <path
               key={`${from}-${to}-${table.step}`}
-              {...arrowBetween(byId[from], byId[to], inset)}
+              d={curvedArrow(byId[from], byId[to], inset)}
+              fill="none"
               pathLength={1}
               strokeDasharray="1"
               markerEnd="url(#pil-rost)"
@@ -188,7 +190,8 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
       aria-hidden
       className={cn(
         'pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--sun)_85%,transparent)_20%,transparent_70%)] motion-safe:transition-[left,top,opacity] motion-safe:duration-500',
-        small ? 'w-[38%]' : 'w-[48%]',
+        // Vid avslöjandet en mindre, tydligare fläck på impostern.
+        spotDelay !== null ? 'w-[26%]' : small ? 'w-[38%]' : 'w-[48%]',
         !target && 'opacity-0',
         spotDelay !== null && 'z-[25] motion-safe:animate-spot-in motion-safe:[animation-delay:var(--d)]',
       )}
@@ -292,20 +295,21 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
             {votes}
           </span>
         )}
+        {/* Stämpeln ligger på figuren, aldrig på namnet eller utanför bordet. */}
+        {stamp !== null && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+            style={{ '--d': `${stamp}ms` } as CSSProperties}
+          >
+            <Stamp className="border-2 bg-card/90 px-1 py-0 text-[9px] tracking-normal motion-safe:[animation-delay:var(--d)] sm:text-[11px]">Imposter</Stamp>
+          </span>
+        )}
       </span>
       <span className={cn('relative max-w-20 truncate rounded-full bg-room/85 px-1 font-bold sm:max-w-28', small ? 'text-[13px] leading-tight sm:text-sm' : 'text-sm sm:text-base', mine && 'text-primary-button')}>
         {mine ? 'Du' : name}
       </span>
       {away && <span className="text-[11px] text-muted-foreground">borta</span>}
-      {stamp !== null && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute top-1/3 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
-          style={{ '--d': `${stamp}ms` } as CSSProperties}
-        >
-          <Stamp className="bg-card/85 px-1.5 py-0 text-sm motion-safe:[animation-delay:var(--d)]">Imposter</Stamp>
-        </span>
-      )}
       {reaction && (
         <span
           key={reaction.key}
