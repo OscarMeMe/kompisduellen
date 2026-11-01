@@ -7,6 +7,12 @@ describe('timeWarning', () => {
     expect(timeWarning(11, false)).toBe('normal')
   })
 
+  it('kan varna senare i korta rundor', () => {
+    expect(timeWarning(10, false, 5)).toBe('normal')
+    expect(timeWarning(6, false, 5)).toBe('normal')
+    expect(timeWarning(5, false, 5)).toBe('kritisk')
+  })
+
   it('varnar vid 10 sekunder och ner till 6', () => {
     expect(timeWarning(10, false)).toBe('varning')
     expect(timeWarning(6, false)).toBe('varning')

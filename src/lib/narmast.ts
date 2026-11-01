@@ -15,6 +15,8 @@ export function randomTarget(): number {
 export const narmastRules: GameRules = {
   guessSeconds: GUESS_SECONDS,
   revealSeconds: REVEAL_SECONDS,
+  // Rundan är bara 15 sekunder, så varningen kommer först när det är 5 kvar.
+  warningSeconds: 5,
   howTo: (seconds) =>
     `Ett snabbt turspel. Gissa ett tal mellan ${MIN_NUMBER} och ${MAX_NUMBER} på ${seconds} sekunder. Det finns inga ledtrådar, för rätt tal slumpas fram efteråt. Den som hamnar närmast får en poäng.`,
   scoringDetails: [
