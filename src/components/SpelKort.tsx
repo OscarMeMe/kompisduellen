@@ -12,22 +12,21 @@ import { cn } from '@/lib/utils'
 // trycker på det (group-data-[play=true]). Allt med motion-safe:, så att det stängs av med "minska rörelse".
 const PREVIEWS: Record<string, ReactNode> = {
   'gissa-priset': (
-    <div className="-rotate-3 rounded-md border bg-card px-5 py-2 shadow-soft-sm motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:animate-wiggle">
-      <p className="font-heading text-3xl font-bold tabular-nums">
-        {/* Frågetecknen rullar in ett i taget, som på en spelautomat. */}
-        {[0, 90, 180].map((delay) => (
-          <span key={delay} className="inline-block overflow-hidden align-bottom">
-            <span
-              className="inline-block motion-safe:group-hover:animate-slot motion-safe:group-data-[play=true]:animate-slot"
-              style={{ animationDelay: `${delay}ms` }}
-            >
-              ?
-            </span>
-          </span>
-        ))}{' '}
-        kr
-      </p>
-    </div>
+    // En prislapp med ett frågetecken, som vickar till.
+    <svg
+      viewBox="0 0 164 84"
+      className="h-18 w-auto -rotate-6 drop-shadow-sm motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:animate-wiggle"
+    >
+      <path
+        d="M46 6 H150 a8 8 0 0 1 8 8 V70 a8 8 0 0 1 -8 8 H46 a8 8 0 0 1 -5.7 -2.3 L8 48 a8 8 0 0 1 0 -11.6 L40.3 8.3 A8 8 0 0 1 46 6 Z"
+        className="fill-card stroke-border"
+        strokeWidth="2"
+      />
+      <circle cx="36" cy="42" r="6" className="fill-sun-soft stroke-border" strokeWidth="2" />
+      <text x="100" y="60" textAnchor="middle" fontSize="50" className="fill-primary font-heading font-bold">
+        ?
+      </text>
+    </svg>
   ),
   narmast: (
     <div className="w-full max-w-[14rem] px-2">
