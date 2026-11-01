@@ -8,6 +8,7 @@ const publicFiles = import.meta.glob(['/public/sitemap.xml', '/public/robots.txt
   import: 'default',
   eager: true,
 }) as Record<string, string>
+const ogImages = Object.keys(import.meta.glob('/public/og/*.png'))
 const sitemap = publicFiles['/public/sitemap.xml']
 const robots = publicFiles['/public/robots.txt']
 
@@ -38,6 +39,17 @@ describe('sidinfo', () => {
     expect(tags).toContain('<title>A &quot;B&quot; &lt;C&gt;</title>')
     expect(tags).not.toContain('</script>"')
     expect(tags).toContain('\\u003c/script>')
+  })
+
+  it('ger Imposterjakten en egen delningsbild, och de andra sidorna loggan', () => {
+    const tags = renderHeadTags(pageMeta('/spel/imposterjakten'))
+    expect(tags).toContain(`<meta property="og:image" content="${SITE_URL}/og/imposterjakten.png" />`)
+    expect(tags).toContain('<meta property="og:image:width" content="1200" />')
+    expect(tags).toContain('<meta name="twitter:card" content="summary_large_image" />')
+    expect(renderHeadTags(pageMeta('/spel/kortkaos'))).toContain(`${SITE_URL}/icon-512.png`)
+    for (const page of GAME_PAGES) {
+      if (page.image) expect(ogImages, page.slug).toContain(`/public${page.image.path}`)
+    }
   })
 
   it('har en spelsida med FAQPage och VideoGame för varje spelsida', () => {
