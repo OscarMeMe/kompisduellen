@@ -42,7 +42,7 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
               <Emoji emoji={p.avatar} className="text-sm" />
               {p.name}
               {done ? (
-                <Check className="size-3.5" aria-label="Klar" />
+                <Check className="size-3.5" aria-label="Har spelat sitt kort" />
               ) : hasChosen ? (
                 <span className="sr-only">Har valt ett kort</span>
               ) : (
