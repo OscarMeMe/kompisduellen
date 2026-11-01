@@ -93,7 +93,7 @@ export function applyVerdict<T extends { id: string; image?: string }>(
   return { items, inbox, reviews }
 }
 
-// Listan som "Exportera" kopierar: en rad per granskad fråga, t.ex. "bitcoinpizza: Behöver fixas – Fel år".
+// Listan som "Exportera" kopierar: en rad per granskad fråga, t.ex. "bitcoinpizza: Behöver fixas: Fel år".
 export function exportReviews(reviews: Reviews): string {
   return Object.entries(reviews)
     .map(([id, review]) => {
