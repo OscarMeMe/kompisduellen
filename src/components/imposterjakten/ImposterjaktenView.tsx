@@ -62,7 +62,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
         keepBarSpace
       />
-      <MyCard mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
+      {/* Nytt kort är dolt igen, även om det förra visades (en avbruten omgång har samma nummer, men ett ord till är använt). */}
+      <MyCard key={`${state.round}-${state.usedWordIds.length}`} mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
       <Instruction
         {...imposterInstruction(table, {
           id: me.id,
