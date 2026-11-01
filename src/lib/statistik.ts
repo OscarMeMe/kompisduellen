@@ -4,14 +4,39 @@ import type { PostHog } from 'posthog-js'
 // Inga kakor och inget sparas i webbläsaren (persistence: 'memory'), så varje sidladdning får ett nytt
 // anonymt id. Skicka aldrig namn, figurer eller annat personligt, bara spel och antal.
 // PostHog laddas för sig efter appen. Stoppas det (t.ex. av en annonsblockerare) märks ingenting.
+// Testmatcher ska inte synas i statistiken: inget skickas lokalt, från en automatiserad webbläsare eller när
+// kd-ingen-statistik är satt i localStorage (för en testrobot som körs mot den riktiga sajten).
 
 const key = import.meta.env.VITE_POSTHOG_KEY
 const host = import.meta.env.VITE_POSTHOG_HOST
 
+const OPT_OUT_KEY = 'kd-ingen-statistik'
+
 let client: Promise<PostHog | null> | null = null
+
+export function statistikAllowed(input: { hostname: string; dev: boolean; webdriver: boolean; optedOut: boolean }): boolean {
+  const { hostname, dev, webdriver, optedOut } = input
+  const local = ['localhost', '127.0.0.1', '[::1]'].includes(hostname) || hostname.endsWith('.localhost')
+  return !local && !dev && !webdriver && !optedOut
+}
+
+function optedOut(): boolean {
+  try {
+    return localStorage.getItem(OPT_OUT_KEY) !== null
+  } catch {
+    return false
+  }
+}
 
 export function startStatistik() {
   if (client || !key || !host) return
+  const allowed = statistikAllowed({
+    hostname: location.hostname,
+    dev: import.meta.env.DEV,
+    webdriver: navigator.webdriver,
+    optedOut: optedOut(),
+  })
+  if (!allowed) return
   client = import('posthog-js')
     .then(({ default: posthog }) => {
       posthog.init(key, {
