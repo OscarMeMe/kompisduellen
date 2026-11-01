@@ -45,6 +45,27 @@ export function playPop() {
   }
 }
 
+// Nedräkningen till en revansch: en kort ton per sekund, ljusare ju närmare starten.
+export function playCountdownTick(secondsLeft: number) {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    oscillator.type = 'triangle'
+    oscillator.frequency.setValueAtTime(secondsLeft <= 1 ? 880 : 660 - secondsLeft * 40, now)
+    gain.gain.setValueAtTime(0.0001, now)
+    gain.gain.exponentialRampToValueAtTime(0.14, now + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16)
+    oscillator.connect(gain).connect(context.destination)
+    oscillator.start(now)
+    oscillator.stop(now + 0.18)
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
 // Imposterjakten: det blev min tur. Två korta, ljusa toner.
 export function playTurn() {
   try {

@@ -31,6 +31,7 @@ import {
 } from '@/lib/imposterjakten'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
+import { loadSoundOn, playCountdownTick } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
 type WaitingRoomProps = {
@@ -342,7 +343,7 @@ function HowToPlay({ howTo, scoringDetails, open = false }: { howTo: string; sco
 }
 
 // Nedräkning före en match (första starten eller revansch): alla ser samma tal, och matchen startar av sig själv.
-// Värden kan avbryta.
+// Värden kan avbryta. En revansch tar över hela skärmen och hörs (följer ljudknappen), så att ingen missar den.
 function RematchCountdown({
   at,
   kind,
@@ -359,16 +360,29 @@ function RematchCountdown({
   onCancel: () => void
 }) {
   const { secondsLeft } = useCountdown(at, clockOffset, REMATCH_SECONDS)
-  return (
+  const rematch = kind !== 'first'
+  const shown = Math.max(1, secondsLeft)
+  useEffect(() => {
+    if (rematch && loadSoundOn()) playCountdownTick(shown)
+  }, [rematch, shown])
+  const box = (
     <section
-      className="space-y-2 rounded-lg border-2 border-primary bg-coral-soft p-5 text-center shadow-soft animate-pop"
+      className={cn(
+        'space-y-2 rounded-lg border-2 border-primary bg-coral-soft p-5 text-center shadow-soft animate-pop',
+        rematch && 'w-full max-w-md space-y-3 p-8',
+      )}
       aria-live="polite"
     >
-      <p className="font-heading text-lg font-bold">{kind === 'first' ? 'Nu kör vi!' : 'Revansch!'}</p>
-      <p className="font-heading text-6xl font-bold text-primary tabular-nums" aria-label={`Startar om ${secondsLeft} sekunder`}>
+      <p className={cn('font-heading font-bold', rematch ? 'text-4xl sm:text-5xl' : 'text-lg')}>
+        {kind === 'first' ? 'Nu kör vi!' : 'Revansch!'}
+      </p>
+      <p
+        className={cn('font-heading font-bold text-primary tabular-nums', rematch ? 'text-8xl sm:text-9xl' : 'text-6xl')}
+        aria-label={`Startar om ${secondsLeft} sekunder`}
+      >
         {/* Varje siffra poppar in för sig. */}
-        <span key={Math.max(1, secondsLeft)} className="inline-block motion-safe:animate-pop">
-          {Math.max(1, secondsLeft)}
+        <span key={shown} className="inline-block motion-safe:animate-pop">
+          {shown}
         </span>
       </p>
       <p className="text-sm text-muted-foreground">
@@ -381,4 +395,6 @@ function RematchCountdown({
       )}
     </section>
   )
+  if (!rematch) return box
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">{box}</div>
 }
