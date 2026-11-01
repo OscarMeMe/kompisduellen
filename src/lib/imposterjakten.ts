@@ -363,11 +363,13 @@ export function imposterMove(
   if (move.type === 'vote') return castVote(host, playerId, move.target, activeIds)
   if (move.type === 'guess' || move.type === 'giveUp') {
     if (table.step !== 'gissning' || table.caught !== playerId) return host
-    if (move.type === 'giveUp') return finishRound(host, 'gav-upp', null, null)
+    // Poängen går bara till dem som fortfarande är med i omgången.
+    const scorers = present(table, activeIds)
+    if (move.type === 'giveUp') return finishRound(host, 'gav-upp', null, null, scorers)
     const word = findWord(host.secrets.wordId)
     const guess = move.word.trim().replace(/\s+/g, ' ')
     if (!guess || !word) return host
-    return finishRound(host, isCorrectGuess(guess, word) ? 'gissade-ratt' : 'gissade-fel', guess, null)
+    return finishRound(host, isCorrectGuess(guess, word) ? 'gissade-ratt' : 'gissade-fel', guess, null, scorers)
   }
 
   if (currentTurn(table) !== playerId) return host
@@ -456,7 +458,7 @@ function openVoting(host: ImposterHost): ImposterHost {
 function castVote(host: ImposterHost, voter: string, target: string, activeIds: readonly string[]): ImposterHost {
   const table = host.state.imposter!
   const candidates = table.tied ?? table.order
-  if (table.step !== 'rostning' || voter === target || !candidates.includes(target)) return host
+  if (table.step !== 'rostning' || voter === target || !candidates.includes(target) || !activeIds.includes(target)) return host
   if (host.secrets.votes[voter] !== undefined) return host
   const votes = { ...host.secrets.votes, [voter]: target }
   return checkVotes({ ...host, secrets: { ...host.secrets, votes } }, activeIds)
@@ -476,7 +478,7 @@ function checkVotes(host: ImposterHost, activeIds: readonly string[]): ImposterH
   const revealed = withTable(host, { ...table, votedCount: voted.length, votes })
   if (top.length === 1) {
     if (top[0] === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: top[0] })
-    return finishRound(revealed, 'undan', null, null)
+    return finishRound(revealed, 'undan', null, null, players)
   }
   if (top.length > 1 && table.tied === null) {
     return {
@@ -488,7 +490,7 @@ function checkVotes(host: ImposterHost, activeIds: readonly string[]): ImposterH
       secrets: { ...host.secrets, ready: [], votes: {} },
     }
   }
-  return finishRound(revealed, 'undan', null, null)
+  return finishRound(revealed, 'undan', null, null, players)
 }
 
 // Rösterna ihop: hur många röster var och en fick, och vem eller vilka som fick flest (flera vid lika).
@@ -507,7 +509,7 @@ export function isCorrectGuess(guess: string, word: ImposterWord): boolean {
 }
 
 // Poängen för en omgång. Kommer impostern undan får den 2. Fångas den men gissar rätt får den 1. Gissar den fel eller
-// ger upp får alla oskyldiga i omgången 2. En avbruten omgång ger inga poäng.
+// ger upp får alla oskyldiga som är kvar i omgången 2. En avbruten omgång ger inga poäng.
 export const IMPOSTER_ESCAPES = 2
 export const IMPOSTER_GUESSES_RIGHT = 1
 export const INNOCENTS_WIN = 2
@@ -521,12 +523,19 @@ export function roundPoints(kind: OutcomeKind, imposter: string, order: readonly
   return {}
 }
 
-// Omgången är slut: poängen läggs till och facit visas. Ordet räknas som använt.
-function finishRound(host: ImposterHost, kind: OutcomeKind, guess: string | null, reason: string | null): ImposterHost {
+// Omgången är slut: poängen läggs till och facit visas. Ordet räknas som använt. scorers = spelarna i omgången som
+// fortfarande är med, så att den som lämnat inte får poäng.
+function finishRound(
+  host: ImposterHost,
+  kind: OutcomeKind,
+  guess: string | null,
+  reason: string | null,
+  scorers: readonly string[] = [],
+): ImposterHost {
   const { state, secrets } = host
   const table = state.imposter!
   const word = findWord(secrets.wordId)
-  const points = roundPoints(kind, secrets.imposter, table.order)
+  const points = roundPoints(kind, secrets.imposter, scorers)
   const scores = { ...state.scores }
   for (const [id, gained] of Object.entries(points)) scores[id] = (scores[id] ?? 0) + gained
   const outcome: ImposterOutcome = {
