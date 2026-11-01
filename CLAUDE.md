@@ -28,6 +28,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - PWA via `vite-plugin-pwa` (manifestet ligger i `vite.config.ts`, ikonerna i `public/`: `favicon.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` och `icon-512-maskable.png`)
 - Driftsätts på Vercel (`vercel.json` skickar alla sökvägar som inte är en fil till appskalet `app.html`)
 - Förrendering i bygget (`vite-plugin-forrendera.ts`, se Synlighet i sökmotorer)
+- GitHub Action `.github/workflows/keep-alive.yml` pingar Supabase varannan dag (och går att köra för hand), så att gratisprojektet inte pausas. URL och den publika nyckeln ligger som Secrets i repot (`SUPABASE_URL`, `SUPABASE_ANON_KEY`), aldrig i koden
 
 ## Stil
 

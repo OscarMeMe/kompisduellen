@@ -1,0 +1,42 @@
+# Håller Supabase-projektet vaket. Gratisprojekt pausas efter en tid utan aktivitet, och då slutar lobbyerna fungera.
+# Sajten har inga tabeller, så workflowen gör två anrop som ändå räknas som aktivitet:
+#   1. GraphQL-anropet körs av en funktion inne i databasen (svarar 200 även när pg_graphql inte är påslaget).
+#   2. Hälsoanropet för inloggningstjänsten.
+# URL och nyckel ligger som Secrets i GitHub-repot (SUPABASE_URL och SUPABASE_ANON_KEY), aldrig i koden. Nyckeln är
+# samma publika nyckel som sajten använder (VITE_SUPABASE_ANON_KEY).
+name: Håll Supabase vaket
+
+on:
+  schedule:
+    # Varannan dag klockan 06:00 UTC.
+    - cron: '0 6 */2 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pinga Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL och SUPABASE_ANON_KEY saknas under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          base="${SUPABASE_URL%/}"
+          graphql=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 -X POST \
+            -H "apikey: $SUPABASE_ANON_KEY" -H 'Content-Type: application/json' \
+            -d '{"query":"{ __typename }"}' "$base/graphql/v1")
+          health=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 \
+            -H "apikey: $SUPABASE_ANON_KEY" "$base/auth/v1/health")
+          echo "Databasen (graphql): $graphql"
+          echo "Inloggningstjänsten (health): $health"
+          if [ "$graphql" != "200" ] || [ "$health" != "200" ]; then
+            echo "::error::Supabase svarade inte som väntat. Kolla att projektet inte är pausat och att nyckeln stämmer."
+            exit 1
+          fi
