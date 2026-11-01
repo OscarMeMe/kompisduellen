@@ -78,8 +78,6 @@ const PREVIEWS: Record<string, ReactNode> = {
 
 type SpelKortProps = {
   game: GameInfo
-  // Spelet som rekommenderas först (får den fyllda knappen). Det är ett redaktionellt val, inget påstående om hur populärt det är.
-  recommended?: boolean
   // Kortet lyser upp en kort stund när besökaren tryckt på Välj spel.
   highlight?: boolean
   onShowRules: () => void
@@ -87,7 +85,7 @@ type SpelKortProps = {
 
 // Ett spelkort på startsidan: förhandsvisning, namn, spelarantal och känsla, kort beskrivning och två tydliga knappar.
 // Kortet är inte en enda stor klickyta, så att reglerna och Skapa lobby inte konkurrerar.
-export function SpelKort({ game, recommended = false, highlight = false, onShowRules }: SpelKortProps) {
+export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps) {
   const { ref, playing, play } = usePlayOnce()
   const page = gamePageFor(game.id)
   return (
@@ -127,7 +125,7 @@ export function SpelKort({ game, recommended = false, highlight = false, onShowR
             <Info aria-hidden />
             Så spelar man
           </Button>
-          <Button asChild size="lg" variant={recommended ? 'default' : 'outline'} className="w-full">
+          <Button asChild size="lg" className="w-full">
             <Link to={`/skapa?spel=${game.id}`}>
               Skapa lobby
               <ArrowRight aria-hidden />
