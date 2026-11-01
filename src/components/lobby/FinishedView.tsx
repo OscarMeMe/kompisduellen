@@ -84,7 +84,8 @@ export function FinishedView({
   // En provomgång har inga snabbval: lobbyns inställningar ligger kvar tills ni spelar på riktigt.
   const rematch = () => onRematch(state.practice ? {} : { rounds, ...(tempo ? { guessSeconds, autoAdvance } : {}) })
   const words = roundWords(state.game)
-  const settingsSummary = tempo ? `${rounds} ${words.many} · ${guessSeconds} s` : `${rounds} ${words.many}`
+  const roundsText = `${rounds} ${rounds === 1 ? words.one : words.many}`
+  const settingsSummary = tempo ? `${roundsText} · ${guessSeconds} s` : roundsText
 
   return (
     <Wide>

@@ -492,7 +492,7 @@ function TableForScreenReaders({
   typing: string | null
   shownVotes: Record<string, string> | null
 }) {
-  const nameOf = (id: string) => (id === meId ? 'du' : (state.players[id]?.name ?? 'någon'))
+  const nameOf = (id: string) => (id === meId ? 'dig' : (state.players[id]?.name ?? 'någon'))
   return (
     <ol className="sr-only" aria-label="Spelarna runt bordet i turordning">
       {table.order.map((id) => {
