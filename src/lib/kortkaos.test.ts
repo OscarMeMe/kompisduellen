@@ -7,6 +7,7 @@ import {
   addPlayers,
   backToWaiting,
   canStart,
+  tooManyPlayers,
   hostAdvance,
   hostDeadline,
   hostMove,
@@ -45,6 +46,21 @@ function playRound(host: HostState, active = ABC): HostState {
   }
   return hostMove(next, next.state.cards!.judge, { type: 'judge', key: 'k1' }, active, NOW)
 }
+
+describe('högst 9 spelare i Kortkaos', () => {
+  it('går att starta med 9 men inte med 10', () => {
+    expect(canStart('kortkaos', 9)).toBe(true)
+    expect(canStart('kortkaos', 10)).toBe(false)
+    expect(tooManyPlayers('kortkaos', 9)).toBe(false)
+    expect(tooManyPlayers('kortkaos', 10)).toBe(true)
+  })
+
+  it('spärren gäller bara Kortkaos', () => {
+    expect(canStart('gissa-priset', 13)).toBe(true)
+    expect(canStart('imposterjakten', 11)).toBe(true)
+    expect(tooManyPlayers('narmast', 20)).toBe(false)
+  })
+})
 
 describe('korten', () => {
   it('har 60 frågor och 150 svar utan dubbletter', () => {
@@ -169,7 +185,7 @@ describe('antal spelare', () => {
     for (const rounds of roundOptionsFor('kortkaos')) {
       expect(smallestHand(max, rounds)).toBe(kortkaosRules.handSize)
     }
-    // Med 12 spelare och 10 rundor tar korten slut mot slutet.
-    expect(smallestHand(12, 10)).toBeLessThan(kortkaosRules.handSize)
+    // Med fler spelare tar korten slut mot slutet, så det går inte att starta.
+    expect(canStart('kortkaos', max + 1)).toBe(false)
   })
 })
