@@ -27,7 +27,7 @@ export function Layout() {
   // Laddar om vid en ny version, utom i en lobby. Där står det en rad i stället.
   const { showNotice } = useAppUpdate()
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
-  useLocation()
+  const { pathname } = useLocation()
   const player = loadPlayer()
 
   return (
@@ -62,7 +62,8 @@ export function Layout() {
                 <Emoji key={hops} emoji={player.avatar} className={cn('text-xl', hops > 0 && 'motion-safe:animate-hop')} />
                 <span className="max-w-24 truncate sm:max-w-32">{player.name}</span>
               </Link>
-            ) : (
+            ) : pathname !== '/' ? (
+              // Startsidan har kodfältet i hjälteavsnittet, så där behövs inte knappen.
               <Link
                 to="/ga-med"
                 onClick={guarded('/ga-med')}
@@ -70,7 +71,7 @@ export function Layout() {
               >
                 Gå med
               </Link>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>
