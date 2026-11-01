@@ -54,6 +54,18 @@ export function arrowBetween(from: Seat, to: Seat, inset: number): { x1: number;
   }
 }
 
+// Handen i Peka ut: en bit från den som pekar, i riktning mot den som pekas ut. degrees = vridning från rakt upp, medurs.
+export function pointingHand(from: Seat, to: Seat, away: number): { x: number; y: number; degrees: number } {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const length = Math.hypot(dx, dy) || 1
+  return {
+    x: round(from.x + (dx / length) * away),
+    y: round(from.y + (dy / length) * away),
+    degrees: round((Math.atan2(dx, -dy) * 180) / Math.PI),
+  }
+}
+
 // Lampan hänger längst upp i rummet, ovanför bordet (procent av bordets ruta).
 export const LAMP = { x: 50, y: -4 }
 

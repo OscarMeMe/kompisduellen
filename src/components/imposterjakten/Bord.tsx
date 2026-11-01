@@ -1,11 +1,11 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { Crosshair, X } from 'lucide-react'
+import { Crosshair, Pointer, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
-import { arrowBetween, beamTo, LAMP, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { arrowBetween, beamTo, LAMP, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { CLUE_ROUNDS, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -103,9 +103,6 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
         <svg aria-hidden viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full overflow-visible">
           <defs>
-            <marker id="pil-peka" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M0 0 10 5 0 10z" className="fill-primary" />
-            </marker>
             <marker id="pil-rost" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
               <path d="M0 0 10 5 0 10z" className="fill-foreground" />
             </marker>
@@ -114,11 +111,9 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             <line
               key={`${from}-${to}`}
               {...arrowBetween(byId[from], byId[to], inset)}
-              pathLength={1}
-              strokeDasharray="1"
-              markerEnd="url(#pil-peka)"
-              className="stroke-primary/70 motion-safe:animate-arrow-draw"
-              strokeWidth={0.6}
+              strokeDasharray="1.2 1.6"
+              className="stroke-primary/50"
+              strokeWidth={0.5}
             />
           ))}
           {voteArrows.map(([from, to], i) => (
@@ -134,6 +129,25 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             />
           ))}
         </svg>
+
+        {/* Peka ut: en hand vid den som pekar, riktad mot den som pekas ut. Den prickiga linjen visar hela vägen. */}
+        {pointers.map(([from, to]) => {
+          const hand = pointingHand(byId[from], byId[to], small ? 12 : 14)
+          return (
+            <span
+              key={`${from}-${to}`}
+              aria-hidden
+              className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 motion-safe:animate-pop"
+              style={{ left: `${hand.x}%`, top: `${hand.y}%` }}
+            >
+              <Pointer
+                className={cn('rounded-full bg-card fill-sun p-0.5 text-primary shadow-soft-sm', small ? 'size-6' : 'size-8')}
+                strokeWidth={2.2}
+                style={{ rotate: `${hand.degrees}deg` }}
+              />
+            </span>
+          )
+        })}
 
         {/* Ett kort med baksidan upp framför varje spelare. Mitt eget är större, som om jag håller det. */}
         {seats.map((seat) => {

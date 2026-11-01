@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { beamTo, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+import { beamTo, pointingHand, arrowBetween, seatLayout, smallSeats } from '@/lib/bord'
+
+describe('handen i Peka ut', () => {
+  const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
+
+  it('står en bit från den som pekar och pekar mot den utpekade', () => {
+    expect(pointingHand(seat(50, 90), seat(50, 10), 15)).toEqual({ x: 50, y: 75, degrees: 0 })
+    expect(pointingHand(seat(10, 50), seat(90, 50), 15)).toEqual({ x: 25, y: 50, degrees: 90 })
+  })
+})
 
 describe('ljuskäglan', () => {
   it('går rakt ner till bordets mitt och vrids åt det håll spelaren sitter', () => {
