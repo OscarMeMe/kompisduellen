@@ -118,8 +118,8 @@ describe('Imposterjakten: spelet och inställningarna', () => {
     expect(roundWords('gissa-priset')).toEqual({ one: 'runda', many: 'rundor' })
   })
 
-  it('har 3, 5 eller 7 omgångar med 3 som förval', () => {
-    expect(roundOptionsFor('imposterjakten')).toEqual([3, 5, 7])
+  it('har 1, 2 eller 3 omgångar med 3 som förval', () => {
+    expect(roundOptionsFor('imposterjakten')).toEqual([1, 2, 3])
     expect(defaultRoundsFor('imposterjakten')).toBe(3)
   })
 
