@@ -11,7 +11,7 @@ import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
-import { GAMES, playersLabel, type GameInfo } from '@/lib/games'
+import { GAMES, playersLabel, roundWords, type GameInfo } from '@/lib/games'
 import {
   canStart,
   guessSecondsFor,
@@ -95,7 +95,7 @@ export function WaitingRoom({
   const imposter = state.game === IMPOSTER_GAME
   const howTo = imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
   const scoringDetails = imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
-  const roundsLabel = imposter ? 'Antal omgångar' : 'Antal rundor'
+  const roundsLabel = `Antal ${roundWords(state.game).many}`
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
   const enoughPlayers = online.length >= game.minPlayers
   // För få spelare för spelet som är valt, t.ex. Kortkaos med två. Kort, eftersom knappen redan säger att det väntar.

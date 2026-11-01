@@ -124,6 +124,11 @@ export function findGame(id: string | null | undefined): GameInfo | undefined {
   return GAMES.find((game) => game.id === id)
 }
 
+// Vad en runda heter i spelet: omgång i Imposterjakten, runda i de andra.
+export function roundWords(gameId: string): { one: string; many: string } {
+  return gameId === 'imposterjakten' ? { one: 'omgång', many: 'omgångar' } : { one: 'runda', many: 'rundor' }
+}
+
 // "2–12 spelare" när det finns ett prövat största antal, annars "2+ spelare". Lobbyn har ingen hård gräns.
 export function playersLabel(game: GameInfo): string {
   return game.maxPlayers ? `${game.minPlayers}–${game.maxPlayers} spelare` : `${game.minPlayers}+ spelare`

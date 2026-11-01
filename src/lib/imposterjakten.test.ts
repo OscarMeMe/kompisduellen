@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAMES } from '@/lib/games'
+import { GAMES, roundWords } from '@/lib/games'
 import {
   CATEGORIES,
   canChangeWord,
@@ -111,6 +111,11 @@ describe('Imposterjakten: spelet och inställningarna', () => {
     expect(canStart('imposterjakten', 2)).toBe(false)
     expect(canStart('imposterjakten', 1)).toBe(false)
     expect(canStart('imposterjakten', 3)).toBe(true)
+  })
+
+  it('kallar rundorna omgångar, och de andra spelen säger rundor', () => {
+    expect(roundWords('imposterjakten')).toEqual({ one: 'omgång', many: 'omgångar' })
+    expect(roundWords('gissa-priset')).toEqual({ one: 'runda', many: 'rundor' })
   })
 
   it('har 3, 5 eller 7 omgångar med 3 som förval', () => {
