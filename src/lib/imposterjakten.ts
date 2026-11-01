@@ -47,7 +47,7 @@ export const IMPOSTER_SCORING: string[] = [
 
 // När alla ord visats börjar listan om, men de senaste står kvar som använda (som i Gissa priset).
 export const RECENT_AFTER_RESET = 20
-export const ROUND_OPTIONS = [3, 5, 7] as const
+export const ROUND_OPTIONS = [1, 2, 3] as const
 export const DEFAULT_ROUNDS = 3
 // Varje spelare ger ett ord per varv.
 export const CLUE_ROUNDS = 2
