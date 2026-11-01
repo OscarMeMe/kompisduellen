@@ -182,6 +182,16 @@ export function markAsHost(code: string, gameId: string) {
   safeSet('session', `kd-host:${code}`, gameId)
 }
 
+// Förval från tillfället på startsidan: sitter ni tillsammans? Läses av värdens lobby när den skapas.
+export function saveLobbyPreset(code: string, aloud: boolean) {
+  safeSet('session', `kd-forval:${code}`, aloud ? '1' : '0')
+}
+
+export function lobbyPreset(code: string): { aloud: boolean } | null {
+  const saved = safeGet('session', `kd-forval:${code}`)
+  return saved === null ? null : { aloud: saved === '1' }
+}
+
 export function hostedGame(code: string): string | null {
   return safeGet('session', `kd-host:${code}`)
 }

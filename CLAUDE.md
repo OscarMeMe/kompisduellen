@@ -96,6 +96,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - `src/hooks/useLayout.ts`: låter en sida säga till `Layout` att en match pågår (då döljs menyn)
 - `src/components/ui/`: genererade shadcn-komponenter. Ändra dem bara om det behövs
 - `src/lib/`: hjälpfunktioner och Supabase-klienten
+  - `tillfallen.ts`: flikarna ovanför spelen på startsidan (Alla, Förfesten, Spelkvällen, Discordgänget). De sorterar spelen och gömmer inget. Valet följer med till lobbyn (`?tillfalle=`, `saveLobbyPreset`) och förväljer "Sitter ni tillsammans?". Drickreglerna finns bara under Förfesten, märkta 18+ och valfria
   - `games.ts`: listan över spel på startsidan
   - `guider.ts`: texterna på guiderna (`/forfestlekar`, `/spel-pa-discord`, `/gissningslekar`). Spelarantal och tid hämtas från spelen i `GuidePage`
   - `spelsidor.ts`: texterna på spelsidorna (`/spel/gissa-priset` …): titel, beskrivning, intro, Så spelar ni, tid och vanliga frågor

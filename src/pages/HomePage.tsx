@@ -4,6 +4,7 @@ import { ArrowDown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
+import { DRINK_RULES, gamesForTillfalle, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,8 @@ export function HomePage() {
 
   // "Välj spel/skapa lobby": scrolla till spelen (om det behövs), flytta fokus dit och låt korten lysa upp.
   const [highlightGames, setHighlightGames] = useState(false)
+  // Tillfället sorterar spelen, och inget spel göms.
+  const [tillfalle, setTillfalle] = useState<TillfalleId>('alla')
   // Spelet vars förklaring visas. Spelet ligger kvar medan rutan stängs, så att innehållet inte försvinner i animationen.
   const [introGame, setIntroGame] = useState<GameInfo | null>(null)
   const [introOpen, setIntroOpen] = useState(false)
@@ -107,12 +110,46 @@ export function HomePage() {
           </h2>
           <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
         </div>
+        {/* Vad är det för kväll? Flikarna sorterar spelen så att det som passar bäst kommer först. */}
+        <div role="group" aria-label="Vad är det för kväll?" className="flex flex-wrap gap-2 py-1">
+          {TILLFALLEN.map((item) => (
+            <Button
+              key={item.id}
+              variant={item.id === tillfalle ? 'default' : 'outline'}
+              aria-pressed={item.id === tillfalle}
+              className="shrink-0 rounded-full"
+              onClick={() => setTillfalle(item.id)}
+            >
+              {item.emoji && <Emoji emoji={item.emoji} />}
+              {item.name}
+            </Button>
+          ))}
+        </div>
+        {tillfalle === 'forfest' && (
+          <details className="rounded-lg bg-coral-soft px-4 py-3">
+            <summary className="cursor-pointer font-semibold">
+              <span className="font-heading font-bold">Drickregler</span>{' '}
+              <span className="rounded-md bg-foreground px-1.5 py-0.5 font-heading text-xs font-bold text-background">18+</span>{' '}
+              <span className="text-sm font-medium">Valfritt. Funkar lika bra med läsk.</span>
+            </summary>
+            <ul className="mt-2 space-y-1 text-sm">
+              {DRINK_RULES.map((item) => (
+                <li key={item.game}>
+                  <span className="font-bold">{item.game}:</span> {item.rule}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-sm">Drick i din egen takt och hoppa över när du vill. Det går lika bra att spela utan.</p>
+          </details>
+        )}
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {GAMES.filter((game) => game.playable).map((game) => (
+          {gamesForTillfalle(tillfalle, GAMES.filter((game) => game.playable)).map(({ game, note }) => (
             <SpelKort
               key={game.id}
               game={game}
+              note={note}
+              tillfalle={tillfalle}
               highlight={highlightGames}
               onShowRules={() => showIntro(game)}
             />

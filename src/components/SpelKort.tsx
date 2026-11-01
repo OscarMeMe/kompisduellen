@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { playersLabel, type GameInfo } from '@/lib/games'
+import { createLobbyHref, type TillfalleId } from '@/lib/tillfallen'
 import { gamePageFor } from '@/lib/spelsidor'
 import { cn } from '@/lib/utils'
 
@@ -128,6 +129,9 @@ function FlippingAnswer({ text, delay }: { text: string; delay: number }) {
 }
 
 type SpelKortProps = {
+  // Varför spelet passar det valda tillfället, och tillfället som följer med till lobbyn.
+  note?: string
+  tillfalle?: TillfalleId
   game: GameInfo
   // Kortet lyser upp en kort stund när besökaren tryckt på Välj spel.
   highlight?: boolean
@@ -136,7 +140,7 @@ type SpelKortProps = {
 
 // Ett spelkort på startsidan: förhandsvisning, namn, spelarantal och känsla, kort beskrivning och två tydliga knappar.
 // Kortet är inte en enda stor klickyta, så att reglerna och Skapa lobby inte konkurrerar.
-export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps) {
+export function SpelKort({ game, highlight = false, note, tillfalle = 'alla', onShowRules }: SpelKortProps) {
   const { ref, playing, play } = usePlayOnce()
   // Ny key vid varje tryck, så att bildens rörelse börjar om, även när musen redan är över kortet.
   const [plays, setPlays] = useState(0)
@@ -164,7 +168,7 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
           {PREVIEWS[game.id]}
         </div>
         {game.feel && (
-          <span className="absolute top-2 left-2 z-10 rounded-full bg-card px-3 py-0.5 text-sm font-bold shadow-soft-sm">{game.feel}</span>
+          <span className="absolute top-2 left-2 z-10 rounded-full bg-card px-3 py-0.5 text-sm font-bold text-foreground shadow-soft-sm">{game.feel}</span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
@@ -184,13 +188,14 @@ export function SpelKort({ game, highlight = false, onShowRules }: SpelKortProps
           </h3>
         </div>
         <p className="leading-snug opacity-90">{game.tagline}</p>
+        {note && <p className="text-sm font-bold">{note}</p>}
         <div className="mt-auto flex flex-col gap-1 pt-1">
           <Button variant="link" className="h-11 w-fit px-0 text-spel-text" onClick={onShowRules}>
             <Info aria-hidden />
             Så spelar man
           </Button>
           <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp/90">
-            <Link to={`/skapa?spel=${game.id}`}>
+            <Link to={createLobbyHref(game.id, tillfalle)}>
               Skapa lobby
               <ArrowRight aria-hidden />
             </Link>
