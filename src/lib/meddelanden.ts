@@ -141,7 +141,8 @@ const isGameState = shape({
   usedWordIds: listOf(isString),
 })
 
-export type StateMessage = { state: GameState; sentAt: number; from: string | null; hands: Record<string, number> }
+// version = värdens version av sajten. Saknas hos en värd med en äldre version.
+export type StateMessage = { state: GameState; sentAt: number; from: string | null; hands: Record<string, number>; version: number | null }
 
 // Läget från värden. Fält som saknas (t.ex. från en värd med en äldre version av sajten) får sina startvärden.
 // null om något har fel typ.
@@ -153,7 +154,7 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, accusation: null, accusers: [], failedAccusation: null, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
   const hands = isObject(payload.hands) && Object.values(payload.hands).every(isNumber) ? (payload.hands as Record<string, number>) : {}
-  return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands }
+  return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands, version: isNumber(payload.version) ? payload.version : null }
 }
 
 // En värd enligt närvarolistan. sendsFrom = värden skickar alltid med sitt id (from). Värdar med en äldre version

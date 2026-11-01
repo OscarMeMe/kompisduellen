@@ -46,6 +46,7 @@ import {
   type StateMessage,
 } from '@/lib/meddelanden'
 import { measureSplatPlace } from '@/lib/splatt'
+import { APP_VERSION, versionStatus } from '@/lib/version'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
@@ -131,6 +132,8 @@ const AWAY_GRACE_MS = 10_000
 // Imposterjakten: "skriver…" skickas högst så här ofta och syns så länge efter senaste tecknet.
 const TYPING_EVERY_MS = 2000
 const TYPING_VISIBLE_MS = 3500
+// Gästen med nyare version än värden säger till värden så här ofta (ms).
+const TELL_VERSION_EVERY_MS = 10_000
 
 // game används bara av värden. Övriga får spelet från värdens tillstånd.
 // onPromote / onDemote: sidan byter roll när jag tar över som värd eller lämnar över till en annan värd.
@@ -227,6 +230,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Gästen: numret på min senaste hand eller mitt kort, och när jag senast sa till att jag saknar den.
   const myHandSeqRef = useRef<number | null>(null)
   const lastHandAskRef = useRef(0)
+  // Versionerna i lobbyn: värdens (hos gästerna) och gästernas (hos värden). Se version.ts.
+  const [hostVersion, setHostVersion] = useState<number | null>(null)
+  const [guestVersions, setGuestVersions] = useState<Record<string, number>>({})
+  const lastVersionTellRef = useRef(0)
+  // Fel version: gästen skickar inga drag.
+  const versionBlockedRef = useRef(false)
   // Värden: när spelare som inte längre är online sågs senast. Efter en omladdning räknas alla i
   // matchen som nyss sedda, så att de hinner ansluta igen.
   const lastSeenRef = useRef<Record<string, number>>(
@@ -257,7 +266,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     void channelRef.current?.send({
       type: 'broadcast',
       event: 'state',
-      payload: { state: stateRef.current, sentAt: Date.now(), from: meId, hands: secretsRef.current ? handSeqRef.current : {} },
+      payload: { state: stateRef.current, sentAt: Date.now(), from: meId, hands: secretsRef.current ? handSeqRef.current : {}, version: APP_VERSION },
     })
   }, [meId])
 
@@ -328,7 +337,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Gästen: be värden om det aktuella läget (och min hand i ett kortspel).
   const sendHello = useCallback(() => {
     if (!meId) return
-    void channelRef.current?.send({ type: 'broadcast', event: 'hello', payload: { id: meId } })
+    void channelRef.current?.send({ type: 'broadcast', event: 'hello', payload: { id: meId, version: APP_VERSION } })
   }, [meId])
 
   // Spelare som är med: online nu, eller borta kortare tid än AWAY_GRACE_MS.
@@ -460,6 +469,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           return
         }
         pendingStateRef.current = null
+        setHostVersion(message.version)
+        // Jag har en nyare version än värden: säg till, så att värden får beskedet att ladda om.
+        if (message.version !== null && message.version < APP_VERSION && Date.now() - lastVersionTellRef.current >= TELL_VERSION_EVERY_MS) {
+          lastVersionTellRef.current = Date.now()
+          void channel.send({ type: 'broadcast', event: 'hello', payload: { id: myId, version: APP_VERSION, only: 'version' } })
+        }
         askForMissingHand(message)
         applyState(message)
       })
@@ -468,7 +483,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       function askForMissingHand({ hands }: StateMessage) {
         if (!handIsMissing(hands[myId], myHandSeqRef.current) || Date.now() - lastHandAskRef.current < HELLO_RETRY_MS) return
         lastHandAskRef.current = Date.now()
-        void channel.send({ type: 'broadcast', event: 'hello', payload: { id: myId, only: 'hand' } })
+        void channel.send({ type: 'broadcast', event: 'hello', payload: { id: myId, version: APP_VERSION, only: 'hand' } })
       }
 
       function applyState({ state: next, sentAt }: StateMessage) {
@@ -638,7 +653,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         // Någon har precis anslutit: spelarens hand igen, och det aktuella läget till alla. Handen först, så att läget
         // visar numret på den. Saknar spelaren bara sin hand (only) räcker den.
         if (!isHost) return
-        const { id, only } = (payload ?? {}) as { id?: unknown; only?: unknown }
+        const { id, only, version } = (payload ?? {}) as { id?: unknown; only?: unknown; version?: unknown }
+        if (typeof id === 'string' && typeof version === 'number' && Number.isFinite(version)) {
+          setGuestVersions((known) => (known[id] === version ? known : { ...known, [id]: version }))
+        }
+        if (only === 'version') return
         if (typeof id === 'string') {
           delete sentHandsRef.current[id]
           sendHands()
@@ -758,6 +777,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (!connected || !playing || !meId) return
     pendingMovesRef.current = pendingMovesRef.current.map((pending) => ({ ...pending, tries: 0, failed: false }))
     const timer = setInterval(() => {
+      if (versionBlockedRef.current) return
       const view = { state: stateRef.current, id: meId, hand: handRef.current, card: imposterCardRef.current }
       const { keep, send } = resendMoves(pendingMovesRef.current, view, Date.now())
       pendingMovesRef.current = keep
@@ -848,6 +868,17 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return () => clearTimeout(timer)
   }, [isHost, state.phase, state.rematchAt, commit, current, wakeTick])
 
+  // Stämmer versionerna? Hos värden räknas bara de som är med just nu.
+  const version = versionStatus({
+    isHost,
+    mine: APP_VERSION,
+    hostVersion,
+    guestVersions: online.filter((p) => !p.host && guestVersions[p.id] !== undefined).map((p) => guestVersions[p.id]),
+  })
+  useEffect(() => {
+    versionBlockedRef.current = !isHost && version !== 'ok'
+  }, [isHost, version])
+
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
   const hostMissing = !isHost && connected && received && !hostOnline
@@ -902,7 +933,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         commit(hostCountdownStart(current(), ids, Date.now()))
       },
       guess: (value: number) => {
-        if (!me) return
+        if (!me || versionBlockedRef.current) return
         setGuessRound(stateRef.current.round)
         void channelRef.current?.send({
           type: 'broadcast',
@@ -913,7 +944,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare. Imposterjakten: läst kortet,
       // skriva ett ord, passa eller säga sitt ord högt.
       move: (move: CardMove | ImposterMove) => {
-        if (!me) return
+        if (!me || versionBlockedRef.current) return
         moveCountRef.current += 1
         const nr = `${me.id}-${Date.now()}-${moveCountRef.current}`
         const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current }
@@ -926,7 +957,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       // Tryck igen: drag som gett upp skickas igen.
       retryMoves: () => {
-        if (!me) return
+        if (!me || versionBlockedRef.current) return
         const { keep, send } = retryMoves(pendingMovesRef.current, Date.now())
         pendingMovesRef.current = keep
         setDelivery(moveDelivery(keep))
@@ -1019,7 +1050,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       // Jag vill ha revansch (eller ångra det) på slutskärmen. Startar inget, värden bestämmer.
       wishRematch: (wants: boolean) => {
-        if (!me || isHost) return
+        if (!me || isHost || versionBlockedRef.current) return
         void channelRef.current?.send({ type: 'broadcast', event: 'wish', payload: { id: me.id, wants } })
       },
     }),
@@ -1032,6 +1063,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     state,
     online,
     clockOffset,
+    version,
     // Hur det går med mina drag. Spelar bara roll under en match.
     delivery: state.phase === 'playing' ? delivery : 'ok',
     // Raden i facit när min gissning, mitt kort eller mitt domarval aldrig nådde värden.

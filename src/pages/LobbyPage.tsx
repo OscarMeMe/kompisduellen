@@ -12,6 +12,7 @@ import { LeaveLobbyDialog } from '@/components/lobby/LeaveLobbyDialog'
 import { Narrow } from '@/components/lobby/LobbyLayout'
 import { SplatOverlay, ThrownConfirm } from '@/components/lobby/Kast'
 import { SendStatus } from '@/components/lobby/SendStatus'
+import { VersionNotice } from '@/components/lobby/VersionNotice'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { Throws } from '@/hooks/useReactions'
 import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps } from '@/components/lobby/types'
@@ -191,6 +192,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     state,
     online,
     clockOffset,
+    version,
     delivery,
     lostMove,
     hand,
@@ -363,6 +365,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       />
       <ReactionFloaters />
       <SendStatus delivery={delivery} onRetry={actions.retryMoves} />
+      <VersionNotice status={version} inMatch={state.phase !== 'waiting' && state.phase !== 'finished'} />
       <SplatOverlay />
       <ThrownConfirm />
       {hostMissing && (

@@ -8,6 +8,8 @@ import { granskaPlugin } from './vite-plugin-granska.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ isSsrBuild }) => ({
+  // Versionen är tiden för bygget, så att en högre siffra är en nyare version (se src/lib/version.ts).
+  define: { __APP_VERSION__: JSON.stringify(Date.now()) },
   plugins: [
     react(),
     tailwindcss(),

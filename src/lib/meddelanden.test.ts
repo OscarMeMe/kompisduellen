@@ -16,6 +16,15 @@ import {
 const players = { a: { name: 'Anna', avatar: '👻' }, b: { name: 'Bo', avatar: '🤖' } }
 const lobby = addPlayers(initialState('gissa-priset'), players)
 
+describe('värdens version', () => {
+  it('följer med läget, och saknas den eller är trasig är den okänd', () => {
+    const state = initialState('gissa-priset')
+    expect(parseStateMessage({ state, sentAt: 5, version: 123 })?.version).toBe(123)
+    expect(parseStateMessage({ state, sentAt: 5, version: 'ny' })?.version).toBeNull()
+    expect(parseStateMessage({ state, sentAt: 5 })?.version).toBeNull()
+  })
+})
+
 describe('numret på händer och kort', () => {
   it('följer med läget, och trasiga nummer ignoreras', () => {
     const state = initialState('gissa-priset')
@@ -35,7 +44,7 @@ describe('läget från värden', () => {
   it('tar emot ett riktigt läge, även mitt i en match', () => {
     const playing = startGame(lobby, ['a', 'b'], 1000)
     const parsed = parseStateMessage({ state: playing, sentAt: 5, from: 'a' })
-    expect(parsed).toEqual({ state: playing, sentAt: 5, from: 'a', hands: {} })
+    expect(parsed).toEqual({ state: playing, sentAt: 5, from: 'a', hands: {}, version: null })
   })
 
   it('fyller i fält som saknas med startvärden, t.ex. från en äldre version av sajten', () => {
