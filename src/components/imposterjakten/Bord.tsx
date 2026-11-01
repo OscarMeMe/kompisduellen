@@ -64,7 +64,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
 
   return (
     <div className="space-y-2">
-      <div className={cn('relative -mx-2 overflow-hidden rounded-lg bg-room px-2 pt-10 shadow-soft tiny:pt-8 sm:mx-0 sm:px-3 sm:pt-8 sm:short:pt-7', small ? 'pb-14 tiny:pb-12 sm:pb-15' : 'pb-24 tiny:pb-20 sm:pb-28 sm:short:pb-24', listWhenLow && 'low:pb-16', crowded && 'max-sm:pb-8')}>
+      <div className={cn('relative -mx-2 overflow-hidden rounded-lg bg-room px-2 pt-10 shadow-soft tiny:pt-8 sm:mx-0 sm:px-3 sm:pt-8 sm:short:pt-7', small ? 'pb-14 tiny:pb-12 sm:pb-15' : 'pb-24 tiny:pb-20 sm:pb-28 sm:short:pb-24', listWhenLow && 'low:pb-20', crowded && 'max-sm:pb-8')}>
       {/* Rummet mörknar kort. Impostern och ljuskäglan ligger ovanpå. */}
       {revealImposter && (
         <div
@@ -79,7 +79,8 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
         className={cn(
           'relative mx-auto h-[clamp(20rem,calc(100svh-30rem),calc(100vw-1.5rem))] w-full tiny:h-[clamp(17rem,calc(100svh-28.5rem),calc(100vw-1.5rem))]',
           // Med 5 och 6 spelare står orden över varandra vid sidorna, så där behövs mest höjd.
-          crowded ? 'sm:h-[clamp(24rem,calc(100svh-37rem),34rem)]' : small ? 'sm:h-[clamp(21rem,calc(100svh-37rem),34rem)]' : seats.length <= 4 ? 'sm:h-80' : 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]',
+          crowded ? 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]' : small ? 'sm:h-[clamp(21rem,calc(100svh-37rem),34rem)]' : seats.length <= 4 ? 'sm:h-80' : 'sm:h-[clamp(26rem,calc(100svh-37rem),34rem)]',
+          listWhenLow && 'tiny:h-[clamp(18rem,calc(100svh-28.5rem),calc(100vw-1.5rem))]',
         )}
       >
         {/* Bordet: en mjuk filtyta med träkant. Det som händer står direkt på filten. */}
