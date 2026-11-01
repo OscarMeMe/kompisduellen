@@ -16,11 +16,26 @@ import {
 const players = { a: { name: 'Anna', avatar: '👻' }, b: { name: 'Bo', avatar: '🤖' } }
 const lobby = addPlayers(initialState('gissa-priset'), players)
 
+describe('numret på händer och kort', () => {
+  it('följer med läget, och trasiga nummer ignoreras', () => {
+    const state = initialState('gissa-priset')
+    expect(parseStateMessage({ state, sentAt: 5, hands: { a: 2 } })?.hands).toEqual({ a: 2 })
+    expect(parseStateMessage({ state, sentAt: 5, hands: { a: 'x' } })?.hands).toEqual({})
+    expect(parseStateMessage({ state, sentAt: 5 })?.hands).toEqual({})
+  })
+
+  it('följer med handen', () => {
+    const hand = { cards: ['x'], blank: true, pick: null }
+    expect(parseHand({ to: 'a', from: 'b', seq: 4, hand })?.seq).toBe(4)
+    expect(parseHand({ to: 'a', from: 'b', hand })?.seq).toBeNull()
+  })
+})
+
 describe('läget från värden', () => {
   it('tar emot ett riktigt läge, även mitt i en match', () => {
     const playing = startGame(lobby, ['a', 'b'], 1000)
     const parsed = parseStateMessage({ state: playing, sentAt: 5, from: 'a' })
-    expect(parsed).toEqual({ state: playing, sentAt: 5, from: 'a' })
+    expect(parsed).toEqual({ state: playing, sentAt: 5, from: 'a', hands: {} })
   })
 
   it('fyller i fält som saknas med startvärden, t.ex. från en äldre version av sajten', () => {
@@ -148,15 +163,15 @@ describe('gissningar och kortdrag', () => {
 describe('händer och värdbyten', () => {
   it('godtar en hand med rätt form, eller ingen hand', () => {
     const hand = { cards: ['x', 'y'], blank: true, pick: null }
-    expect(parseHand({ to: 'a', from: 'b', hand })).toEqual({ to: 'a', from: 'b', hand })
-    expect(parseHand({ to: 'a', hand: null })).toEqual({ to: 'a', from: null, hand: null })
+    expect(parseHand({ to: 'a', from: 'b', hand })).toEqual({ to: 'a', from: 'b', seq: null, hand })
+    expect(parseHand({ to: 'a', hand: null })).toEqual({ to: 'a', from: null, seq: null, hand: null })
     expect(parseHand({ to: 'a', hand: { cards: 'x' } })).toBeNull()
     expect(parseHand({ hand })).toBeNull()
   })
 
   it('godtar mitt kort i Imposterjakten, eller inget kort', () => {
     const innocent = { card: { role: 'oskyldig', word: 'Paraply', category: null }, rejectedAt: null, ready: false, vote: null, accuseVote: null }
-    expect(parseImposterCard({ to: 'a', from: 'b', card: innocent })).toEqual({ to: 'a', from: 'b', card: innocent })
+    expect(parseImposterCard({ to: 'a', from: 'b', card: innocent })).toEqual({ to: 'a', from: 'b', seq: null, card: innocent })
     const imposter = { card: { role: 'imposter', hint: 'väder', category: 'Vardag och saker' }, rejectedAt: 12, ready: true, vote: 'b', accuseVote: null }
     expect(parseImposterCard({ to: 'a', card: imposter })?.card).toEqual(imposter)
     const empty = { card: null, rejectedAt: null, ready: false, vote: null, accuseVote: null }

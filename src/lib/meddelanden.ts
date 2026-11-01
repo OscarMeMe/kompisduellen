@@ -141,7 +141,7 @@ const isGameState = shape({
   usedWordIds: listOf(isString),
 })
 
-export type StateMessage = { state: GameState; sentAt: number; from: string | null }
+export type StateMessage = { state: GameState; sentAt: number; from: string | null; hands: Record<string, number> }
 
 // Läget från värden. Fält som saknas (t.ex. från en värd med en äldre version av sajten) får sina startvärden.
 // null om något har fel typ.
@@ -152,7 +152,8 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   // Fälten för lika röster, sista gissningen och facit saknas hos en värd med en äldre version av sajten.
   if (isObject(state.imposter)) state.imposter = Object.assign({ tied: null, tieVotes: null, pointers: {}, accusation: null, accusers: [], failedAccusation: null, caught: null, outcome: null }, state.imposter)
   if (!isGameState(state)) return null
-  return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null }
+  const hands = isObject(payload.hands) && Object.values(payload.hands).every(isNumber) ? (payload.hands as Record<string, number>) : {}
+  return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands }
 }
 
 // En värd enligt närvarolistan. sendsFrom = värden skickar alltid med sitt id (from). Värdar med en äldre version
@@ -240,10 +241,10 @@ function parseMoveBody(payload: unknown): { id: string; move: CardMove | Imposte
 const isMyHand = shape({ cards: listOf(isString), blank: isBoolean, pick: orNull(isPick) })
 
 // Min hand i ett kortspel. null = ingen hand (t.ex. efter matchen).
-export function parseHand(payload: unknown): { to: string; from: string | null; hand: MyHand | null } | null {
+export function parseHand(payload: unknown): { to: string; from: string | null; seq: number | null; hand: MyHand | null } | null {
   if (!isObject(payload) || !isString(payload.to)) return null
   if (payload.hand !== null && !isMyHand(payload.hand)) return null
-  return { to: payload.to, from: isString(payload.from) ? payload.from : null, hand: payload.hand as MyHand | null }
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, seq: isNumber(payload.seq) ? payload.seq : null, hand: payload.hand as MyHand | null }
 }
 
 const isImposterCard = (value: unknown): value is ImposterCard =>
@@ -251,13 +252,13 @@ const isImposterCard = (value: unknown): value is ImposterCard =>
   shape({ role: (role) => role === 'imposter', hint: orNull(isString), category: orNull(isString) })(value)
 
 // Mitt kort i Imposterjakten (som hand i kortspelen). card null = inte med i omgången.
-export function parseImposterCard(payload: unknown): { to: string; from: string | null; card: MyImposterCard } | null {
+export function parseImposterCard(payload: unknown): { to: string; from: string | null; seq: number | null; card: MyImposterCard } | null {
   if (!isObject(payload) || !isString(payload.to) || !isObject(payload.card)) return null
   const { card, rejectedAt, ready, vote } = payload.card
   const accuseVote = isBoolean(payload.card.accuseVote) ? payload.card.accuseVote : null
   if (!(card === null || isImposterCard(card)) || !orNull(isNumber)(rejectedAt)) return null
   if (!isBoolean(ready) || !orNull(isString)(vote)) return null
-  return { to: payload.to, from: isString(payload.from) ? payload.from : null, card: { card, rejectedAt, ready, vote, accuseVote } }
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, seq: isNumber(payload.seq) ? payload.seq : null, card: { card, rejectedAt, ready, vote, accuseVote } }
 }
 
 export function parseHandover(payload: unknown): { to: string; from: string | null } | null {

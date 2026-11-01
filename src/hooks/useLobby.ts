@@ -5,9 +5,13 @@ import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type
 import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
-  HANDS_RESEND_EVERY, HELLO_RETRY_MS, isSameContent, STATE_RESEND_MS,
+  awaitsAnswer,
+  handIsMissing,
+  HELLO_RETRY_MS,
   helloRetryAction,
+  isSameContent,
   lobbyStatus,
+  shouldResendState,
   shouldRetryHello,
   STUCK_AFTER_MS,
   wakeAction,
@@ -197,6 +201,14 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
   const secretsRef = useRef<HostState['secrets']>(restored?.secrets ?? null)
   const sentHandsRef = useRef<Record<string, string>>({})
+  // Värden: numret på varje spelares senaste hand eller kort. Det följer med läget, så att den som saknar sin kan säga till.
+  const handSeqRef = useRef<Record<string, number>>({})
+  // Värden: när läget skickades senast, och om det ändrats sedan det senast skickades igen (se shouldResendState).
+  const lastStateAtRef = useRef(0)
+  const stateChangedRef = useRef(false)
+  // Gästen: numret på min senaste hand eller mitt kort, och när jag senast sa till att jag saknar den.
+  const myHandSeqRef = useRef<number | null>(null)
+  const lastHandAskRef = useRef(0)
   // Värden: när spelare som inte längre är online sågs senast. Efter en omladdning räknas alla i
   // matchen som nyss sedda, så att de hinner ansluta igen.
   const lastSeenRef = useRef<Record<string, number>>(
@@ -221,6 +233,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     saveHostLobby(code, { state: stateRef.current, secrets: secretsRef.current } satisfies HostState)
   }, [code])
 
+  // Värden: skicka läget till alla, med numret på allas händer och kort under en match med hemlig data.
+  const sendState = useCallback(() => {
+    lastStateAtRef.current = Date.now()
+    void channelRef.current?.send({
+      type: 'broadcast',
+      event: 'state',
+      payload: { state: stateRef.current, sentAt: Date.now(), from: meId, hands: secretsRef.current ? handSeqRef.current : {} },
+    })
+  }, [meId])
+
   // Värden: uppdatera lokalt och skicka ut till alla.
   const publish = useCallback(
     (next: GameState) => {
@@ -230,13 +252,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       stateRef.current = next
       setState(next)
       save()
-      void channelRef.current?.send({
-        type: 'broadcast',
-        event: 'state',
-        payload: { state: next, sentAt: Date.now(), from: meId },
-      })
+      stateChangedRef.current = true
+      sendState()
     },
-    [save, meId],
+    [save, sendState],
   )
 
   // Värden: skicka varje spelares hand (kortspel) eller kort (Imposterjakten) till spelaren, men bara när det har
@@ -255,7 +274,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const json = JSON.stringify(card)
         if (sentHandsRef.current[id] === json) continue
         sentHandsRef.current[id] = json
-        void channelRef.current?.send({ type: 'broadcast', event: 'kort', payload: { to: id, from: meId, card } })
+        const seq = (handSeqRef.current[id] ?? 0) + 1
+        handSeqRef.current[id] = seq
+        void channelRef.current?.send({ type: 'broadcast', event: 'kort', payload: { to: id, from: meId, seq, card } })
       }
       return
     }
@@ -264,7 +285,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const json = JSON.stringify(view)
       if (sentHandsRef.current[id] === json) continue
       sentHandsRef.current[id] = json
-      void channelRef.current?.send({ type: 'broadcast', event: 'hand', payload: { to: id, from: meId, hand: view } })
+      const seq = (handSeqRef.current[id] ?? 0) + 1
+      handSeqRef.current[id] = seq
+      void channelRef.current?.send({ type: 'broadcast', event: 'hand', payload: { to: id, from: meId, seq, hand: view } })
     }
   }, [meId])
 
@@ -406,17 +429,29 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
       // Läget från värden. Trasiga meddelanden slängs, och läget används bara om det kommer från värden.
       channel.on('broadcast', { event: 'state' }, ({ payload }) => {
-        if (isHost) return
         const message = parseStateMessage(payload)
         if (!message) return
+        // Värden får sitt eget läge tillbaka. Det ändrar inget, men visar om värdens egen hand försvunnit på vägen.
+        if (isHost) {
+          if (message.from === myId) askForMissingHand(message)
+          return
+        }
         if (!isFromHost(message.from, hosts())) {
           // Kanske en ny värd som inte syns i närvarolistan än. Sparas tills den gör det.
           if (message.from !== null) pendingStateRef.current = message
           return
         }
         pendingStateRef.current = null
+        askForMissingHand(message)
         applyState(message)
       })
+
+      // Läget visar att jag saknar min hand eller mitt kort: be värden om den, men inte oftare än HELLO_RETRY_MS.
+      function askForMissingHand({ hands }: StateMessage) {
+        if (!handIsMissing(hands[myId], myHandSeqRef.current) || Date.now() - lastHandAskRef.current < HELLO_RETRY_MS) return
+        lastHandAskRef.current = Date.now()
+        void channel.send({ type: 'broadcast', event: 'hello', payload: { id: myId, only: 'hand' } })
+      }
 
       function applyState({ state: next, sentAt }: StateMessage) {
         // Värden skickar läget igen med jämna mellanrum. Är inget nytt behöver inget göras.
@@ -437,6 +472,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       channel.on('broadcast', { event: 'hand' }, ({ payload }) => {
         const message = parseHand(payload)
         if (message?.to !== myId) return
+        myHandSeqRef.current = message.seq
         if (isFromHost(message.from, hosts())) {
           pendingHandRef.current = null
           setHand((prev) => (isSameContent(prev, message.hand) ? prev : message.hand))
@@ -450,6 +486,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       channel.on('broadcast', { event: 'kort' }, ({ payload }) => {
         const message = parseImposterCard(payload)
         if (message?.to !== myId) return
+        myHandSeqRef.current = message.seq
         if (isFromHost(message.from, hosts())) {
           pendingCardRef.current = null
           setImposterCard((prev) => (isSameContent(prev, message.card) ? prev : message.card))
@@ -564,12 +601,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           commit(next)
           return
         }
-        // Inget ändrades: spelaren har troligen missat vad som hände, eftersom draget skickades igen. Svara som på hello.
-        void channel.send({
-          type: 'broadcast',
-          event: 'state',
-          payload: { state: stateRef.current, sentAt: Date.now(), from: myId },
-        })
+        // Inget ändrades: spelaren har troligen missat vad som hände, eftersom draget skickades igen. Spelaren får sin
+        // hand eller sitt kort direkt, och läget skickas igen så snart det är dags (se shouldResendState).
+        stateChangedRef.current = true
         delete sentHandsRef.current[id]
         sendHands()
       })
@@ -583,18 +617,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       })
 
       channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
-        // Någon har precis anslutit: skicka det aktuella läget till alla, och spelarens hand igen.
+        // Någon har precis anslutit: spelarens hand igen, och det aktuella läget till alla. Handen först, så att läget
+        // visar numret på den. Saknar spelaren bara sin hand (only) räcker den.
         if (!isHost) return
-        void channel.send({
-          type: 'broadcast',
-          event: 'state',
-          payload: { state: stateRef.current, sentAt: Date.now(), from: myId },
-        })
-        const id = (payload as { id?: unknown } | undefined)?.id
+        const { id, only } = (payload ?? {}) as { id?: unknown; only?: unknown }
         if (typeof id === 'string') {
           delete sentHandsRef.current[id]
           sendHands()
         }
+        if (only !== 'hand') sendState()
       })
 
       // Jag tar över som värd: spara rollen i fliken och gå med i kanalen på nytt som värd. Tillståndet skickas ut
@@ -669,27 +700,26 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setConnected(false)
       if (opened) closeChannel(opened)
     }
-  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, resolveIfEveryoneGuessed, sendHello, connectKey])
+  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, sendState, resolveIfEveryoneGuessed, sendHello, connectKey])
 
-  // Värden: skickar läget igen med jämna mellanrum, och händerna och korten lite mer sällan, så att en gäst som missat
-  // ett meddelande inte står kvar i ett gammalt läge (se STATE_RESEND_MS).
+  // Värden: skickar läget igen när spelet väntar på ett svar eller när det ändrats, högst var tionde sekund, så att en gäst
+  // som missat ett meddelande inte står kvar i ett gammalt läge (se shouldResendState).
   useEffect(() => {
     if (!isHost || !connected) return
-    let ticks = 0
     const timer = setInterval(() => {
-      ticks += 1
-      void channelRef.current?.send({
-        type: 'broadcast',
-        event: 'state',
-        payload: { state: stateRef.current, sentAt: Date.now(), from: meId },
+      const resend = shouldResendState({
+        awaiting: awaitsAnswer(stateRef.current),
+        changed: stateChangedRef.current,
+        others: onlineRef.current.length > 1,
+        now: Date.now(),
+        lastSentAt: lastStateAtRef.current,
       })
-      if (ticks % HANDS_RESEND_EVERY === 0) {
-        sentHandsRef.current = {}
-        sendHands()
-      }
-    }, STATE_RESEND_MS)
+      if (!resend) return
+      stateChangedRef.current = false
+      sendState()
+    }, 1000)
     return () => clearInterval(timer)
-  }, [isHost, connected, meId, sendHands])
+  }, [isHost, connected, sendState])
 
   // Mina drag skickas igen tills läget visar att de kommit fram, med en kort paus och en gräns (se leverans.ts).
   // Klockan börjar om när kanalen anslutit på nytt, så att försök som gjordes utan anslutning inte räknas.
