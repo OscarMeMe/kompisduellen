@@ -87,9 +87,7 @@ export const GAMES: GameInfo[] = [
     minPlayers: 3,
     maxPlayers: 10,
     feel: 'Bluffigt',
-    // Byggs i steg. Spelbart bara i utvecklingsläget tills omröstningen och poängen finns. På sajten syns det under
-    // Fler dueller är på väg.
-    playable: import.meta.env.DEV,
+    playable: true,
     intro: {
       emoji: '🔍',
       pitch: 'Alla vet ordet. Utom en. Lista ut vem som bluffar innan bluffaren listar ut ordet.',
@@ -97,6 +95,7 @@ export const GAMES: GameInfo[] = [
         'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in.',
         'Ni ger ett ord var som hör ihop med det hemliga ordet, två varv.',
         'Diskutera och rösta fram vem ni tror är impostern.',
+        'Fångas impostern får den gissa ordet. Kommer den undan, eller gissar rätt, får den poäng. Annars får de oskyldiga poäng.',
       ],
     },
   },
