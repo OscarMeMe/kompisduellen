@@ -48,7 +48,7 @@ import {
 import { measureSplatPlace } from '@/lib/splatt'
 import { APP_VERSION, versionStatus } from '@/lib/version'
 import { supabase } from '@/lib/supabase'
-import { leaveHostRole, loadHostLobby, markAsHost, saveHostLobby, type Player } from '@/lib/player'
+import { leaveHostRole, loadHostLobby, lobbyPreset, markAsHost, saveHostLobby, type Player } from '@/lib/player'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
 import {
@@ -145,7 +145,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     const host = isHost ? restoreHostState(loadHostLobby(code)) : null
     return host && { ...host, at: Date.now() }
   })
-  const [state, setState] = useState<GameState>(() => restored?.state ?? initialState(game))
+  const [state, setState] = useState<GameState>(() => {
+    if (restored) return restored.state
+    // Tillfället på startsidan: förvalet följer med, och värden kan ändra det i väntrummet.
+    const preset = isHost ? lobbyPreset(code) : null
+    return preset ? setImposterSettings(initialState(game), preset) : initialState(game)
+  })
   // Övriga spelare: har vi fått något tillstånd från värden än?
   const [received, setReceived] = useState(false)
   const receivedRef = useRef(false)
