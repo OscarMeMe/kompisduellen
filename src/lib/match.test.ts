@@ -8,6 +8,7 @@ import {
   backToWaiting,
   canStart,
   changeGame,
+  countThrow,
   everyoneHasGuessed,
   guessSecondsFor,
   handleDeadline,
@@ -1019,5 +1020,32 @@ describe('topplistan före matchen', () => {
     expect(leaderboardOrderBefore(entries, ['c'])).toEqual(['a', 'b', 'c'])
     expect(leaderboardOrderBefore(entries, [])).toEqual(['c', 'a', 'b'])
     expect(leaderboardOrderBefore(entries, ['a', 'b'])).toEqual(['c', 'a', 'b'])
+  })
+})
+
+describe('kasträknaren i läget', () => {
+  const to = { id: 'b', name: 'Lisa' }
+  const base = addPlayers(initialState('narmast'), { a: { name: 'Oscar', avatar: '🧙' }, b: { name: 'Lisa', avatar: '🦊' } })
+
+  it('börjar på noll och räknar upp', () => {
+    expect(base.throwStats).toEqual({ items: {}, received: {} })
+    const next = countThrow(countThrow(base, 'tomat', to), 'paj', to)
+    expect(next.throwStats.items).toEqual({ tomat: 1, paj: 1 })
+    expect(next.throwStats.received.b).toEqual({ name: 'Lisa', count: 2 })
+  })
+
+  it('står kvar genom match, avbrott, byt spel, värdbyte och omladdning', () => {
+    const counted = countThrow(base, 'tomat', to)
+    const playing = startGame(counted, ['a', 'b'], 1000)
+    expect(playing.throwStats).toEqual(counted.throwStats)
+    expect(abortMatch(playing).throwStats).toEqual(counted.throwStats)
+    expect(changeGame(counted).throwStats).toEqual(counted.throwStats)
+    expect(takeOverState(counted, 500).throwStats).toEqual(counted.throwStats)
+    expect(restoreHostState({ state: counted, secrets: null })?.state.throwStats).toEqual(counted.throwStats)
+  })
+
+  it('får startvärdet när en sparad lobby saknar räknaren', () => {
+    const { throwStats: _stats, ...old } = base
+    expect(restoreHostState({ state: old, secrets: null })?.state.throwStats).toEqual({ items: {}, received: {} })
   })
 })

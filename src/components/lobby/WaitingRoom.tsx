@@ -5,8 +5,10 @@ import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
 import { Wide } from '@/components/lobby/LobbyLayout'
+import { ImposterLobbyHeader } from '@/components/imposterjakten/ImposterLobbyHeader'
 import { ImposterSettingsChoices } from '@/components/imposterjakten/ImposterSettingsChoices'
-import { AcceptThrowsChoice, ThrowBar } from '@/components/lobby/Kast'
+import { Suspects } from '@/components/imposterjakten/Suspects'
+import { AcceptThrowsChoice, ThrowBar, ThrowCounter } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -27,11 +29,14 @@ import {
   IMPOSTER_GAME,
   IMPOSTER_HOW_TO,
   IMPOSTER_SCORING,
-  imposterSettingsSummary,
+  imposterEmptySeats,
+  imposterLobbyStatus,
+  imposterSettingsLine,
   type ImposterSettings,
 } from '@/lib/imposterjakten'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
+import { totalThrows } from '@/lib/kast'
 import { loadSoundOn, playCountdownTick } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
@@ -109,12 +114,22 @@ export function WaitingRoom({
   const hostName = online.find((p) => p.host)?.name
   // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
   const rematching = state.rematchAt !== null
+  // Imposterjaktens väntrum: namnen från läget, där den som heter likadant som någon annan har fått en siffra.
+  const lobbyName = (player: OnlinePlayer) => state.players[player.id]?.name ?? player.name
+  const hostPlayer = online.find((p) => p.host)
+  const imposterStatus = imposterLobbyStatus({
+    count: online.length,
+    minPlayers: game.minPlayers,
+    maxPlayers: game.maxPlayers ?? Infinity,
+    tooMany,
+    isHost,
+    hostName: hostPlayer && lobbyName(hostPlayer),
+  })
 
   // Det som deltagarna ser i stället för valen: spel, antal rundor och, för spel med tempo, svarstid och facit.
   const summary: [string, string][] = [
     ['Spel', game.name],
     [roundsLabel, String(state.rounds)],
-    ...(imposter ? imposterSettingsSummary(state.imposterSettings) : []),
     ...(hasTempoSettings(state.game)
       ? ([
           ['Svarstid', `${guessSecondsFor(state)} s`],
@@ -139,12 +154,16 @@ export function WaitingRoom({
 
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Spelet">
-        <div data-spel={game.id} className="flex items-center gap-3 rounded-md bg-spel-yta px-3 py-2 text-spel-text">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl leading-tight">{game.name}</h1>
-            <p className="text-sm opacity-80">👥 {online.length} i lobbyn</p>
+        {imposter ? (
+          <ImposterLobbyHeader gameId={game.id} name={game.name} />
+        ) : (
+          <div data-spel={game.id} className="flex items-center gap-3 rounded-md bg-spel-yta px-3 py-2 text-spel-text">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl leading-tight">{game.name}</h1>
+              <p className="text-sm opacity-80">👥 {online.length} i lobbyn</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {state.notice && (
           <p className="rounded-md bg-sun-soft px-3 py-2 text-center text-sm font-semibold" role="status">
@@ -164,12 +183,17 @@ export function WaitingRoom({
             >
               {tooMany ? 'För många spelare' : enoughPlayers ? `Starta ${game.name}` : 'Väntar på spelare…'}
             </Button>
-            {tooMany && (
+            {imposter && (
+              <p className="text-center font-semibold" role="status">
+                {imposterStatus}
+              </p>
+            )}
+            {!imposter && tooMany && (
               <p className="text-center text-sm text-muted-foreground" role="status">
                 {tooManyText}
               </p>
             )}
-            {!enoughPlayers && (
+            {!imposter && !enoughPlayers && (
               <p className="text-center text-sm text-muted-foreground" role="status">
                 {tooFewText} Dela koden nedan.
               </p>
@@ -187,6 +211,10 @@ export function WaitingRoom({
               </Button>
             )}
           </div>
+        ) : imposter && !state.choosingGame ? (
+          <p className="rounded-md bg-coral-soft px-3 py-3 text-center font-semibold" role="status">
+            {imposterStatus}
+          </p>
         ) : (
           <div className="space-y-2">
             <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft px-3 py-3 text-center font-semibold">
@@ -209,9 +237,27 @@ export function WaitingRoom({
         )}
       </section>
 
-      {/* Gästerna väntar ändå, så reglerna står utfällda direkt under väntarutan (före QR-koden och spelarna). */}
-      {!isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} open />}
+      {/* Gästerna väntar ändå, så reglerna står utfällda direkt under väntarutan (före QR-koden och spelarna).
+          I Imposterjakten är de hopfällda även för gästerna. */}
+      {!isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} open={!imposter} />}
 
+      {imposter ? (
+        <>
+          <section className="min-w-0 space-y-4 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Misstänkta">
+            <h2 className="text-xl">Misstänkta ({online.length})</h2>
+            <Suspects
+              players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true }))}
+              meId={meId}
+              emptySeats={imposterEmptySeats(online.length, game.minPlayers, game.maxPlayers ?? Infinity)}
+            />
+            <ReactionBar className="pt-1" />
+            {state.throwsAllowed && online.length > 1 && <ThrowBar />}
+            {state.throwsAllowed && (online.length > 1 || totalThrows(state.throwStats) > 0) && <ThrowCounter stats={state.throwStats} />}
+            {state.throwsAllowed && online.length > 1 && <AcceptThrowsChoice />}
+          </section>
+          <InviteCard code={code} game={game} compactQr />
+        </>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         <InviteCard code={code} game={game} />
 
@@ -239,6 +285,7 @@ export function WaitingRoom({
           )}
         </section>
       </div>
+      )}
 
       {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. */}
       <section
@@ -320,6 +367,8 @@ export function WaitingRoom({
               onSelect={(value) => onSetThrowsAllowed(value === 1)}
             />
           </>
+        ) : imposter ? (
+          <p className="text-muted-foreground">{imposterSettingsLine(state.imposterSettings, state.rounds)}</p>
         ) : (
           <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">
             {summary.map(([label, value]) => (

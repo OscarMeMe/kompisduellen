@@ -59,7 +59,7 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
       },
       {
         gameId: 'imposterjakten',
-        text: 'Alla utom en får samma hemliga ord. Ni säger ett ord var, tre varv, och röstar sedan om vem som bluffar. Sitter ni tillsammans säger ni orden högt.',
+        text: 'Alla utom en får samma hemliga ord. Ni säger ett ord var, tre varv runt bordet, och röstar sedan om vem som bluffar. Sitter ni tillsammans säger ni orden högt. Värden väljer 1, 2 eller 3 omgångar, med nytt ord och ny lottning av impostern varje gång.',
       },
     ],
     faq: [

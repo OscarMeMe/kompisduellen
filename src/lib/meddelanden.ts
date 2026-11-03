@@ -126,6 +126,7 @@ const isGameState = shape({
   guessSeconds: isNumber,
   autoAdvance: isBoolean,
   throwsAllowed: isBoolean,
+  throwStats: shape({ items: recordOf(isNumber), received: recordOf(shape({ name: isString, count: isNumber })) }),
   practice: isBoolean,
   rematchAt: orNull(isNumber),
   rematchWishes: listOf(isString),

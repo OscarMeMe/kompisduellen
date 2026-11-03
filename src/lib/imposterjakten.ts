@@ -36,7 +36,7 @@ export function findWord(id: string): ImposterWord | undefined {
 
 // Förklaringen i väntrummet ("Så spelas det") och hur poängen räknas.
 export const IMPOSTER_HOW_TO =
-  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, tre varv. Efter andra varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter tredje varvet och röstar fram vem ni tror är impostern.'
+  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går tre varv runt bordet. Efter andra varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter tredje varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1, 2 eller 3 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
 
 export const IMPOSTER_SCORING: string[] = [
   'Kommer impostern undan får den 2 poäng.',
@@ -66,13 +66,54 @@ export type ImposterSettings = { hard: boolean; tricky?: boolean; category: stri
 
 export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null, aloud: false }
 
-// Inställningarna i ord, för deltagarnas sammanfattning i väntrummet.
-export function imposterSettingsSummary(settings: ImposterSettings): [string, string][] {
+function difficultyName(settings: ImposterSettings): string {
+  return settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'
+}
+
+// Inställningarna på en rad, för gästerna i väntrummet: "2 omgångar · Normal · Blandat · Vi skriver orden".
+export function imposterSettingsLine(settings: ImposterSettings, rounds: number): string {
   return [
-    ['Svårighet', settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'],
-    ['Kategori', settings.category ?? 'Blandat'],
-    ['Sitter ni tillsammans?', settings.aloud ? 'Ja, vi säger orden högt' : 'Nej, vi skriver orden'],
-  ]
+    `${rounds} ${rounds === 1 ? 'omgång' : 'omgångar'}`,
+    difficultyName(settings),
+    settings.category ?? 'Blandat',
+    settings.aloud ? 'Vi säger orden högt' : 'Vi skriver orden',
+  ].join(' · ')
+}
+
+// Replikerna i väntrummets rubrikrad, som byter var tredje sekund.
+export const IMPOSTER_LOBBY_LINES: readonly string[] = [
+  'Någon bland er ljuger…',
+  'Vem ser mest skyldig ut?',
+  'Vem undviker din blick?',
+  'Alla ser oskyldiga ut. Nästan alla.',
+  'Lita inte på den som ler.',
+]
+export const IMPOSTER_LOBBY_LINE_MS = 3000
+
+// Väntrummets status i klartext. tooMany kommer från tooManyPlayers i match.ts.
+export function imposterLobbyStatus({
+  count,
+  minPlayers,
+  maxPlayers,
+  tooMany,
+  isHost,
+  hostName,
+}: {
+  count: number
+  minPlayers: number
+  maxPlayers: number
+  tooMany: boolean
+  isHost: boolean
+  hostName?: string
+}): string {
+  if (tooMany) return `Ni är för många. Högst ${maxPlayers} spelare kan vara med.`
+  if (count < minPlayers) return `Väntar på ${minPlayers - count} till.`
+  return `Ni är tillräckligt många. ${isHost ? 'Du kan starta.' : `Väntar på ${hostName ?? 'värden'}.`}`
+}
+
+// Hur många streckade ringar för lediga platser som visas: en för varje som saknas, annars en så länge det finns plats.
+export function imposterEmptySeats(count: number, minPlayers: number, maxPlayers: number): number {
+  return count >= maxPlayers ? 0 : Math.max(1, minPlayers - count)
 }
 
 // kort: alla läser sitt kort. ledtradar: ett ord var i turordning, tre varv. diskussion: allas ord syns kvar och man
