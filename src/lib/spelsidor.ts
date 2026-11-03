@@ -129,10 +129,11 @@ export const GAME_PAGES: GamePageInfo[] = [
     steps: [
       'En av er skapar en lobby och delar koden på fyra bokstäver. Ni behöver vara minst tre.',
       'Alla går med från sin egen mobil eller dator och läser sitt kort i hemlighet. En av er är impostern.',
-      'Ge varsin ledtråd med ett ord. Kör tre varv. Skriv i spelet eller säg ledtrådarna högt.',
+      'Ge varsin ledtråd med ett ord, och kör tre varv runt bordet. Skriv i spelet eller säg ledtrådarna högt.',
       'Efter andra varvet kan vem som helst trycka på en spelare och anklaga den. Då röstar de andra ja eller nej direkt.',
       'Annars diskuterar ni efter tredje varvet vem som bluffar och röstar. Omröstningen är hemlig och alla har en röst.',
-      'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer impostern undan får den poäng. Värden väljer 1, 2 eller 3 omgångar, och flest poäng efter sista omgången vinner.',
+      'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer impostern undan får den poäng.',
+      'Allt det är en omgång. Värden väljer 1, 2 eller 3 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.',
     ],
     time: '5–15 minuter',
     image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: en rad figurer där en röd figur med glasögon står i spotlighten. Imposter-spel online på svenska för 3–10 spelare' },
