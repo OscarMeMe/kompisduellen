@@ -10,6 +10,8 @@ import {
   THROW_ITEMS,
   throwCooldownSeconds,
   thrownText,
+  throwCounterText,
+  type ThrowStats,
   type ThrowItem,
 } from '@/lib/kast'
 import { cn } from '@/lib/utils'
@@ -95,6 +97,11 @@ function ThrowButton({ item, throws, disabled }: { item: ThrowItem; throws: Thro
       </PopoverContent>
     </Popover>
   )
+}
+
+// Kasträknaren: hur mycket som kastats i lobbyn och vem som fått flest. Samma för alla, se ThrowStats i kast.ts.
+export function ThrowCounter({ stats }: { stats: ThrowStats }) {
+  return <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">{throwCounterText(stats)}</p>
 }
 
 // Bekräftelsen för den som kastade: saken gör en volt och "Du kastade en tomat på Lisa!" står kvar en stund.

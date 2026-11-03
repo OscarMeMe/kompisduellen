@@ -103,6 +103,10 @@
        animate-wiggle vickar (skakar inte), animate-slot rullar in ett tecken som på en spelautomat,
        animate-hop gör ett litet hopp, animate-wave vinkar och animate-confetti är en fallande konfettibit. */
     --animate-wiggle: wiggle 0.5s ease-in-out;
+    /* Imposterjaktens väntrum: figurerna gungar lätt och förstoringsglaset letar sakta. Undantag från regeln om att
+       inget pågår hela tiden. Bara med motion-safe:, så att de står still med "minska rörelse". */
+    --animate-sway: sway 3.2s ease-in-out infinite;
+    --animate-magnify: magnify 8s ease-in-out infinite;
     --animate-slot: slot-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
     --animate-hop: hop 0.35s cubic-bezier(0.3, 0.7, 0.4, 1.4);
     --animate-wave: wave 0.55s ease-in-out;
@@ -169,6 +173,18 @@
     --animate-splat-fade: splat-fade 2s linear both;
     --animate-thrown-life: splat-life 1.6s linear both;
     --animate-toss: toss 0.55s ease-in-out;
+
+    @keyframes sway {
+        0%, 100% { transform: rotate(-3deg); }
+        50% { transform: rotate(3deg); }
+    }
+
+    @keyframes magnify {
+        0%, 100% { transform: translate(0, 0) rotate(-8deg); }
+        25% { transform: translate(-10px, 3px) rotate(4deg); }
+        50% { transform: translate(-3px, -4px) rotate(10deg); }
+        75% { transform: translate(-13px, -2px) rotate(-3deg); }
+    }
 
     @keyframes wiggle {
         0%, 100% { transform: rotate(0deg); }
