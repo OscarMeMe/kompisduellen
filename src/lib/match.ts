@@ -7,6 +7,7 @@
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
 import { findGame } from '@/lib/games'
+import { addThrow, EMPTY_THROW_STATS, type ThrowItemId, type ThrowStats } from '@/lib/kast'
 import {
   advanceCardReveal,
   cardDeadline,
@@ -109,6 +110,8 @@ export type GameState = {
   autoAdvance: boolean
   // Får man kasta saker på varandra (kast.ts)? Värden kan stänga av det i väntrummet. På från början.
   throwsAllowed: boolean
+  // Hur mycket som kastats i lobbyn och vem som fått flest (kast.ts). Bara värden räknar, och det gäller hela lobbyn.
+  throwStats: ThrowStats
   // Matchen har bara en spelare: en provomgång som inte räknas i topplistan.
   practice: boolean
   // Revansch: när matchen startar av sig själv (värdens klocka, ms). null = ingen revansch på väg.
@@ -172,6 +175,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     guessSeconds: rulesFor('gissa-priset').guessSeconds,
     autoAdvance: true,
     throwsAllowed: true,
+    throwStats: EMPTY_THROW_STATS,
     practice: false,
     rematchAt: null,
     rematchWishes: [],
@@ -263,6 +267,11 @@ export function setImposterSettings(state: GameState, settings: Partial<Imposter
 // Värden slår på eller av kasten i lobbyn.
 export function setThrowsAllowed(state: GameState, allowed: boolean): GameState {
   return state.throwsAllowed === allowed ? state : { ...state, throwsAllowed: allowed }
+}
+
+// Värden räknar ett kast som släppts igenom.
+export function countThrow(state: GameState, item: ThrowItemId, to: { id: string; name: string }): GameState {
+  return { ...state, throwStats: addThrow(state.throwStats, item, to) }
 }
 
 export function setTempo(state: GameState, tempo: { guessSeconds?: number; autoAdvance?: boolean }): GameState {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   acceptThrow,
+  addThrow,
+  EMPTY_THROW_STATS,
+  throwCounterText,
+  totalThrows,
+  type ThrowItemId,
   canThrow,
   findThrowItem,
   hitText,
@@ -64,5 +69,55 @@ describe('kast', () => {
 
   it('ger ägget och pajen olika färger', () => {
     expect(findThrowItem('agg')?.splat).not.toBe(findThrowItem('paj')?.splat)
+  })
+})
+
+describe('kasträknaren', () => {
+  const lisa = { id: 'l', name: 'Lisa' }
+  const oscar = { id: 'o', name: 'Oscar' }
+  const many = (list: [ThrowItemId, { id: string; name: string }][]) =>
+    list.reduce((stats, [item, to]) => addThrow(stats, item, to), EMPTY_THROW_STATS)
+
+  it('räknar saker och träffar utan att ändra det gamla värdet', () => {
+    const one = addThrow(EMPTY_THROW_STATS, 'tomat', lisa)
+    const two = addThrow(one, 'tomat', lisa)
+    expect(EMPTY_THROW_STATS).toEqual({ items: {}, received: {} })
+    expect(one.items.tomat).toBe(1)
+    expect(two.items.tomat).toBe(2)
+    expect(two.received.l).toEqual({ name: 'Lisa', count: 2 })
+    expect(totalThrows(two)).toBe(2)
+  })
+
+  it('säger till när inget kastats', () => {
+    expect(throwCounterText(EMPTY_THROW_STATS)).toBe('Ingen har kastat något än.')
+  })
+
+  it('skriver ett enda kast i singular', () => {
+    expect(throwCounterText(many([['tomat', lisa]]))).toBe('Ni har kastat 1 tomat, på Lisa.')
+    expect(throwCounterText(many([['agg', oscar]]))).toBe('Ni har kastat 1 ägg, på Oscar.')
+  })
+
+  it('skriver saken i plural när bara en sorts sak kastats', () => {
+    expect(throwCounterText(many([['tomat', lisa], ['tomat', lisa], ['tomat', oscar]]))).toBe('Ni har kastat 3 tomater. Lisa har fått flest.')
+    expect(throwCounterText(many([['toapapper', lisa], ['toapapper', lisa]]))).toBe('Ni har kastat 2 toapapper. Lisa har fått flest.')
+  })
+
+  it('skriver saker och vad som kastats mest när det är blandat', () => {
+    expect(throwCounterText(many([['paj', lisa], ['paj', lisa], ['gurka', lisa]]))).toBe('Ni har kastat 3 saker, mest pajer. Lisa har fått flest.')
+    expect(throwCounterText(many([['paj', lisa], ['gurka', lisa]]))).toBe('Ni har kastat 2 saker. Lisa har fått flest.')
+  })
+
+  it('namnger delad förstaplats, men inte fler än tre', () => {
+    const a = { id: 'a', name: 'A' }
+    const b = { id: 'b', name: 'B' }
+    const c = { id: 'c', name: 'C' }
+    const d = { id: 'd', name: 'D' }
+    expect(throwCounterText(many([['tomat', a], ['tomat', b]]))).toBe('Ni har kastat 2 tomater. A och B har fått flest.')
+    expect(throwCounterText(many([['tomat', a], ['tomat', b], ['tomat', c]]))).toBe('Ni har kastat 3 tomater. A, B och C har fått flest.')
+    expect(throwCounterText(many([['tomat', a], ['tomat', b], ['tomat', c], ['tomat', d]]))).toBe('Ni har kastat 4 tomater. Flera ligger lika.')
+  })
+
+  it('ignorerar okända saker från läget', () => {
+    expect(throwCounterText({ items: { sten: 5 }, received: {} })).toBe('Ingen har kastat något än.')
   })
 })

@@ -13,6 +13,9 @@ export type ThrowItem = {
   // Knappens namn ("Tomat") och hur saken skrivs i en mening ("en tomat").
   label: string
   text: string
+  // Hur saken räknas i kasträknaren: "1 tomat", "23 tomater".
+  one: string
+  many: string
   // Färgen på fläcken bakom saken när den splattar (Tailwind-klass med färgerna från index.css).
   splat: string
   // Ägget får en äggula mitt i den vita fläcken, så att det går att skilja från pajen.
@@ -20,11 +23,11 @@ export type ThrowItem = {
 }
 
 export const THROW_ITEMS: readonly ThrowItem[] = [
-  { id: 'tomat', emoji: '🍅', label: 'Tomat', text: 'en tomat', splat: 'bg-primary/70' },
-  { id: 'paj', emoji: '🥧', label: 'Paj', text: 'en paj', splat: 'bg-sun' },
-  { id: 'agg', emoji: '🥚', label: 'Ägg', text: 'ett ägg', splat: 'bg-card', yolk: true },
-  { id: 'toapapper', emoji: '🧻', label: 'Toapapper', text: 'toapapper', splat: 'bg-muted' },
-  { id: 'gurka', emoji: '🥒', label: 'Gurka', text: 'en gurka', splat: 'bg-mint' },
+  { id: 'tomat', emoji: '🍅', label: 'Tomat', text: 'en tomat', one: 'tomat', many: 'tomater', splat: 'bg-primary/70' },
+  { id: 'paj', emoji: '🥧', label: 'Paj', text: 'en paj', one: 'paj', many: 'pajer', splat: 'bg-sun' },
+  { id: 'agg', emoji: '🥚', label: 'Ägg', text: 'ett ägg', one: 'ägg', many: 'ägg', splat: 'bg-card', yolk: true },
+  { id: 'toapapper', emoji: '🧻', label: 'Toapapper', text: 'toapapper', one: 'toapapper', many: 'toapapper', splat: 'bg-muted' },
+  { id: 'gurka', emoji: '🥒', label: 'Gurka', text: 'en gurka', one: 'gurka', many: 'gurkor', splat: 'bg-mint' },
 ]
 
 export function findThrowItem(id: unknown): ThrowItem | undefined {
@@ -81,6 +84,62 @@ export type Thrown = { key: string; item: ThrowItemId; to: string }
 
 export function thrownText(item: ThrowItem, to: string): string {
   return `Du kastade ${item.text} på ${to}!`
+}
+
+// Kasträknaren: hur mycket som kastats i lobbyn och vem som fått flest. Bara värden räknar och den ligger i läget, så
+// den är samma för alla, även för den som ansluter sent, efter en omladdning och efter ett värdbyte. Namnet sparas,
+// så att den som lämnat lobbyn kan stå kvar som den som fått flest.
+export type ThrowStats = {
+  items: Record<string, number>
+  received: Record<string, { name: string; count: number }>
+}
+
+export const EMPTY_THROW_STATS: ThrowStats = { items: {}, received: {} }
+
+export function addThrow(stats: ThrowStats, item: ThrowItemId, to: { id: string; name: string }): ThrowStats {
+  return {
+    items: { ...stats.items, [item]: (stats.items[item] ?? 0) + 1 },
+    received: { ...stats.received, [to.id]: { name: to.name, count: (stats.received[to.id]?.count ?? 0) + 1 } },
+  }
+}
+
+export function totalThrows(stats: ThrowStats): number {
+  return THROW_ITEMS.reduce((sum, item) => sum + (stats.items[item.id] ?? 0), 0)
+}
+
+// Fler än så här många på delad förstaplats skrivs inte ut, eftersom raden annars blir för lång.
+const MAX_NAMED_LEADERS = 3
+
+function joinNames(names: readonly string[]): string {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} och ${names.at(-1)}`
+}
+
+// "Ni har kastat 23 tomater. Spelare 3 har fått flest." Är sakerna olika står det "23 saker", och "mest tomater" om
+// någon sak ligger ensam i topp.
+export function throwCounterText(stats: ThrowStats): string {
+  const total = totalThrows(stats)
+  if (total === 0) return 'Ingen har kastat något än.'
+  const thrown = THROW_ITEMS.map((item) => ({ item, count: stats.items[item.id] ?? 0 })).filter(({ count }) => count > 0)
+  const players = Object.values(stats.received)
+  if (total === 1) {
+    const name = players[0]?.name
+    return `Ni har kastat 1 ${thrown[0].item.one}${name ? `, på ${name}` : ''}.`
+  }
+
+  const most = Math.max(...thrown.map(({ count }) => count))
+  const top = thrown.filter(({ count }) => count === most)
+  const what =
+    thrown.length === 1
+      ? `${total} ${thrown[0].item.many}`
+      : top.length === 1
+        ? `${total} saker, mest ${top[0].item.many}`
+        : `${total} saker`
+
+  const highest = Math.max(0, ...players.map(({ count }) => count))
+  const leaders = players.filter(({ count }) => count === highest).map(({ name }) => name)
+  const who =
+    leaders.length === 0 ? '' : leaders.length > MAX_NAMED_LEADERS ? ' Flera ligger lika.' : ` ${joinNames(leaders)} har fått flest.`
+  return `Ni har kastat ${what}.${who}`
 }
 
 // Så länge syns bekräftelsen för den som kastade (ms).

@@ -98,6 +98,7 @@ import {
   setRounds,
   setTempo,
   setThrowsAllowed,
+  countThrow,
   type GameState,
   type HostState,
   type PlayerInfo,
@@ -582,6 +583,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const to = inLobby(message.to)
         const item = findThrowItem(message.item)
         if (!from || !to || !item) return
+        // Bara värden räknar kasten, och alla får räknaren med läget (kanalen skickar även värdens eget kast hit).
+        if (isHost) publish(countThrow(stateRef.current, item.id, to))
         const key = `${message.id}-${now}-${Math.random()}`
         // Mitt eget kast (kanalen skickar det tillbaka till mig): en större bekräftelse i stället för en rad.
         if (message.id === myId) {

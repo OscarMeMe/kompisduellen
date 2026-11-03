@@ -55,6 +55,15 @@ describe('läget från värden', () => {
     expect(parsed?.from).toBeNull()
   })
 
+  it('ger kasträknaren sitt startvärde hos en värd med en äldre version, och slänger en trasig', () => {
+    const { throwStats: _stats, ...old } = lobby
+    expect(parseStateMessage({ state: old, sentAt: 5 })?.state.throwStats).toEqual({ items: {}, received: {} })
+    const counted = { items: { tomat: 2 }, received: { b: { name: 'Lisa', count: 2 } } }
+    expect(parseStateMessage({ state: { ...lobby, throwStats: counted }, sentAt: 5 })?.state.throwStats).toEqual(counted)
+    expect(parseStateMessage({ state: { ...lobby, throwStats: { items: { tomat: 'två' }, received: {} } }, sentAt: 5 })).toBeNull()
+    expect(parseStateMessage({ state: { ...lobby, throwStats: { items: {}, received: { b: 3 } } }, sentAt: 5 })).toBeNull()
+  })
+
   it('slänger trasiga meddelanden i stället för att krascha', () => {
     for (const payload of [
       undefined,
