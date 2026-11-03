@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { findEmoji } from '@/lib/emoji'
-import { AVATARS, loadPlayer, savePlayer, type Player } from '@/lib/player'
+import { findBlob } from '@/lib/figurer'
+import { AVATARS, loadPlayer, PICKABLE_AVATARS, savePlayer, type Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 type PlayerSetupProps = {
@@ -18,7 +19,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   const [name, setName] = useState(saved?.name ?? '')
   // En sparad figur som inte längre finns att välja byts mot en slumpad.
   const [avatar, setAvatar] = useState(() =>
-    saved && AVATARS.includes(saved.avatar) ? saved.avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
+    saved && PICKABLE_AVATARS.includes(saved.avatar) ? saved.avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
   )
 
   function handleSubmit(event: FormEvent) {
@@ -49,12 +50,12 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
           Välj en figur
         </p>
         <div className="grid grid-cols-6 gap-2">
-          {AVATARS.map((option) => (
+          {PICKABLE_AVATARS.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setAvatar(option)}
-              aria-label={`Välj ${findEmoji(option)?.label ?? option}`}
+              aria-label={`Välj ${findEmoji(option)?.label ?? findBlob(option)?.name ?? option}`}
               aria-pressed={avatar === option}
               className={cn(
                 'group grid aspect-square min-h-11 place-items-center rounded-lg text-2xl transition outline-none focus-visible:ring-4 focus-visible:ring-primary/30 sm:text-3xl',

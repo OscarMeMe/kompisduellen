@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Crown, Loader2 } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AUTO_ADVANCE_TEXT, Choice, HOST_ADVANCES_TEXT, NEXT_QUESTION_LABEL, NextQuestionChoice } from '@/components/lobby/Choice'
@@ -267,7 +268,12 @@ export function WaitingRoom({
             {online.map((p) => (
               <li key={p.id} className="flex max-w-full min-w-0 items-center gap-2 rounded-full bg-muted py-1.5 pr-3 pl-2 animate-pop">
                 {/* Figuren vinkar när spelaren dyker upp i listan. */}
-                <Emoji emoji={p.avatar} className="origin-bottom text-xl motion-safe:animate-wave motion-safe:[animation-delay:200ms]" />
+                <LobbyFigur
+                  playerId={p.id}
+                  avatar={p.avatar}
+                  className="text-xl"
+                  emojiClassName="origin-bottom text-xl motion-safe:animate-wave motion-safe:[animation-delay:200ms]"
+                />
                 <span className="truncate font-semibold">{p.name}</span>
                 {p.id === meId && (
                   <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">Du</span>

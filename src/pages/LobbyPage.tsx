@@ -201,6 +201,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     floating,
     splat,
     thrown,
+    figureHits,
     lastThrowAt,
     acceptsThrows,
     hostMissing,
@@ -249,8 +250,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
       setAcceptsThrows: actions.setAcceptsThrows,
       splat,
       thrown,
+      hits: figureHits,
     }),
-    [state.throwsAllowed, othersPresent, online, me.id, lastThrowAt, actions, acceptsThrows, splat, thrown],
+    [state.throwsAllowed, othersPresent, online, me.id, lastThrowAt, actions, acceptsThrows, splat, thrown, figureHits],
   )
   const askBeforeLeaving = othersPresent
   function requestLeave(to: string) {

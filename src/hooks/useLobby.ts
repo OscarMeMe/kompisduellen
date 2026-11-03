@@ -49,6 +49,7 @@ import { measureSplatPlace } from '@/lib/splatt'
 import { APP_VERSION, versionStatus } from '@/lib/version'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, lobbyPreset, markAsHost, saveHostLobby, type Player } from '@/lib/player'
+import { createHitTracker, type FigureHits } from '@/lib/figurTraffar'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
 import {
@@ -223,6 +224,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Tar jag emot kast? Sparas i webbläsaren och skickas i närvaron, så att de andra vet vem de kan kasta på.
   const [acceptsThrows, setAcceptsThrowsState] = useState(loadAcceptsThrows)
   const acceptsThrowsRef = useRef(acceptsThrows)
+  // Figurerna i väntrummet som just träffats.
+  const [figureHits, setFigureHits] = useState<FigureHits>({})
+  const [hitTracker] = useState(() => createHitTracker(setFigureHits))
+  useEffect(() => () => hitTracker.stop(), [hitTracker])
   // Det jag skickade i närvaron senast, så att den kan skickas igen med ett nytt val utan att något annat ändras.
   const presenceRef = useRef<OnlinePlayer | null>(null)
   // Värden: kortspelens hemliga data, och händerna som senast skickades till varje spelare.
@@ -417,6 +422,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           if (!players.some((other) => other.id === p.id)) lastSeenRef.current[p.id] = now
         }
         for (const p of players) delete lastSeenRef.current[p.id]
+        hitTracker.sync(players.filter((p) => !p.noThrows).map((p) => p.id))
         onlineRef.current = players
         setOnline(players)
         const pending = pendingStateRef.current
@@ -585,6 +591,15 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (!from || !to || !item) return
         // Bara värden räknar kasten, och alla får räknaren med läget (kanalen skickar även värdens eget kast hit).
         if (isHost) publish(countThrow(stateRef.current, item.id, to))
+        // Figuren i väntrummet reagerar när kastet landar, om spelaren då är kvar och tar emot kast. Närvarolistan säger
+        // vem som tar emot kast. Mitt eget val gäller direkt, medan mitt val hos de andra kommer med närvaron.
+        if (stateRef.current.phase === 'waiting') {
+          hitTracker.thrown(to.id, () => {
+            if (to.id === myId && !acceptsThrowsRef.current) return false
+            const target = onlineRef.current.find((p) => p.id === to.id)
+            return target !== undefined && !target.noThrows
+          })
+        }
         const key = `${message.id}-${now}-${Math.random()}`
         // Mitt eget kast (kanalen skickar det tillbaka till mig): en större bekräftelse i stället för en rad.
         if (message.id === myId) {
@@ -750,7 +765,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setConnected(false)
       if (opened) closeChannel(opened)
     }
-  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, sendState, resolveIfEveryoneGuessed, sendHello, connectKey])
+  }, [code, me, isHost, publish, commit, current, activeIds, sendHands, sendState, resolveIfEveryoneGuessed, sendHello, connectKey, hitTracker])
 
   // Värden: skickar läget igen när spelet väntar på ett svar eller när det ändrats, högst var tionde sekund, så att en gäst
   // som missat ett meddelande inte står kvar i ett gammalt läge (se shouldResendState).
@@ -1032,6 +1047,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setAcceptsThrows: (on: boolean) => {
         saveAcceptsThrows(on)
         acceptsThrowsRef.current = on
+        if (!on && me) hitTracker.clear(me.id)
         setAcceptsThrowsState(on)
         const presence = presenceRef.current
         if (presence) {
@@ -1084,7 +1100,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         void channelRef.current?.send({ type: 'broadcast', event: 'wish', payload: { id: me.id, wants } })
       },
     }),
-    [isHost, me, publish, commit, current, activeIds, reconnect],
+    [isHost, me, publish, commit, current, activeIds, reconnect, hitTracker],
   )
 
   // Handen gäller bara medan ett kortspel pågår.
@@ -1105,6 +1121,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     typing: typing && state.imposter && currentTurn(state.imposter) === typing.id ? typing.id : null,
     splat,
     thrown,
+    figureHits,
     lastThrowAt,
     acceptsThrows,
     hostMissing,

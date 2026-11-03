@@ -1,5 +1,7 @@
 import { Crown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { LobbyFigur } from '@/components/figurer/LobbyFigur'
+import { findBlob } from '@/lib/figurer'
 
 export type Suspect = { id: string; name: string; avatar: string; host: boolean }
 
@@ -11,12 +13,18 @@ export function Suspects({ players, meId, emptySeats }: { players: readonly Susp
       {players.map((player, i) => (
         <li key={player.id} className="flex min-w-0 flex-col items-center gap-1.5 text-center motion-safe:animate-pop">
           <div className="relative">
-            <span
-              className="block origin-bottom text-5xl leading-none motion-safe:animate-sway sm:text-6xl"
-              style={{ animationDelay: `${-i * 0.7}s` }}
-            >
-              <Emoji emoji={player.avatar} className="block" />
-            </span>
+            {findBlob(player.avatar) ? (
+              <span className="block text-5xl leading-none sm:text-6xl">
+                <LobbyFigur playerId={player.id} avatar={player.avatar} delay={i * 0.7} className="block" />
+              </span>
+            ) : (
+              <span
+                className="block origin-bottom text-5xl leading-none motion-safe:animate-sway sm:text-6xl"
+                style={{ animationDelay: `${-i * 0.7}s` }}
+              >
+                <Emoji emoji={player.avatar} className="block" />
+              </span>
+            )}
             {player.host && (
               <span className="absolute -top-1 -right-2 flex size-7 items-center justify-center rounded-full border bg-card shadow-soft-sm">
                 <Crown className="size-4 text-crown" aria-label="Värd" />

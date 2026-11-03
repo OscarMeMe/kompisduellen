@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { FigureHits } from '@/lib/figurTraffar'
 import type { Splat, Thrown, ThrowItemId } from '@/lib/kast'
 
 // Reaktionerna och kasten på lobbysidan, delade via context (ReactionsProvider i Reactions.tsx), så att väntrummet,
@@ -20,6 +21,8 @@ export type Throws = {
   setAcceptsThrows: (on: boolean) => void
   splat: Splat | null
   thrown: Thrown | null
+  // Figurerna i väntrummet som just träffats (figurTraffar.ts).
+  hits: FigureHits
 }
 
 export type ReactionsValue = {

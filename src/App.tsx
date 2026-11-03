@@ -35,6 +35,9 @@ function Loading({ children }: { children: ReactNode }) {
 
 // Granskningen av Gissa priset finns bara i utvecklingsläge. I produktionsbygget blir villkoret false,
 // så sidan och dess kod byggs aldrig in i sajten.
+const FigurerPage = import.meta.env.DEV
+  ? lazy(() => import('@/pages/FigurerPage').then((m) => ({ default: m.FigurerPage })))
+  : null
 const ReviewPage = import.meta.env.DEV
   ? lazy(() => import('@/pages/ReviewPage').then((m) => ({ default: m.ReviewPage })))
   : null
@@ -57,6 +60,16 @@ export default function App() {
         ))}
         <Route path="resultat/:code" element={<ResultsPage />} />
         <Route path="profil" element={<Loading><ProfilePage /></Loading>} />
+        {FigurerPage && (
+          <Route
+            path="figurer"
+            element={
+              <Suspense fallback={null}>
+                <FigurerPage />
+              </Suspense>
+            }
+          />
+        )}
         {ReviewPage && (
           <Route
             path="granska"

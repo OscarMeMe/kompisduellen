@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Figur } from '@/components/figurer/Figur'
 import { findEmoji } from '@/lib/emoji'
+import { findBlob } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
 type EmojiProps = {
@@ -9,10 +11,14 @@ type EmojiProps = {
   className?: string
 }
 
-// Visar en emoji som Fluent-bild. Saknas bilden visas tecknet i stället.
+// Visar en emoji som Fluent-bild. Saknas bilden visas tecknet i stället. En blobb (figurer.ts) ritas stilla med minen
+// väntar, så att den fungerar överallt där en spelarfigur visas.
 export function Emoji({ emoji, className }: EmojiProps) {
   const info = findEmoji(emoji)
   const [failed, setFailed] = useState(false)
+
+  const blob = findBlob(emoji)
+  if (blob) return <Figur figure={blob} className={className} />
 
   if (!info || failed) {
     return (
