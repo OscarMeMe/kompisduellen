@@ -3,6 +3,8 @@
 // - Spelar-id och värdflaggan sparas i sessionStorage, alltså per flik. Då blir varje flik
 //   en egen spelare, och bara fliken som skapade lobbyn är värd.
 
+import { BLOB_AVATARS } from '@/lib/figurer'
+
 export type Player = {
   id: string
   name: string
@@ -10,6 +12,8 @@ export type Player = {
 }
 
 export const AVATARS = ['👻', '👽', '🤖', '👾', '🧙', '🧛', '🧜', '🦸', '🥷', '🤡', '💀', '🎃']
+// Allt som går att välja: även blobbarna, som inte slumpas fram.
+export const PICKABLE_AVATARS: readonly string[] = [...AVATARS, ...BLOB_AVATARS]
 
 const PROFILE_KEY = 'kd-player'
 const PLAYER_ID_KEY = 'kd-player-id'
