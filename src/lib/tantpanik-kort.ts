@@ -1,6 +1,10 @@
-// Korten i Exploderande Tanter: namn, regeltext, färg och hur många av varje som finns. Allt som har med korten att göra och som
-// kan behöva justeras ligger här, så att reglerna i tantpanik.ts inte behöver ändras när en kortlek balanseras om.
-// Texterna är egna. Kortbilderna kommer senare, så korten visas som text med en symbol och en färg.
+// Korten i Exploderande Tanter: namn, text, bild, färg och hur många av varje som finns. Allt som har med korten att
+// göra och som kan behöva justeras ligger här, så att reglerna i tantpanik.ts inte behöver ändras när en kortlek
+// balanseras om eller ett kort får en bild.
+//
+// Kortbilderna ligger i public/images/tantpanik/ (två storlekar per kort, se cardImage). Beskrivningen av bilderna och
+// hur de ska visas ligger lokalt i docs/tantpanik-bilder-README.md. Kort utan bild visas som textkort med symbol och
+// färg. Typerna (CardType) är spelets interna id:n och skickas i meddelandena. De ändras inte när ett kort byter namn.
 
 export type CardType =
   | 'tant'
@@ -14,8 +18,8 @@ export type CardType =
   | 'underifran'
   | 'tjanst'
   | 'nadu'
-  | 'bingo'
-  | 'kaffe'
+  | 'regnbage'
+  | 'kupong'
   | 'stickning'
   | 'stavgang'
   | 'tradgard'
@@ -28,35 +32,49 @@ export type CardKind = 'bomb' | 'defuse' | 'action' | 'nope' | 'collect' | 'joke
 export type CardDef = {
   type: CardType
   name: string
-  // Kort symbol på kortet, tills det finns riktiga bilder.
+  // Symbol på textkortet, för kort som saknar bild.
   symbol: string
+  // Texten på kortet. För kort med bild är det texten som står på bilden.
   text: string
+  // Längre förklaring i regelvyn, när kortets text inte säger allt. Saknas den visas text.
+  rule?: string
   kind: CardKind
-  // Färgen på kortet (klasser från index.css), så att korten går att känna igen innan man läst texten.
+  // Färgen på textkortet (klasser från index.css), så att korten går att känna igen innan man läst texten.
   color: string
+  // Bildens namn i public/images/tantpanik/ (utan storlek och filändelse). Saknas den visas ett textkort.
+  image?: string
 }
+
+// Tantkorten har samma text. Regnbågstanten och Kupongtanten har den på sina bilder.
+const COLLECT_TEXT = 'Kan inte spelas ensamt. Spela två lika och stjäl ett slumpat kort från en annan spelare.'
+const COLLECT_RULE =
+  'Gör inget ensam. Två lika (eller en med en Vild tant): ta ett slumpat kort från någon. Tre lika: be om ett visst kort.'
 
 export const CARDS: Record<CardType, CardDef> = {
   tant: {
     type: 'tant',
     name: 'Exploderande tant',
     symbol: '💥',
-    text: 'Visas direkt när du drar det. Har du en Fikapaus gömmer du tanten i högen igen. Annars är du ute.',
+    text: 'Desarmera eller åk ut.',
+    rule: 'Visas direkt när du drar det. Har du ett Desarmera-kort gömmer du tanten i högen igen, var du vill. Annars är du ute.',
     kind: 'bomb',
     // Svart kort, som kortbilden: en arg tant i röd kavaj som pekar på dig.
     color: 'bg-foreground text-card',
+    image: 'exploderande-tant',
   },
   fika: {
     type: 'fika',
-    name: 'Fikapaus',
+    name: 'Desarmera',
     symbol: '☕',
-    text: 'Räddar dig när du drar en exploderande tant. Göm tanten var du vill i högen. Din tur är slut.',
+    text: 'Räddar dig. Lägg tillbaka den exploderande tanten på en hemlig plats i högen.',
+    rule: 'Används av sig själv när du drar en exploderande tant. Göm tanten var du vill i högen. Din tur är slut.',
     kind: 'defuse',
     color: 'bg-mint',
+    image: 'desarmera',
   },
   dubbelpass: {
     type: 'dubbelpass',
-    name: 'Dubbelpass',
+    name: 'Attack',
     symbol: '⏩',
     text: 'Avsluta din tur utan att dra. Nästa spelare får två turer. Var du själv attackerad får nästa dina turer plus två.',
     kind: 'action',
@@ -64,23 +82,25 @@ export const CARDS: Record<CardType, CardDef> = {
   },
   dudar: {
     type: 'dudar',
-    name: 'Du där!',
+    name: 'Riktad attack',
     symbol: '👉',
-    text: 'Som Dubbelpass, men du väljer vem som får turerna.',
+    text: 'Som Attack, men du väljer vem som får turerna.',
     kind: 'action',
     color: 'bg-coral-soft',
   },
   intemin: {
     type: 'intemin',
-    name: 'Inte min tur',
+    name: 'Hoppa över',
     symbol: '🙅',
-    text: 'Avsluta en tur utan att dra. Har du flera turer kvar försvinner bara en.',
+    text: 'Avsluta din tur utan att dra ett kort.',
+    rule: 'Avsluta en tur utan att dra. Har du flera turer kvar försvinner bara en.',
     kind: 'action',
     color: 'bg-sky-soft',
+    image: 'hoppa-over',
   },
   tjuvkika: {
     type: 'tjuvkika',
-    name: 'Tjuvkika',
+    name: 'Se framtiden',
     symbol: '👀',
     text: 'Titta i hemlighet på de tre översta korten i högen.',
     kind: 'action',
@@ -88,7 +108,7 @@ export const CARDS: Record<CardType, CardDef> = {
   },
   mobblera: {
     type: 'mobblera',
-    name: 'Möblera om',
+    name: 'Ändra framtiden',
     symbol: '🔀',
     text: 'Titta i hemlighet på de tre översta korten och lägg tillbaka dem i den ordning du vill.',
     kind: 'action',
@@ -96,7 +116,7 @@ export const CARDS: Record<CardType, CardDef> = {
   },
   blanda: {
     type: 'blanda',
-    name: 'Blanda om',
+    name: 'Blanda',
     symbol: '🌀',
     text: 'Blanda hela draghögen.',
     kind: 'action',
@@ -106,47 +126,56 @@ export const CARDS: Record<CardType, CardDef> = {
     type: 'underifran',
     name: 'Dra underifrån',
     symbol: '⤵️',
-    text: 'Avsluta din tur genom att dra det understa kortet i stället för det översta.',
+    text: 'Avsluta din tur genom att dra det understa kortet i högen.',
     kind: 'action',
     color: 'bg-sky-soft',
+    image: 'dra-underifran',
   },
   tjanst: {
     type: 'tjanst',
-    name: 'Gör mig en tjänst',
+    name: 'Tjänst',
     symbol: '🎁',
-    text: 'Välj en spelare. Den väljer själv ett kort att ge dig.',
+    text: 'Välj en spelare som ger dig ett kort. Spelaren väljer vilket.',
     kind: 'action',
     color: 'bg-sun-soft',
+    image: 'tjanst',
   },
   nadu: {
     type: 'nadu',
-    name: 'Nä du!',
+    name: 'Nope!',
     symbol: '✋',
-    text: 'Stoppa ett kort som någon precis spelat, även när det inte är din tur. Går inte på en exploderande tant eller en Fikapaus.',
+    text: 'Stoppa en effekt, även på andras tur. Gäller inte Exploderande tant eller Desarmera.',
+    rule: 'Stoppa ett kort som någon precis spelat, även när det inte är din tur. Ett Nope! på ett Nope! gör att kortet gäller igen. Gäller inte Exploderande tant eller Desarmera.',
     kind: 'nope',
     color: 'bg-primary text-primary-foreground',
+    image: 'nope',
   },
-  bingo: {
-    type: 'bingo',
-    name: 'Bingotanten',
-    symbol: '🎱',
-    text: 'Gör inget ensam. Två lika: ta ett slumpat kort. Tre lika: be om ett kort.',
+  regnbage: {
+    type: 'regnbage',
+    name: 'Regnbågstanten',
+    symbol: '🌈',
+    text: COLLECT_TEXT,
+    rule: COLLECT_RULE,
+    kind: 'collect',
+    color: 'bg-lilac',
+    image: 'regnbagstanten',
+  },
+  kupong: {
+    type: 'kupong',
+    name: 'Kupongtanten',
+    symbol: '🏷️',
+    text: COLLECT_TEXT,
+    rule: COLLECT_RULE,
     kind: 'collect',
     color: 'bg-sun',
-  },
-  kaffe: {
-    type: 'kaffe',
-    name: 'Kaffetanten',
-    symbol: '🫖',
-    text: 'Gör inget ensam. Två lika: ta ett slumpat kort. Tre lika: be om ett kort.',
-    kind: 'collect',
-    color: 'bg-sun',
+    image: 'kupongtanten',
   },
   stickning: {
     type: 'stickning',
     name: 'Sticktanten',
     symbol: '🧶',
-    text: 'Gör inget ensam. Två lika: ta ett slumpat kort. Tre lika: be om ett kort.',
+    text: COLLECT_TEXT,
+    rule: COLLECT_RULE,
     kind: 'collect',
     color: 'bg-sun',
   },
@@ -154,7 +183,8 @@ export const CARDS: Record<CardType, CardDef> = {
     type: 'stavgang',
     name: 'Stavgångstanten',
     symbol: '🥢',
-    text: 'Gör inget ensam. Två lika: ta ett slumpat kort. Tre lika: be om ett kort.',
+    text: COLLECT_TEXT,
+    rule: COLLECT_RULE,
     kind: 'collect',
     color: 'bg-sun',
   },
@@ -162,7 +192,8 @@ export const CARDS: Record<CardType, CardDef> = {
     type: 'tradgard',
     name: 'Trädgårdstanten',
     symbol: '🌷',
-    text: 'Gör inget ensam. Två lika: ta ett slumpat kort. Tre lika: be om ett kort.',
+    text: COLLECT_TEXT,
+    rule: COLLECT_RULE,
     kind: 'collect',
     color: 'bg-sun',
   },
@@ -209,8 +240,8 @@ export const DECK: Record<DeckGroup, Partial<Record<CardType, number>>> = {
     underifran: 3,
     tjanst: 2,
     nadu: 4,
-    bingo: 3,
-    kaffe: 3,
+    regnbage: 3,
+    kupong: 3,
     stickning: 3,
     stavgang: 3,
     tradgard: 3,
@@ -227,8 +258,8 @@ export const DECK: Record<DeckGroup, Partial<Record<CardType, number>>> = {
     underifran: 4,
     tjanst: 4,
     nadu: 5,
-    bingo: 4,
-    kaffe: 4,
+    regnbage: 4,
+    kupong: 4,
     stickning: 4,
     stavgang: 4,
     tradgard: 4,
@@ -240,7 +271,7 @@ export const DECK: Record<DeckGroup, Partial<Record<CardType, number>>> = {
 export const BOMBS_TOTAL = 9
 // Tantsnaror som läggs i leken när fällan är påslagen, i alla spelarantal.
 export const TRAP_COUNT = 2
-// Korten man har på handen från början, utöver sin Fikapaus.
+// Korten man har på handen från början, utöver sitt Desarmera-kort.
 export const START_CARDS = 7
 // Hur länge (s) ett kort kan stoppas med Nä du! innan det händer. Varje Nä du! börjar om tiden.
 export const NOPE_SECONDS = 5
@@ -249,4 +280,17 @@ export function groupsFor(players: number): DeckGroup[] {
   if (players <= 3) return ['liten']
   if (players <= 7) return ['stor']
   return ['liten', 'stor']
+}
+
+// Kortets bild i en viss bredd (360 eller 960 px), eller undefined för ett kort utan bild.
+export const CARD_IMAGE_WIDTHS = [360, 960] as const
+export function cardImage(type: CardType, width: (typeof CARD_IMAGE_WIDTHS)[number]): string | undefined {
+  const image = CARDS[type].image
+  return image ? `/images/tantpanik/${image}-${width}.webp` : undefined
+}
+
+// srcset för kortets bild, så att webbläsaren väljer storlek efter hur stort kortet visas.
+export function cardSrcSet(type: CardType): string | undefined {
+  if (!CARDS[type].image) return undefined
+  return CARD_IMAGE_WIDTHS.map((width) => `${cardImage(type, width)} ${width}w`).join(', ')
 }

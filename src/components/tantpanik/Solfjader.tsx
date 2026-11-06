@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { TantKort } from '@/components/tantpanik/TantKort'
 import { FAN_CARD_WIDTH, fanIndexAt, fanLayout } from '@/lib/solfjader'
 import type { TantCard } from '@/lib/tantpanik'
-import { CARDS, cardName } from '@/lib/tantpanik-kort'
+import { CARDS, cardImage, cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
 // Så långt fingret får röra sig (px) och ändå räknas som ett tryck.
@@ -10,7 +10,7 @@ const TAP_SLOP = 8
 
 // Handen som en solfjäder. Dra fingret eller musen längs korten: kortet under fingret lyfts och visas större ovanför.
 // Släpp så läggs det tillbaka. Ett tryck på ett kort väljer det (onTap). Valda kort och kort som lyser (glow, t.ex.
-// Nä du! när det går att spela) står lite högre. Rörelserna stängs av med "minska rörelse", men korten lyfts ändå.
+// Nope! när det går att spela) står lite högre. Rörelserna stängs av med "minska rörelse", men korten lyfts ändå.
 export function Solfjader({
   cards,
   selected,
@@ -90,9 +90,9 @@ export function Solfjader({
         <div
           aria-hidden
           className="pointer-events-none absolute bottom-full z-50 mb-2 -translate-x-1/2 motion-safe:animate-pop"
-          style={{ left: Math.max(76, Math.min(width - 76, previewX)) }}
+          style={{ left: Math.max(100, Math.min(width - 100, previewX)) }}
         >
-          <TantKort type={preview.type} className="shadow-lift" />
+          <TantKort type={preview.type} size="preview" />
         </div>
       )}
       {cards.map((card, i) => {
@@ -111,7 +111,7 @@ export function Solfjader({
               if (event.detail === 0) onTap(card.id)
             }}
             className={cn(
-              'absolute bottom-6 h-30 w-21 origin-bottom rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out',
+              'absolute bottom-6 h-29 w-21 origin-bottom rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out',
               isSelected && 'ring-4 ring-primary',
               lit && !isSelected && 'shadow-[0_0_18px_4px] shadow-sun ring-4 ring-sun',
             )}
@@ -130,8 +130,11 @@ export function Solfjader({
 }
 
 // Kortet i solfjädern: symbolen i övre vänstra hörnet syns även när korten ligger tätt, som på riktiga kort.
+// Har kortet en bild visas den hela, och knappen har kortets namn och text för skärmläsare.
 function FanCard({ type }: { type: TantCard['type'] }) {
   const card = CARDS[type]
+  const src = cardImage(type, 360)
+  if (src) return <img src={src} alt="" draggable={false} className="size-full object-contain drop-shadow-sm select-none" />
   return (
     <span className={cn('flex size-full flex-col rounded-lg border border-foreground/15 p-1.5 text-left shadow-soft-sm', card.color)}>
       <span aria-hidden className="text-lg leading-none">
