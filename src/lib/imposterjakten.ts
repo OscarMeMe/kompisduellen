@@ -1,5 +1,5 @@
 // Imposterjakten: alla utom en får samma hemliga ord. Impostern får inte ordet (i Normal bara en vag ledtråd) och
-// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, tre varv. Sedan diskuterar gruppen, och när
+// måste smälta in. Alla ger ett ord var som hör ihop med det hemliga ordet, två eller tre varv. Sedan diskuterar gruppen, och när
 // mer än hälften är redo börjar en nedräkning till omröstningen. Fångas impostern får den gissa ordet. Facit visar
 // ordet, impostern, allas röster och poängen.
 //
@@ -36,7 +36,7 @@ export function findWord(id: string): ImposterWord | undefined {
 
 // Förklaringen i väntrummet ("Så spelas det") och hur poängen räknas.
 export const IMPOSTER_HOW_TO =
-  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går tre varv runt bordet. Efter andra varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter tredje varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1, 2 eller 3 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
+  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går två eller tre varv runt bordet. Efter näst sista varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter sista varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
 
 export const IMPOSTER_SCORING: string[] = [
   'Kommer impostern undan får den 2 poäng.',
@@ -47,12 +47,11 @@ export const IMPOSTER_SCORING: string[] = [
 
 // När alla ord visats börjar listan om, men de senaste står kvar som använda (som i Gissa priset).
 export const RECENT_AFTER_RESET = 20
-export const ROUND_OPTIONS = [1, 2, 3] as const
+export const ROUND_OPTIONS = [1, 2, 3, 5, 10] as const
 export const DEFAULT_ROUNDS = 3
-// Varje spelare ger ett ord per varv.
-export const CLUE_ROUNDS = 3
-// Från det att så många varv är klara går det att anklaga någon.
-export const ACCUSE_AFTER_ROUNDS = 2
+// Varje spelare ger ett ord per varv. Värden väljer 2 eller 3 varv per omgång, och 3 är förvalt.
+export const CLUE_ROUND_OPTIONS = [2, 3] as const
+export const DEFAULT_CLUE_ROUNDS = 3
 // Så länge pågår den snabba omröstningen efter en anklagelse.
 export const ACCUSE_SECONDS = 20
 export const MAX_CLUE_LENGTH = 30
@@ -61,10 +60,21 @@ export const COUNTDOWN_SECONDS = 30
 
 // Värdens val i väntrummet. hard = Svår (impostern får ingen ledtråd). tricky = Lurig (impostern får ett närliggande ord
 // och vet inte om att den är impostern). Saknas tricky är det inte Lurig. category = null för Blandat.
-// aloud = ni sitter tillsammans och säger orden högt, i stället för att skriva dem i appen.
-export type ImposterSettings = { hard: boolean; tricky?: boolean; category: string | null; aloud: boolean }
+// aloud = ni sitter tillsammans och säger orden högt, i stället för att skriva dem i appen. clueRounds = varv per omgång
+// (2 eller 3). Saknas det är det 3, som hos en värd med en äldre version.
+export type ImposterSettings = { hard: boolean; tricky?: boolean; category: string | null; aloud: boolean; clueRounds?: number }
+
+// Varv per omgång enligt inställningarna. Allt annat än 2 räknas som 3.
+export function clueRoundsOf(settings: Pick<ImposterSettings, 'clueRounds'>): number {
+  return settings.clueRounds === 2 ? 2 : DEFAULT_CLUE_ROUNDS
+}
 
 export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null, aloud: false }
+
+// Det som gäller hela matchen: orden som visats och hur många gånger var och en varit imposter. Uppdateras först när en
+// omgång är slut, så att inget hemligt syns i tillståndet. Nollställs när en match startar.
+export type ImposterMatch = { wordIds: string[]; imposterCounts: Record<string, number> }
+export const EMPTY_IMPOSTER_MATCH: ImposterMatch = { wordIds: [], imposterCounts: {} }
 
 function difficultyName(settings: ImposterSettings): string {
   return settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'
@@ -72,10 +82,10 @@ function difficultyName(settings: ImposterSettings): string {
 
 // Värdens val i ord, för gästernas rad i väntrummet (settingsLine i vantrum.ts): "Normal", "Blandat", "Vi skriver orden".
 export function imposterSettingsParts(settings: ImposterSettings): string[] {
-  return [difficultyName(settings), settings.category ?? 'Blandat', settings.aloud ? 'Vi säger orden högt' : 'Vi skriver orden']
+  return [`${clueRoundsOf(settings)} varv`, difficultyName(settings), settings.category ?? 'Blandat', settings.aloud ? 'Vi säger orden högt' : 'Vi skriver orden']
 }
 
-// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, tre varv. diskussion: allas ord syns kvar och man
+// kort: alla läser sitt kort. ledtradar: ett ord var i turordning, två eller tre varv. diskussion: allas ord syns kvar och man
 // markerar när man är redo att rösta. rostning: hemlig omröstning. gissning: impostern är fast och gissar ordet.
 // facit: ordet, impostern, rösterna och poängen.
 export type ImposterStep = 'kort' | 'ledtradar' | 'diskussion' | 'rostning' | 'gissning' | 'facit'
@@ -104,8 +114,10 @@ export type Clue = { player: string; kind: 'ord' | 'pass' | 'sagt'; word: string
 // Det alla får se av omgången. Inställningarna låses när matchen startar och följer med i tabellen.
 export type ImposterTable = {
   step: ImposterStep
-  // Turordningen (alla i omgången). Startspelaren slumpas och samma ordning gäller båda varven.
+  // Turordningen (alla i omgången). Startspelaren slumpas och samma ordning gäller alla varv.
   order: string[]
+  // Varv i den här omgången (2 eller 3), låst när omgången delas ut. Saknas hos en värd med en äldre version, och då är det 3.
+  clueRounds?: number
   // Antal gjorda turer. Den som har tur är order[turn % order.length].
   turn: number
   clues: Clue[]
@@ -207,11 +219,14 @@ export function normalizeWord(text: string): string {
 
 // Ett slumpat ord som inte visats än (i kategorin om värden valt en). Är alla använda börjar listan om, men de
 // senaste RECENT_AFTER_RESET står kvar som använda. usedWordIds = listan efter en eventuell omstart, utan det nya ordet
-// (det läggs till när omgången är slut, så att det aldrig syns i tillståndet medan det är hemligt).
+// (det läggs till när omgången är slut, så att det aldrig syns i tillståndet medan det är hemligt). matchWordIds = orden
+// som visats i den pågående matchen. De spärras först vid en omstart, så att inget ord kommer tillbaka i samma match
+// så länge kategorin räcker.
 export function pickWord(
   usedWordIds: readonly string[],
   category: string | null,
   random: Random = Math.random,
+  matchWordIds: readonly string[] = [],
 ): { wordId: string; usedWordIds: string[] } {
   const pool = WORDS.filter((word) => category === null || word.kategori === category)
   const list = pool.length > 0 ? pool : WORDS
@@ -219,29 +234,57 @@ export function pickWord(
   let unused = list.filter((word) => !used.includes(word.id))
   if (unused.length === 0) {
     used = used.slice(-RECENT_AFTER_RESET)
-    unused = list.filter((word) => !used.includes(word.id))
-    // Kategorin har färre ord än spärren: allt utom det senaste ordet går bra.
-    if (unused.length === 0) unused = list.filter((word) => word.id !== used.at(-1))
+    const fromMatch = list.filter((word) => matchWordIds.includes(word.id))
+    unused = list.filter((word) => !used.includes(word.id) && !matchWordIds.includes(word.id))
+    // Spärren är större än det som finns kvar: bara matchens ord är spärrade.
+    if (unused.length === 0) unused = list.filter((word) => !fromMatch.includes(word))
+    // Kategorin räcker inte till hela matchen: allt utom det senaste ordet går bra.
+    if (unused.length === 0) unused = list.filter((word) => word.id !== used.at(-1) && word.id !== matchWordIds.at(-1))
     if (unused.length === 0) unused = [...list]
   }
   return { wordId: unused[Math.floor(random() * unused.length)].id, usedWordIds: used }
 }
 
-// Delar ut en omgång: ett ord, exakt en imposter och en turordning med slumpad startspelare.
+// En kort rad till värden när ord kan komma tillbaka i matchen: kategorin har inte många fler ord än antalet omgångar,
+// eller de flesta orden har redan spelats i lobbyn. null när det inte är aktuellt.
+export function wordsRunningOutText(settings: Pick<ImposterSettings, 'category'>, rounds: number, usedWordIds: readonly string[]): string | null {
+  const pool = WORDS.filter((word) => settings.category === null || word.kategori === settings.category)
+  if (settings.category !== null && pool.length < rounds + 3) return `Kategorin har ${pool.length} ord, så ord kan komma tillbaka.`
+  const unused = pool.filter((word) => !usedWordIds.includes(word.id)).length
+  if (unused < rounds) return `Ni har redan spelat de flesta orden${settings.category === null ? '' : ' i kategorin'}, så ord kan komma tillbaka.`
+  return null
+}
+
+// Väljer impostern med en viktad slump: alla kan bli imposter, men den som redan varit det i matchen blir mindre
+// trolig (vikt 1 / (1 + antal gånger)). Så går det inte att räkna ut vem det är, och ingen blir imposter hela tiden.
+export function pickImposter(players: readonly string[], counts: Readonly<Record<string, number>>, random: Random): string {
+  const weights = players.map((id) => 1 / (1 + (counts[id] ?? 0)))
+  let left = random() * weights.reduce((sum, weight) => sum + weight, 0)
+  for (const [i, weight] of weights.entries()) {
+    left -= weight
+    if (left < 0) return players[i]
+  }
+  return players[players.length - 1]
+}
+
+// Delar ut en omgång: ett ord, exakt en imposter och en turordning med slumpad startspelare. match = orden och hur
+// många gånger var och en varit imposter i den pågående matchen.
 export function dealRound(
   players: readonly string[],
   settings: ImposterSettings,
   usedWordIds: readonly string[],
   random: Random = Math.random,
+  match: ImposterMatch = EMPTY_IMPOSTER_MATCH,
 ): { table: ImposterTable; secrets: ImposterSecrets; usedWordIds: string[] } {
-  const picked = pickWord(usedWordIds, settings.category, random)
-  const imposter = players[Math.floor(random() * players.length)]
+  const picked = pickWord(usedWordIds, settings.category, random, match.wordIds)
+  const imposter = pickImposter(players, match.imposterCounts, random)
   const start = Math.floor(random() * players.length)
   const order = [...players.slice(start), ...players.slice(0, start)]
   return {
     table: {
       step: 'kort',
       order,
+      clueRounds: clueRoundsOf(settings),
       turn: 0,
       clues: [],
       read: [],
@@ -292,8 +335,13 @@ export function myImposterCard(secrets: ImposterSecrets, table: ImposterTable, p
   }
 }
 
+// Varv i omgången, låst när den delades ut.
+export function clueRoundsFor(table: Pick<ImposterTable, 'clueRounds'>): number {
+  return table.clueRounds === 2 ? 2 : DEFAULT_CLUE_ROUNDS
+}
+
 export function totalTurns(table: ImposterTable): number {
-  return table.order.length * CLUE_ROUNDS
+  return table.order.length * clueRoundsFor(table)
 }
 
 // Den som har tur just nu, eller null när varven är klara.
@@ -302,9 +350,9 @@ export function currentTurn(table: ImposterTable): string | null {
   return table.order[table.turn % table.order.length]
 }
 
-// Vilket varv (1 eller 2) som pågår.
+// Vilket varv som pågår (från 1).
 export function clueRound(table: ImposterTable): number {
-  return Math.min(CLUE_ROUNDS, Math.floor(table.turn / Math.max(1, table.order.length)) + 1)
+  return Math.min(clueRoundsFor(table), Math.floor(table.turn / Math.max(1, table.order.length)) + 1)
 }
 
 // Hur en spärrad form jämförs med en ledtråd. anywhere: formen får inte finnas någonstans i ledtråden. start: ledtråden
@@ -369,20 +417,42 @@ export function checkClue(
 
 // Ny match: inställningarna låses och första omgången delas ut. state har redan matchens spelare och rundor.
 export function startImposterMatch(state: GameState, random: Random = Math.random): ImposterHost {
-  return startImposterRound(state, 1, Object.keys(state.players), random)
+  return startImposterRound({ ...state, imposterMatch: EMPTY_IMPOSTER_MATCH }, 1, Object.keys(state.players), random)
 }
 
 function startImposterRound(state: GameState, round: number, players: readonly string[], random: Random): ImposterHost {
-  const dealt = dealRound(players, state.imposterSettings, state.usedWordIds, random)
+  const dealt = dealRound(players, state.imposterSettings, state.usedWordIds, random, state.imposterMatch)
   return {
     state: { ...state, phase: 'playing', round, deadline: null, imposter: dealt.table, usedWordIds: dealt.usedWordIds },
     secrets: dealt.secrets,
   }
 }
 
-// Ordet har visats och räknas som använt.
+// Ordet har visats och räknas som använt, i lobbyn och i matchen.
 function markUsed(state: GameState, secrets: ImposterSecrets): GameState {
-  return { ...state, usedWordIds: [...state.usedWordIds.filter((id) => id !== secrets.wordId), secrets.wordId] }
+  return {
+    ...state,
+    usedWordIds: [...state.usedWordIds.filter((id) => id !== secrets.wordId), secrets.wordId],
+    imposterMatch: { ...state.imposterMatch, wordIds: [...state.imposterMatch.wordIds.filter((id) => id !== secrets.wordId), secrets.wordId] },
+  }
+}
+
+// Värden avslutar efter den pågående omgången (on) eller ångrar sig. Antalet omgångar blir den pågående, och det
+// valda antalet sparas i savedRounds, så att väntrummet får tillbaka det efter matchen. Alla ser "Omgång 2 av 2".
+// En avbruten omgång räknas inte, så då kommer en ny med samma nummer, precis som vanligt.
+export function imposterEndAfterRound(state: GameState, on: boolean): GameState {
+  if (state.game !== IMPOSTER_GAME || state.phase !== 'playing' || state.practice) return state
+  if (on) {
+    if (state.round >= state.rounds) return state
+    return { ...state, rounds: state.round, savedRounds: state.savedRounds ?? state.rounds }
+  }
+  if (state.savedRounds === null) return state
+  return { ...state, rounds: state.savedRounds, savedRounds: null }
+}
+
+// Har värden valt att avsluta efter den här omgången? Då står det för alla.
+export function endsAfterThisRound(state: Pick<GameState, 'game' | 'phase' | 'practice' | 'savedRounds'>): boolean {
+  return state.game === IMPOSTER_GAME && state.phase === 'playing' && !state.practice && state.savedRounds !== null
 }
 
 function withTable(host: ImposterHost, table: ImposterTable): ImposterHost {
@@ -400,7 +470,7 @@ function toClues(host: ImposterHost): ImposterHost {
   return withTable(host, { ...table, step: 'ledtradar' })
 }
 
-// En tur är gjord. Efter sista turen i andra varvet börjar diskussionen. Turer för spelare som lämnat hoppas över.
+// En tur är gjord. Efter sista turen i sista varvet börjar diskussionen. Turer för spelare som lämnat hoppas över.
 function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter!
   const turn = table.turn + 1
@@ -553,7 +623,7 @@ export function imposterInstruction(
         ? { text: 'Väntar på att alla läser sitt kort…', act: false }
         : { text: 'Läs ditt kort i hemlighet. Tryck sedan Jag har läst', act: true }
     case 'ledtradar': {
-      const lap = `Varv ${clueRound(table)} av ${CLUE_ROUNDS}`
+      const lap = `Varv ${clueRound(table)} av ${clueRoundsFor(table)}`
       const turn = currentTurn(table)
       if (turn === me.id) return { lap, text: `Din tur! ${table.aloud ? 'Säg ditt ord högt' : 'Skriv ett ord'}`, act: true }
       const name = turn ? me.name(turn) : 'Någon'
@@ -581,12 +651,13 @@ export function voteCandidates(table: ImposterTable, meId: string, activeIds: re
   return (table.tied ?? table.order).filter((id) => id !== meId && activeIds.includes(id))
 }
 
-// Får spelaren anklaga någon nu? Från det att andra varvet är klart och fram till att omröstningen öppnas, en gång per
+// Får spelaren anklaga någon nu? Från det att näst sista varvet är klart (varv 1 vid två varv, varv 2 vid tre) och fram
+// till att omröstningen öppnas, en gång per
 // spelare om anklagelsen inte får majoritet.
 export function canAccuse(table: ImposterTable, playerId: string): boolean {
   if (table.accusation || table.tied || !table.order.includes(playerId) || table.accusers.includes(playerId)) return false
   if (table.step === 'diskussion') return true
-  return table.step === 'ledtradar' && table.turn >= table.order.length * ACCUSE_AFTER_ROUNDS
+  return table.step === 'ledtradar' && table.turn >= table.order.length * (clueRoundsFor(table) - 1)
 }
 
 // Anklaga!: en snabb hemlig omröstning för alla utom den anklagade. Allt annat står still så länge.
@@ -839,9 +910,13 @@ function finishRound(
     points,
     reason,
   }
+  const used = markUsed(state, secrets)
+  const counts = used.imposterMatch.imposterCounts
+  const imposterMatch =
+    kind === 'avbruten' ? used.imposterMatch : { ...used.imposterMatch, imposterCounts: { ...counts, [secrets.imposter]: (counts[secrets.imposter] ?? 0) + 1 } }
   return {
     ...host,
-    state: { ...markUsed(state, secrets), scores, deadline: null, imposter: { ...table, step: 'facit', outcome, accusation: null } },
+    state: { ...used, imposterMatch, scores, deadline: null, imposter: { ...table, step: 'facit', outcome, accusation: null } },
   }
 }
 

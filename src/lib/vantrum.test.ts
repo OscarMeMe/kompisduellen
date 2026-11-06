@@ -92,13 +92,16 @@ describe('inställningarna på en rad', () => {
   it('visar Imposterjaktens omgångar och val', () => {
     const state = initialState('imposterjakten')
     expect(settingsLine({ ...state, rounds: 2, imposterSettings: { hard: false, category: null, aloud: false } })).toBe(
-      '2 omgångar · Normal · Blandat · Vi skriver orden',
+      '2 omgångar · 3 varv · Normal · Blandat · Vi skriver orden',
     )
     expect(settingsLine({ ...state, rounds: 1, imposterSettings: { hard: true, category: 'Mat', aloud: true } })).toBe(
-      '1 omgång · Svår · Mat · Vi säger orden högt',
+      '1 omgång · 3 varv · Svår · Mat · Vi säger orden högt',
+    )
+    expect(settingsLine({ ...state, rounds: 10, imposterSettings: { hard: false, category: null, aloud: false, clueRounds: 2 } })).toBe(
+      '10 omgångar · 2 varv · Normal · Blandat · Vi skriver orden',
     )
     expect(settingsLine({ ...state, rounds: 3, imposterSettings: { hard: false, tricky: true, category: null, aloud: false } })).toBe(
-      '3 omgångar · Lurig · Blandat · Vi skriver orden',
+      '3 omgångar · 3 varv · Lurig · Blandat · Vi skriver orden',
     )
   })
 })

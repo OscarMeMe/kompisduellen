@@ -25,7 +25,7 @@ import {
   type CountdownKind,
   type GameState,
 } from '@/lib/match'
-import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, type ImposterSettings } from '@/lib/imposterjakten'
+import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, type ImposterSettings } from '@/lib/imposterjakten'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
@@ -243,6 +243,8 @@ export function WaitingRoom({
 
             <Choice
               label={roundsLabel}
+              compact
+              hint={imposter ? (wordsRunningOutText(state.imposterSettings, state.rounds, state.usedWordIds) ?? undefined) : undefined}
               options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
               selected={state.rounds}
               onSelect={onSetRounds}

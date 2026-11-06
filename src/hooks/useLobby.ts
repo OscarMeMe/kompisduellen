@@ -80,6 +80,7 @@ import {
   hostDeadline,
   hostImposterNewWord,
   hostImposterAbortRound,
+  hostImposterEndAfterRound,
   hostImposterNextRound,
   hostImposterSkipTurn,
   hostImposterStartAnyway,
@@ -961,6 +962,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       imposterNextRound: () => {
         if (isHost) commit(hostImposterNextRound(current(), activeIds()))
+      },
+      // Värden avslutar efter den pågående omgången i Imposterjakten, eller ångrar sig.
+      imposterEndAfterRound: (on: boolean) => {
+        if (isHost) commit(hostImposterEndAfterRound(current(), on))
       },
       imposterAbortRound: () => {
         if (isHost) commit(hostImposterAbortRound(current()))

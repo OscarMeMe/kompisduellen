@@ -22,6 +22,10 @@ import {
   type CardTable,
 } from '@/lib/kort'
 import {
+  CLUE_ROUND_OPTIONS,
+  EMPTY_IMPOSTER_MATCH,
+  imposterEndAfterRound,
+  type ImposterMatch,
   CATEGORIES,
   DEFAULT_ROUNDS as IMPOSTER_DEFAULT_ROUNDS,
   DEFAULT_SETTINGS as IMPOSTER_DEFAULT_SETTINGS,
@@ -137,6 +141,8 @@ export type GameState = {
   imposter: ImposterTable | null
   imposterSettings: ImposterSettings
   usedWordIds: string[]
+  // Imposterjakten: orden i den pågående matchen och hur många gånger var och en varit imposter (se ImposterMatch).
+  imposterMatch: ImposterMatch
 }
 
 // Värdens tillstånd: det som skickas ut till alla, och kortspelens eller Imposterjaktens hemliga data.
@@ -190,6 +196,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     imposter: null,
     imposterSettings: IMPOSTER_DEFAULT_SETTINGS,
     usedWordIds: [],
+    imposterMatch: EMPTY_IMPOSTER_MATCH,
   }
 }
 
@@ -257,6 +264,9 @@ export function setImposterSettings(state: GameState, settings: Partial<Imposter
   if (settings.hard !== undefined) next.hard = settings.hard
   if (settings.tricky !== undefined) next.tricky = settings.tricky
   if (settings.aloud !== undefined) next.aloud = settings.aloud
+  if (settings.clueRounds !== undefined && (CLUE_ROUND_OPTIONS as readonly number[]).includes(settings.clueRounds)) {
+    next.clueRounds = settings.clueRounds
+  }
   if (settings.category !== undefined && (settings.category === null || CATEGORIES.includes(settings.category))) {
     next.category = settings.category
   }
@@ -846,6 +856,12 @@ export function hostImposterNextRound(host: HostState, activeIds: string[], rand
     state: { ...resetMatch(state), notice: 'För få spelare är kvar för att fortsätta. Matchen räknas inte i kvällens ställning.' },
     secrets: null,
   }
+}
+
+// Värden avslutar efter den pågående omgången, eller ångrar sig. Ändrar bara det alla ser.
+export function hostImposterEndAfterRound(host: HostState, on: boolean): HostState {
+  const state = imposterEndAfterRound(host.state, on)
+  return state === host.state ? host : { ...host, state }
 }
 
 export function hostImposterAbortRound(host: HostState): HostState {

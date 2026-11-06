@@ -11,10 +11,13 @@ import {
   dealRound,
   DEFAULT_SETTINGS,
   findWord,
-  ACCUSE_AFTER_ROUNDS,
   ACCUSE_SECONDS,
   canAccuse,
-  CLUE_ROUNDS,
+  clueRoundsFor,
+  DEFAULT_CLUE_ROUNDS,
+  imposterEndAfterRound,
+  pickImposter,
+  wordsRunningOutText,
   COUNTDOWN_SECONDS,
   MIN_DISCUSSION_SECONDS,
   INNOCENTS_WIN,
@@ -38,7 +41,13 @@ import {
   addPlayers,
   canStart,
   defaultRoundsFor,
+  abortMatch,
+  backToWaiting,
   hostImposterAbortRound,
+  hostImposterEndAfterRound,
+  setGame,
+  setRounds,
+  startGame,
   hostImposterNewWord,
   hostImposterSkipTurn,
   hostImposterNextRound,
@@ -107,7 +116,7 @@ function playRound(host: HostState, ids = ABC): HostState {
 // Spelar alla turer med ett eget ord per tur.
 function playClues(host: HostState, ids = ABC): HostState {
   let next = host
-  for (let i = 0; i < ids.length * CLUE_ROUNDS; i++) {
+  for (let i = 0; i < ids.length * clueRoundsFor(table(host)); i++) {
     const turn = currentTurn(table(next))!
     next = hostMove(next, turn, { type: 'clue', word: `ord${i}` }, ids, NOW)
   }
@@ -128,8 +137,9 @@ describe('Imposterjakten: spelet och inställningarna', () => {
     expect(roundWords('gissa-priset')).toEqual({ one: 'runda', many: 'rundor' })
   })
 
-  it('har 1, 2 eller 3 omgångar med 3 som förval', () => {
-    expect(roundOptionsFor('imposterjakten')).toEqual([1, 2, 3])
+  it('har 1, 2, 3, 5 eller 10 omgångar med 3 som förval, och de andra spelen är som förut', () => {
+    expect(roundOptionsFor('imposterjakten')).toEqual([1, 2, 3, 5, 10])
+    expect(roundOptionsFor('narmast')).toEqual([3, 5, 10])
     expect(defaultRoundsFor('imposterjakten')).toBe(3)
   })
 
@@ -687,14 +697,14 @@ describe('Imposterjakten: Anklaga', () => {
   // Fram till tredje varvet, med fyra spelare. a är impostern (slumpen 0).
   function toThirdRound(): HostState {
     let host = readAll(start(ABCD), ABCD)
-    for (let i = 0; i < ABCD.length * ACCUSE_AFTER_ROUNDS; i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+    for (let i = 0; i < ABCD.length * (DEFAULT_CLUE_ROUNDS - 1); i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
     return host
   }
   const answer = (host: HostState, id: string, yes: boolean) => hostMove(host, id, { type: 'accuseVote', yes }, ABCD, NOW + 1000)
 
   it('går inte förrän andra varvet är klart', () => {
     let host = readAll(start(ABCD), ABCD)
-    for (let i = 0; i < ABCD.length * ACCUSE_AFTER_ROUNDS - 1; i++) {
+    for (let i = 0; i < ABCD.length * (DEFAULT_CLUE_ROUNDS - 1) - 1; i++) {
       expect(canAccuse(table(host), 'b')).toBe(false)
       expect(hostMove(host, 'b', { type: 'accuse', target: 'c' }, ABCD, NOW)).toBe(host)
       host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
@@ -756,7 +766,7 @@ describe('Imposterjakten: Anklaga', () => {
     // Fram till tredje varvet, med valfritt antal spelare. a är impostern (slumpen 0).
     function accused(ids: string[], target: string, yes: string[]): HostState {
       let host = readAll(start(ids), ids)
-      for (let i = 0; i < ids.length * ACCUSE_AFTER_ROUNDS; i++) {
+      for (let i = 0; i < ids.length * (DEFAULT_CLUE_ROUNDS - 1); i++) {
         host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ids, NOW)
       }
       const accuser = ids.find((id) => id !== target)!
@@ -803,7 +813,7 @@ describe('Imposterjakten: Anklaga', () => {
   it('kräver mer än hälften: lika många ja som nej räcker inte', () => {
     const ids = ['a', 'b', 'c', 'd', 'e']
     let host = readAll(start(ids), ids)
-    for (let i = 0; i < ids.length * ACCUSE_AFTER_ROUNDS; i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ids, NOW)
+    for (let i = 0; i < ids.length * (DEFAULT_CLUE_ROUNDS - 1); i++) host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ids, NOW)
     host = hostMove(host, 'b', { type: 'accuse', target: 'a' }, ids, NOW)
     for (const [id, yes] of [['b', true], ['c', true], ['d', false], ['e', false]] as const) host = hostMove(host, id, { type: 'accuseVote', yes }, ids, NOW)
     expect(table(host).step).toBe('ledtradar')
@@ -1045,5 +1055,217 @@ describe('Imposterjakten: peka ut och rösterna vid lika', () => {
     const tied = vote(vote(vote(vote(voting, 'a', 'b'), 'b', 'a'), 'c', 'a'), 'd', 'b')
     expect(table(tied)).toMatchObject({ step: 'diskussion', tieVotes: { a: 'b', b: 'a', c: 'a', d: 'b' }, votes: null })
     expect(table(readyAll(tied, ABCD))).toMatchObject({ step: 'rostning', tieVotes: null })
+  })
+})
+
+describe('Imposterjakten: hur långt spelet blir', () => {
+  const words = (host: HostState) => table(host).outcome?.word
+  // En enkel seedad slump, så att långa matcher går att upprepa.
+  function seeded(seed: number) {
+    let x = seed
+    return () => {
+      x = (x * 1103515245 + 12345) % 2147483648
+      return x / 2147483648
+    }
+  }
+  // Spelar hela matchen: en omgång i taget fram till prispallen. Ger orden och impostrarna i ordning.
+  function playMatch(host: HostState, ids = ABC, random = () => 0.5) {
+    const played: { word: string; imposter: string }[] = []
+    let next = host
+    while (next.state.phase === 'playing') {
+      const imposter = secretsOf(next).imposter
+      next = playRound(next, ids)
+      played.push({ word: words(next)!, imposter })
+      next = hostImposterNextRound(next, ids, random)
+    }
+    return { host: next, played }
+  }
+
+  it('har två eller tre varv, där tre är förvalt och gamla inställningar räknas som tre', () => {
+    expect(table(start()).clueRounds).toBe(3)
+    expect(table(start(ABC, { clueRounds: 2 })).clueRounds).toBe(2)
+    expect(lobby(ABC, { clueRounds: 4 }).state.imposterSettings.clueRounds).toBeUndefined()
+    expect(clueRoundsFor({})).toBe(3)
+    expect(clueRoundsFor({ clueRounds: 2 })).toBe(3 - 1)
+  })
+
+  it('går två varv runt bordet och sedan till diskussionen vid två varv', () => {
+    let host = readAll(start(ABC, { clueRounds: 2 }))
+    expect(totalTurns(table(host))).toBe(ABC.length * 2)
+    const lap = () => imposterInstruction(table(host), { id: 'a', name: (id) => id, ready: false, vote: null, accuseVote: null, typing: null, secondsLeft: 0 }).lap
+    expect(lap()).toBe('Varv 1 av 2')
+    for (let i = 0; i < ABC.length; i++) host = hostMove(host, currentTurn(table(host))!, { type: 'clue', word: `ord${i}` }, ABC, NOW)
+    expect(lap()).toBe('Varv 2 av 2')
+    host = playClues(host)
+    expect(table(host).step).toBe('diskussion')
+    expect(table(host).clues).toHaveLength(ABC.length * 2)
+  })
+
+  it('låter alla anklaga från näst sista varvet, vid både två och tre varv', () => {
+    for (const clueRounds of [2, 3]) {
+      let host = readAll(start(ABCD, { clueRounds }), ABCD)
+      const from = ABCD.length * (clueRounds - 1)
+      for (let i = 0; i < from; i++) {
+        expect(canAccuse(table(host), 'a'), `${clueRounds} varv, tur ${i}`).toBe(false)
+        host = hostMove(host, currentTurn(table(host))!, { type: 'pass' }, ABCD, NOW)
+      }
+      expect(canAccuse(table(host), 'a'), `${clueRounds} varv`).toBe(true)
+    }
+  })
+
+  it('kan inte byta varv mitt i en match', () => {
+    const host = start(ABC, { clueRounds: 2 })
+    expect(setImposterSettings(host.state, { clueRounds: 3 })).toBe(host.state)
+  })
+
+  it('spelar tio omgångar utan att ett ord kommer tillbaka', () => {
+    const lobbyState = setRounds(lobby().state, 10)
+    const { host, played } = playMatch(hostStart({ state: lobbyState, secrets: null }, ABC, NOW, seeded(7)), ABC, seeded(8))
+    expect(host.state.phase).toBe('finished')
+    expect(played).toHaveLength(10)
+    expect(new Set(played.map((round) => round.word)).size).toBe(10)
+  })
+
+  it('upprepar inget ord i matchen när en kategori med tio ord redan är spelad i lobbyn', () => {
+    const category = 'Jobb och plugg'
+    const all = WORDS.filter((word) => word.kategori === category).map((word) => word.id)
+    expect(all).toHaveLength(10)
+    const waiting = { ...setRounds(lobby(ABC, { category }).state, 10), usedWordIds: all }
+    const { played } = playMatch(hostStart({ state: waiting, secrets: null }, ABC, NOW, seeded(3)), ABC, seeded(4))
+    expect(new Set(played.map((round) => round.word)).size).toBe(10)
+  })
+
+  it('spärrar matchens ord först när listan börjar om', () => {
+    const list = WORDS.filter((word) => word.kategori === 'Jobb och plugg').map((word) => word.id)
+    const matchWords = list.slice(0, 9)
+    for (let i = 0; i < 20; i++) {
+      const picked = pickWord(list, 'Jobb och plugg', () => i / 20, matchWords)
+      expect(picked.wordId).toBe(list[9])
+    }
+  })
+
+  it('säger till värden när orden i kategorin kan ta slut, och annars inget', () => {
+    const settings = { ...DEFAULT_SETTINGS, category: 'Jobb och plugg' }
+    expect(wordsRunningOutText(settings, 10, [])).toBe('Kategorin har 10 ord, så ord kan komma tillbaka.')
+    expect(wordsRunningOutText(settings, 3, [])).toBeNull()
+    expect(wordsRunningOutText(DEFAULT_SETTINGS, 10, [])).toBeNull()
+    const almostAll = WORDS.slice(0, WORDS.length - 4).map((word) => word.id)
+    expect(wordsRunningOutText(DEFAULT_SETTINGS, 5, almostAll)).toBe('Ni har redan spelat de flesta orden, så ord kan komma tillbaka.')
+    const kategori = 'Mat och fika'
+    const usedInCategory = WORDS.filter((word) => word.kategori === kategori).slice(0, 22).map((word) => word.id)
+    expect(wordsRunningOutText({ ...DEFAULT_SETTINGS, category: kategori }, 5, usedInCategory)).toBe(
+      'Ni har redan spelat de flesta orden i kategorin, så ord kan komma tillbaka.',
+    )
+  })
+
+  it('väljer impostern med en viktad slump, så att den som redan varit det blir mindre trolig', () => {
+    expect(pickImposter(ABC, {}, () => 0)).toBe('a')
+    expect(pickImposter(ABC, {}, () => 0.99)).toBe('c')
+    // Vikterna 1/3, 1 och 1: a får bara en sjundedel av utrymmet.
+    expect(pickImposter(ABC, { a: 2 }, () => 0.14)).toBe('a')
+    expect(pickImposter(ABC, { a: 2 }, () => 0.15)).toBe('b')
+    // Alla kan fortfarande bli imposter, även den som varit det många gånger.
+    expect(pickImposter(ABC, { a: 9, b: 9 }, () => 0)).toBe('a')
+  })
+
+  it('sprider impostern över tio omgångar bättre än en ren slump', () => {
+    let sevenOrMore = 0
+    let total = 0
+    for (let seed = 1; seed <= 200; seed++) {
+      const lobbyState = setRounds(lobby().state, 10)
+      const { played } = playMatch(hostStart({ state: lobbyState, secrets: null }, ABC, NOW, seeded(seed)), ABC, seeded(seed + 1000))
+      const most = Math.max(...ABC.map((id) => played.filter((round) => round.imposter === id).length))
+      if (most >= 7) sevenOrMore++
+      total += most
+    }
+    // Ren slump (3 spelare, 10 omgångar): den som varit imposter mest har i snitt 4,9 omgångar, och någon blir det sju
+    // gånger eller fler i 5,7 % av matcherna. Med vikterna är det 4,4 och 0,2 %. Gränserna skiljer de två åt.
+    expect(total / 200).toBeLessThan(4.6)
+    expect(sevenOrMore).toBeLessThanOrEqual(2)
+  })
+
+  it('räknar hur många gånger var och en varit imposter först i facit, och inte en avbruten omgång', () => {
+    let host = start()
+    const imposter = secretsOf(host).imposter
+    expect(host.state.imposterMatch.imposterCounts).toEqual({})
+    host = hostImposterAbortRound(host)
+    expect(host.state.imposterMatch.imposterCounts).toEqual({})
+    host = hostImposterNextRound(host, ABC, () => 0.5)
+    const next = secretsOf(host).imposter
+    host = playRound(host)
+    expect(host.state.imposterMatch.imposterCounts).toEqual({ [next]: 1 })
+    expect(imposter).toBeTruthy()
+  })
+
+  it('nollställer matchens ord och impostrar när en ny match startar', () => {
+    const played = playRound(start())
+    const finished = hostImposterNextRound(
+      { ...played, state: { ...played.state, rounds: 1 } },
+      ABC,
+      () => 0.5,
+    )
+    const again = hostStart({ state: backToWaiting(finished.state), secrets: null }, ABC, NOW, () => 0)
+    expect(again.state.imposterMatch).toEqual({ wordIds: [], imposterCounts: {} })
+  })
+
+  it('avslutar efter den pågående omgången, med poängen kvar, och väntrummet får tillbaka antalet', () => {
+    let host = start(ABC)
+    host = { ...host, state: { ...host.state, rounds: 5 } }
+    host = hostImposterEndAfterRound(host, true)
+    expect(host.state.rounds).toBe(1)
+    expect(host.state.savedRounds).toBe(5)
+    host = playRound(host)
+    const scores = host.state.scores
+    host = hostImposterNextRound(host, ABC, () => 0.5)
+    expect(host.state.phase).toBe('finished')
+    expect(host.state.scores).toEqual(scores)
+    expect(host.state.matchesPlayed).toBe(1)
+    const waiting = backToWaiting(host.state)
+    expect(waiting.rounds).toBe(5)
+    expect(waiting.savedRounds).toBeNull()
+  })
+
+  it('går att ångra, och gör inget i sista omgången eller utanför en match', () => {
+    const playing = start()
+    const five = { ...playing.state, rounds: 5 }
+    const ended = imposterEndAfterRound(five, true)
+    expect(imposterEndAfterRound(ended, false)).toMatchObject({ rounds: 5, savedRounds: null })
+    expect(imposterEndAfterRound({ ...five, round: 5 }, true)).toEqual({ ...five, round: 5 })
+    const waiting = lobby().state
+    expect(imposterEndAfterRound(waiting, true)).toBe(waiting)
+    expect(imposterEndAfterRound(five, false)).toBe(five)
+  })
+
+  it('spelar om en avbruten sista omgång när värden valt att avsluta', () => {
+    let host = start()
+    host = hostImposterEndAfterRound({ ...host, state: { ...host.state, rounds: 3 } }, true)
+    host = hostImposterAbortRound(host)
+    host = hostImposterNextRound(host, ABC, () => 0.5)
+    expect(host.state.phase).toBe('playing')
+    expect(host.state.round).toBe(1)
+    host = hostImposterNextRound(playRound(host), ABC, () => 0.5)
+    expect(host.state.phase).toBe('finished')
+  })
+
+  it('krockar inte med Testa själv, som också använder savedRounds', () => {
+    // Testa själv i Gissa priset: en runda, och antalet rundor tillbaka efteråt.
+    const solo = addPlayers(initialState('gissa-priset'), { a: { name: 'A', avatar: '🤪' } })
+    const practice = startGame(setRounds(solo, 10), ['a'], NOW)
+    expect(practice.practice).toBe(true)
+    expect(imposterEndAfterRound(practice, true)).toBe(practice)
+    const afterPractice = abortMatch(practice)
+    expect(afterPractice).toMatchObject({ rounds: 10, savedRounds: null })
+    // Sedan Imposterjakten i samma lobby, avslutad tidigare. Antalet omgångar kommer tillbaka.
+    const imposterLobby = setRounds(setGame(addPlayers(afterPractice, { b: { name: 'B', avatar: '🎩' }, c: { name: 'C', avatar: '😴' } }), 'imposterjakten'), 5)
+    let host = hostStart({ state: imposterLobby, secrets: null }, ['a', 'b', 'c'], NOW, () => 0)
+    host = hostImposterEndAfterRound(host, true)
+    host = hostImposterNextRound(playRound(host, ['a', 'b', 'c']), ['a', 'b', 'c'], () => 0.5)
+    const back = backToWaiting(host.state)
+    expect(back).toMatchObject({ rounds: 5, savedRounds: null })
+    // Och Testa själv igen i Gissa priset, med sitt eget antal rundor.
+    const gissa = setRounds(setGame(back, 'gissa-priset'), 10)
+    const practiceAgain = startGame({ ...gissa, players: { a: gissa.players.a }, scores: { a: 0 } }, ['a'], NOW)
+    expect(practiceAgain).toMatchObject({ practice: true, savedRounds: 10 })
+    expect(abortMatch(practiceAgain)).toMatchObject({ rounds: 10, savedRounds: null })
   })
 })

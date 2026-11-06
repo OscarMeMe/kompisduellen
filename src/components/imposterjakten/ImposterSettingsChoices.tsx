@@ -1,5 +1,5 @@
 import { Choice } from '@/components/lobby/Choice'
-import { CATEGORIES, type ImposterSettings } from '@/lib/imposterjakten'
+import { CLUE_ROUND_OPTIONS, clueRoundsOf, CATEGORIES, type ImposterSettings } from '@/lib/imposterjakten'
 
 // Värdens val för Imposterjakten i väntrummet: svårighet, kategori och om ni sitter tillsammans (säger orden högt) eller
 // spelar på distans (skriver orden).
@@ -13,6 +13,13 @@ export function ImposterSettingsChoices({
 }) {
   return (
     <>
+      <Choice
+        label="Varv per omgång"
+        hint="Hur många gånger det går runt bordet."
+        options={CLUE_ROUND_OPTIONS.map((n) => ({ value: n, label: String(n) }))}
+        selected={clueRoundsOf(settings)}
+        onSelect={(clueRounds) => onChange({ clueRounds })}
+      />
       <Choice
         label="Svårighet"
         hint="Välj hur mycket hjälp impostern får."

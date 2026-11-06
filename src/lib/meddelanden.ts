@@ -140,6 +140,7 @@ const isGameState = shape({
   imposter: orNull(isImposterTable),
   imposterSettings: isImposterSettings,
   usedWordIds: listOf(isString),
+  imposterMatch: shape({ wordIds: listOf(isString), imposterCounts: recordOf(isNumber) }),
 })
 
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.
