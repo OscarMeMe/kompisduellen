@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   abortMatch,
   addGuess,
@@ -47,6 +47,7 @@ import {
 } from '@/lib/match'
 import { parseStateMessage } from '@/lib/meddelanden'
 import { takeOverState } from '@/lib/vardbyte'
+import { matchHighlights } from '@/lib/hojdpunkter'
 
 const NOW = 1_000_000
 
@@ -1058,5 +1059,85 @@ describe('kasträknaren i läget', () => {
   it('får startvärdet när en sparad lobby saknar räknaren', () => {
     const { throwStats: _stats, ...old } = base
     expect(restoreHostState({ state: old, secrets: null })?.state.throwStats).toEqual({ items: {}, received: {} })
+  })
+})
+
+describe('den som går med under matchen', () => {
+  it('kan spela resten av matchen men står inte på slutskärmen, i topplistan eller i utmärkelserna', () => {
+    let state = startGame(lobby('narmast', ['a', 'b'], { rounds: 2 }), ['a', 'b'], NOW)
+    state = playRound(state, { a: 40, b: 60 }, 50)
+    // c går med efter första rundan.
+    state = addPlayers(state, { c: { name: 'C', avatar: '👻' } })
+    state = nextRound(state, NOW)
+    state = playRound(state, { a: 10, b: 20, c: 50 }, 50)
+    state = nextRound(state, NOW)
+    expect(state.phase).toBe('finished')
+    // c fick flest poäng i sista rundan, men räknas inte.
+    expect(state.scores.c).toBeGreaterThan(0)
+    expect(rankPlayers(state).map((p) => p.id).sort()).toEqual(['a', 'b'])
+    expect(matchWinners(state)).not.toContain('c')
+    expect(state.leaderboard.c).toBeUndefined()
+    expect(state.leaderboard.a.played).toBe(1)
+    expect(JSON.stringify(matchHighlights(state))).not.toContain('"C ')
+  })
+
+  it('räknas i nästa match', () => {
+    let state = startGame(lobby('narmast', ['a', 'b'], { rounds: 1 }), ['a', 'b'], NOW)
+    state = addPlayers(state, { c: { name: 'C', avatar: '👻' } })
+    state = playRound(state, { a: 40, b: 60 }, 50)
+    state = nextRound(state, NOW)
+    const next = startGame(backToWaiting(state), ['a', 'b', 'c'], NOW)
+    expect(rankPlayers(next).map((p) => p.id).sort()).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('rätt tal i första rundan av Närmast vinner', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('slumpas på nytt i varje match, revansch, avbruten match och efter att värden laddat om sidan', () => {
+    // Slumpen ger 11, 22, 33 … i tur och ordning, så att varje rundas tal går att förutsäga och jämföra.
+    let n = 0
+    vi.spyOn(Math, 'random').mockImplementation(() => ((n++ % 9) + 1) * 0.11 - 0.0001)
+    const ids = ['a', 'b']
+    let host: HostState = { state: lobby('narmast', ids, { rounds: 1 }), secrets: null }
+    const firstTargets: number[] = []
+    const playFirstRound = () => {
+      let state = host.state
+      for (const id of ids) state = addGuess(state, id, 50)
+      state = resolveRound(state, NOW)
+      firstTargets.push(state.lastResult!.target)
+      host = { state: nextRound(state, NOW), secrets: null }
+    }
+
+    for (let match = 0; match < 6; match++) {
+      if (match === 0) host = hostStart(host, ids, NOW)
+      else if (match === 3) {
+        // Värden laddar om sidan: läget sparas och läses tillbaka (saveHostLobby, restoreHostState).
+        host = restoreHostState(JSON.parse(JSON.stringify(host)))!
+        host = hostRematchStart(hostRematch(host, NOW), ids, NOW + 5000, NOW + 3000)
+      } else if (match === 4) {
+        // En match som avbryts mitt i rundan, och sedan en ny start.
+        host = hostStart({ state: abortMatch(hostStart({ state: backToWaiting(host.state), secrets: null }, ids, NOW).state), secrets: null }, ids, NOW)
+      } else {
+        host = hostRematchStart(hostRematch(host, NOW), ids, NOW + 5000, NOW + 3000)
+      }
+      expect(host.state.phase).toBe('guessing')
+      expect(host.state.lastResult).toBeNull()
+      playFirstRound()
+    }
+    // Varje runda fick ett nytt tal från slumpen, aldrig förra matchens.
+    expect(firstTargets).toEqual([11, 22, 33, 44, 55, 66])
+    expect(new Set(firstTargets).size).toBe(firstTargets.length)
+  })
+
+  it('med den riktiga slumpen blir första rundans tal inte detsamma match efter match', () => {
+    const ids = ['a', 'b']
+    const targets = Array.from({ length: 40 }, () => {
+      let state = startGame(lobby('narmast', ids, { rounds: 1 }), ids, NOW)
+      for (const id of ids) state = addGuess(state, id, 50)
+      return resolveRound(state, NOW).lastResult!.target
+    })
+    // 40 matcher med samma första tal skulle vara en bugg, inte slump.
+    expect(new Set(targets).size).toBeGreaterThan(10)
   })
 })

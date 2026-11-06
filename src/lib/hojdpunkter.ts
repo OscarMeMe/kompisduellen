@@ -6,7 +6,7 @@
 // Alla kräver minst två spelare, utom fullträffen som också kan visas i en provomgång.
 // Rena funktioner, så att de är lätta att testa.
 
-import { matchWinners, rankPlayers, type GameState } from '@/lib/match'
+import { matchParticipants, matchWinners, rankPlayers, type GameState } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
 
 export type HighlightId =
@@ -47,7 +47,7 @@ function nameOf(state: GameState, id: string): string {
 }
 
 const isPriceGame = (state: GameState) => state.game === 'gissa-priset'
-const fewPlayers = (state: GameState) => Object.keys(state.players).length < 2
+const fewPlayers = (state: GameState) => matchParticipants(state).length < 2
 
 // Sista rundan gav en ensam vinnare som låg efter eller delade ledningen inför den.
 function decidedInLastRound(state: GameState, pick: Pick): Highlight | null {
@@ -58,7 +58,7 @@ function decidedInLastRound(state: GameState, pick: Pick): Highlight | null {
   const winner = winners[0]
 
   const before = (id: string) => (state.scores[id] ?? 0) - (last.points[id] ?? 0)
-  const bestOther = Math.max(...Object.keys(state.players).filter((id) => id !== winner).map(before))
+  const bestOther = Math.max(...matchParticipants(state).filter((id) => id !== winner).map(before))
   const winnerBefore = before(winner)
   if (winnerBefore > bestOther) return null
 
@@ -282,7 +282,7 @@ function totalAfter(state: GameState, id: string, rounds: number): number {
 
 // Segern gick till någon som låg ensam sist efter en tidigare runda.
 function comeback(state: GameState, pick: Pick): Highlight | null {
-  const ids = Object.keys(state.players)
+  const ids = matchParticipants(state)
   const winners = matchWinners(state)
   if (ids.length < 2 || winners.length !== 1 || state.matchRounds.length < 3) return null
   const winner = winners[0]
@@ -306,7 +306,7 @@ function comeback(state: GameState, pick: Pick): Highlight | null {
 
 // Vinnaren ledde ensam efter varje runda.
 function wireToWire(state: GameState, pick: Pick): Highlight | null {
-  const ids = Object.keys(state.players)
+  const ids = matchParticipants(state)
   const winners = matchWinners(state)
   if (ids.length < 2 || winners.length !== 1 || state.matchRounds.length < 3) return null
   const winner = winners[0]
@@ -354,7 +354,7 @@ function spread(values: number[]): number {
 // Den som fick jämnast poäng från runda till runda, om hen är ensam om det. Bara i Gissa priset, där poängen
 // går från 0 till 100. I Närmast vinner är det bara några få poäng per runda.
 function steadiest(state: GameState, pick: Pick): Highlight | null {
-  const ids = Object.keys(state.players)
+  const ids = matchParticipants(state)
   if (!isPriceGame(state) || ids.length < 2 || state.matchRounds.length < 3) return null
   const spreads = ids
     .map((id) => ({ id, points: pointsPerRound(state, id) }))
@@ -436,7 +436,7 @@ function fastestAnswerer(state: GameState, pick: Pick): Highlight | null {
 function missedMost(state: GameState, pick: Pick): Highlight | null {
   if (fewPlayers(state)) return null
   const counts = new Map<string, number>()
-  for (const id of Object.keys(state.players)) {
+  for (const id of matchParticipants(state)) {
     const answered = state.matchRounds.filter((round) => round.guesses[id] !== undefined).length
     if (answered > 0) counts.set(id, state.matchRounds.length - answered)
   }
@@ -473,8 +473,26 @@ export function winnerSummary(state: GameState): string {
 }
 
 // Alla utmärkelser som stämmer för matchen, i fast ordning. random väljer text (utan random blir det den första).
-export function validHighlights(state: GameState, random: () => number = () => 0): Highlight[] {
-  if (state.phase !== 'finished') return []
+// Matchen sedd bara med spelarna som var med från start (matchParticipants): den som gick med under matchen får inga
+// utmärkelser, och dess gissningar påverkar inte de andras.
+function onlyParticipants(state: GameState): GameState {
+  const ids = new Set(matchParticipants(state))
+  const pick = <T,>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([id]) => ids.has(id)))
+  return {
+    ...state,
+    matchRounds: state.matchRounds.map((round) => ({
+      ...round,
+      guesses: pick(round.guesses),
+      points: pick(round.points),
+      winners: round.winners.filter((id) => ids.has(id)),
+      times: round.times && pick(round.times),
+    })),
+  }
+}
+
+export function validHighlights(full: GameState, random: () => number = () => 0): Highlight[] {
+  if (full.phase !== 'finished') return []
+  const state = onlyParticipants(full)
   const pick: Pick = (texts) => texts[Math.min(texts.length - 1, Math.floor(random() * texts.length))]
   return [
     decidedInLastRound,

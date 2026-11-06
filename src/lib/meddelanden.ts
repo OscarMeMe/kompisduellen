@@ -177,6 +177,7 @@ const isGameState = shape({
   imposterMatch: shape({ wordIds: listOf(isString), imposterCounts: recordOf(isNumber) }),
   tantpanik: orNull(isTantTable),
   tantSettings: shape({ trap: isBoolean }),
+  matchPlayerIds: listOf(isString),
 })
 
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.
