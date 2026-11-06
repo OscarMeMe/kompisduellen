@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChevronRight, CircleHelp, Menu } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
@@ -76,11 +76,16 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         // Ett kortbord: filt med träkant, som Imposterjaktens bord.
         className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-[1.75rem] border-[7px] border-wood bg-felt p-2 shadow-[inset_0_2px_14px_rgb(0_0_0/0.15)] ring-2 ring-wood-edge"
       >
-        {tantView?.peek && table.step !== 'arrange' && <Peek cards={tantView.peek} />}
         {/* Högarna växer och fyller bordet när det finns plats. */}
         <div ref={pileRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
           <Piles table={table} size={pileSize} canDraw={canDraw} onDraw={() => onMove({ type: 'tDraw' })} />
         </div>
+        {/* Se framtiden ligger överst på bordet, ovanpå högarna, så att draghögen behåller sin storlek. */}
+        {tantView?.peek && table.step !== 'arrange' && (
+          <div className="absolute inset-x-0 top-1.5 z-10 flex justify-center px-1.5">
+            <Peek cards={tantView.peek} />
+          </div>
+        )}
         {notice && (
           <p
             key={notice.n}
@@ -138,8 +143,8 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   )
 }
 
-// Hur breda högarna får vara (px): de fyller bordets höjd, men får inte bli bredare än att båda ryms bredvid varandra.
-// På 360 × 640 blir de cirka 112 px.
+// Hur bred draghögen får vara (px): den fyller bordets höjd, men slänghögen ska få plats bredvid (DISCARD_SPREAD).
+// På 360 × 640 blir den cirka 120 px.
 function usePileSize() {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState(112)
@@ -148,8 +153,8 @@ function usePileSize() {
     if (!element) return
     const measure = () => {
       // Plats för texten under högarna och kortlekens tjocklek, och lite luft runt om.
-      const byHeight = (element.clientHeight - 36) * 0.72 * (107 / 147)
-      const byWidth = (element.clientWidth - 16) / 2 - 6
+      const byHeight = (element.clientHeight - 36) * 0.76 * (107 / 147)
+      const byWidth = (element.clientWidth - 8) / DISCARD_SPREAD
       setSize(Math.round(Math.max(72, Math.min(byHeight, byWidth, 240))))
     }
     measure()
@@ -350,26 +355,34 @@ function MiniFan({ count }: { count: number }) {
   )
 }
 
-// Draghögen som en riktig kortlek (tjockare ju fler kort) och slänghögen med det översta kortet. Tryck på högen för att
-// dra när det är min tur.
+// Slänghögen är mindre än draghögen, ligger snett och överlappar draghögens högra kant (andelar av draghögens bredd).
+const DISCARD_SCALE = 0.6
+const DISCARD_OVERLAP = 0.35
+// Hur många draghögsbredder högarna tar tillsammans när draghögen står i mitten: slänghögen sticker ut åt höger, och
+// lika mycket plats lämnas till vänster.
+const DISCARD_SPREAD = 1 + 2 * DISCARD_SCALE * (1 - DISCARD_OVERLAP)
+// De översta korten i slänghögen ligger åt lite olika håll, som om de slängts dit (grader, översta sist).
+const DISCARD_TILT = [-7, 4, 11]
+
+// Draghögen är huvudsaken: stor, i mitten och tjock som en riktig kortlek. Tryck på den för att dra när det är min tur.
+// Slänghögen ligger mindre och snett över draghögens hörn, med de senaste korten åt olika håll.
 function Piles({ table, size, canDraw, onDraw }: { table: TantTable; size: number; canDraw: boolean; onDraw: () => void }) {
-  const width = { width: size }
   const sizes = `${size}px`
-  const top = table.discardTop.at(-1)
+  const discard = Math.round(size * DISCARD_SCALE)
   const layers = Math.min(6, Math.ceil(table.deckCount / 5))
+  const shown = table.discardTop.slice(-3)
   return (
-    <div className="flex items-end justify-center gap-4" style={{ '--pile-w': `${size}px` } as CSSProperties}>
-      <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: size }}>
         <button
           type="button"
           disabled={!canDraw}
           onClick={onDraw}
           aria-label={canDraw ? `Dra ett kort. ${table.deckCount} kort i högen` : `Draghögen, ${table.deckCount} kort`}
           className={cn(
-            'relative block rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
+            'relative block w-full rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
             canDraw && 'ring-4 ring-primary motion-safe:animate-turn-pulse',
           )}
-          style={{ ...width, marginTop: layers * 2, marginLeft: layers * 2 }}
           data-tant-pile
         >
           {/* Kortleken: baksidor förskjutna några pixlar, så att den ser tjock ut. */}
@@ -378,7 +391,7 @@ function Piles({ table, size, canDraw, onDraw }: { table: TantTable; size: numbe
               key={i}
               sizes={sizes}
               className="absolute inset-0 w-full"
-              style={{ transform: `translate(${-(layers - i) * 2}px, ${-(layers - i) * 2}px)` }}
+              style={{ transform: `translate(${(layers - i) * 2}px, ${(layers - i) * 2}px)` }}
             />
           ))}
           {table.deckCount > 0 ? (
@@ -386,28 +399,45 @@ function Piles({ table, size, canDraw, onDraw }: { table: TantTable; size: numbe
           ) : (
             <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
           )}
-          <span className="absolute -right-2 -bottom-2 rounded-full bg-foreground px-2 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm">
+          <span className="absolute -top-2 -left-2 rounded-full bg-foreground px-2 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm">
             {table.deckCount}
           </span>
         </button>
-        <span className={cn('text-xs font-semibold', canDraw && 'font-bold text-primary-button')}>
-          {canDraw ? 'Tryck för att dra' : 'Draghögen'}
-        </span>
+
+        {/* Slänghögen tar inga tryck, så att hela draghögen går att trycka på. */}
+        <div
+          aria-label={`Slänghögen, ${table.discardCount} kort`}
+          className="pointer-events-none absolute bottom-[6%] z-10"
+          style={{ left: size - discard * DISCARD_OVERLAP, width: discard }}
+        >
+          {shown.length === 0 ? (
+            <span className="block aspect-[107/147] w-full rotate-6 rounded-lg border-2 border-dashed border-foreground/30" />
+          ) : (
+            <div className="relative aspect-[107/147] w-full">
+              {shown.map((type, i) => {
+                const latest = i === shown.length - 1
+                return (
+                  <div
+                    key={`${table.discardCount - shown.length + i}-${type}`}
+                    aria-hidden={!latest}
+                    className={cn('absolute inset-0 drop-shadow-lg', latest && 'motion-safe:animate-pop')}
+                    style={{ rotate: `${DISCARD_TILT[i + 3 - shown.length]}deg` }}
+                  >
+                    <TantKort type={type} size="small" sizes={`${discard}px`} className="w-full" />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <span className="absolute -bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap shadow-soft-sm">
+            Slänghögen {table.discardCount}
+          </span>
+        </div>
       </div>
-      <div className="flex flex-col items-center gap-1">
-        {top ? (
-          <TantKort
-            key={`${table.discardCount}-${top}`}
-            type={top}
-            size={size >= 140 ? 'large' : 'small'}
-            sizes={sizes}
-            className="w-(--pile-w) motion-safe:animate-pop sm:w-(--pile-w)"
-          />
-        ) : (
-          <span style={width} className="block aspect-[107/147] rounded-lg border-2 border-dashed border-foreground/30" />
-        )}
-        <span className="text-xs font-semibold">Slänghögen ({table.discardCount})</span>
-      </div>
+      {/* Under kortlekens tjocklek, så att texten inte hamnar bakom den. */}
+      <span className={cn('text-xs font-semibold', canDraw && 'font-bold text-primary-button')} style={{ marginTop: layers * 2 + 2 }}>
+        {canDraw ? 'Tryck för att dra' : 'Draghögen'}
+      </span>
     </div>
   )
 }

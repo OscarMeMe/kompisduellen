@@ -66,18 +66,27 @@ export function NopeWindow({ state, table, meId, clockOffset }: { state: GameSta
   )
 }
 
-// Se framtiden: de översta korten, bara för mig. Överst först.
+// Se framtiden: de översta korten, bara för mig, som en smal rad överst på bordet. Överst först. Raden tar inga tryck,
+// så att draghögen under den går att trycka på.
 export function Peek({ cards }: { cards: CardType[] }) {
   return (
-    <section aria-label="Överst i högen" className={cn(PANEL, 'space-y-2 bg-lilac/40')}>
-      <p className="text-sm font-semibold">Överst i högen (bara du ser det):</p>
+    <section
+      aria-label="Överst i högen"
+      className="pointer-events-none flex items-center gap-2 rounded-lg bg-card/95 px-2 py-1.5 shadow-lift motion-safe:animate-pop"
+    >
+      <p className="w-16 shrink-0 text-xs leading-tight font-semibold">Överst i högen (bara du ser):</p>
       {cards.length === 0 ? (
         <p className="text-sm">Högen är tom.</p>
       ) : (
-        <ol className="flex justify-center gap-2">
+        <ol className="flex gap-1.5">
           {cards.map((type, i) => (
-            <li key={i} className="flex flex-col items-center gap-1 text-xs font-semibold">
-              <TantKort type={type} size="small" />
+            <li key={i} className="flex flex-col items-center text-[11px] font-semibold">
+              <TantKort
+                type={type}
+                size="small"
+                sizes="48px"
+                className="w-12 overflow-hidden p-0.5 [&>span:first-child]:text-base [&>span:last-child]:text-[8px] [&>span:last-child]:break-all [&>span:last-child]:whitespace-normal"
+              />
               {i === 0 ? 'Överst' : `${i + 1}`}
             </li>
           ))}
