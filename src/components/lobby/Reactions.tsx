@@ -65,7 +65,8 @@ export function ReactionsProvider({ enabled, floating, send, throws, seatedIds =
   return <ReactionsContext.Provider value={value}>{children}</ReactionsContext.Provider>
 }
 
-// Reaktionerna och en ljudknapp. Visas inte om man är ensam i lobbyn eller utanför en lobby.
+// Reaktionerna och en ljudknapp på en rad som aldrig bryts: reaktionerna krymper i stället (minst 40 px breda på en
+// skärm som är 320 px bred), och ljudknappen har en fast bredd. Visas inte om man är ensam i lobbyn eller utanför en lobby.
 export function ReactionBar({ className }: { className?: string }) {
   const reactions = useReactions()
   const [cooling, setCooling] = useState(false)
@@ -81,12 +82,12 @@ export function ReactionBar({ className }: { className?: string }) {
   }
 
   return (
-    <div role="group" aria-label="Reaktioner" className={cn('flex flex-wrap items-center justify-center gap-1.5 sm:gap-2', className)}>
+    <div role="group" aria-label="Reaktioner" className={cn('flex w-full items-center justify-center gap-1 min-[360px]:gap-1.5 sm:gap-2', className)}>
       {REACTIONS.map((reaction) => (
         <Button
           key={reaction.id}
           variant="outline"
-          className="h-12 w-11 text-2xl sm:w-14"
+          className="h-12 min-w-0 max-w-14 flex-1 px-0 text-2xl"
           disabled={cooling}
           onClick={() => press(reaction.id)}
           aria-label={reaction.label}
@@ -96,7 +97,7 @@ export function ReactionBar({ className }: { className?: string }) {
       ))}
       <Button
         variant="ghost"
-        className="h-12 w-11 sm:w-12"
+        className="h-12 w-9 shrink-0 px-0 sm:w-12"
         aria-pressed={reactions.soundOn}
         aria-label={reactions.soundOn ? 'Stäng av ljud' : 'Sätt på ljud'}
         onClick={() => reactions.setSoundOn(!reactions.soundOn)}
