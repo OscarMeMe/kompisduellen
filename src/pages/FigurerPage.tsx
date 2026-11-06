@@ -3,7 +3,8 @@ import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { Button } from '@/components/ui/button'
 import { BLOBS, MOOD_NAMES, MOODS } from '@/lib/figurer'
-import { PICKABLE_AVATARS } from '@/lib/player'
+import { AVATARS } from '@/lib/player'
+import { cn } from '@/lib/utils'
 
 // De storlekar figurerna visas i på sajten, från spelarlistorna under spelet till spelarchipsen och topplistan.
 const SMALL_SIZES = [
@@ -40,13 +41,40 @@ export function FigurerPage() {
         </section>
       ))}
 
+      <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Blobbarna i liten storlek">
+        <h2 className="text-xl">Blobbarna i liten storlek</h2>
+        <p className="text-sm text-muted-foreground">Alla tolv bredvid varandra, som i spelarlistorna. Inga två ska gå att blanda ihop.</p>
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {BLOBS.map((blob) => (
+            <li key={blob.id} className="flex flex-col items-center gap-1 rounded-md bg-muted/60 p-2 text-center">
+              <span className="flex items-end gap-1.5">
+                <Figur figure={blob} className="text-sm" />
+                <Figur figure={blob} className="text-lg" />
+                <Figur figure={blob} className="text-2xl" />
+              </span>
+              <span className="text-xs font-semibold">{blob.name}</span>
+            </li>
+          ))}
+        </ul>
+        {SMALL_SIZES.slice(0, 2).map((size) => (
+          <div key={size.label} className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground">{size.label}, i rad</p>
+            <div className={cn('flex flex-wrap items-center gap-2', size.className)}>
+              {BLOBS.map((blob) => (
+                <Figur key={blob.id} figure={blob} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Emoji-storlek">
         <h2 className="text-xl">Emoji-storlek</h2>
         {SMALL_SIZES.map((size) => (
           <div key={size.label} className="space-y-1">
             <p className="text-xs font-semibold text-muted-foreground">{size.label}</p>
             <div className={`flex flex-wrap items-center gap-2 ${size.className}`}>
-              {PICKABLE_AVATARS.map((avatar) => (
+              {AVATARS.map((avatar) => (
                 <Emoji key={avatar} emoji={avatar} />
               ))}
             </div>

@@ -15,19 +15,9 @@ const EMOJI: Record<string, EmojiInfo> = {
   // Bilderna i spelförklaringarna (intro i games.ts)
   '💸': { file: 'money-with-wings', label: 'Sedlar med vingar' },
   '🍀': { file: 'four-leaf-clover', label: 'Fyrklöver' },
-  // Spelarfigurerna (AVATARS i player.ts)
-  '👻': { file: 'ghost', label: 'Spöke' },
-  '👽': { file: 'alien', label: 'Utomjording' },
+  // Flikarna ovanför spelen på startsidan (tillfallen.ts). Spelarfigurerna är blobbar och ritas i kod (figurer.ts).
   '🤖': { file: 'robot', label: 'Robot' },
-  '👾': { file: 'alien-monster', label: 'Rymdmonster' },
-  '🧙': { file: 'mage', label: 'Trollkarl' },
-  '🧛': { file: 'vampire', label: 'Vampyr' },
-  '🧜': { file: 'merperson', label: 'Sjöjungfru' },
-  '🦸': { file: 'superhero', label: 'Superhjälte' },
-  '🥷': { file: 'ninja', label: 'Ninja' },
   '🤡': { file: 'clown', label: 'Clown' },
-  '💀': { file: 'skull', label: 'Dödskalle' },
-  '🎃': { file: 'jack-o-lantern', label: 'Pumpalykta' },
   // Det man kan kasta på varandra (THROW_ITEMS i kast.ts)
   '🍅': { file: 'tomato', label: 'Tomat' },
   '🥧': { file: 'pie', label: 'Paj' },

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { findEmoji } from '@/lib/emoji'
 import { findBlob } from '@/lib/figurer'
-import { AVATARS, loadPlayer, PICKABLE_AVATARS, savePlayer, type Player } from '@/lib/player'
+import { AVATARS, loadPlayer, savePlayer, type Player } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
 type PlayerSetupProps = {
@@ -19,7 +19,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
   const [name, setName] = useState(saved?.name ?? '')
   // En sparad figur som inte längre finns att välja byts mot en slumpad.
   const [avatar, setAvatar] = useState(() =>
-    saved && PICKABLE_AVATARS.includes(saved.avatar) ? saved.avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
+    saved && AVATARS.includes(saved.avatar) ? saved.avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
   )
 
   function handleSubmit(event: FormEvent) {
@@ -50,7 +50,7 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
           Välj en figur
         </p>
         <div className="grid grid-cols-6 gap-2">
-          {PICKABLE_AVATARS.map((option) => (
+          {AVATARS.map((option) => (
             <button
               key={option}
               type="button"

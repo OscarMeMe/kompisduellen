@@ -3,7 +3,7 @@
 // - Spelar-id och värdflaggan sparas i sessionStorage, alltså per flik. Då blir varje flik
 //   en egen spelare, och bara fliken som skapade lobbyn är värd.
 
-import { BLOB_AVATARS } from '@/lib/figurer'
+import { BLOB_AVATARS, upgradeAvatar } from '@/lib/figurer'
 
 export type Player = {
   id: string
@@ -11,9 +11,8 @@ export type Player = {
   avatar: string
 }
 
-export const AVATARS = ['👻', '👽', '🤖', '👾', '🧙', '🧛', '🧜', '🦸', '🥷', '🤡', '💀', '🎃']
-// Allt som går att välja: även blobbarna, som inte slumpas fram.
-export const PICKABLE_AVATARS: readonly string[] = [...AVATARS, ...BLOB_AVATARS]
+// Figurerna som går att välja och som slumpas fram: blobbarna (figurer.ts). Gamla emoji-figurer görs om med upgradeAvatar.
+export const AVATARS: readonly string[] = BLOB_AVATARS
 
 const PROFILE_KEY = 'kd-player'
 const PLAYER_ID_KEY = 'kd-player-id'
@@ -64,7 +63,7 @@ export function parseLobbyIdentity(raw: string | null, now: number): Player | nu
     const saved = JSON.parse(raw) as Partial<SavedIdentity>
     if (!saved.id || !saved.name || !saved.avatar || typeof saved.at !== 'number') return null
     if (now - saved.at > LOBBY_IDENTITY_MAX_AGE_MS) return null
-    return { id: saved.id, name: saved.name, avatar: saved.avatar }
+    return { id: saved.id, name: saved.name, avatar: upgradeAvatar(saved.avatar) }
   } catch {
     return null
   }
@@ -117,7 +116,7 @@ export function markJoinedInThisTab(code: string, player?: Player) {
 export function loadPlayerInThisTab(code: string): Player | null {
   try {
     const saved = JSON.parse(safeGet('session', TAB_PLAYER_PREFIX + code) ?? 'null') as Partial<Player> | null
-    return saved?.id && saved.name && saved.avatar ? { id: saved.id, name: saved.name, avatar: saved.avatar } : null
+    return saved?.id && saved.name && saved.avatar ? { id: saved.id, name: saved.name, avatar: upgradeAvatar(saved.avatar) } : null
   } catch {
     return null
   }
@@ -141,7 +140,11 @@ export function loadPlayer(): Player | null {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as Partial<Player>
-    if (parsed.name && parsed.avatar) return { id: playerId(), name: parsed.name, avatar: parsed.avatar }
+    if (!parsed.name || !parsed.avatar) return null
+    // En gammal emoji-figur blir sin blobb, och profilen sparas med den.
+    const avatar = upgradeAvatar(parsed.avatar)
+    if (avatar !== parsed.avatar) safeSet('local', PROFILE_KEY, JSON.stringify({ name: parsed.name, avatar }))
+    return { id: playerId(), name: parsed.name, avatar }
   } catch {
     // Trasig data: be om namn igen.
   }
