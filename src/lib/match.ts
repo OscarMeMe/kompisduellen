@@ -161,6 +161,9 @@ export type GameState = {
   // Exploderande Tanter: det alla får se av matchen (null i andra spel) och värdens val i väntrummet.
   tantpanik: TantTable | null
   tantSettings: TantSettings
+  // De som var med när matchen startade. Den som går med under matchen kan spela resten av den, men står inte på
+  // slutskärmen, i topplistan eller i utmärkelserna (matchPlayerIds, se matchParticipants). Tom utanför en match.
+  matchPlayerIds: string[]
 }
 
 // Värdens tillstånd: det som skickas ut till alla, och kortspelens, Imposterjaktens eller Exploderande Tanters hemliga data.
@@ -217,6 +220,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     imposterMatch: EMPTY_IMPOSTER_MATCH,
     tantpanik: null,
     tantSettings: DEFAULT_TANT_SETTINGS,
+    matchPlayerIds: [],
   }
 }
 
@@ -423,6 +427,7 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
     savedRounds,
     scores,
     players,
+    matchPlayerIds: Object.keys(players),
     lastResult: null,
     matchRounds: [],
     practice,
@@ -460,7 +465,7 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
   if (state.phase !== 'guessing') return state
 
   const rules = rulesFor(state.game)
-  const outcome = rules.scoreRound(state.guesses, state.itemId, target)
+  const outcome = rules.scoreRound(state.guesses, state.itemId, target, state.round >= state.rounds)
   const best = Math.max(0, ...Object.values(outcome.points))
   const winners = best > 0 ? Object.keys(outcome.points).filter((id) => outcome.points[id] === best) : []
 
@@ -517,12 +522,21 @@ export function resumeReveal(state: GameState, now: number, round: number): Game
   return { ...state, deadline: now + state.pause.msLeft, pause: null }
 }
 
+// Spelarna som räknas i matchen: de som var med när den startade (och fortfarande finns i lobbyns lista). Den som gått
+// med under matchen räknas inte. Saknas listan (ett läge från en äldre version) räknas alla.
+export function matchParticipants(state: Pick<GameState, 'players' | 'matchPlayerIds'>): string[] {
+  const all = Object.keys(state.players)
+  if (!state.matchPlayerIds || state.matchPlayerIds.length === 0) return all
+  return all.filter((id) => state.matchPlayerIds.includes(id))
+}
+
 // Den eller de med flest poäng i matchen. Delad seger ger alla på förstaplatsen en vinst.
 // Fick ingen några poäng blir det ingen vinnare.
 export function matchWinners(state: GameState): string[] {
-  const best = Math.max(0, ...Object.keys(state.players).map((id) => state.scores[id] ?? 0))
+  const ids = matchParticipants(state)
+  const best = Math.max(0, ...ids.map((id) => state.scores[id] ?? 0))
   if (best === 0) return []
-  return Object.keys(state.players).filter((id) => (state.scores[id] ?? 0) === best)
+  return ids.filter((id) => (state.scores[id] ?? 0) === best)
 }
 
 // Lägger matchens vinster på topplistan. En provomgång med en spelare räknas inte.
@@ -530,7 +544,8 @@ function finishMatch(state: GameState): GameState {
   if (state.practice) return state
   const winners = matchWinners(state)
   const leaderboard = { ...state.leaderboard }
-  for (const [id, info] of Object.entries(state.players)) {
+  for (const id of matchParticipants(state)) {
+    const info = state.players[id]
     const previous = leaderboard[id]
     leaderboard[id] = {
       ...info,
@@ -591,6 +606,7 @@ function resetMatch(state: GameState): GameState {
     cards: null,
     imposter: null,
     tantpanik: null,
+    matchPlayerIds: [],
   }
 }
 
@@ -611,10 +627,11 @@ export function rematchWishCount(state: GameState, onlineIds: string[], hostIds:
 }
 
 // Sorterar på poäng. Lika poäng ger samma placering (1, 2, 2, 4 …).
+// Bara spelarna i matchen (matchParticipants), så att den som gick med under matchen inte står på slutskärmen.
 export function rankPlayers(state: GameState): RankedPlayer[] {
-  const list = Object.entries(state.players).map(([id, info]) => ({
+  const list = matchParticipants(state).map((id) => ({
     id,
-    ...info,
+    ...state.players[id],
     score: state.scores[id] ?? 0,
   }))
   list.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'sv'))

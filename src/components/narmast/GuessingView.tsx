@@ -13,14 +13,18 @@ import { useMyGuess } from '@/hooks/useMyGuess'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { hasFinePointer } from '@/lib/device'
 import { guessSecondsFor, isValidGuess, waitingStanding } from '@/lib/match'
-import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
+import { MAX_NUMBER, MIN_NUMBER, randomTarget } from '@/lib/narmast'
 import { rulesFor } from '@/lib/spelregler'
 import { cn } from '@/lib/utils'
 
 export function GuessingView({ state, me, online, clockOffset, onGuess }: GuessingViewProps) {
-  const [value, setValue] = useState(50)
+  // Fältet börjar tomt, så att alla gör ett eget val. − och + och reglaget börjar från 50.
+  const [value, setValue] = useState<number | null>(null)
+  // Ökar vid varje Slumpa åt mig, så att talet poppar fram igen även när det blir samma.
+  const [rolls, setRolls] = useState(0)
   const { locked, inGame, lockIn, delivery, retry } = useMyGuess(state, me.id, onGuess)
-  const valid = isValidGuess(state.game, value)
+  const valid = value !== null && isValidGuess(state.game, value)
+  const lastRound = state.round >= state.rounds && state.rounds > 1 && !state.practice
   // Tydligare när tiden håller på att ta slut, bara medan jag gissar.
   const { warning, secondsLeft } = useTimeWarning(
     state.deadline,
@@ -32,7 +36,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (valid) lockIn(value)
+    if (valid && value !== null) lockIn(value)
   }
 
   return (
@@ -40,6 +44,11 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
       <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
       <SendStatus delivery={delivery} onRetry={retry} />
       <RoundTimer state={state} clockOffset={clockOffset} warning={warning} />
+      {lastRound && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-heading text-lg font-bold motion-safe:animate-pop">
+          Sista rundan. Dubbla poäng!
+        </p>
+      )}
 
       {/* Svarsdelen. En splatt från ett kast täcker den aldrig. */}
       <div {...SPLAT_SHIELD} className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
@@ -64,27 +73,29 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
                 type="button"
                 variant="outline"
                 className="size-14 text-2xl"
-                onClick={() => setValue((v) => Math.max(MIN_NUMBER, v - 1))}
+                onClick={() => setValue((v) => Math.max(MIN_NUMBER, (v ?? 51) - 1))}
                 aria-label="Minska"
               >
                 −
               </Button>
               <Input
+                key={rolls}
                 type="number"
                 inputMode="numeric"
                 min={MIN_NUMBER}
                 max={MAX_NUMBER}
-                value={Number.isNaN(value) ? '' : value}
-                onChange={(e) => setValue(e.target.valueAsNumber)}
+                placeholder="?"
+                value={value === null || Number.isNaN(value) ? '' : value}
+                onChange={(e) => setValue(Number.isNaN(e.target.valueAsNumber) ? null : e.target.valueAsNumber)}
                 aria-label="Din gissning"
-                className="h-20 w-36 text-center font-heading text-5xl font-bold"
+                className={cn('h-20 w-36 text-center font-heading text-5xl font-bold', rolls > 0 && 'motion-safe:animate-pop')}
                 autoFocus={hasFinePointer()}
               />
               <Button
                 type="button"
                 variant="outline"
                 className="size-14 text-2xl"
-                onClick={() => setValue((v) => Math.min(MAX_NUMBER, v + 1))}
+                onClick={() => setValue((v) => Math.min(MAX_NUMBER, (v ?? 49) + 1))}
                 aria-label="Öka"
               >
                 +
@@ -94,11 +105,24 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
               type="range"
               min={MIN_NUMBER}
               max={MAX_NUMBER}
-              value={Number.isNaN(value) ? 50 : value}
+              value={value === null || Number.isNaN(value) ? 50 : value}
               onChange={(e) => setValue(Number(e.target.value))}
               aria-label="Dra för att välja tal"
-              className="w-full accent-primary"
+              // Nedtonat tills ett tal är valt, så att 50 inte ser ut som ett val.
+              className={cn('w-full accent-primary', (value === null || Number.isNaN(value)) && 'opacity-50')}
             />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setValue(randomTarget())
+                setRolls((n) => n + 1)
+              }}
+            >
+              <span aria-hidden>🎲</span>
+              Slumpa åt mig
+            </Button>
             {/* Vickar till en gång när det blir fem sekunder kvar. */}
             <Button
               type="submit"

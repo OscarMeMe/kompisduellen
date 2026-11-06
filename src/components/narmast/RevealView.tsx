@@ -1,37 +1,42 @@
 import { useEffect, useState } from 'react'
+import { Konfetti } from '@/components/Konfetti'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import { ResultRow, type ResultRowProps } from '@/components/lobby/ResultRow'
 import { RoundStanding } from '@/components/lobby/RoundStanding'
 import type { RevealViewProps } from '@/components/lobby/types'
-import { MAX_NUMBER, MIN_NUMBER } from '@/lib/narmast'
+import { Tallinje } from '@/components/narmast/Tallinje'
+import { loadSoundOn, playBullseye } from '@/lib/ljud'
 import { roundStanding } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
+// Så länge markören rullar längs tallinjen (samma tid som animate-tallinje-markor i index.css).
+const ROLL_MS = 2000
+
+function reducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+// Facit i Närmast vinner: tallinjen där allas figurer står vid sina tal och markören rullar fram till rätt tal. När den
+// stannat syns talet, vem som vann och allas rader. Exakt träff ger konfetti och ett eget ljud.
 export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, onPause, onResume }: RevealViewProps) {
   const result = state.lastResult
-  const [shownTarget, setShownTarget] = useState<number | null>(null)
-
-  // Liten "rulle"-effekt innan rätt tal visas.
-  const target = result?.target
+  // Markören har stannat. Med "minska rörelse" direkt.
+  const [done, setDone] = useState(reducedMotion)
   useEffect(() => {
-    if (target === undefined) return
-    let ticks = 0
-    const timer = setInterval(() => {
-      ticks++
-      if (ticks >= 12) {
-        setShownTarget(target)
-        clearInterval(timer)
-      } else {
-        setShownTarget(Math.floor(Math.random() * MAX_NUMBER) + MIN_NUMBER)
-      }
-    }, 70)
-    return () => clearInterval(timer)
-  }, [target, state.round])
+    if (done) return
+    const timer = setTimeout(() => setDone(true), ROLL_MS)
+    return () => clearTimeout(timer)
+  }, [done])
+
+  const target = result?.target
+  const exact = result ? Object.values(result.guesses).some((guess) => guess === target) : false
+  useEffect(() => {
+    if (done && exact && loadSoundOn()) playBullseye()
+  }, [done, exact])
 
   if (!result) return null
-  const rolling = shownTarget !== result.target
   // Matchledaren får en krona, så att den syns skild från rundans vinnare (grön).
   const standing = state.practice ? null : roundStanding(state, me.id)
   const leaderIds = standing?.leaderIds ?? []
@@ -41,36 +46,45 @@ export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, o
   const rows = Object.entries(state.players)
     .map(([id, info]) => ({ id, ...info, guess: result.guesses[id] }))
     .sort((a, b) => distance(a.guess, result.target) - distance(b.guess, result.target))
+  const linePlayers = rows.flatMap((row) =>
+    row.guess === undefined ? [] : [{ id: row.id, name: row.name, avatar: row.avatar, value: row.guess }],
+  )
+  const scorers = Object.keys(result.points).filter((id) => (result.points[id] ?? 0) > 0)
 
-  const iWon = result.winners.includes(me.id)
+  const lastRound = state.round >= state.rounds && state.rounds > 1
+  const nextIsLast = state.round === state.rounds - 1 && state.rounds > 1
 
   return (
     <Wide>
       <RoundBadge state={state} />
       <LostMoveLine text={lostMove} />
 
-      <div className="rounded-lg border bg-card p-8 text-center shadow-soft">
+      <div className="relative rounded-lg border bg-card px-2 pt-5 pb-3 text-center shadow-soft">
+        {done && exact && <Konfetti />}
         <p className="font-semibold text-muted-foreground">Det rätta talet var</p>
-        <p className={cn('font-heading text-8xl font-bold tabular-nums', rolling ? 'text-muted-foreground' : 'text-primary')}>
-          {shownTarget ?? '?'}
+        <p
+          className={cn(
+            'font-heading text-7xl font-bold tabular-nums',
+            done ? 'text-primary motion-safe:animate-pop' : 'text-muted-foreground',
+          )}
+        >
+          {done ? result.target : '?'}
         </p>
-        {!rolling && (
-          <p className="mt-2 text-lg font-bold">
-            {result.winners.length === 0
-              ? 'Ingen hann gissa den här gången'
-              : result.winners.length > 1
-                ? iWon
-                  ? 'Delad etta! +1 poäng'
-                  : 'Delad etta! Flera var lika nära.'
-                : iWon
-                  ? 'Du var närmast! +1 poäng'
-                  : `${state.players[result.winners[0]]?.name ?? 'Någon'} var närmast!`}
-          </p>
+        {done && <p className="mt-1 px-2 text-lg font-bold">{headline(state, me.id, lastRound)}</p>}
+        {linePlayers.length > 0 && (
+          <Tallinje
+            key={`${state.round}-${result.target}`}
+            players={linePlayers}
+            target={result.target}
+            done={done}
+            meId={me.id}
+            scorers={scorers}
+          />
         )}
       </div>
 
-      {!rolling && (
-        <ul className="space-y-2" aria-label="Allas gissningar">
+      {done && (
+        <ul className="space-y-2 motion-safe:animate-fade" aria-label="Allas gissningar">
           {rows.map((row, index) => (
             <ResultRow
               key={row.id}
@@ -90,18 +104,34 @@ export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, o
         </ul>
       )}
 
-      {!rolling && <RoundStanding state={state} meId={me.id} />}
+      {done && <RoundStanding state={state} meId={me.id} />}
 
-      <RevealFooter
-        state={state}
-        isHost={isHost}
-        clockOffset={clockOffset}
-        onNext={onNext}
-        onPause={onPause}
-        onResume={onResume}
-      />
+      {/* Inför sista rundan, så att alla vet att den är värd mer. */}
+      {done && nextIsLast && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-heading text-lg font-bold motion-safe:animate-pop">
+          Nästa runda är den sista. Dubbla poäng!
+        </p>
+      )}
+
+      <RevealFooter state={state} isHost={isHost} clockOffset={clockOffset} onNext={onNext} onPause={onPause} onResume={onResume} />
     </Wide>
   )
+}
+
+// Raden under talet: vem som vann rundan, och mina poäng om det var jag.
+function headline(state: RevealViewProps['state'], meId: string, lastRound: boolean): string {
+  const result = state.lastResult!
+  const mine = result.points[meId] ?? 0
+  const name = (id: string) => state.players[id]?.name ?? 'Någon'
+  const double = lastRound ? '. Dubbla poäng!' : ''
+  if (Object.keys(result.guesses).length === 0) return 'Ingen hann gissa den här gången'
+  const exact = result.winners.filter((id) => result.guesses[id] === result.target)
+  if (exact.includes(meId)) return `Pricken mitt i! +${mine} poäng${double}`
+  if (exact.length === 1) return `${name(exact[0])} prickade exakt!`
+  if (exact.length > 1) return 'Flera prickade exakt!'
+  if (result.winners.includes(meId)) return `${result.winners.length > 1 ? 'Delad etta!' : 'Du var närmast!'} +${mine} poäng${double}`
+  if (result.winners.length > 1) return 'Delad etta! Flera var lika nära.'
+  return `${name(result.winners[0])} var närmast!${mine > 0 ? ` Du fick ${mine} poäng.` : ''}`
 }
 
 function distance(guess: number | undefined, target: number) {

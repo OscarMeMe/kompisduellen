@@ -57,7 +57,8 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
                 )}
                 style={{ '--share': share, animationDelay: `${style.delay}ms` } as CSSProperties}
               >
-                {style.medal}
+                {/* Ingen medalj när ingen fick poäng. */}
+                {best > 0 && style.medal}
               </div>
             </div>
           )

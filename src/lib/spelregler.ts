@@ -31,8 +31,9 @@ export type GameRules = {
   isValidGuess: (value: number) => boolean
   // Spel där varje runda gäller en sak (t.ex. Gissa priset) väljer den här.
   pickItem?: (usedItemIds: string[]) => { itemId: string; usedItemIds: string[] }
-  // target kan skickas med för att slippa slump, t.ex. i tester.
-  scoreRound: (guesses: Record<string, number>, itemId: string | null, target?: number) => RoundOutcome
+  // target kan skickas med för att slippa slump, t.ex. i tester. lastRound = matchens sista runda (Närmast vinner
+  // ger dubbla poäng då).
+  scoreRound: (guesses: Record<string, number>, itemId: string | null, target?: number, lastRound?: boolean) => RoundOutcome
   // Hur långt ifrån rätt svar en gissning är, med samma mått som poängen bygger på (0 = exakt).
   distance: (guess: number, target: number) => number
   // Från hur stort avstånd en miss är värd att lyfta fram som "Längst från verkligheten".
