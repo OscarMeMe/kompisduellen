@@ -3,9 +3,10 @@ import { AnswerCard } from '@/components/kort/PlayingCard'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { cn } from '@/lib/utils'
 
-// Handen med svarskort. På dator (lg) en solfjäder längst ner: korten överlappar lite, lutar utåt och ligger i en
-// båge. Kortet under musen (eller med fokus från tangentbordet) lyfts, rätas upp och förstoras så att hela texten
-// går att läsa, och grannarna glider undan. På mobilen och mellanstora skärmar samma rad att bläddra i som förut.
+// Handen med svarskort. På dator (lg) en solfjäder längst ner: korten ligger sida vid sida utan att överlappa, så att
+// all text går att läsa, och lutar lite utåt i en båge. De delar på bordets bredd (högst 9 rem breda). Kortet under
+// musen (eller med fokus från tangentbordet) lyfts och rätas upp. På mobilen och mellanstora skärmar samma rad att
+// bläddra i som förut.
 // Med musen går ett kort också att dra upp mot frågekortet (dropTarget). Utan onSelect går korten bara att titta på.
 
 export type FanCard = { key: string; text: string; blank?: boolean; footer?: string }
@@ -32,14 +33,24 @@ const DRAG_UP_PX = 120
 type Drag = { i: number; x0: number; y0: number; dx: number; dy: number; moved: boolean }
 
 function fanTransform(i: number, n: number, a: number | null): string {
-  if (i === a) return 'translateY(-2.25rem) scale(1.12)'
+  if (i === a) return 'translateY(-1.25rem) scale(1.06)'
   const d = i - (n - 1) / 2
-  const spread = n > 1 ? Math.min(4, 22 / (n - 1)) : 0
+  // Lite lutning, så att hörnen inte når in över grannens text.
+  const spread = n > 1 ? Math.min(2.5, 14 / (n - 1)) : 0
   const rot = d * spread
-  const y = d * d * 0.12
-  // Grannarna till det lyfta kortet glider undan, så att det syns helt.
-  const x = a === null ? 0 : Math.sign(i - a) * (Math.abs(i - a) === 1 ? 1.75 : 0.75)
+  const y = d * d * 0.08
+  // Grannarna till det lyfta kortet glider undan lite, så att det förstorade kortet inte täcker dem.
+  const x = a === null ? 0 : Math.sign(i - a) * (Math.abs(i - a) === 1 ? 0.4 : 0.2)
   return `translateX(${x}rem) translateY(${y}rem) rotate(${rot}deg)`
+}
+
+// Namnet skärmläsare läser upp: kortets text (utan mjuka bindestreck) och raden längst ner på det blanka kortet.
+function cardName(card: FanCard, selected: boolean): string {
+  const text = card.text.replaceAll('\u00ad', '')
+  // Det blanka kortets text är "Blankt kort" tills man har skrivit något.
+  const written = card.blank && text !== 'Blankt kort'
+  const name = card.blank ? [written ? `Blankt kort: ${text}` : 'Blankt kort', card.footer].filter(Boolean).join('. ') : text
+  return selected ? `${name} (i luckan)` : name
 }
 
 export function Solfjader({
@@ -162,7 +173,7 @@ export function Solfjader({
       onMouseLeave={() => setHovered(null)}
       className={cn(
         '-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:grid-cols-4',
-        'lg:flex lg:justify-center lg:gap-0 lg:px-8 lg:pt-4 lg:pb-1 lg:short:pt-2',
+        'lg:flex lg:justify-center lg:gap-1.5 lg:px-0 lg:pt-4 lg:pb-1 lg:short:pt-2',
         className,
       )}
     >
@@ -182,7 +193,7 @@ export function Solfjader({
             onPointerCancel={(event) => endDrag(event, true)}
             className={cn(
               'relative w-40 shrink-0 snap-start sm:w-auto',
-              'lg:-mx-5 lg:h-48 lg:w-36 lg:origin-bottom lg:transition-transform lg:duration-200 lg:ease-out lg:select-none lg:[transform:var(--fan)] lg:short:h-36 lg:short:w-32 motion-reduce:transition-none',
+              'lg:h-48 lg:max-w-36 lg:min-w-0 lg:flex-1 lg:origin-bottom lg:transition-transform lg:duration-200 lg:ease-out lg:select-none lg:[transform:var(--fan)] lg:short:h-40 motion-reduce:transition-none',
               dragging && 'lg:cursor-grabbing lg:transition-none',
             )}
           >
@@ -211,8 +222,12 @@ export function Solfjader({
               onBlur={() => setFocused(null)}
               footer={card.footer}
               aria-keyshortcuts={shortcuts && i < 9 ? String(i + 1) : undefined}
+              // Kortets text som namn, även när det valda kortets text är dold i konturen.
+              aria-label={cardName(card, isSelected)}
               className={cn(
-                'lg:min-h-0 lg:gap-2 lg:p-3 lg:text-base lg:shadow-lift lg:hover:translate-y-0 lg:short:text-sm',
+                'lg:min-h-0 lg:gap-1.5 lg:p-2.5 lg:text-sm lg:shadow-lift lg:hover:translate-y-0',
+                // Långa svar får lite mindre text, så att de får plats utan att man håller musen över.
+                card.text.length > 44 && 'lg:text-[0.8125rem] lg:leading-tight',
                 // På dator ligger det valda kortet i frågan, så här blir det en tom kontur.
                 isSelected &&
                   'lg:translate-y-0 lg:border-dashed lg:border-background/60 lg:bg-background/10 lg:shadow-none lg:ring-0 lg:hover:border-background/80 lg:[&>span]:invisible',
@@ -223,7 +238,7 @@ export function Solfjader({
             {isSelected && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 hidden items-center justify-center font-heading text-sm font-bold text-background/80 lg:flex"
+                className="pointer-events-none absolute inset-0 hidden items-center justify-center font-heading text-sm font-bold text-background lg:flex"
               >
                 I luckan
               </span>

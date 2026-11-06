@@ -82,16 +82,16 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
           >
             <Check className="size-5" aria-hidden /> Klart! Väntar på de andra…
           </p>
-          {/* På dator ligger handen kvar, nedsjunken och utan att gå att välja. */}
+          {/* På dator ligger handen kvar, nedsjunken och utan att gå att välja. Det spelade kortet är borta ur handen. */}
           <div aria-hidden className="pointer-events-none hidden translate-y-3 opacity-40 motion-safe:transition motion-safe:duration-200 lg:block">
-            <Solfjader label="Din hand" cards={cards} />
+            <Solfjader label="Din hand" cards={cards.filter((card) => card.key !== selectedKey)} />
           </div>
         </div>
       ) : (
         <div className="space-y-3 lg:space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:hidden">
             <h2 className="text-xl">Välj ett kort</h2>
-            <span className="text-sm text-background/75">Du kan byta kort tills du trycker på Spela kortet.</span>
+            <span className="text-sm font-medium text-background">Du kan byta kort tills du trycker på Spela kortet.</span>
           </div>
           <h2 className="sr-only max-lg:hidden">Välj ett kort</h2>
 
@@ -125,7 +125,7 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
 
           {/* På dator står tipsen bredvid knappen, så att handen får plats. */}
           <div className="lg:grid lg:grid-cols-[1fr_minmax(0,20rem)_1fr] lg:items-center lg:gap-4">
-            <p className="hidden text-right text-sm text-background/75 lg:block">
+            <p className="hidden text-right text-sm font-medium text-background lg:block">
               Klicka, dra upp eller tryck 1–{Math.min(9, cards.length)}
             </p>
             <div {...SPLAT_SHIELD}>
@@ -133,7 +133,7 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
                 Spela kortet
               </Button>
             </div>
-            <p className="hidden text-sm text-background/75 lg:block">Du kan byta tills du spelar kortet</p>
+            <p className="hidden text-sm font-medium text-background lg:block">Du kan byta tills du spelar kortet</p>
           </div>
         </div>
       )}

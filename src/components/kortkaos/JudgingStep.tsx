@@ -35,7 +35,7 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
     <>
       <div className="space-y-1 text-center">
         <h1 className="text-2xl">{isJudge ? 'Välj ditt favoritkort' : `${judgeName} väljer vinnare…`}</h1>
-        <p className="text-sm font-semibold text-background/75 tabular-nums">
+        <p className="text-sm font-semibold text-background tabular-nums">
           {state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}Ingen vet vem som spelade vad
         </p>
       </div>

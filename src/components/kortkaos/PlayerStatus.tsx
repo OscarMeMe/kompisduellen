@@ -28,7 +28,7 @@ export function PlayerStatus({ state, online, clockOffset, compact = false, clas
     <div className={cn(compact ? 'flex-wrap items-center gap-x-3 gap-y-1.5' : 'space-y-3', className)}>
       <p
         className={cn(
-          'text-sm font-semibold text-background/80 tabular-nums',
+          'text-sm font-semibold text-background tabular-nums',
           compact ? 'whitespace-nowrap' : 'text-center',
         )}
       >
