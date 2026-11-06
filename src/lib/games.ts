@@ -49,7 +49,7 @@ export const GAMES: GameInfo[] = [
     tagline: 'Välj ett tal mellan 1 och 100. Sedan slumpas ett tal fram. Vem kom närmast?',
     quickRule: 'Gissa ett tal mellan 1 och 100. Närmast det dolda talet vinner rundan.',
     emoji: '🎯',
-    color: 'bg-coral-soft',
+    color: 'bg-peach',
     minPlayers: 2,
     maxPlayers: 12,
     feel: 'Slumpigt',
