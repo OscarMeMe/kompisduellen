@@ -35,12 +35,12 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
     <>
       <div className="space-y-1 text-center">
         <h1 className="text-2xl">{isJudge ? 'Välj ditt favoritkort' : `${judgeName} väljer vinnare…`}</h1>
-        <p className="text-sm font-semibold text-muted-foreground tabular-nums">
+        <p className="text-sm font-semibold text-background/75 tabular-nums">
           {state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}Ingen vet vem som spelade vad
         </p>
       </div>
 
-      <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2" aria-label="Insända kort">
+      <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Insända kort">
         {table.submissions.map((submission, i) => (
           <li key={submission.key}>
             {/* Korten vänds upp ett i taget. */}
@@ -58,7 +58,7 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
       </ul>
 
       {isJudge && (
-        <div {...SPLAT_SHIELD} className="sticky bottom-4 z-10">
+        <div {...SPLAT_SHIELD} className="sticky bottom-4 z-10 lg:mx-auto lg:w-full lg:max-w-sm">
           <Button size="lg" className="w-full" disabled={!chosen || sent} onClick={confirm}>
             {sent ? 'Vinnaren är vald' : chosen ? 'Välj som vinnare' : 'Tryck på ett kort'}
           </Button>

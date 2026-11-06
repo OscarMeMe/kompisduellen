@@ -25,8 +25,9 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
   const winner = winnerId ? state.players[winnerId] : undefined
   const others = table.submissions.filter((s) => s.key !== table.winner)
 
+  // Rutorna är ljusa, så texten är mörk även på det mörka bordet.
   return (
-    <>
+    <div className="contents text-foreground">
       {table.skipped || !winning ? (
         <div className="space-y-2 rounded-lg border bg-card p-6 text-center shadow-soft animate-pop">
           <h1 className="text-2xl">Ingen poäng den här rundan</h1>
@@ -86,7 +87,7 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
         onNext={onNext}
         totalSeconds={kortkaosRules.seconds.reveal}
       />
-    </>
+    </div>
   )
 }
 

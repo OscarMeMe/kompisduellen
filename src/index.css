@@ -75,6 +75,8 @@
     --color-room: var(--room);
     --color-wood: var(--wood);
     --color-felt: var(--felt);
+    --color-kortbord: var(--kortbord);
+    --color-kortbord-kant: var(--kortbord-kant);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
     --color-spel-yta: var(--spel-yta);
@@ -785,6 +787,10 @@
     --felt: oklch(0.9 0.06 165);
     --wood-edge: oklch(0.56 0.08 55);
     --chair: oklch(0.63 0.07 55);
+    /* Kortkaos spelbord: mörkt petroleumgrönt. En annan nyans och ljusare än de svarta frågekorten (foreground), så
+       att korten syns mot bordet. Kanten är en ljusare ton av samma färg. */
+    --kortbord: oklch(0.4 0.06 192);
+    --kortbord-kant: oklch(0.55 0.06 188);
     --sun-soft: oklch(0.97 0.05 90);
     --sky-soft: oklch(0.955 0.03 235);
     /* Guld för kronan. Mörk nog att synas (minst 3:1) mot korten och pastellerna */
@@ -810,6 +816,8 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
+    --kortbord: oklch(0.3 0.045 192);
+    --kortbord-kant: oklch(0.42 0.045 188);
 }
 
 @layer base {
