@@ -128,7 +128,6 @@ export function HomePage() {
               className="shrink-0 rounded-full"
               onClick={() => setTillfalle(item.id)}
             >
-              {item.emoji && <Emoji emoji={item.emoji} />}
               {item.name}
             </Button>
           ))}
