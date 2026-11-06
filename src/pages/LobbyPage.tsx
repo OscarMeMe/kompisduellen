@@ -447,6 +447,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             onNewWord={actions.imposterNewWord}
             onNextRound={actions.imposterNextRound}
             onAbortRound={actions.imposterAbortRound}
+            onEndAfterRound={actions.imposterEndAfterRound}
             typing={typing}
             onTyping={actions.typing}
           />

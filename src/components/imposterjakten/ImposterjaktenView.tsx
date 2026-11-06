@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Check, CircleStop, RefreshCw, Send } from 'lucide-react'
+import { Flag, Undo2, Check, CircleStop, RefreshCw, Send } from 'lucide-react'
 import { Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
 import { AccusationStep, DiscussionStep, FacitStep, GuessStep, VotingStep, TableCenter } from '@/components/imposterjakten/VoteSteps'
@@ -16,7 +16,8 @@ import { useTimeWarning } from '@/hooks/useTimeWarning'
 import {
   canChangeWord,
   clueRound,
-  CLUE_ROUNDS,
+  clueRoundsFor,
+  endsAfterThisRound,
   ACCUSE_SECONDS,
   canAccuse,
   imposterInstruction,
@@ -31,11 +32,12 @@ import { hasFinePointer } from '@/lib/device'
 import { playTurn } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
-// Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, tre
-// varv. Efter andra varvet kan vem som helst anklaga någon. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
-// poängen. Kortet går att visa och dölja hela tiden. Värden kan avbryta omgången (inga poäng, den räknas inte).
+// Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
+// eller tre varv. Efter näst sista varvet kan vem som helst anklaga någon. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
+// poängen. Kortet går att visa och dölja hela tiden. Värden kan avbryta omgången (inga poäng, den räknas inte) och
+// avsluta efter den här omgången.
 export function ImposterjaktenView(props: ImposterViewProps) {
-  const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound } = props
+  const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound, onEndAfterRound } = props
   const [confirmAbort, setConfirmAbort] = useState(false)
   const table = state.imposter
   // Vem jag tänker rösta på. Valet gäller bara den omröstning det gjordes i.
@@ -117,6 +119,25 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={onNewWord}>
           <RefreshCw aria-hidden />
           Nytt ord
+        </Button>
+      )}
+      {/* Värden har valt att avsluta efter den här omgången. Alla ser det. */}
+      {endsAfterThisRound(state) && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
+          Sista omgången. {isHost ? 'Du avslutar' : `${hostName(state, props.online)} avslutar`} efter den här.
+        </p>
+      )}
+      {/* Värden kan korta matchen. Spelet går till prispallen efter den pågående omgången, med poängen kvar. */}
+      {isHost && endsAfterThisRound(state) && (
+        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => onEndAfterRound(false)}>
+          <Undo2 aria-hidden />
+          Kör alla omgångar
+        </Button>
+      )}
+      {isHost && !endsAfterThisRound(state) && state.round < state.rounds && (
+        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => onEndAfterRound(true)}>
+          <Flag aria-hidden />
+          Avsluta efter den här omgången
         </Button>
       )}
       {/* Om någon dröjer eller ordet avslöjas av misstag. Omgången ger inga poäng och räknas inte. */}
@@ -211,7 +232,7 @@ function CluesCenter({ table, state, meId }: { table: ImposterTable; state: Impo
   )
 }
 
-// Ett ord var i turordning, tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
+// Ett ord var i turordning, två eller tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
 function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onTyping, onSkipTurn }: StepProps) {
   const myTurn = currentTurn(table) === me.id
@@ -219,7 +240,7 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onT
 
   const line = (
     <p className="text-center text-sm font-semibold text-muted-foreground">
-      Varv {clueRound(table)} av {CLUE_ROUNDS}
+      Varv {clueRound(table)} av {clueRoundsFor(table)}
     </p>
   )
 
@@ -368,6 +389,12 @@ function WriteTurn({
 }
 
 // Frågan innan värden avbryter omgången.
+// Värdens namn, från läget där namnen är unika.
+function hostName(state: ImposterViewProps['state'], online: ImposterViewProps['online']): string {
+  const host = online.find((player) => player.host)
+  return (host && state.players[host.id]?.name) ?? 'Värden'
+}
+
 function AbortRoundDialog({ open, onStay, onAbort }: { open: boolean; onStay: () => void; onAbort: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onStay()}>

@@ -60,6 +60,8 @@ export type ImposterViewProps = {
   onNewWord: () => void
   onNextRound: () => void
   onAbortRound: () => void
+  // Avsluta efter den här omgången (true) eller kör alla omgångar (false).
+  onEndAfterRound: (on: boolean) => void
   // Vem som skriver på sitt ord just nu (bara den som har tur), och att jag skriver (skickas högst varannan sekund).
   typing: string | null
   onTyping: () => void
