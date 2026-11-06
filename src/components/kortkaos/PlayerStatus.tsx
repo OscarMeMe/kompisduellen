@@ -11,23 +11,31 @@ type PlayerStatusProps = {
   state: GameState
   online: OnlinePlayer[]
   clockOffset: number
+  // På dator: en rad överst på bordet med bara figurerna, utan kasten (de ligger i hörnet).
+  compact?: boolean
+  className?: string
 }
 
 // Statusraden medan alla väljer kort ("⏱ 12 s kvar · 2/3 har valt") och vilka som har valt.
 // Visar bara att någon har valt, aldrig vilket kort.
-export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) {
+export function PlayerStatus({ state, online, clockOffset, compact = false, className }: PlayerStatusProps) {
   const table = state.cards!
   const { secondsLeft } = useCountdown(state.deadline, clockOffset, kortkaosRules.seconds.choosing)
   const players = online.filter((p) => state.players[p.id] && p.id !== table.judge)
   const chosen = players.filter((p) => table.chosen.includes(p.id)).length
 
   return (
-    <div className="space-y-3">
-      <p className="text-center text-sm font-semibold text-muted-foreground tabular-nums">
+    <div className={cn(compact ? 'flex-wrap items-center gap-x-3 gap-y-1.5' : 'space-y-3', className)}>
+      <p
+        className={cn(
+          'text-sm font-semibold text-background tabular-nums',
+          compact ? 'whitespace-nowrap' : 'text-center',
+        )}
+      >
         {state.deadline !== null && `⏱ ${secondsLeft} s kvar · `}
         {chosen}/{players.length} har valt
       </p>
-      <ul className="flex flex-wrap justify-center gap-1.5">
+      <ul className={cn('flex flex-wrap gap-1.5', !compact && 'justify-center')}>
         {players.map((p) => {
           const done = table.done.includes(p.id)
           const hasChosen = table.chosen.includes(p.id)
@@ -36,7 +44,7 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
               key={p.id}
               className={cn(
                 'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
-                done ? 'bg-mint-soft text-accent-foreground' : hasChosen ? 'bg-sky-soft' : 'bg-card text-muted-foreground',
+                done ? 'bg-mint-soft text-accent-foreground' : hasChosen ? 'bg-sky-soft text-foreground' : 'bg-card text-muted-foreground',
               )}
             >
               <Emoji emoji={p.avatar} className="text-sm" />
@@ -52,8 +60,12 @@ export function PlayerStatus({ state, online, clockOffset }: PlayerStatusProps) 
           )
         })}
       </ul>
-      {/* Kasta något på de andra medan de väljer kort. */}
-      <ThrowBar />
+      {/* Kasta något på de andra medan de väljer kort. Rutan är ljus, så att texten syns mot bordet. */}
+      {!compact && (
+        <div className="rounded-lg bg-card/95 p-2 text-foreground shadow-soft-sm empty:hidden">
+          <ThrowBar />
+        </div>
+      )}
     </div>
   )
 }

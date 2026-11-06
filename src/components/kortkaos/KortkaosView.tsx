@@ -1,24 +1,29 @@
 import { Gavel, Loader2 } from 'lucide-react'
 import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { Emoji } from '@/components/Emoji'
-import { Hand, HandSlot } from '@/components/kort/Hand'
-import { AnswerCard, PromptCard } from '@/components/kort/PlayingCard'
+import { Solfjader } from '@/components/kort/Solfjader'
+import { PromptCard } from '@/components/kort/PlayingCard'
 import { ChoosingStep } from '@/components/kortkaos/ChoosingStep'
+import { handCards } from '@/components/kortkaos/hand'
 import { JudgingStep } from '@/components/kortkaos/JudgingStep'
+import { Center, Kortbord, Middle } from '@/components/kortkaos/Kortbord'
 import { PlayerStatus } from '@/components/kortkaos/PlayerStatus'
 import { RevealStep } from '@/components/kortkaos/RevealStep'
-import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { ThrowBar } from '@/components/lobby/Kast'
+import { RoundTimer } from '@/components/lobby/LobbyLayout'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import type { CardViewProps } from '@/components/lobby/types'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import { findGame } from '@/lib/games'
-import { capitalize, type MyHand } from '@/lib/kort'
+import type { MyHand } from '@/lib/kort'
 import { kortkaosRules } from '@/lib/kortkaos'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
-// Kortkaos: hela rundan i en vy. Vilket steg som visas styrs av state.cards.step.
+// Kortkaos: hela rundan i en vy på ett mörkt spelbord. Vilket steg som visas styrs av state.cards.step.
 // LobbyPage ger vyn en ny key för varje frågekort, så att val och utkast börjar om.
+// På dator (lg) är bordet lika högt som skärmen: överst domaren och vilka som har valt, i mitten frågekortet och
+// längst ner handen. På mobilen ligger allt under varandra som förut.
 export function KortkaosView({ state, me, online, isHost, clockOffset, hand, lostMove, onMove, onNext }: CardViewProps) {
   const table = state.cards
   // Tiden varnar bara när jag har något kvar att göra: lägga mitt kort, eller välja vinnare som domare.
@@ -42,51 +47,80 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, los
   )
 
   return (
-    <Wide>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2 lg:max-w-5xl lg:gap-3 lg:short:pt-1">
       <TimeWarningFrame warning={warning} secondsLeft={secondsLeft} />
       <RoundTimer state={state} clockOffset={clockOffset} totalSeconds={kortkaosRules.seconds[table.step]} warning={warning} />
-      <JudgeBanner state={state} meId={me.id} />
 
-      {table.step === 'question' && (
-        <>
-          {table.retried && (
-            <p role="status" className="rounded-md bg-coral-soft px-4 py-3 text-center font-semibold animate-pop">
-              För få kort kom in, så det blir ett nytt frågekort.
-            </p>
+      <Kortbord>
+        {/* Under avslöjandet på dator syns vinnaren i stället, så att ställningen och nedräkningen får plats. */}
+        <div
+          className={cn(
+            'flex flex-col items-center gap-3 lg:flex-row',
+            table.step === 'choosing' && 'lg:justify-between',
+            table.step === 'reveal' && 'lg:hidden',
           )}
-          <PromptCard prompt={prompt} footer={footer} className="animate-pop" />
-          <p className="text-center font-semibold text-muted-foreground">
-            {isJudge ? 'Läs upp frågan! Snart lägger de andra sina kort.' : 'Läs frågan. Snart får du välja ett kort.'}
-          </p>
-          {!isJudge && hand && <HandPreview hand={hand} />}
-        </>
-      )}
+        >
+          <JudgeBanner state={state} meId={me.id} />
+          {table.step === 'choosing' && (
+            <PlayerStatus state={state} online={online} clockOffset={clockOffset} compact className="hidden lg:flex" />
+          )}
+          {/* På dator ligger kasten uppe i hörnet, så att de inte tar plats från handen. */}
+          {table.step === 'choosing' && (
+            <div className="hidden rounded-lg bg-card/95 px-3 py-1.5 text-foreground shadow-soft-sm lg:[&:not(:empty)]:block">
+              <ThrowBar className="lg:flex-row lg:gap-3" />
+            </div>
+          )}
+        </div>
 
-      {table.step === 'choosing' &&
-        (isJudge || !hand ? (
-          <>
-            <PromptCard prompt={prompt} footer={footer} />
-            <p className="flex items-center justify-center gap-2 rounded-md bg-coral-soft py-4 text-center font-semibold">
-              <Loader2 className="size-5 animate-spin" aria-hidden />
-              {isJudge ? 'Väntar på svar' : 'Du får kort från nästa runda'}
+        {table.step === 'question' && (
+          <Middle>
+            {table.retried && (
+              <p role="status" className="rounded-md bg-coral-soft px-4 py-3 text-center font-semibold text-foreground animate-pop">
+                För få kort kom in, så det blir ett nytt frågekort.
+              </p>
+            )}
+            <Center>
+              <PromptCard prompt={prompt} footer={footer} className="animate-pop lg:w-full lg:max-w-2xl" />
+            </Center>
+            <p className="text-center font-semibold text-background">
+              {isJudge ? 'Läs upp frågan! Snart lägger de andra sina kort.' : 'Läs frågan. Snart får du välja ett kort.'}
             </p>
-          </>
-        ) : (
-          <ChoosingStep prompt={prompt} hand={hand} done={table.done.includes(me.id)} footer={footer} onMove={onMove} />
-        ))}
+            {!isJudge && hand && <HandPreview hand={hand} />}
+          </Middle>
+        )}
 
-      {table.step === 'choosing' && <PlayerStatus state={state} online={online} clockOffset={clockOffset} />}
+        {table.step === 'choosing' &&
+          (isJudge || !hand ? (
+            <Middle>
+              <Center>
+                <PromptCard prompt={prompt} footer={footer} className="lg:w-full lg:max-w-2xl" />
+              </Center>
+              <p className="flex items-center justify-center gap-2 self-center rounded-md bg-coral-soft px-6 py-4 text-center font-semibold text-foreground">
+                <Loader2 className="size-5 animate-spin" aria-hidden />
+                {isJudge ? 'Väntar på svar' : 'Du får kort från nästa runda'}
+              </p>
+            </Middle>
+          ) : (
+            <ChoosingStep prompt={prompt} hand={hand} done={table.done.includes(me.id)} footer={footer} onMove={onMove} />
+          ))}
 
-      {table.step === 'judging' && (
-        <JudgingStep state={state} prompt={prompt} isJudge={isJudge} clockOffset={clockOffset} onMove={onMove} />
-      )}
+        {table.step === 'choosing' && (
+          <PlayerStatus state={state} online={online} clockOffset={clockOffset} className="lg:hidden" />
+        )}
 
-      <LostMoveLine text={lostMove} />
+        {table.step === 'judging' && (
+          <JudgingStep state={state} prompt={prompt} isJudge={isJudge} clockOffset={clockOffset} onMove={onMove} />
+        )}
 
-      {table.step === 'reveal' && (
-        <RevealStep state={state} me={me} prompt={prompt} isHost={isHost} clockOffset={clockOffset} onNext={onNext} />
-      )}
-    </Wide>
+        <div className="text-foreground">
+          <LostMoveLine text={lostMove} />
+        </div>
+
+        {table.step === 'reveal' && (
+          <RevealStep state={state} me={me} prompt={prompt} isHost={isHost} clockOffset={clockOffset} onNext={onNext} />
+        )}
+      </Kortbord>
+    </div>
   )
 }
 
@@ -99,7 +133,7 @@ function JudgeBanner({ state, meId }: { state: GameState; meId: string }) {
     <div
       key={myTurn ? 'min-tur' : 'vantar'}
       className={cn(
-        'flex items-center justify-center gap-2 self-center rounded-full border bg-sun-soft px-4 py-1.5 shadow-soft-sm',
+        'flex items-center justify-center gap-2 rounded-full border bg-sun-soft px-4 py-1.5 whitespace-nowrap text-foreground shadow-soft-sm',
         myTurn && 'motion-safe:animate-turn-pulse',
       )}
     >
@@ -119,20 +153,5 @@ function JudgeBanner({ state, meId }: { state: GameState; meId: string }) {
 
 // Handen medan frågekortet visas. Korten går att titta på men inte välja än.
 function HandPreview({ hand }: { hand: MyHand }) {
-  return (
-    <Hand label="Din hand">
-      {hand.cards.map((card) => (
-        <HandSlot key={card}>
-          <AnswerCard>{capitalize(kortkaosRules.answerText(card))}</AnswerCard>
-        </HandSlot>
-      ))}
-      {hand.blank && (
-        <HandSlot>
-          <AnswerCard blank footer="Skriv ett eget svar">
-            Blankt kort
-          </AnswerCard>
-        </HandSlot>
-      )}
-    </Hand>
-  )
+  return <Solfjader label="Din hand" cards={handCards(hand)} />
 }
