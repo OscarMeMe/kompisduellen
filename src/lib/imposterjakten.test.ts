@@ -1126,27 +1126,37 @@ describe('Imposterjakten: hur långt spelet blir', () => {
     expect(new Set(played.map((round) => round.word)).size).toBe(10)
   })
 
-  it('upprepar inget ord i matchen när en kategori med tio ord redan är spelad i lobbyn', () => {
-    const category = 'Jobb och plugg'
-    const all = WORDS.filter((word) => word.kategori === category).map((word) => word.id)
-    expect(all).toHaveLength(10)
-    const waiting = { ...setRounds(lobby(ABC, { category }).state, 10), usedWordIds: all }
+  // Den minsta kategorin, så att testerna gäller även när ordlistan växer.
+  const smallest = CATEGORIES.map((category) => ({ category, ids: WORDS.filter((word) => word.kategori === category).map((word) => word.id) })).sort(
+    (a, b) => a.ids.length - b.ids.length,
+  )[0]
+
+  it('räcker till tio omgångar i alla kategorier', () => {
+    expect(smallest.ids.length).toBeGreaterThanOrEqual(15)
+  })
+
+  it('upprepar inget ord i matchen när hela den minsta kategorin redan är spelad i lobbyn', () => {
+    const { category, ids } = smallest
+    const waiting = { ...setRounds(lobby(ABC, { category }).state, 10), usedWordIds: ids }
     const { played } = playMatch(hostStart({ state: waiting, secrets: null }, ABC, NOW, seeded(3)), ABC, seeded(4))
     expect(new Set(played.map((round) => round.word)).size).toBe(10)
   })
 
   it('spärrar matchens ord först när listan börjar om', () => {
-    const list = WORDS.filter((word) => word.kategori === 'Jobb och plugg').map((word) => word.id)
-    const matchWords = list.slice(0, 9)
+    const { category, ids } = smallest
+    const matchWords = ids.slice(0, -1)
     for (let i = 0; i < 20; i++) {
-      const picked = pickWord(list, 'Jobb och plugg', () => i / 20, matchWords)
-      expect(picked.wordId).toBe(list[9])
+      const picked = pickWord(ids, category, () => i / 20, matchWords)
+      expect(picked.wordId).toBe(ids.at(-1))
     }
   })
 
   it('säger till värden när orden i kategorin kan ta slut, och annars inget', () => {
-    const settings = { ...DEFAULT_SETTINGS, category: 'Jobb och plugg' }
-    expect(wordsRunningOutText(settings, 10, [])).toBe('Kategorin har 10 ord, så ord kan komma tillbaka.')
+    const { category, ids } = smallest
+    const settings = { ...DEFAULT_SETTINGS, category }
+    // Med 15 ord eller fler och högst 10 omgångar räcker kategorin, men regeln gäller om fler omgångar läggs till.
+    expect(wordsRunningOutText(settings, 10, [])).toBeNull()
+    expect(wordsRunningOutText(settings, ids.length, [])).toBe(`Kategorin har ${ids.length} ord, så ord kan komma tillbaka.`)
     expect(wordsRunningOutText(settings, 3, [])).toBeNull()
     expect(wordsRunningOutText(DEFAULT_SETTINGS, 10, [])).toBeNull()
     const almostAll = WORDS.slice(0, WORDS.length - 4).map((word) => word.id)
