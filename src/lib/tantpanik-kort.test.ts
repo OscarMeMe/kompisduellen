@@ -32,7 +32,7 @@ describe('korten i Exploderande Tanter', () => {
 
   it('varje kort med bild har båda storlekarna i public/images/tantpanik', () => {
     const withImage = CARD_TYPES.filter((type) => CARDS[type].image)
-    expect(withImage).toHaveLength(8)
+    expect(withImage).toHaveLength(14)
     for (const type of withImage) {
       for (const width of [360, 960] as const) {
         expect(images).toContain(cardImage(type, width))
@@ -41,8 +41,9 @@ describe('korten i Exploderande Tanter', () => {
     }
   })
 
-  it('kort utan bild visas som textkort', () => {
-    expect(cardImage('blanda', 360)).toBeUndefined()
-    expect(cardSrcSet('vild')).toBeUndefined()
+  it('kort utan bild visas som textkort: tre tantsorter och Tantsnara', () => {
+    expect(CARD_TYPES.filter((type) => !CARDS[type].image)).toEqual(['stickning', 'stavgang', 'tradgard', 'snara'])
+    expect(cardImage('stickning', 360)).toBeUndefined()
+    expect(cardSrcSet('snara')).toBeUndefined()
   })
 })

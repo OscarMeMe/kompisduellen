@@ -245,9 +245,11 @@ function Choice({
           ? 'Nope! spelar du när någon annan precis spelat ett kort.'
           : kind === 'defuse'
             ? 'Desarmera används av sig själv när du drar en exploderande tant.'
-            : kind === 'trap'
-              ? 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
-              : 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'
+            : kind === 'joker'
+              ? 'Vild tant gör inget ensam. Tryck på en tant för att göra ett par eller tretal.'
+              : kind === 'trap'
+                ? 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
+                : 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'
     return <p className="text-center text-sm font-semibold">{text}</p>
   }
   if (!myTurn) return <p className="text-center text-sm font-semibold">Du kan spela när det är din tur.</p>
