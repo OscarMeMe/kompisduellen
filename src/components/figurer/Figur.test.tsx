@@ -115,4 +115,12 @@ describe('de nya minerna och personligheterna', () => {
       expect(layer(html, 'min'), blob.name).toContain('<circle')
     }
   })
+
+  it('alla figurer följer muspekaren i väntrummet, även Kungen som sneglar under ögonlocken', () => {
+    for (const blob of BLOBS) {
+      const html = renderToStaticMarkup(<Figur figure={blob} animated lively gaze />)
+      expect(html, blob.id).toContain('var(--gaze-x')
+    }
+    expect(renderToStaticMarkup(<Figur figure={BLOBS.find((blob) => blob.id === 'kungen')!} animated lively />)).not.toContain('var(--gaze-x')
+  })
 })

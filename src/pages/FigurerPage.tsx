@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { Button } from '@/components/ui/button'
+import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { BLOBS, MOOD_NAMES, MOODS } from '@/lib/figurer'
 import { AVATARS } from '@/lib/player'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,9 @@ const SMALL_SIZES = [
 // Alla blobbar med alla miner, och alla figurer i emoji-storlek. Finns bara med npm run dev.
 export function FigurerPage() {
   const [replay, setReplay] = useState(0)
+  // Väntrummets figurer följer muspekaren, som i lobbyn.
+  const lobbyRef = useRef<HTMLUListElement>(null)
+  const gaze = useGazeFollow(lobbyRef)
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -44,11 +48,15 @@ export function FigurerPage() {
 
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="I väntrummet">
         <h2 className="text-xl">I väntrummet</h2>
-        <p className="text-sm text-muted-foreground">Var och en med sin egen rörelse. Sist Sjusovaren när den har somnat.</p>
-        <ul className="grid grid-cols-3 gap-4 sm:grid-cols-6">
+        <p className="text-sm text-muted-foreground">
+          Var och en med sin egen rörelse, och med mus följer de muspekaren med blicken. Sist Sjusovaren när den har somnat.
+        </p>
+        <ul ref={lobbyRef} className="grid grid-cols-3 gap-4 sm:grid-cols-6">
           {BLOBS.map((blob, i) => (
             <li key={blob.id} className="flex flex-col items-center gap-1 text-center">
-              <Figur figure={blob} animated lively delay={i * 0.7} className="block text-6xl" />
+              <span data-gaze className="block text-6xl">
+                <Figur figure={blob} animated lively gaze={gaze} delay={i * 0.7} className="block" />
+              </span>
               <span className="text-sm font-semibold">{blob.name}</span>
             </li>
           ))}
