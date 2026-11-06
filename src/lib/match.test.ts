@@ -663,9 +663,10 @@ describe('önskemål om revansch', () => {
 })
 
 describe('ställningen efter en runda', () => {
-  // Närmast vinner, med rätt tal 50: 49 ger 3 poäng (närmast), 48 ger 2 och 47 ger 1. Den som inte gissar får inget.
+  // Närmast vinner, med rätt tal 50: 49 ger 7 poäng (6 plus bonusen för närmast), 48 ger 6, 40 ger 2 och 30 ger 1.
+  // Den som inte gissar får inget.
   const match = (ids = ['a', 'b', 'c'], rounds = 5) => startGame(lobby('narmast', ids, { rounds }), ids, NOW)
-  // Spelar rundor där bara vinnaren gissar och får 3 poäng.
+  // Spelar rundor där bara vinnaren gissar och får 7 poäng.
   function play(state: GameState, winners: string[]): GameState {
     return rounds(state, winners.map((winner) => ({ [winner]: 49 })))
   }
@@ -680,7 +681,7 @@ describe('ställningen efter en runda', () => {
 
   it('säger ungefär var man ligger, utan placering', () => {
     const state = play(match(['a', 'b', 'c', 'd', 'e']), ['a', 'a', 'a', 'b'])
-    // a 9, b 3, c d e 0. Nära = högst en fjärdedel av en rundas poäng bakom. Lägst poäng är sist, även delat.
+    // a 21, b 7, c d e 0. Nära = högst en fjärdedel av en rundas poäng bakom. Lägst poäng är sist, även delat.
     expect(roundStanding(state, 'a')?.kind).toBe('leader')
     expect(roundStanding(state, 'b')?.kind).toBe('top')
     expect(roundStanding(state, 'c')?.kind).toBe('last')
@@ -688,18 +689,14 @@ describe('ställningen efter en runda', () => {
   })
 
   it('nära ledaren går före sist', () => {
-    // a 3, b 2: en poäng efter.
+    // a 7, b 6: en poäng efter.
     const state = rounds(match(['a', 'b']), [{ a: 49, b: 48 }])
     expect(roundStanding(state, 'b')?.kind).toBe('close')
   })
 
   it('mitt i klungan i undre halvan', () => {
-    const state = rounds(match(['a', 'b', 'c', 'd', 'e'], 10), [
-      { a: 49, b: 48, c: 47 },
-      { a: 49, c: 48 },
-      { b: 49, c: 48, d: 47 },
-    ])
-    // a 6, b 5, c 5, d 1, e 0
+    const state = rounds(match(['a', 'b', 'c', 'd', 'e'], 10), [{ a: 49, b: 48, c: 40, d: 30 }])
+    // a 7, b 6, c 2, d 1, e 0
     expect(roundStanding(state, 'b')?.kind).toBe('close')
     expect(roundStanding(state, 'd')?.kind).toBe('middle')
     expect(roundStanding(state, 'e')?.kind).toBe('last')
@@ -808,14 +805,15 @@ describe('lika resultat', () => {
   })
 
   it('Närmast vinner: lika nära ger samma poäng och delad vinst, och nästa blir trea', () => {
-    const state = playRound(startGame(lobby('narmast', ['a', 'b', 'c']), ['a', 'b', 'c'], NOW), { a: 40, b: 60, c: 90 }, 50)
+    const state = playRound(startGame(lobby('narmast', ['a', 'b', 'c']), ['a', 'b', 'c'], NOW), { a: 40, b: 60, c: 70 }, 50)
     expect(state.lastResult!.winners.sort()).toEqual(['a', 'b'])
+    // 10 ifrån ger 2 plus bonusen, 20 ifrån ger 1.
     expect(state.scores).toMatchObject({ a: 3, b: 3, c: 1 })
   })
 
   it('Närmast vinner: sista rundan ger dubbla poäng', () => {
     const state = playRound(startGame(lobby('narmast', ['a', 'b'], { rounds: 1 }), ['a', 'b'], NOW), { a: 50, b: 60 }, 50)
-    expect(state.lastResult!.points).toEqual({ a: 10, b: 4 })
+    expect(state.lastResult!.points).toEqual({ a: 22, b: 4 })
   })
 
   it('delade placeringar hoppar över nästa plats (1, 1, 3)', () => {

@@ -671,7 +671,7 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
   const leaderIds = best > 0 ? ids.filter((id) => after(id) === best) : []
   const bestBefore = Math.max(0, ...ids.map(before))
   const leadersBefore = bestBefore > 0 ? ids.filter((id) => before(id) === bestBefore) : []
-  // Det mesta någon fått i en enda runda hittills (1 i Närmast vinner, upp till 100 i Gissa priset).
+  // Det mesta någon fått i en enda runda hittills (upp till 22 i Närmast vinner, upp till 100 i Gissa priset).
   const roundMax = Math.max(1, ...[...state.matchRounds, result].flatMap((round) => Object.values(round.points)))
   const place = placeOf(after)
   const gap = best - after(playerId)
@@ -693,7 +693,7 @@ export function roundStanding(state: GameState, playerId: string): RoundStanding
 }
 
 // "Nära ledaren" = högst en fjärdedel av en rundas poäng efter (minst 1). I Gissa priset, där en runda ger upp till
-// 100 poäng, är det 25 poäng. I Närmast vinner, där rundans vinnare får 1 poäng, är det 1 poäng.
+// 100 poäng, är det 25 poäng. I Närmast vinner, där en runda oftast ger högst 7 poäng, är det 2 poäng.
 function closeGap(roundMax: number): number {
   return Math.max(1, Math.round(roundMax / 4))
 }

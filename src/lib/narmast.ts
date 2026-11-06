@@ -1,6 +1,6 @@
 // Spelregler för "Närmast vinner": alla gissar ett tal, sedan slumpas rätt tal. Ett enkelt turspel utan ledtrådar.
-// De tre närmaste får 3, 2 och 1 poäng (delad placering ger samma poäng), exakt träff ger 5, och sista rundan ger
-// dubbla poäng. Rena funktioner, så att de är lätta att testa.
+// Poängen beror på hur långt ifrån man var (exakt träff ger 10), den eller de närmaste får 1 bonuspoäng, och sista
+// rundan ger dubbla poäng. Rena funktioner, så att de är lätta att testa.
 
 import type { GameRules } from '@/lib/spelregler'
 
@@ -10,24 +10,37 @@ const GUESS_SECONDS = 15
 // Facit: tallinjen med markören som rullar fram, och sedan raderna.
 const REVEAL_SECONDS = 9
 
-// Poäng efter placering (1:a, 2:a, 3:e), och för exakt träff. Sista rundan ger dubbelt.
-export const PLACE_POINTS = [3, 2, 1] as const
-export const EXACT_POINTS = 5
+// Poäng efter avstånd till rätt tal: [högsta avstånd, poäng]. Längre ifrån än sista steget ger inget.
+export const DISTANCE_POINTS = [
+  [0, 10],
+  [2, 6],
+  [5, 4],
+  [10, 2],
+  [20, 1],
+] as const
+export const EXACT_POINTS = 10
+// Till den eller de som var närmast i rundan, ovanpå avståndspoängen.
+export const CLOSEST_BONUS = 1
 export const LAST_ROUND_FACTOR = 2
+
+// Poängen för ett avstånd, utan bonus och dubbling.
+export function distancePoints(away: number): number {
+  return DISTANCE_POINTS.find(([max]) => away <= max)?.[1] ?? 0
+}
 
 export function randomTarget(): number {
   return Math.floor(Math.random() * (MAX_NUMBER - MIN_NUMBER + 1)) + MIN_NUMBER
 }
 
-// Poängen i en runda. Placeringen räknas som vid lika i sport: två delade ettor får 3 var, och nästa är trea.
+// Poängen i en runda: avståndspoängen plus bonusen till den eller de närmaste, dubblat i sista rundan.
 export function roundPoints(guesses: Record<string, number>, target: number, lastRound = false): Record<string, number> {
   const entries = Object.entries(guesses)
   const factor = lastRound ? LAST_ROUND_FACTOR : 1
+  const closest = Math.min(...entries.map(([, guess]) => Math.abs(guess - target)))
   const points: Record<string, number> = {}
   for (const [id, guess] of entries) {
     const away = Math.abs(guess - target)
-    const place = entries.filter(([, other]) => Math.abs(other - target) < away).length
-    const base = away === 0 ? EXACT_POINTS : (PLACE_POINTS[place] ?? 0)
+    const base = distancePoints(away) + (away === closest ? CLOSEST_BONUS : 0)
     if (base > 0) points[id] = base * factor
   }
   return points
@@ -53,11 +66,11 @@ export const narmastRules: GameRules = {
   // Rundan är bara 15 sekunder, så varningen kommer först när det är 5 kvar.
   warningSeconds: 5,
   howTo: (seconds) =>
-    `Ett snabbt turspel. Gissa ett tal mellan ${MIN_NUMBER} och ${MAX_NUMBER} på ${seconds} sekunder, eller tryck Slumpa åt mig. Rätt tal slumpas fram efteråt. De tre närmaste får poäng, och sista rundan ger dubbla poäng.`,
+    `Ett snabbt turspel. Gissa ett tal mellan ${MIN_NUMBER} och ${MAX_NUMBER} på ${seconds} sekunder, eller tryck Slumpa åt mig. Rätt tal slumpas fram efteråt. Ju närmare, desto fler poäng, och sista rundan ger dubbla poäng.`,
   scoringDetails: [
     'Rätt tal slumpas fram först när rundan är slut, så ingen kan veta det i förväg.',
-    'Närmast får 3 poäng, tvåan 2 och trean 1. Är flera lika nära får de samma poäng.',
-    'Exakt rätt tal ger 5 poäng.',
+    'Poängen beror på hur långt ifrån du var: exakt rätt ger 10, 1–2 ifrån 6, 3–5 ifrån 4, 6–10 ifrån 2 och 11–20 ifrån 1.',
+    'Den som var närmast i rundan får 1 bonuspoäng. Är flera lika nära får alla bonusen.',
     'Sista rundan ger dubbla poäng. Flest poäng efter sista rundan vinner matchen.',
   ],
   isValidGuess: (value) => Number.isInteger(value) && value >= MIN_NUMBER && value <= MAX_NUMBER,
