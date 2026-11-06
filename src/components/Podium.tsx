@@ -16,8 +16,9 @@ function points(score: number) {
   return score === 1 ? '1 poäng' : `${score} poäng`
 }
 
-// Prispall för topp tre. Lika poäng delar placering.
-export function Podium({ players }: { players: RankedPlayer[] }) {
+// Prispall för topp tre. Lika poäng delar placering. label = texten under namnet, om spelet vill säga något annat
+// än poängen (t.ex. "Sist kvar!" i Exploderande Tanter).
+export function Podium({ players, label = (p) => points(p.score) }: { players: RankedPlayer[]; label?: (p: RankedPlayer) => string }) {
   const onPodium = players.filter((p) => p.place <= 3)
   const rest = players.filter((p) => p.place > 3)
   const best = Math.max(0, ...players.map((p) => p.score))
@@ -46,7 +47,7 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
                       <MoodFigur avatar={p.avatar} mood={podiumMood(place)} className="text-4xl sm:text-5xl" />
                     </span>
                     <span className="max-w-28 truncate font-bold">{p.name}</span>
-                    <span className="text-sm text-muted-foreground">{points(p.score)}</span>
+                    <span className="text-sm text-muted-foreground">{label(p)}</span>
                   </div>
                 ))}
               </div>
@@ -72,7 +73,7 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
               <span className="w-8 font-heading text-lg font-bold text-muted-foreground">{p.place}.</span>
               <MoodFigur avatar={p.avatar} mood={podiumMood(p.place)} className="text-2xl" />
               <span className="flex-1 truncate font-semibold">{p.name}</span>
-              <span className="text-sm text-muted-foreground">{points(p.score)}</span>
+              <span className="text-sm text-muted-foreground">{label(p)}</span>
             </li>
           ))}
         </ol>

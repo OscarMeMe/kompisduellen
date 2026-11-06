@@ -1,41 +1,66 @@
-import { useEffect, useMemo, useState } from 'react'
-import { LobbyFigur } from '@/components/figurer/LobbyFigur'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Solfjader } from '@/components/tantpanik/Solfjader'
+import type { Incoming } from '@/components/tantpanik/TantAnimationer'
 import { TantKort } from '@/components/tantpanik/TantKort'
+import { RequestPopup, TargetPopup } from '@/components/tantpanik/TantVal'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
+import { useReactions } from '@/hooks/useReactions'
+import { loadSoundOn, playPop } from '@/lib/ljud'
+import { tantMusic } from '@/lib/tantmusik'
 import type { GameState } from '@/lib/match'
-import { nextSelection, selectionLabel, sortHand } from '@/lib/solfjader'
+import { hasFinePointer } from '@/lib/device'
+import { arrangeHand, cardHint, nextSelection, selectionLabel, sortHand } from '@/lib/solfjader'
 import { SPLAT_SHIELD } from '@/lib/splatt'
-import { isCombo, needsTarget, REQUESTABLE, validTargets, type TantCard, type TantMove, type TantTable } from '@/lib/tantpanik'
-import { CARDS, NOPE_SECONDS, cardName, type CardType } from '@/lib/tantpanik-kort'
+import { isCombo, needsTarget, validTargets, type TantCard, type TantMove, type TantTable } from '@/lib/tantpanik'
+import { NOPE_SECONDS, cardName, type CardType } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
 // Min hand: en solfjäder längst ner på skärmen. Tryck på ett kort så hoppar det fram med hela texten och en stor knapp.
 // Tantkort (och kort med samma namn) kan väljas flera, och hoppar då fram tillsammans som par eller tretal. Tryck utanför
 // för att lägga tillbaka. När någon spelat ett kort och jag har Nope! dyker en stor knapp upp nära tummen.
-// giving = Tjänst: jag väljer ett kort att ge bort.
+// Behöver kortet en spelare (eller ett kort, för tretal) öppnas en stor popup för valet.
 export function TantHand({
   state,
   table,
   meId,
   hand,
-  giving,
   clockOffset,
   onMove,
+  onOverlap,
+  incoming = null,
+  orderKey,
+  dimmed = false,
 }: {
   state: GameState
   table: TantTable
   meId: string
   hand: TantCard[]
-  giving: boolean
   clockOffset: number
   onMove: (move: TantMove) => void
+  onOverlap?: (px: number) => void
+  // Kortet jag just drog. Medan det visas stort har det ingen plats i handen. När det glider ner gör de andra plats,
+  // men kortet syns först när det landat.
+  incoming?: Incoming
+  // Var min ordning av handen sparas (en per lobby), så att den finns kvar mellan turerna och efter en omladdning.
+  orderKey: string
+  // Inte min tur: handen är lätt dämpad och ligger lite lägre.
+  dimmed?: boolean
 }) {
-  const cards = useMemo(() => sortHand(hand), [hand])
+  const [order, setOrder] = useHandOrder(orderKey, hand)
+  const arranged = useMemo(() => arrangeHand(hand, order), [hand, order])
+  const cards = incoming?.phase === 'show' ? arranged.filter((card) => card.id !== incoming.id) : arranged
+  const hiddenId = incoming?.phase === 'land' ? incoming.id : null
+  // Handens höjd följer kortens storlek. De valda korten och Nope!-knappen ligger precis ovanför den.
+  const handRef = useRef<HTMLElement>(null)
+  const handHeight = useHeight(handRef)
+  // Ett valt kort lyfts i handen (en fjärdedel av kortets höjd), så de förstorade korten ligger ovanför det.
+  const popupBottom = Math.round(handHeight * 1.25) + 4
+  const zoomWidth = useZoomWidth()
   const [selected, setSelected] = useState<string[]>([])
   const [target, setTarget] = useState<string | null>(null)
-  const [request, setRequest] = useState<CardType | null>(null)
+  // Popupen som är öppen: välj spelare eller (tretal) välj kort.
+  const [asking, setAsking] = useState<'target' | 'request' | null>(null)
   // Valda kort som inte längre finns på handen (stulna, givna) räknas inte.
   const chosen = selected.map((id) => cards.find((card) => card.id === id)).filter((card) => card !== undefined)
   const types = chosen.map((card) => card.type)
@@ -48,16 +73,46 @@ export function TantHand({
   const ownLatest = pending !== null && (pending.lastNopeBy ?? pending.by) === meId
   const nope = pending && !ownLatest && !table.out.includes(meId) ? cards.find((card) => card.type === 'nadu') : undefined
 
+  // Under Nope!-fönstret: alla mina Nope!-kort, som hoppar upp och lyser. De andra korten blir gråa.
+  const nopeIds = nope ? cards.filter((card) => card.type === 'nadu').map((card) => card.id) : []
+
   function tap(id: string) {
-    setSelected((list) => (giving ? (list[0] === id ? [] : [id]) : nextSelection(cards, list, id)))
+    // Ett tryck på ett Nope!-kort när det går att säga Nope! spelar det direkt, som den stora knappen.
+    if (nope && pending && nopeIds.includes(id)) {
+      send({ type: 'tNope', card: id, level: pending.nopes })
+      return
+    }
+    setSelected((list) => nextSelection(cards, list, id))
     setTarget(null)
-    setRequest(null)
+    setAsking(null)
   }
   function close() {
     setSelected([])
     setTarget(null)
-    setRequest(null)
+    setAsking(null)
   }
+  const combo = types.length > 1 && isCombo(types)
+  const triple = types.length === 3 && combo
+  const wantsTarget = chosen.length > 0 && (combo || needsTarget(types[0]))
+  function play(targetId: string | null, request: CardType | null = null) {
+    send({ type: 'tPlay', cards: chosen.map((card) => card.id), target: targetId, request })
+  }
+  const targetOptions = wantsTarget
+    ? validTargets(table, meId, combo || types[0] === 'tjanst').map((id) => ({
+        id,
+        name: state.players[id]?.name ?? 'Någon',
+        avatar: state.players[id]?.avatar ?? '',
+        count: table.handCounts[id] ?? 0,
+      }))
+    : []
+  const targetTitle = triple
+    ? 'Vem ber du om ett kort?'
+    : combo
+      ? 'Vem tar du ett kort från?'
+      : types[0] === 'tjanst'
+        ? 'Vem ska ge dig ett kort?'
+        : 'Vem får två turer?'
+  const targetName = target ? (state.players[target]?.name ?? 'Någon') : ''
   function send(move: TantMove) {
     onMove(move)
     close()
@@ -71,42 +126,30 @@ export function TantHand({
           <button
             type="button"
             aria-label="Lägg tillbaka korten"
-            className="fixed inset-0 z-30 bg-foreground/30 motion-safe:animate-fade"
+            className="fixed inset-0 z-30 bg-foreground/45 motion-safe:animate-fade"
             onClick={close}
           />
           <section
             aria-label="Valda kort"
             {...SPLAT_SHIELD}
-            className="fixed inset-x-0 bottom-[calc(10.75rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-3"
+            // Från skärmens överkant ned till handen och det lyfta kortet i den, så att inget överlappar. Rutan själv tar
+            // inga tryck, så att ett tryck bredvid kortet lägger tillbaka det.
+            className="pointer-events-none fixed inset-x-0 z-40 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+            style={{
+              bottom: `calc(${popupBottom}px + env(safe-area-inset-bottom))`,
+              height: `calc(100dvh - ${popupBottom}px - env(safe-area-inset-bottom))`,
+            }}
           >
-            {/* Kortbilden överst skrollar när rutan inte räcker till. Valen och knappen längst ner syns alltid. */}
-            <div className="flex max-h-[calc(100dvh-11rem)] flex-col gap-3 rounded-lg bg-card p-3 shadow-lift">
-              <div className="flex min-h-0 shrink items-start justify-center gap-2 overflow-x-hidden overflow-y-auto">
-                {chosen.map((card) => (
-                  // Ett kort visas förstorat, så att bildens regeltext går att läsa. Par och tretal står bredvid varandra.
-                  <TantKort
-                    key={card.id}
-                    type={card.type}
-                    size={chosen.length === 1 ? 'zoom' : 'large'}
-                    className={cn('motion-safe:animate-pop', chosen.length === 3 && 'w-20 sm:w-28')}
-                  />
-                ))}
-              </div>
-              <div className="flex shrink-0 flex-col">
+            {/* Bara kortbilden, stor och med en mjuk skugga, så att texten går att läsa. Den krymper när platsen inte räcker,
+                så att valen och knappen under den alltid syns. */}
+            <div className="flex h-full flex-col justify-end gap-2.5">
+              <ZoomedCards key={chosen.map((card) => card.id).join()} cards={chosen} zoomWidth={zoomWidth} />
+              <div className="pointer-events-auto mx-auto flex w-full max-w-md shrink-0 flex-col">
                 <Choice
-                  state={state}
-                  table={table}
-                  meId={meId}
                   types={types}
-                  giving={giving}
                   myTurn={myTurn}
                   nopeLevel={pending && chosen.length === 1 && types[0] === 'nadu' && nope ? pending.nopes : null}
-                  target={target}
-                  request={request}
-                  onTarget={setTarget}
-                  onRequest={setRequest}
-                  onPlay={() => send({ type: 'tPlay', cards: chosen.map((card) => card.id), target, request })}
-                  onGive={() => send({ type: 'tGive', card: chosen[0].id })}
+                  onPlay={() => (wantsTarget ? setAsking('target') : play(null))}
                   onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level })}
                 />
               </div>
@@ -115,43 +158,217 @@ export function TantHand({
         </>
       )}
 
+      {popped && asking === 'target' && (
+        <TargetPopup
+          title={targetTitle}
+          players={targetOptions}
+          onBack={() => setAsking(null)}
+          onPick={(id) => {
+            if (triple) {
+              setTarget(id)
+              setAsking('request')
+            } else play(id)
+          }}
+        />
+      )}
+      {popped && asking === 'request' && target && (
+        <RequestPopup
+          title={`Vilket kort vill du ha från ${targetName}?`}
+          onBack={() => setAsking('target')}
+          onPick={(type) => play(target, type)}
+        />
+      )}
+
       {nope && pending && (
         <NopeButton
           key={`${pending.by}-${pending.cards.join()}-${pending.nopes}`}
           deadline={state.deadline}
           clockOffset={clockOffset}
+          bottom={handHeight + 8}
           onNope={() => send({ type: 'tNope', card: nope.id, level: pending.nopes })}
         />
       )}
 
       {/* Handen längst ner. Kast landar aldrig här (SPLAT_SHIELD). */}
       <section
+        ref={handRef}
         aria-label={`Din hand, ${cards.length} kort`}
         {...SPLAT_SHIELD}
         className="relative z-40 px-2"
       >
-        {!popped && giving && (
-          <p className="absolute inset-x-0 top-1 z-50 text-center text-sm font-bold">Tryck på kortet du vill ge bort.</p>
-        )}
         {cards.length === 0 ? (
           <p className="mx-auto mb-4 max-w-sm rounded-md bg-muted px-3 py-3 text-center text-sm text-muted-foreground">
             Du har inga kort. Du drar ändå på din tur.
           </p>
         ) : (
-          <Solfjader cards={cards} selected={chosen.map((card) => card.id)} glow={nope ? [nope.id] : []} onTap={tap} />
+          <>
+            {/* Ordnar handen som förut: likadana kort bredvid varandra. */}
+            {cards.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setOrder(sortHand(hand).map((card) => card.id))}
+                className="absolute left-3 bottom-full z-50 mb-1 rounded-full bg-card/90 px-3 py-1.5 text-xs font-bold shadow-soft-sm hover:bg-card md:text-sm"
+              >
+                Sortera
+              </button>
+            )}
+            <Solfjader
+              cards={cards}
+              selected={chosen.map((card) => card.id)}
+              glow={nopeIds}
+              hiddenId={hiddenId}
+              onTap={tap}
+              onReorder={setOrder}
+              onOverlap={onOverlap}
+              dimmed={dimmed}
+            />
+          </>
         )}
       </section>
     </>
   )
 }
 
+// Vinklarna (grader) och förskjutningen i sidled (andel av kortets bredd) när två eller tre kort visas omlott.
+const FAN_ANGLES: Record<number, number[]> = { 1: [0], 2: [-6, 6], 3: [-8, 0, 8] }
+const FAN_SHIFT = 0.2
+
+// De valda korten, stora och med en mjuk skugga. Ett par eller tretal ligger omlott och korsar varandra lite, som kort
+// man håller upp i handen. Det översta går att läsa helt, och ett tryck på ett annat lägger det överst. Korten glider
+// ut från en hög när de visas (med "minska rörelse" ligger de direkt på plats).
+function ZoomedCards({ cards, zoomWidth }: { cards: TantCard[]; zoomWidth: number }) {
+  const [front, setFront] = useState(cards.length - 1)
+  const [spread, setSpread] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setSpread(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  const count = cards.length
+  const angles = FAN_ANGLES[count] ?? FAN_ANGLES[3]
+  const mid = (count - 1) / 2
+  // Kortet krymper så att även de förskjutna korten får plats i bredd.
+  const widthShare = 1 + FAN_SHIFT * 2 * mid
+  return (
+    <div className="flex min-h-0 flex-1 items-end justify-center">
+      <div
+        className={cn('relative aspect-[107/147]', count > 1 ? 'h-[92%]' : 'h-full')}
+        style={{ maxHeight: Math.round(zoomWidth * (147 / 107)), maxWidth: `calc(100% / ${widthShare})` }}
+      >
+        {cards.map((card, i) => {
+          const isFront = i === front
+          const shift = spread ? (i - mid) * FAN_SHIFT * 100 : 0
+          const angle = spread ? angles[i] : 0
+          return (
+            <button
+              key={card.id}
+              type="button"
+              aria-label={isFront ? undefined : `Visa ${cardName(card.type)} överst`}
+              aria-hidden={isFront || undefined}
+              tabIndex={isFront ? -1 : 0}
+              onClick={() => setFront(i)}
+              className={cn(
+                'pointer-events-auto absolute inset-0 origin-bottom outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out',
+                isFront ? 'cursor-default' : 'cursor-pointer',
+              )}
+              style={{ zIndex: isFront ? count + 1 : i, transform: `translateX(${shift}%) rotate(${angle}deg)` }}
+            >
+              <TantKort
+                type={card.type}
+                size="zoom"
+                sizes={`${zoomWidth}px`}
+                className="size-full drop-shadow-[0_18px_28px_rgb(0_0_0/0.4)] motion-safe:animate-fade"
+              />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Hur brett ett valt kort visas: på dator cirka 60 % av skärmens höjd (minst 360 px brett), på mobil hela bredden.
+// Kortet krymper ändå om platsen ovanför handen inte räcker.
+function useZoomWidth(): number {
+  const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
+  useEffect(() => {
+    const measure = () => setSize({ width: window.innerWidth, height: window.innerHeight })
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+  if (hasFinePointer() || size.width >= 768) return Math.round(Math.max(360, size.height * 0.6 * (107 / 147)))
+  return size.width - 24
+}
+
+// Min ordning av handen, bara hos mig (sessionStorage). Första gången sorteras handen och den ordningen sparas, så att
+// kort jag får sedan hamnar längst till höger.
+function useHandOrder(key: string, hand: TantCard[]): [string[], (ids: string[]) => void] {
+  const storageKey = `kd-tant-hand:${key}`
+  const [order, setOrderState] = useState<string[]>(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null')
+      if (Array.isArray(saved) && saved.every((id) => typeof id === 'string')) return saved
+    } catch {
+      // Ingen sparad ordning.
+    }
+    const sorted = sortHand(hand).map((card) => card.id)
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(sorted))
+    } catch {
+      // Utan lagring gäller ordningen bara tills sidan laddas om.
+    }
+    return sorted
+  })
+  function setOrder(ids: string[]) {
+    setOrderState(ids)
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(ids))
+    } catch {
+      // Utan lagring gäller ordningen bara tills sidan laddas om.
+    }
+  }
+  return [order, setOrder]
+}
+
+// Höjden på ett element, som följer med när den ändras.
+function useHeight(ref: RefObject<HTMLElement | null>): number {
+  const [height, setHeight] = useState(180)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setHeight(element.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+  return height
+}
+
 // Den stora Nope!-knappen nära tummen, med en ring som visar tiden kvar. Telefonen vibrerar kort när den dyker upp.
 // Ett tryck spelar kortet direkt.
-function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null; clockOffset: number; onNope: () => void }) {
+function NopeButton({
+  deadline,
+  clockOffset,
+  bottom,
+  onNope,
+}: {
+  deadline: number | null
+  clockOffset: number
+  bottom: number
+  onNope: () => void
+}) {
   const { progress } = useCountdown(deadline, clockOffset, NOPE_SECONDS)
   const [sent, setSent] = useState(false)
+  const reactions = useReactions()
+  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   useEffect(() => {
-    navigator.vibrate?.(80)
+    navigator.vibrate?.([60, 40, 60])
+    if (soundOn) {
+      tantMusic.duck()
+      playPop()
+    }
+    // Bara när knappen dyker upp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   if (sent) return null
   const radius = 52
@@ -164,7 +381,8 @@ function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null
         setSent(true)
         onNope()
       }}
-      className="fixed right-3 bottom-[calc(11.5rem+env(safe-area-inset-bottom))] z-50 flex size-28 items-center justify-center rounded-full bg-primary-button font-heading text-xl font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:animate-pop motion-safe:active:scale-95"
+      style={{ bottom: `calc(${bottom}px + env(safe-area-inset-bottom))` }}
+      className="fixed right-3 z-50 flex size-28 items-center justify-center rounded-full bg-primary-button font-heading text-xl font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:animate-pop motion-safe:active:scale-95"
     >
       <svg aria-hidden viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
         <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="8" className="stroke-primary-foreground/25" />
@@ -185,45 +403,24 @@ function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null
   )
 }
 
-// Vad de valda korten gör: mål, kortet man ber om och den stora knappen.
+// Hjälptexter under det förstorade kortet: en liten mörk etikett, så att den syns mot bordet.
+const LABEL =
+  'mx-auto w-fit max-w-full rounded-full bg-foreground/90 px-3 py-1.5 text-center text-sm font-semibold text-background shadow-soft-sm'
+
+// Vad de valda korten gör: en hjälptext, eller den stora knappen. Behövs en spelare eller ett kort öppnas en popup.
 function Choice({
-  state,
-  table,
-  meId,
   types,
-  giving,
   myTurn,
   nopeLevel,
-  target,
-  request,
-  onTarget,
-  onRequest,
   onPlay,
-  onGive,
   onNope,
 }: {
-  state: GameState
-  table: TantTable
-  meId: string
   types: CardType[]
-  giving: boolean
   myTurn: boolean
   nopeLevel: number | null
-  target: string | null
-  request: CardType | null
-  onTarget: (id: string) => void
-  onRequest: (type: CardType) => void
   onPlay: () => void
-  onGive: () => void
   onNope: (level: number) => void
 }) {
-  if (giving) {
-    return (
-      <Button size="lg" className="w-full" onClick={onGive}>
-        Ge bort {cardName(types[0])}
-      </Button>
-    )
-  }
   if (nopeLevel !== null) {
     return (
       <Button size="lg" className="w-full" onClick={() => onNope(nopeLevel)}>
@@ -232,89 +429,11 @@ function Choice({
     )
   }
   const label = selectionLabel(types)
-  const kind = CARDS[types[0]].kind
-  if (!label) {
-    const text =
-      types.length > 1
-        ? types.every((type) => type === 'vild')
-          ? 'Lägg till en riktig tant, så blir det ett par eller tretal.'
-          : 'De här korten går inte att spela tillsammans.'
-        : kind === 'nope'
-          ? 'Nope! spelar du när någon annan precis spelat ett kort.'
-          : kind === 'defuse'
-            ? 'Desarmera används av sig själv när du drar en exploderande tant.'
-            : kind === 'joker'
-              ? 'Vild tant gör inget ensam. Tryck på en tant för att göra ett par eller tretal.'
-              : kind === 'trap'
-                ? 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
-                : 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'
-    return <p className="text-center text-sm font-semibold">{text}</p>
-  }
-  if (!myTurn) return <p className="text-center text-sm font-semibold">Du kan spela när det är din tur.</p>
-
-  const combo = types.length > 1 && isCombo(types)
-  const wantsTarget = combo || needsTarget(types[0])
-  const targets = validTargets(table, meId, combo || types[0] === 'tjanst')
-  const triple = types.length === 3
-  const ready = (!wantsTarget || target !== null) && (!triple || request !== null)
-
+  if (!label) return <p className={LABEL}>{cardHint(types)}</p>
+  if (!myTurn) return <p className={LABEL}>Du kan spela när det är din tur.</p>
   return (
-    <div className="space-y-3">
-      {/* Valen skrollar för sig om de är många (tretalets kort), så att knappen nedanför alltid syns. */}
-      <div className="max-h-[38dvh] space-y-3 overflow-y-auto">
-        {combo && (
-          <p className="text-center text-sm font-semibold">
-            {triple ? 'Be en spelare om ett visst kort. Har den det får du det.' : 'Ta ett slumpat kort från en spelare.'}
-          </p>
-        )}
-        {wantsTarget &&
-          (targets.length === 0 ? (
-            <p className="text-center text-sm font-semibold text-primary">Ingen går att välja just nu.</p>
-          ) : (
-            <div className="space-y-1.5">
-              <p className="text-sm font-bold">
-                {combo ? 'Från vem?' : types[0] === 'tjanst' ? 'Vem ska ge dig ett kort?' : 'Vem får turerna?'}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {targets.map((id) => (
-                  <Button
-                    key={id}
-                    variant="outline"
-                    aria-pressed={target === id}
-                    className={cn(target === id && 'border-primary bg-coral-soft')}
-                    onClick={() => onTarget(id)}
-                  >
-                    <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-xl" />
-                    {state.players[id]?.name}
-                    <span className="text-xs font-normal text-muted-foreground">{table.handCounts[id]} kort</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ))}
-        {triple && (
-          <div className="space-y-1.5">
-            <p className="text-sm font-bold">Vilket kort ber du om?</p>
-            <div className="flex flex-wrap gap-1.5">
-              {REQUESTABLE.map((type) => (
-                <Button
-                  key={type}
-                  variant="outline"
-                  aria-pressed={request === type}
-                  className={cn(request === type && 'border-primary bg-coral-soft')}
-                  onClick={() => onRequest(type)}
-                >
-                  <span aria-hidden>{CARDS[type].symbol}</span>
-                  {cardName(type)}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-      <Button size="lg" className="w-full" disabled={!ready} onClick={onPlay}>
-        {label}
-      </Button>
-    </div>
+    <Button size="lg" className="w-full" onClick={onPlay}>
+      {label}
+    </Button>
   )
 }

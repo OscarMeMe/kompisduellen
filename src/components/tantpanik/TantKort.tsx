@@ -23,11 +23,13 @@ export function TantKort({
   size = 'large',
   className,
   sizes: sizesOverride,
+  style,
 }: {
   type: CardType
   size?: TantKortSize
   className?: string
   sizes?: string
+  style?: CSSProperties
 }) {
   const card = CARDS[type]
   const { width, sizes: sizesForSize } = SIZES[size]
@@ -41,6 +43,7 @@ export function TantKort({
         sizes={sizes}
         alt={`${card.name}. ${card.text}`}
         draggable={false}
+        style={style}
         // Hörnen är genomskinliga, så skuggan följer kortets form i stället för en fyrkant.
         className={cn('aspect-[107/147] shrink-0 object-contain drop-shadow-md select-none', width, className)}
       />
@@ -49,6 +52,7 @@ export function TantKort({
   const small = size === 'small'
   return (
     <div
+      style={style}
       className={cn(
         'flex aspect-[107/147] shrink-0 flex-col rounded-lg border border-foreground/10 p-2.5 text-left shadow-soft-sm',
         card.color,
