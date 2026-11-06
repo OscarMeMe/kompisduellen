@@ -1,5 +1,6 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useRef, type CSSProperties } from 'react'
 import { Figur } from '@/components/figurer/Figur'
+import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { BLOBS, type BlobId } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
@@ -16,45 +17,13 @@ const POSES = [
   { y: '-0.03em', rotate: '8deg' },
 ]
 
-// Hur långt bort (px) muspekaren ska vara för att blicken ska gå hela vägen åt sidan.
-const GAZE_REACH = 260
-
 // Några figurer som står tätt ihop i startsidans hero. De andas, blinkar och guppar lite, var och en i sin egen takt,
 // och med mus följer de muspekaren med blicken. Bara dekoration, så de göms för skärmläsare. Med "minska rörelse" står
 // de still och tittar rakt fram.
 export function HeroFigurer({ className }: { className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const root = ref.current
-    if (!root) return
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const figures = Array.from(root.querySelectorAll<HTMLElement>('[data-gaze]'))
-    let frame = 0
-    let pointer = { x: 0, y: 0 }
-    // Blicken räknas ut högst en gång per bildruta och sätts som CSS-variabler, så att React inte ritar om något.
-    function update() {
-      frame = 0
-      for (const figure of figures) {
-        const box = figure.getBoundingClientRect()
-        if (box.bottom < 0 || box.top > window.innerHeight) continue
-        const dx = pointer.x - (box.left + box.width / 2)
-        const dy = pointer.y - (box.top + box.height * 0.45)
-        figure.style.setProperty('--gaze-x', String(Math.max(-1, Math.min(1, dx / GAZE_REACH)).toFixed(2)))
-        figure.style.setProperty('--gaze-y', String(Math.max(-1, Math.min(1, dy / GAZE_REACH)).toFixed(2)))
-      }
-    }
-    function onMove(event: PointerEvent) {
-      pointer = { x: event.clientX, y: event.clientY }
-      if (!frame) frame = requestAnimationFrame(update)
-    }
-    window.addEventListener('pointermove', onMove, { passive: true })
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      cancelAnimationFrame(frame)
-    }
-  }, [])
+  useGazeFollow(ref)
 
   return (
     // En figur är 1.2em hög: cirka 40 px på mobil och 55 px från md. De överlappar lite (negativ space-x).
