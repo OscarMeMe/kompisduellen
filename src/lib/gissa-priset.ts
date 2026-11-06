@@ -9,7 +9,8 @@ import type { GameRules } from '@/lib/spelregler'
 // Värden kan välja en annan svarstid i lobbyn.
 const GUESS_SECONDS = 30
 export const GUESS_SECONDS_OPTIONS = [30, 45, 60] as const
-const REVEAL_SECONDS = 12
+// Facit står i 15 sekunder, så att alla hinner läsa priset, faktameningen och allas rader. Värden kan pausa.
+const REVEAL_SECONDS = 15
 // Så många av de senast visade frågorna spärras fortfarande när listan med frågor börjar om.
 export const RECENT_AFTER_RESET = 20
 
