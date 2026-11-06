@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { canJoin, FAN_CARD_HEIGHT, FAN_CARD_WIDTH, fanIndexAt, fanLayout, nextSelection, selectionLabel, sortHand } from '@/lib/solfjader'
+import {
+  canJoin,
+  FAN_BOTTOM,
+  FAN_CARD_HEIGHT,
+  FAN_CARD_WIDTH,
+  fanIndexAt,
+  fanIndexAtPoint,
+  fanLayout,
+  nextSelection,
+  selectionLabel,
+  sortHand,
+} from '@/lib/solfjader'
 import type { TantCard } from '@/lib/tantpanik'
 
 const card = (id: string, type: TantCard['type']): TantCard => ({ id, type })
@@ -61,5 +72,52 @@ describe('handens ordning och val', () => {
     expect(selectionLabel(['vild', 'vild'])).toBeNull()
     expect(canJoin(['vild', 'vild'])).toBe(true)
     expect(canJoin(['vild', 'blanda'])).toBe(false)
+  })
+})
+
+describe('tryck på ett lutat kort', () => {
+  const HEIGHT = 172
+  // En punkt i kortets egen ruta (lx från mitten, ly uppåt från nederkanten) räknad om till rutans koordinater.
+  function toBox(slot: { x: number; y: number; rotate: number }, lx: number, ly: number) {
+    const a = (slot.rotate * Math.PI) / 180
+    const px = slot.x + FAN_CARD_WIDTH / 2
+    const py = HEIGHT - FAN_BOTTOM + slot.y
+    return { x: px + lx * Math.cos(a) + ly * Math.sin(a), y: py + lx * Math.sin(a) - ly * Math.cos(a) }
+  }
+  function inside(slot: { x: number; y: number; rotate: number }, point: { x: number; y: number }) {
+    const a = (-slot.rotate * Math.PI) / 180
+    const dx = point.x - (slot.x + FAN_CARD_WIDTH / 2)
+    const dy = point.y - (HEIGHT - FAN_BOTTOM + slot.y)
+    const lx = dx * Math.cos(a) - dy * Math.sin(a)
+    const ly = dx * Math.sin(a) + dy * Math.cos(a)
+    return Math.abs(lx) <= FAN_CARD_WIDTH / 2 && ly <= 0 && ly >= -FAN_CARD_HEIGHT
+  }
+
+  for (const [count, width] of [
+    [5, 390],
+    [12, 360],
+    [16, 360],
+  ]) {
+    it(`${count} kort på ${width} px: varje synlig del av ett kort väljer just det kortet`, () => {
+      const layout = fanLayout(count, width)
+      let checked = 0
+      layout.slots.forEach((slot, i) => {
+        for (const ly of [10, 40, 70, 100, 115]) {
+          for (let lx = -FAN_CARD_WIDTH / 2 + 2; lx < FAN_CARD_WIDTH / 2; lx += 4) {
+            const point = toBox(slot, lx, ly)
+            // Bara där kortet syns, alltså inte under ett kort längre till höger.
+            if (layout.slots.slice(i + 1).some((other) => inside(other, point))) continue
+            expect(fanIndexAtPoint(point.x, point.y, layout, HEIGHT), `kort ${i} vid ${lx}, ${ly}`).toBe(i)
+            checked++
+          }
+        }
+      })
+      expect(checked).toBeGreaterThan(count * 5)
+    })
+  }
+
+  it('under korten avgör sidled', () => {
+    const layout = fanLayout(5, 390)
+    expect(fanIndexAtPoint(layout.slots[2].x + 5, HEIGHT - 2, layout, HEIGHT)).toBe(fanIndexAt(layout.slots[2].x + 5, layout))
   })
 })

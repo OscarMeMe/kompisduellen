@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { TantKort } from '@/components/tantpanik/TantKort'
-import { FAN_CARD_WIDTH, fanIndexAt, fanLayout } from '@/lib/solfjader'
+import { FAN_CARD_WIDTH, fanIndexAtPoint, fanLayout } from '@/lib/solfjader'
 import type { TantCard } from '@/lib/tantpanik'
 import { CARDS, cardImage, cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
@@ -42,7 +42,7 @@ export function Solfjader({
   const layout = fanLayout(cards.length, width)
   const indexAt = (event: PointerEvent) => {
     const box = ref.current?.getBoundingClientRect()
-    return box ? fanIndexAt(event.clientX - box.left, layout) : -1
+    return box ? fanIndexAtPoint(event.clientX - box.left, event.clientY - box.top, layout, box.height) : -1
   }
 
   function down(event: PointerEvent<HTMLDivElement>) {

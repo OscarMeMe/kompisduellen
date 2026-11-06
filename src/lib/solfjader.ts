@@ -45,6 +45,28 @@ export function fanIndexAt(x: number, layout: FanLayout): number {
   return Math.max(0, Math.min(slots.length - 1, index))
 }
 
+// Avståndet från rutans nederkant till korten (px), som bottom-6 i Solfjader.tsx.
+export const FAN_BOTTOM = 24
+
+// Kortet under fingret, med hänsyn till att korten lutar: punkten räknas om till varje korts egen, lutade ruta, och det
+// översta kortet som träffas vinner (korten längre till höger ligger ovanpå). Utanför alla kort (t.ex. under dem) avgör
+// sidled som i fanIndexAt. x och y räknas från rutans övre vänstra hörn, height är rutans höjd.
+export function fanIndexAtPoint(x: number, y: number, layout: FanLayout, height: number): number {
+  for (let i = layout.slots.length - 1; i >= 0; i--) {
+    const slot = layout.slots[i]
+    // Kortet vrids runt mitten av sin nederkant.
+    const pivotX = slot.x + FAN_CARD_WIDTH / 2
+    const pivotY = height - FAN_BOTTOM + slot.y
+    const angle = (-slot.rotate * Math.PI) / 180
+    const dx = x - pivotX
+    const dy = y - pivotY
+    const localX = dx * Math.cos(angle) - dy * Math.sin(angle)
+    const localY = dx * Math.sin(angle) + dy * Math.cos(angle)
+    if (Math.abs(localX) <= FAN_CARD_WIDTH / 2 && localY <= 0 && localY >= -FAN_CARD_HEIGHT) return i
+  }
+  return fanIndexAt(x, layout)
+}
+
 // Likadana kort bredvid varandra, i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).
 export function sortHand(hand: readonly TantCard[]): TantCard[] {
   const order = (type: CardType) => CARD_TYPES.indexOf(type)
