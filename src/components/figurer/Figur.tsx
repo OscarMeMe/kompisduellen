@@ -14,7 +14,7 @@ function Picture({ src }: { src: string }) {
 // antingen ritat i kod eller en bild, och minen är samma i båda fallen. Storleken följer textstorleken, som Emoji.
 // animated = figuren rör sig efter sin min. restartKey = ett nytt värde startar om rörelsen.
 // lively = figurens egen rörelse och personlighet i väntrummet (i stället för andningen). asleep = Sjusovaren sover.
-// look = Ögat tittar åt vänster (-1) eller höger (1).
+// look = Ögat tittar åt vänster (-1) eller höger (1). gaze = pupillerna följer --gaze-x och --gaze-y (se Miner).
 export function Figur({
   figure,
   mood = 'vantar',
@@ -22,6 +22,7 @@ export function Figur({
   lively = false,
   asleep = false,
   look = 0,
+  gaze = false,
   restartKey,
   delay,
   className,
@@ -32,6 +33,7 @@ export function Figur({
   lively?: boolean
   asleep?: boolean
   look?: -1 | 0 | 1
+  gaze?: boolean
   restartKey?: number
   // Hur långt in i rörelsen figuren börjar (s), så att flera figurer inte rör sig som en enda.
   delay?: number
@@ -63,7 +65,7 @@ export function Figur({
           {body.kind === 'png' ? <Picture src={body.src} /> : <DrawnBack figure={figure} uid={uid} lively={lifelike && !asleep} />}
         </g>
         <g data-lager="min">
-          <Face mood={mood} figure={figure} animated={animated} lively={lifelike} asleep={lifelike && asleep} look={look} />
+          <Face mood={mood} figure={figure} animated={animated} lively={lifelike} asleep={lifelike && asleep} look={look} gaze={gaze} />
         </g>
         <g data-lager="fram" transform={tilt && `translate(${tilt.x} ${tilt.y}) rotate(${tilt.rotate} 100 108)`}>
           {front}

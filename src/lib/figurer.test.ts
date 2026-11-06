@@ -8,7 +8,6 @@ import { parseStateMessage } from '@/lib/meddelanden'
 import { AVATARS, defaultGuest, loadPlayer, loadPlayerInThisTab, markJoinedInThisTab, parseLobbyIdentity } from '@/lib/player'
 import prisdata from '@/lib/prisdata.json'
 import { REACTIONS } from '@/lib/reaktioner'
-import { TILLFALLEN } from '@/lib/tillfallen'
 
 const OLD_AVATARS = Object.keys(LEGACY_AVATARS)
 
@@ -19,7 +18,6 @@ describe('blobbarnas värden', () => {
       ...THROW_ITEMS.map((item) => item.emoji),
       ...REACTIONS.map((reaction) => reaction.emoji),
       ...GAMES.flatMap((game) => [game.emoji, game.intro?.emoji]),
-      ...TILLFALLEN.map((tillfalle) => tillfalle.emoji),
       ...(prisdata as { emoji?: string }[]).map((item) => item.emoji),
       '🙂',
       '🏆',

@@ -38,7 +38,11 @@ function OpenEyes({
 }) {
   const size = r * eyes.scale
   return (
-    <g className={blink ? 'origin-center [transform-box:fill-box] motion-safe:animate-blob-blink' : undefined}>
+    // --blink-delay låter figurer som står bredvid varandra blinka i otakt.
+    <g
+      className={blink ? 'origin-center [transform-box:fill-box] motion-safe:animate-blob-blink' : undefined}
+      style={blink ? { animationDelay: 'var(--blink-delay, 0s)' } : undefined}
+    >
       {eyes.xs.map((x, i) => (
         <g key={x}>
           <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
@@ -76,10 +80,14 @@ function Brows({ eyes, left, right, single }: { eyes: Eyes; left: string; right:
 }
 
 // Hur figuren beter sig i väntrummet: lively = sin egen rörelse, asleep = Sjusovaren har somnat, look = Ögat tittar åt
-// vänster (-1) eller höger (1) där någon nyss gjorde något.
-export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1 }
+// vänster (-1) eller höger (1) där någon nyss gjorde något. gaze = pupillerna följer --gaze-x och --gaze-y (-1 till 1) från
+// ett element utanför, t.ex. muspekaren på startsidan.
+export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1; gaze?: boolean }
 
-function Waiting({ figure, animated, lively = false, look = 0 }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
+// Pupillerna flyttas med CSS-variabler, så att React inte behöver rita om figuren när blicken ändras.
+const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*6px)_calc(var(--gaze-y,0)*4px)]'
+
+function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
   const eyes = eyesFor(figure)
   const { crossEyed, sleepy, haughty } = figure.traits ?? {}
   // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn.
@@ -102,7 +110,7 @@ function Waiting({ figure, animated, lively = false, look = 0 }: { figure: BlobF
         look={lookAt}
         lid={sleepy ? figure.palette.base : undefined}
         blink={animated}
-        pupilClass={scan && look === 0 ? 'motion-safe:animate-blob-scan' : undefined}
+        pupilClass={gaze ? GAZE_CLASS : scan && look === 0 ? 'motion-safe:animate-blob-scan' : undefined}
       />
       <Stroke d={crossEyed ? 'M78 136Q100 158 122 136' : eyes.cyclops ? 'M84 146Q100 156 116 146' : 'M84 138Q100 150 116 138'} />
     </>
@@ -203,10 +211,10 @@ function Sulky({ figure }: { figure: BlobFigure }) {
   )
 }
 
-export function Face({ mood, figure, animated, lively, asleep, look }: { mood: Mood; figure: BlobFigure; animated: boolean } & FaceExtras) {
+export function Face({ mood, figure, animated, lively, asleep, look, gaze }: { mood: Mood; figure: BlobFigure; animated: boolean } & FaceExtras) {
   switch (mood) {
     case 'vantar':
-      return asleep ? <Sleeping figure={figure} /> : <Waiting figure={figure} animated={animated} lively={lively} look={look} />
+      return asleep ? <Sleeping figure={figure} /> : <Waiting figure={figure} animated={animated} lively={lively} look={look} gaze={gaze} />
     case 'misstankt':
       return <Suspicious figure={figure} />
     case 'anklagad':

@@ -6,7 +6,6 @@ export type TillfalleId = 'alla' | 'forfest' | 'spelkvall' | 'discord'
 export type Tillfalle = {
   id: TillfalleId
   name: string
-  emoji?: string
   // Spelen i den ordning de visas, bäst först, och en kort rad om varför. Spel som saknas här kommer sist.
   games: { id: string; note: string }[]
   // Imposterjakten: sitter ni tillsammans och säger orden högt? Saknas det ändras inget.
@@ -18,7 +17,6 @@ export const TILLFALLEN: Tillfalle[] = [
   {
     id: 'forfest',
     name: 'Förfesten',
-    emoji: '🤡',
     aloud: true,
     games: [
       { id: 'imposterjakten', note: 'Ni säger orden högt' },
@@ -30,7 +28,6 @@ export const TILLFALLEN: Tillfalle[] = [
   {
     id: 'spelkvall',
     name: 'Spelkvällen',
-    emoji: '🃏',
     aloud: true,
     games: [
       { id: 'kortkaos', note: 'Flera rundor runt bordet' },
@@ -42,7 +39,6 @@ export const TILLFALLEN: Tillfalle[] = [
   {
     id: 'discord',
     name: 'Discordgänget',
-    emoji: '🤖',
     aloud: false,
     games: [
       { id: 'gissa-priset', note: 'Alla spelar på sin egen skärm' },
