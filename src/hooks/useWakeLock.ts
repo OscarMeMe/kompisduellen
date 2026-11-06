@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
-// Ber telefonen att inte släcka skärmen medan active är sant (Screen Wake Lock). Används för värden under en match,
-// eftersom en låst telefon stoppar allt och rundorna då står still för alla. Webbläsaren släpper låset när fliken
+// Ber telefonen att inte släcka skärmen medan active är sant (Screen Wake Lock). Används för värden under en match och i
+// lobbyn när andra är med (shouldKeepScreenOn i device.ts), eftersom en låst telefon stoppar allt. Webbläsaren släpper låset när fliken
 // döljs, så det begärs igen när fliken syns. Gör ingenting där det inte stöds (se canKeepScreenOn i device.ts).
 export function useWakeLock(active: boolean) {
   useEffect(() => {
