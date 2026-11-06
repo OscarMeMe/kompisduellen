@@ -52,7 +52,14 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, los
       <RoundTimer state={state} clockOffset={clockOffset} totalSeconds={kortkaosRules.seconds[table.step]} warning={warning} />
 
       <Kortbord>
-        <div className={cn('flex flex-col items-center gap-3 lg:flex-row', table.step === 'choosing' && 'lg:justify-between')}>
+        {/* Under avslöjandet på dator syns vinnaren i stället, så att ställningen och nedräkningen får plats. */}
+        <div
+          className={cn(
+            'flex flex-col items-center gap-3 lg:flex-row',
+            table.step === 'choosing' && 'lg:justify-between',
+            table.step === 'reveal' && 'lg:hidden',
+          )}
+        >
           <JudgeBanner state={state} meId={me.id} />
           {table.step === 'choosing' && (
             <PlayerStatus state={state} online={online} clockOffset={clockOffset} compact className="hidden lg:flex" />
@@ -75,7 +82,7 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, los
             <Center>
               <PromptCard prompt={prompt} footer={footer} className="animate-pop lg:w-full lg:max-w-2xl" />
             </Center>
-            <p className="text-center font-semibold text-background/80">
+            <p className="text-center font-semibold text-background">
               {isJudge ? 'Läs upp frågan! Snart lägger de andra sina kort.' : 'Läs frågan. Snart får du välja ett kort.'}
             </p>
             {!isJudge && hand && <HandPreview hand={hand} />}

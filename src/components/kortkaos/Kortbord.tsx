@@ -11,7 +11,7 @@ export function Kortbord({ children, className }: { children: ReactNode; classNa
       className={cn(
         'relative flex flex-col gap-4 rounded-3xl border-4 border-kortbord-kant bg-kortbord p-4 text-background shadow-soft sm:gap-5 sm:p-6',
         'bg-[radial-gradient(color-mix(in_oklab,var(--background)_10%,transparent)_1px,transparent_1px),radial-gradient(ellipse_at_50%_40%,transparent_45%,color-mix(in_oklab,black_28%,transparent))] [background-size:22px_22px,100%_100%]',
-        'lg:min-h-[calc(100svh-11rem)] lg:gap-4 lg:px-6 lg:py-5 lg:short:gap-3 lg:short:py-4',
+        'lg:min-h-[calc(100svh-12.5rem)] lg:gap-4 lg:px-6 lg:py-5 lg:short:gap-2.5 lg:short:py-3.5',
         className,
       )}
     >
