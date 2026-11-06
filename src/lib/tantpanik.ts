@@ -57,6 +57,18 @@ export type TantStep = 'turn' | 'window' | 'give' | 'arrange' | 'place'
 
 export type TantEvent = { n: number; text: string }
 
+// Det senaste som hänt vid bordet, för animationerna: ett kort dras (draw, kortet syns inte), en exploderande tant dras
+// (bomb, saved = hade Desarmera) eller ett kort spelas (play). n ökar för varje händelse, så att samma händelse bara
+// animeras en gång.
+export type TantAction = {
+  n: number
+  kind: 'draw' | 'bomb' | 'play'
+  player: string
+  // Kortet, när alla får se det (tanten, ett spelat kort). null för ett vanligt drag.
+  card: CardType | null
+  saved: boolean | null
+}
+
 // Det alla ser.
 export type TantTable = {
   // Spelarna i turordning, även de som är ute.
@@ -82,6 +94,8 @@ export type TantTable = {
   winner: string | null
   // Något har gått fel som inte ska kunna hända (t.ex. tom draghög). Matchen står still tills värden avbryter.
   error: string | null
+  // Det senaste som hänt vid bordet (se TantAction). null innan något hänt.
+  lastAction: TantAction | null
 }
 
 // Bara värden har det här.
@@ -100,6 +114,8 @@ export type TantSecrets = {
   // Det någon tittat på med Se framtiden eller Ändra framtiden, och ett kort besked till var och en.
   peek: Record<string, CardType[]>
   notices: Record<string, TantEvent>
+  // Kortet var och en senast drog, så att bara den som drog ser det vändas.
+  drew: Record<string, { n: number; type: CardType }>
   // Dragens nummer som värden har hanterat, per spelare, så att samma drag aldrig räknas två gånger.
   handled: Record<string, string[]>
   eventCount: number
@@ -114,6 +130,8 @@ export type MyTantView = {
   // Ändra framtiden: korten jag ska ordna (överst först).
   arrange: CardType[] | null
   notice: TantEvent | null
+  // Kortet jag senast drog (inte tanten, som alla ser). n är samma nummer som i lastAction.
+  drew: { n: number; type: CardType } | null
   handled: string[]
 }
 
@@ -148,7 +166,8 @@ export function isCardType(value: unknown): value is CardType {
 export const MIN_PLAYERS = 2
 export const MAX_PLAYERS = BOMBS_TOTAL + 1
 
-const LOG_KEPT = 12
+// Historiken bakom loggraden.
+const LOG_KEPT = 30
 const HANDLED_KEPT = 30
 
 export function shuffleCards<T>(items: readonly T[], random: Random): T[] {
@@ -223,6 +242,7 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     peek: {},
     notices: {},
     handled: {},
+    drew: {},
     eventCount: 1,
   }
   const table: TantTable = {
@@ -242,6 +262,7 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     trap,
     winner: null,
     error: null,
+    lastAction: null,
   }
   return sync({
     state: {
@@ -325,6 +346,7 @@ function draft(host: TantHost, random: Random): Draft {
       arranging: [...secrets.arranging],
       peek: { ...secrets.peek },
       notices: { ...secrets.notices },
+      drew: { ...secrets.drew },
       handled: { ...secrets.handled },
     },
   }
@@ -366,6 +388,16 @@ function endTurn(d: Draft) {
   d.table.current = nextAlive(d.table, d.table.current)
   d.table.turnsLeft = 1
   d.table.attacked = false
+  // Ett gammalt besked ska inte stå kvar när det blir ens tur.
+  delete d.secrets.notices[d.table.current]
+}
+
+// Det senaste som hänt vid bordet, för animationerna.
+function act(d: Draft, kind: TantAction['kind'], player: string, card: CardType | null, saved: boolean | null = null): number {
+  d.secrets.eventCount += 1
+  const n = d.secrets.eventCount
+  d.table.lastAction = { n, kind, player, card, saved }
+  return n
 }
 
 // Attack och Riktad attack: turen slutar utan drag och target får två turer, eller alla turer kvar plus två om den som
@@ -410,6 +442,8 @@ function draw(d: Draft, from: 'top' | 'bottom') {
   d.secrets.peek = {}
   if (card.type !== 'tant') {
     d.secrets.hands[id].push(card)
+    const n = act(d, 'draw', id, null)
+    d.secrets.drew[id] = { n, type: card.type }
     notify(d, id, `Du drog ${endName(card.type)}`)
     log(d, from === 'top' ? `${name(d, id)} drog ett kort.` : `${name(d, id)} drog det understa kortet.`)
     endTurn(d)
@@ -421,10 +455,14 @@ function draw(d: Draft, from: 'top' | 'bottom') {
     d.secrets.discard.push(...hand.splice(fika, 1))
     d.secrets.bomb = card
     d.table.step = 'place'
+    act(d, 'bomb', id, 'tant', true)
+    notify(d, id, 'Du drog en exploderande tant! Desarmera räddade dig. Göm tanten i högen.')
     log(d, `${name(d, id)} drog en exploderande tant, men desarmerade den! Nu gömmer ${name(d, id)} tanten i högen.`)
     return
   }
   d.secrets.discard.push(card)
+  act(d, 'bomb', id, 'tant', false)
+  delete d.secrets.notices[id]
   log(d, `${name(d, id)} drog en exploderande tant och är ute!`)
   eliminate(d, id)
 }
@@ -551,6 +589,7 @@ function play(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tPlay
     }
   }
   d.secrets.hands[playerId] = hand.filter((card) => !move.cards.includes(card.id))
+  act(d, 'play', playerId, types[0])
   d.secrets.discard.push(...(cards as TantCard[]))
   delete d.secrets.peek[playerId]
   log(d, playText(d, pending))
@@ -747,6 +786,7 @@ export function myTantView(secrets: TantSecrets, table: TantTable, playerId: str
     peek: secrets.peek[playerId] ?? null,
     arrange: table.step === 'arrange' && table.current === playerId ? secrets.arranging.map((card) => card.type) : null,
     notice: secrets.notices[playerId] ?? null,
+    drew: secrets.drew[playerId] ?? null,
     handled: secrets.handled[playerId] ?? [],
   }
 }

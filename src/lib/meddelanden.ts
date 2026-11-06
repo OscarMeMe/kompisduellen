@@ -137,6 +137,18 @@ const isTantTable = (value: unknown): value is TantTable =>
     trap: isBoolean,
     winner: orNull(isString),
     error: orNull(isString),
+    // Saknas hos en värd med en äldre version.
+    lastAction: (action: unknown) =>
+      action === undefined ||
+      orNull(
+        shape({
+          n: isNumber,
+          kind: (kind) => isString(kind) && ['draw', 'bomb', 'play'].includes(kind),
+          player: isString,
+          card: orNull(isCardType),
+          saved: orNull(isBoolean),
+        }),
+      )(action),
   })(value)
 
 const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
@@ -318,6 +330,7 @@ export function parseTantView(payload: unknown): { to: string; from: string | nu
     peek: orNull(listOf(isCardType)),
     arrange: orNull(listOf(isCardType)),
     notice: orNull(isTantEvent),
+    drew: (drew: unknown) => drew === undefined || orNull(shape({ n: isNumber, type: isCardType }))(drew),
     handled: listOf(isString),
   })(view)
   if (!ok) return null
