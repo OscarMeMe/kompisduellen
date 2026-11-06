@@ -167,3 +167,4 @@ skisser/
 # Specar för kommande spel. Bara lokalt.
 docs/
 skarmdumpar/
+.vercel
