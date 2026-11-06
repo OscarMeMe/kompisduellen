@@ -31,6 +31,13 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             tant i paret eller tretalet. Sist kvar vinner.
           </li>
         </ul>
+        {/* Krediten för musiken (se docs/ljud-licenser.md). */}
+        <p className="border-t pt-3 text-xs text-muted-foreground">
+          Musik: ”Happy” av{' '}
+          <a href="https://soundcloud.com/rezoner" target="_blank" rel="noreferrer" className="underline">
+            Rezoner
+          </a>
+        </p>
       </DialogContent>
     </Dialog>
   )

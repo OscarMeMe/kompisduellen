@@ -28,6 +28,7 @@ import {
 import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, type ImposterSettings } from '@/lib/imposterjakten'
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
 import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
+import { TantVantrum } from '@/components/tantpanik/TantVantrum'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
@@ -123,6 +124,8 @@ export function WaitingRoom({
 
   return (
     <Wide>
+      {/* Exploderande Tanter: mönstret, musiken och volymknappen. */}
+      {tant && <TantVantrum />}
       {state.rematchAt !== null && (
         <RematchCountdown
           at={state.rematchAt}

@@ -1,12 +1,19 @@
-// Bakgrundsmusik i Exploderande Tanter, bara under matchen. Musikfilen (MUSIC_FILE i public/) laddas först när matchen
-// startar och loopar sömlöst (AudioBufferSourceNode med loop). Finns ingen fil spelas en enkel slinga som skapas med
-// Web Audio, som platshållare. Låg volym, sänks när ljudeffekter spelas (duck) och tystnar en stund vid en explosion
+// Bakgrundsmusik i Exploderande Tanter, bara när Exploderande Tanter är valt: ett spår i väntrummet och ett under matchen
+// (setLevel). När man går mellan dem tonas spåren över i varandra (CROSSFADE). Spåren laddas först när de behövs och
+// loopar sömlöst (AudioBufferSourceNode med loop). Saknas en fil spelas en enkel slinga som skapas med Web Audio. Låg
+// volym (i väntrummet högst LOBBY_MAX), sänks när ljudeffekter spelas (duck) och tystnar en stund vid en explosion
 // (silence). Lite snabbare när det är spännande (setFast). Startar först efter ett tryck (webbläsarnas regel) och tonas
 // in. Volymen (0–1, där 1 är musikens högsta volym MAX_VOLUME) sparas i localStorage (kd-musik-volym), skild från
-// ljudeffekterna, och sätts med en GainNode, som fungerar även på iPhone.
+// ljudeffekterna, och sätts med en GainNode, som fungerar även på iPhone. Källor och licenser står i
+// docs/ljud-licenser.md.
 
-// Lägg musiken här: public/ljud/tantmusik.mp3 (eller .ogg, ändra då sökvägen). Helst en kort slinga som loopar sömlöst.
-export const MUSIC_FILE = '/ljud/tantmusik.mp3'
+export type MusicLevel = 'lobby' | 'match'
+
+// Väntrummet: från Pixabay. Matchen: "Happy" av Rezoner (krediten står i regelvyn).
+export const MUSIC_FILES: Record<MusicLevel, string> = {
+  lobby: '/musik/vantrum.mp3',
+  match: '/musik/kafferep.mp3',
+}
 
 const VOLUME_KEY = 'kd-musik-volym'
 // Äldre val: musiken av eller på.
@@ -17,8 +24,15 @@ const DEFAULT_VOLUME = 0.5
 const DUCKED = 0.35
 const FADE_IN = 1.5
 const FADE_OUT = 0.6
+// I väntrummet är musiken aldrig högre än så här, hur högt reglaget än står.
+const LOBBY_MAX = 0.15
+// Hur länge spåren tonas över i varandra när man går mellan väntrummet och matchen (sekunder).
+const CROSSFADE = 1.5
 // Hur mycket snabbare musiken går när det är spännande.
 const FAST_RATE = 1.12
+// Så länge musiken får vara utan någon som vill ha den innan den tonas ut (ms), så att den fortsätter utan avbrott när
+// väntrummet byts mot matchen.
+const STOP_DELAY = 400
 
 export function loadMusicVolume(): number {
   try {
@@ -38,19 +52,29 @@ function saveMusicVolume(volume: number) {
   }
 }
 
-let volume = loadMusicVolume()
+// Musikens verkliga volym för ett läge (0–1). Exporterad för testerna.
+export function musicGain(sliderVolume: number, level: MusicLevel): number {
+  const full = sliderVolume * MAX_VOLUME
+  return level === 'lobby' ? Math.min(full, LOBBY_MAX) : full
+}
 
 type Source = { stop: () => void; setRate: (rate: number) => void }
+// Ett spår som spelar: källan och dess egen volym, som används när spåren tonas över i varandra.
+type Playing = { level: MusicLevel; source: Source; gain: GainNode }
 
+let volume = loadMusicVolume()
 let context: AudioContext | null = null
+// Huvudvolymen: musikens volym, duck och tystnad. Spåren går hit genom sina egna GainNodes.
 let output: GainNode | null = null
-let source: Source | null = null
+let playing: Playing | null = null
 let starting = false
 let wanted = false
+let level: MusicLevel = 'match'
 let rate = 1
 let duckUntil = 0
 let silentUntil = 0
-let buffer: AudioBuffer | null | 'none' = null
+let stopTimer: ReturnType<typeof setTimeout> | null = null
+const buffers: Partial<Record<MusicLevel, Promise<AudioBuffer | 'none'>>> = {}
 
 function ctx(): AudioContext {
   context ??= new AudioContext()
@@ -62,39 +86,46 @@ function ctx(): AudioContext {
   return context
 }
 
-// Målvolymen just nu, med hänsyn till duck och tystnad.
+// Målvolymen just nu, med hänsyn till läget, duck och tystnad.
 function targetVolume(): number {
   const now = performance.now()
   if (now < silentUntil) return 0
-  const full = volume * MAX_VOLUME
+  const full = musicGain(volume, level)
   return now < duckUntil ? full * DUCKED : full
 }
 
-function rampTo(volume: number, seconds: number) {
-  if (!context || !output) return
+function ramp(gain: GainNode, value: number, seconds: number) {
+  if (!context) return
   const now = context.currentTime
-  output.gain.cancelScheduledValues(now)
-  output.gain.setValueAtTime(output.gain.value, now)
-  output.gain.linearRampToValueAtTime(volume, now + seconds)
+  gain.gain.cancelScheduledValues(now)
+  gain.gain.setValueAtTime(gain.gain.value, now)
+  gain.gain.linearRampToValueAtTime(value, now + seconds)
 }
 
-async function loadBuffer(audio: AudioContext): Promise<AudioBuffer | 'none'> {
-  try {
-    const response = await fetch(MUSIC_FILE)
-    const type = response.headers.get('content-type') ?? ''
-    if (!response.ok || !type.startsWith('audio')) return 'none'
-    return await audio.decodeAudioData(await response.arrayBuffer())
-  } catch {
-    return 'none'
-  }
+function rampTo(value: number, seconds: number) {
+  if (output) ramp(output, value, seconds)
 }
 
-function playBuffer(audio: AudioContext, data: AudioBuffer): Source {
+function loadBuffer(audio: AudioContext, track: MusicLevel): Promise<AudioBuffer | 'none'> {
+  buffers[track] ??= (async () => {
+    try {
+      const response = await fetch(MUSIC_FILES[track])
+      const type = response.headers.get('content-type') ?? ''
+      if (!response.ok || !type.startsWith('audio')) return 'none'
+      return await audio.decodeAudioData(await response.arrayBuffer())
+    } catch {
+      return 'none'
+    }
+  })()
+  return buffers[track]
+}
+
+function playBuffer(audio: AudioContext, data: AudioBuffer, destination: AudioNode): Source {
   const node = audio.createBufferSource()
   node.buffer = data
   node.loop = true
   node.playbackRate.value = rate
-  node.connect(output!)
+  node.connect(destination)
   node.start()
   return {
     stop: () => node.stop(),
@@ -102,10 +133,10 @@ function playBuffer(audio: AudioContext, data: AudioBuffer): Source {
   }
 }
 
-// Platshållaren: en enkel, glad slinga (bas och en liten melodi) som schemaläggs i förväg.
+// Reserven om en fil saknas: en enkel, glad slinga (bas och en liten melodi) som schemaläggs i förväg.
 const BASS = [45, 45, 52, 52, 41, 41, 43, 43]
 const MELODY = [69, null, 72, 74, null, 72, 69, null, 67, null, 69, 72, null, 74, 76, null]
-function playSynth(audio: AudioContext): Source {
+function playSynth(audio: AudioContext, destination: AudioNode): Source {
   let tempo = rate
   let step = 0
   let next = audio.currentTime + 0.05
@@ -117,7 +148,7 @@ function playSynth(audio: AudioContext): Source {
     envelope.gain.setValueAtTime(0.0001, at)
     envelope.gain.exponentialRampToValueAtTime(gain, at + 0.02)
     envelope.gain.exponentialRampToValueAtTime(0.0001, at + length)
-    oscillator.connect(envelope).connect(output!)
+    oscillator.connect(envelope).connect(destination)
     oscillator.start(at)
     oscillator.stop(at + length + 0.05)
   }
@@ -135,17 +166,44 @@ function playSynth(audio: AudioContext): Source {
   return { stop: () => clearInterval(timer), setRate: (value) => (tempo = value) }
 }
 
+// Startar spåret för läget, med en egen volym som börjar på from (0 vid en övertoning, 1 annars).
+async function playTrack(audio: AudioContext, track: MusicLevel, from: number): Promise<Playing> {
+  const data = await loadBuffer(audio, track)
+  const gain = audio.createGain()
+  gain.gain.value = from
+  gain.connect(output!)
+  const source = data === 'none' ? playSynth(audio, gain) : playBuffer(audio, data, gain)
+  return { level: track, source, gain }
+}
+
+function stopTrack(track: Playing, seconds: number) {
+  ramp(track.gain, 0, seconds)
+  setTimeout(
+    () => {
+      track.source.stop()
+      track.gain.disconnect()
+    },
+    seconds * 1000 + 50,
+  )
+}
+
 async function start() {
-  if (source || starting) return
+  if (playing || starting) return
   starting = true
   try {
     const audio = ctx()
     if (audio.state === 'suspended') await audio.resume()
     if (audio.state !== 'running') return
-    buffer ??= await loadBuffer(audio)
-    if (!wanted || source) return
-    source = buffer === 'none' ? playSynth(audio) : playBuffer(audio, buffer)
+    const track = await playTrack(audio, level, 1)
+    if (!wanted || playing) {
+      track.source.stop()
+      track.gain.disconnect()
+      return
+    }
+    playing = track
     rampTo(targetVolume(), FADE_IN)
+    // Läget kan ha bytts medan spåret laddades.
+    if (track.level !== level) void crossfade()
   } catch {
     // Ingen musik är inget fel.
   } finally {
@@ -153,19 +211,36 @@ async function start() {
   }
 }
 
+// Byter till spåret för läget och tonar över mjukt: det gamla tonas ut medan det nya tonas in.
+async function crossfade() {
+  const audio = context
+  const old = playing
+  if (!audio || !old || old.level === level) return
+  const track = await playTrack(audio, level, 0)
+  // Har något hänt under laddningen (stoppad, eller läget bytt igen) tas det nya spåret bort.
+  if (playing !== old || !wanted || track.level !== level) {
+    track.source.stop()
+    track.gain.disconnect()
+    if (playing === old && wanted && old.level !== level) void crossfade()
+    return
+  }
+  playing = track
+  ramp(track.gain, 1, CROSSFADE)
+  stopTrack(old, CROSSFADE)
+  rampTo(targetVolume(), CROSSFADE)
+}
+
 function stop() {
-  const playing = source
-  source = null
-  if (!playing) return
+  const track = playing
+  playing = null
+  if (!track) return
   rampTo(0, FADE_OUT)
-  setTimeout(() => {
-    if (source !== playing) playing.stop()
-  }, FADE_OUT * 1000 + 50)
+  stopTrack(track, FADE_OUT)
 }
 
 // Webbläsaren låter musiken starta först efter ett tryck. Försöker igen vid varje tryck tills den spelar.
 function onGesture() {
-  if (wanted && !source) void start()
+  if (wanted && !playing) void start()
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('pointerdown', onGesture, { capture: true })
@@ -177,31 +252,45 @@ export const tantMusic = {
   setVolume(next: number) {
     volume = Math.max(0, Math.min(1, next))
     saveMusicVolume(volume)
-    if (source) rampTo(targetVolume(), 0.1)
+    if (playing) rampTo(targetVolume(), 0.1)
   },
-  // Ska musiken spela just nu (match pågår, musik och ljud på)?
+  // Ska musiken spela just nu (Exploderande Tanter valt, ljud på och musikvolym över 0)?
   setWanted(on: boolean) {
     wanted = on
-    if (on) void start()
-    else stop()
+    if (stopTimer) clearTimeout(stopTimer)
+    stopTimer = null
+    if (on) {
+      void start()
+      return
+    }
+    stopTimer = setTimeout(() => {
+      stopTimer = null
+      if (!wanted) stop()
+    }, STOP_DELAY)
+  },
+  // Väntrummet eller matchen: spåren tonas över i varandra, och väntrummet är som mest LOBBY_MAX.
+  setLevel(next: MusicLevel) {
+    if (next === level) return
+    level = next
+    if (playing) void crossfade()
   },
   // Spännande läge: lite snabbare.
   setFast(fast: boolean) {
     rate = fast ? FAST_RATE : 1
-    source?.setRate(rate)
+    playing?.source.setRate(rate)
   },
   // En ljudeffekt spelas: musiken sänks en stund.
   duck(ms = 700) {
     duckUntil = Math.max(duckUntil, performance.now() + ms)
-    if (!source) return
+    if (!playing) return
     rampTo(targetVolume(), 0.08)
-    setTimeout(() => source && rampTo(targetVolume(), 0.4), ms)
+    setTimeout(() => playing && rampTo(targetVolume(), 0.4), ms)
   },
   // En explosion: musiken tystnar helt en stund och tonas sedan in igen.
   silence(ms = 1000) {
     silentUntil = Math.max(silentUntil, performance.now() + ms)
-    if (!source) return
+    if (!playing) return
     rampTo(0, 0.05)
-    setTimeout(() => source && rampTo(targetVolume(), 0.8), ms)
+    setTimeout(() => playing && rampTo(targetVolume(), 0.8), ms)
   },
 }
