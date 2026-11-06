@@ -26,6 +26,7 @@ import {
   type GameState,
 } from '@/lib/match'
 import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, type ImposterSettings } from '@/lib/imposterjakten'
+import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
@@ -51,6 +52,7 @@ type WaitingRoomProps = {
   onSetTempo: (tempo: { guessSeconds?: number; autoAdvance?: boolean }) => void
   onSetThrowsAllowed: (allowed: boolean) => void
   onSetImposterSettings: (settings: Partial<ImposterSettings>) => void
+  onSetTantSettings: (settings: Partial<TantSettings>) => void
   // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
   onStartCountdown: () => void
@@ -71,6 +73,7 @@ export function WaitingRoom({
   onSetTempo,
   onSetThrowsAllowed,
   onSetImposterSettings,
+  onSetTantSettings,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
@@ -93,9 +96,10 @@ export function WaitingRoom({
   // Kortspelen och Imposterjakten har egen beskrivning och poängförklaring, och Imposterjakten har egna val.
   const cardRules = cardRulesFor(state.game)
   const imposter = state.game === IMPOSTER_GAME
+  const tant = state.game === TANT_GAME
   const theme = lobbyThemeFor(game)
-  const howTo = imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
-  const scoringDetails = imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
+  const howTo = tant ? TANT_HOW_TO : imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
+  const scoringDetails = tant ? TANT_SCORING : imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
   const roundsLabel = `Antal ${roundWords(state.game).many}`
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
   const enoughPlayers = online.length >= game.minPlayers
@@ -241,14 +245,17 @@ export function WaitingRoom({
               </div>
             </div>
 
-            <Choice
-              label={roundsLabel}
-              compact
-              hint={imposter ? (wordsRunningOutText(state.imposterSettings, state.rounds, state.usedWordIds) ?? undefined) : undefined}
-              options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
-              selected={state.rounds}
-              onSelect={onSetRounds}
-            />
+            {/* Exploderande Tanter har inga rundor: sist kvar vinner. */}
+            {!tant && (
+              <Choice
+                label={roundsLabel}
+                compact
+                hint={imposter ? (wordsRunningOutText(state.imposterSettings, state.rounds, state.usedWordIds) ?? undefined) : undefined}
+                options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
+                selected={state.rounds}
+                onSelect={onSetRounds}
+              />
+            )}
 
             {/* Tempo för spel som har det (Gissa priset). Gäller hela lobbyn. */}
             {hasTempoSettings(state.game) && (
@@ -264,6 +271,19 @@ export function WaitingRoom({
             )}
 
             {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}
+
+            {tant && (
+              <Choice
+                label="Tantsnara"
+                hint="En fälla i leken: den som stjäl den får lämna tillbaka två kort"
+                options={[
+                  { value: 1, label: 'På' },
+                  { value: 0, label: 'Av' },
+                ]}
+                selected={state.tantSettings.trap ? 1 : 0}
+                onSelect={(value) => onSetTantSettings({ trap: value === 1 })}
+              />
+            )}
 
             <Choice
               label="Kasta saker"

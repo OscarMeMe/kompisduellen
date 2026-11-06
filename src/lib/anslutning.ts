@@ -22,6 +22,7 @@ export function awaitsAnswer(state: GameState): boolean {
   if (state.phase === 'guessing') return true
   if (state.phase !== 'playing') return false
   if (state.imposter) return state.imposter.step !== 'facit'
+  if (state.tantpanik) return true
   return state.cards?.step === 'choosing' || state.cards?.step === 'judging'
 }
 

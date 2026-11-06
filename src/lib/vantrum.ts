@@ -4,6 +4,7 @@
 import type { GameInfo } from '@/lib/games'
 import { roundWords } from '@/lib/games'
 import { imposterSettingsParts } from '@/lib/imposterjakten'
+import { TANT_GAME } from '@/lib/tantpanik'
 import { guessSecondsFor, hasTempoSettings, type GameState } from '@/lib/match'
 
 export type LobbyTheme = {
@@ -47,6 +48,11 @@ export const LOBBY_THEMES: Record<string, LobbyTheme> = {
     ],
     icon: '🔍',
   },
+  tantpanik: {
+    playersTitle: 'Tantvakter',
+    lines: ['Någonstans i högen väntar en tant.', 'Har alla sin Fikapaus?', 'Dra lugnt. Andas.', 'Det här slutar med panik.'],
+    icon: '💥',
+  },
 }
 
 // Så ofta repliken byts (ms).
@@ -88,7 +94,9 @@ export function emptySeats(count: number, game: Pick<GameInfo, 'minPlayers' | 'm
 }
 
 // Inställningarna på en rad, för gästerna: "5 rundor · 30 s svarstid · Nästa fråga automatiskt".
-export function settingsLine(state: Pick<GameState, 'game' | 'rounds' | 'guessSeconds' | 'autoAdvance' | 'imposterSettings'>): string {
+export function settingsLine(state: Pick<GameState, 'game' | 'rounds' | 'guessSeconds' | 'autoAdvance' | 'imposterSettings' | 'tantSettings'>): string {
+  // Exploderande Tanter har inga rundor, bara fällan att slå på eller av.
+  if (state.game === TANT_GAME) return state.tantSettings.trap ? 'Med Tantsnaror' : 'Utan Tantsnaror'
   const words = roundWords(state.game)
   const parts = [`${state.rounds} ${state.rounds === 1 ? words.one : words.many}`]
   if (hasTempoSettings(state.game)) {

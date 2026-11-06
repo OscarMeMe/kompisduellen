@@ -460,6 +460,8 @@ export function winnerSummary(state: GameState): string {
   }
   const winners = ranked.filter((p) => p.place === 1)
   const top = winners[0]?.score ?? 0
+  // Exploderande Tanter: poängen är bara placeringen, så det viktiga är vem som var sist kvar.
+  if (state.game === 'tantpanik' && winners.length === 1) return `${winners[0].name} var sist kvar och vinner!`
   if (top === 0) return 'Ingen fick poäng den här gången. Revansch?'
   if (winners.length > 1) {
     return `Delad seger! ${joinNames(winners.map((p) => p.name))} fick ${winners.length === 2 ? 'båda' : 'alla'} ${top} poäng.`

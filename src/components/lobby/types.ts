@@ -1,6 +1,7 @@
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import type { ImposterMove, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardMove, MyHand } from '@/lib/kort'
+import type { MyTantView, TantMove } from '@/lib/tantpanik'
 import type { GameState } from '@/lib/match'
 import type { Player } from '@/lib/player'
 
@@ -65,4 +66,16 @@ export type ImposterViewProps = {
   // Vem som skriver på sitt ord just nu (bara den som har tur), och att jag skriver (skickas högst varannan sekund).
   typing: string | null
   onTyping: () => void
+}
+
+// Exploderande Tanter har en vy för hela matchen.
+export type TantViewProps = {
+  state: GameState
+  me: Player
+  online: OnlinePlayer[]
+  isHost: boolean
+  clockOffset: number
+  // Min hand och det bara jag får veta. null innan det har kommit.
+  tantView: MyTantView | null
+  onMove: (move: TantMove) => void
 }

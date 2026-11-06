@@ -49,6 +49,21 @@ import {
   type ImposterSettings,
   type ImposterTable,
 } from '@/lib/imposterjakten'
+import {
+  DEFAULT_TANT_SETTINGS,
+  isTantMove,
+  isTantSecrets,
+  MAX_PLAYERS as TANT_MAX_PLAYERS,
+  startTantMatch,
+  TANT_GAME,
+  tantDeadline,
+  tantMove,
+  type TantHost,
+  type TantMove,
+  type TantSecrets,
+  type TantSettings,
+  type TantTable,
+} from '@/lib/tantpanik'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 
 // Antal rundor att välja mellan i gissningsspelen. Kortspelen har egna (roundOptionsFor).
@@ -143,12 +158,15 @@ export type GameState = {
   usedWordIds: string[]
   // Imposterjakten: orden i den pågående matchen och hur många gånger var och en varit imposter (se ImposterMatch).
   imposterMatch: ImposterMatch
+  // Exploderande Tanter: det alla får se av matchen (null i andra spel) och värdens val i väntrummet.
+  tantpanik: TantTable | null
+  tantSettings: TantSettings
 }
 
-// Värdens tillstånd: det som skickas ut till alla, och kortspelens eller Imposterjaktens hemliga data.
+// Värdens tillstånd: det som skickas ut till alla, och kortspelens, Imposterjaktens eller Exploderande Tanters hemliga data.
 export type HostState = {
   state: GameState
-  secrets: CardSecrets | ImposterSecrets | null
+  secrets: CardSecrets | ImposterSecrets | TantSecrets | null
 }
 
 export type RankedPlayer = PlayerInfo & {
@@ -197,15 +215,22 @@ export function initialState(game = 'gissa-priset'): GameState {
     imposterSettings: IMPOSTER_DEFAULT_SETTINGS,
     usedWordIds: [],
     imposterMatch: EMPTY_IMPOSTER_MATCH,
+    tantpanik: null,
+    tantSettings: DEFAULT_TANT_SETTINGS,
   }
 }
 
+// Exploderande Tanter är en enda match utan rundor: sist kvar vinner.
+const ONE_ROUND: readonly number[] = [1]
+
 export function roundOptionsFor(game: string): readonly number[] {
+  if (game === TANT_GAME) return ONE_ROUND
   if (game === IMPOSTER_GAME) return IMPOSTER_ROUND_OPTIONS
   return cardRulesFor(game)?.roundOptions ?? ROUND_OPTIONS
 }
 
 export function defaultRoundsFor(game: string): number {
+  if (game === TANT_GAME) return 1
   if (game === IMPOSTER_GAME) return IMPOSTER_DEFAULT_ROUNDS
   return cardRulesFor(game)?.defaultRounds ?? DEFAULT_ROUNDS
 }
@@ -354,8 +379,9 @@ export function addPlayers(state: GameState, players: Record<string, PlayerInfo>
 
 // Kan en match starta med så här många i lobbyn? Spel med soloPractice får starta som provomgång
 // med en spelare. Annars krävs spelets minsta antal spelare.
-// Spel som inte går att starta med fler spelare än sajten anger. Bara Kortkaos: svarshögen räcker inte till fler.
-const CAPPED_GAMES = ['kortkaos']
+// Spel som inte går att starta med fler spelare än sajten anger. Kortkaos: svarshögen räcker inte till fler.
+// Exploderande Tanter: det finns nio exploderande tanter, så tio spelare är högst.
+const CAPPED_GAMES = ['kortkaos', TANT_GAME]
 
 export function tooManyPlayers(game: string, playerCount: number): boolean {
   const maxPlayers = findGame(game)?.maxPlayers
@@ -564,6 +590,7 @@ function resetMatch(state: GameState): GameState {
     notice: null,
     cards: null,
     imposter: null,
+    tantpanik: null,
   }
 }
 
@@ -711,7 +738,7 @@ type Random = () => number
 // Kör ett steg i ett kortspel. Tar matchen slut läggs den in i topplistan och hemligheterna släpps.
 function withCards(host: HostState, step: (host: CardHost, rules: CardGameRules) => CardHost): HostState {
   const rules = cardRulesFor(host.state.game)
-  if (!rules || !host.secrets || isImposterSecrets(host.secrets) || host.state.phase !== 'playing') return host
+  if (!rules || !host.secrets || isImposterSecrets(host.secrets) || isTantSecrets(host.secrets) || host.state.phase !== 'playing') return host
   const next = step({ state: host.state, secrets: host.secrets }, rules)
   if (next.state === host.state && next.secrets === host.secrets) return host
   if (next.state.phase === 'finished') return { state: finishMatch(next.state), secrets: null }
@@ -728,7 +755,21 @@ function withImposter(host: HostState, step: (host: ImposterHost) => ImposterHos
   return next
 }
 
+// Kör ett steg i Exploderande Tanter, på samma sätt som withCards. Matchens poäng sätts av tantpanik.ts när någon vunnit.
+function withTant(host: HostState, step: (host: TantHost) => TantHost): HostState {
+  const { state, secrets } = host
+  if (state.game !== TANT_GAME || !isTantSecrets(secrets) || state.phase !== 'playing') return host
+  const next = step({ state, secrets })
+  if (next.state === state && next.secrets === secrets) return host
+  if (next.state.phase === 'finished') return { state: finishMatch(next.state), secrets: null }
+  return next
+}
+
 export function hostStart(host: HostState, onlineIds: string[], now: number, random: Random = Math.random): HostState {
+  if (host.state.game === TANT_GAME) {
+    const ready = matchPlayers(host.state, onlineIds)
+    return ready && Object.keys(ready.players).length <= TANT_MAX_PLAYERS ? startTantMatch(ready, random) : host
+  }
   if (host.state.game === IMPOSTER_GAME) {
     const ready = matchPlayers(host.state, onlineIds)
     return ready ? startImposterMatch(ready, random) : host
@@ -799,6 +840,7 @@ export function hostDeadline(
   random: Random = Math.random,
 ): HostState {
   if (host.state.phase === 'playing') {
+    if (host.state.game === TANT_GAME) return withTant(host, (game) => tantDeadline(game, now, deadline, random))
     if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterDeadline(game, now, deadline, activeIds))
     return withCards(host, (cards, rules) => cardDeadline(cards, rules, now, deadline, activeIds, random))
   }
@@ -817,16 +859,21 @@ export function hostAdvance(host: HostState, now: number, round: number, activeI
 export function hostMove(
   host: HostState,
   playerId: string,
-  move: CardMove | ImposterMove,
+  move: CardMove | ImposterMove | TantMove,
   activeIds: string[],
   now: number,
   random: Random = Math.random,
+  // Dragets nummer. Exploderande Tanter kommer ihåg vilka drag som hanterats och visar det för spelaren.
+  nr: string | null = null,
 ): HostState {
+  if (isTantMove(move)) return withTant(host, (game) => tantMove(game, playerId, move, nr, now, random))
   if (isImposterMove(move)) return withImposter(host, (game) => imposterMove(game, playerId, move, activeIds, now))
   return withCards(host, (cards, rules) => cardMove(cards, rules, playerId, move, activeIds, now, random))
 }
 
+// Exploderande Tanter: den som tappar nätet behåller sin plats, hand och tur, och matchen väntar (se tantpanik.ts).
 export function hostPresence(host: HostState, activeIds: string[], now: number, random: Random = Math.random): HostState {
+  if (host.state.game === TANT_GAME) return host
   if (host.state.game === IMPOSTER_GAME) return withImposter(host, (game) => imposterPresence(game, activeIds, now))
   return withCards(host, (cards, rules) => cardPresence(cards, rules, activeIds, now, random))
 }

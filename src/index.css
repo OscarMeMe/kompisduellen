@@ -26,6 +26,11 @@
 [data-spel='kortkaos'] {
   --spel-yta: var(--lilac);
 }
+[data-spel='tantpanik'] {
+  --spel-yta: var(--coral-soft);
+  --spel-knapp: var(--primary-button);
+  --spel-knapp-text: var(--primary-foreground);
+}
 [data-spel='imposterjakten'] {
   --spel-yta: var(--foreground);
   --spel-text: var(--card);

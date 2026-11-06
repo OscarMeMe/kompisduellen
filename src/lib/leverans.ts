@@ -5,6 +5,7 @@
 import type { ImposterMove, MyImposterCard } from '@/lib/imposterjakten'
 import type { CardMove, MyHand } from '@/lib/kort'
 import type { GameState } from '@/lib/match'
+import { isTantMove, type MyTantView, type TantMove } from '@/lib/tantpanik'
 
 // Pausen mellan försöken (ms) och hur många gånger ett drag eller en gissning skickas igen. En sista paus efter det sista
 // försöket, och sedan ges det upp: tillsammans cirka 30 sekunder.
@@ -13,10 +14,11 @@ export const RESEND_MAX_TRIES = 9
 // Så många dragnummer kommer värden ihåg per spelare.
 const SEEN_MOVES_KEPT = 30
 
-export type AnyMove = CardMove | ImposterMove
+export type AnyMove = CardMove | ImposterMove | TantMove
 
 // Det jag vet just nu: läget från värden och det värden skickat bara till mig.
-export type MoveView = { state: GameState; id: string; hand: MyHand | null; card: MyImposterCard | null }
+// tant = det värden skickat bara till mig i Exploderande Tanter. Saknas i spel där det inte behövs.
+export type MoveView = { state: GameState; id: string; hand: MyHand | null; card: MyImposterCard | null; tant?: MyTantView | null }
 
 // Hur det såg ut när draget skickades, för att se när det har hänt något.
 type Sent = { scope: string; turn: number; rejectedAt: number | null; accusation: string | null }
@@ -57,20 +59,24 @@ export function newPendingMove(nr: string, move: AnyMove, view: MoveView, now: n
 }
 
 // Drag som ersätter varandra: ett nytt val eller ett nytt ord gör att det förra inte ska skickas igen.
-function moveSlot(move: AnyMove): string {
+function moveSlot(move: AnyMove, nr: string): string {
+  // Exploderande Tanter: varje drag är eget, inget ersätter ett annat.
+  if (isTantMove(move)) return `tant-${nr}`
   if (move.type === 'clue' || move.type === 'pass' || move.type === 'said') return 'turn'
   if (move.type === 'guess' || move.type === 'giveUp') return 'final'
   return move.type
 }
 
 export function addPendingMove(list: readonly PendingMove[], pending: PendingMove): PendingMove[] {
-  return [...list.filter((other) => moveSlot(other.move) !== moveSlot(pending.move)), pending]
+  return [...list.filter((other) => moveSlot(other.move, other.nr) !== moveSlot(pending.move, pending.nr)), pending]
 }
 
 // Visar läget att draget har kommit fram, eller att det inte längre behövs (spelet har gått vidare)?
 export function moveArrived(pending: PendingMove, view: MoveView): boolean {
   const { move, sent } = pending
   const { state, id, hand, card } = view
+  // Exploderande Tanter: värden visar vilka drag den har hanterat, även de som inte gick.
+  if (isTantMove(move)) return state.phase !== 'playing' || !state.tantpanik || (view.tant?.handled.includes(pending.nr) ?? false)
   if (state.phase !== 'playing' || moveScope(state) !== sent.scope) return true
   const table = state.imposter
   if (table) {

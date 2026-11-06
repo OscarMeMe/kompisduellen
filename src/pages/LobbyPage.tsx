@@ -15,7 +15,8 @@ import { SendStatus } from '@/components/lobby/SendStatus'
 import { VersionNotice } from '@/components/lobby/VersionNotice'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
 import type { Throws } from '@/hooks/useReactions'
-import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps } from '@/components/lobby/types'
+import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps, TantViewProps } from '@/components/lobby/types'
+import { TantpanikView } from '@/components/tantpanik/TantpanikView'
 import { WaitingRoom } from '@/components/lobby/WaitingRoom'
 import { GuessingView } from '@/components/narmast/GuessingView'
 import { RevealView } from '@/components/narmast/RevealView'
@@ -53,12 +54,14 @@ type GameViews =
   | { Guessing: ComponentType<GuessingViewProps>; Reveal: ComponentType<RevealViewProps> }
   | { Play: ComponentType<CardViewProps> }
   | { Imposter: ComponentType<ImposterViewProps> }
+  | { Tant: ComponentType<TantViewProps> }
 
 const GAME_VIEWS: Record<string, GameViews> = {
   narmast: { Guessing: GuessingView, Reveal: RevealView },
   'gissa-priset': { Guessing: PriceGuessingView, Reveal: PriceRevealView },
   kortkaos: { Play: KortkaosView },
   imposterjakten: { Imposter: ImposterjaktenView },
+  tantpanik: { Tant: TantpanikView },
 }
 
 export function LobbyPage() {
@@ -197,6 +200,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     lostMove,
     hand,
     imposterCard,
+    tantView,
     typing,
     floating,
     splat,
@@ -425,11 +429,25 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onSetTempo={actions.setTempo}
           onSetThrowsAllowed={actions.setThrowsAllowed}
           onSetImposterSettings={actions.setImposterSettings}
+          onSetTantSettings={actions.setTantSettings}
           onStart={actions.start}
           onStartCountdown={actions.startCountdown}
         />
       )
     case 'playing':
+      if ('Tant' in views) {
+        return (
+          <views.Tant
+            state={state}
+            me={me}
+            online={online}
+            isHost={isHost}
+            clockOffset={clockOffset}
+            tantView={tantView}
+            onMove={actions.move}
+          />
+        )
+      }
       if ('Imposter' in views) {
         return (
           <views.Imposter

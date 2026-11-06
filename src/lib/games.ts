@@ -102,6 +102,30 @@ export const GAMES: GameInfo[] = [
     },
   },
   {
+    id: 'tantpanik',
+    // Arbetsnamn. Namnet står bara här (och i kortens texter i tantpanik-kort.ts).
+    name: 'Exploderande Tanter',
+    tagline: 'Dra kort och håll tummarna. Den som drar en exploderande tant utan fikapaus åker ut.',
+    quickRule: 'Spela kort och dra ur högen. Drar du en exploderande tant utan Fikapaus är du ute.',
+    emoji: '💥',
+    color: 'bg-coral-soft',
+    minPlayers: 2,
+    maxPlayers: 10,
+    feel: 'Nervigt',
+    playable: true,
+    intro: {
+      emoji: '💥',
+      pitch: 'Någonstans i högen väntar tanterna. Skicka turen vidare, kika i högen och stjäl av kompisarna. Sist kvar vinner.',
+      steps: [
+        'Alla får en Fikapaus och sju kort. På din tur spelar du så många kort du vill, och sedan drar du ett kort ur högen.',
+        'Drar du en exploderande tant är du ute, om du inte har en Fikapaus. Då gömmer du tanten i högen igen, var du vill.',
+        'Dubbelpass och Inte min tur låter dig slippa dra. Tjuvkika och Möblera om visar vad som ligger överst.',
+        'Två lika kort tar ett slumpat kort från någon. Tre lika låter dig be om ett visst kort.',
+        'Nä du! stoppar ett kort som någon precis spelat, även när det inte är din tur. Sist kvar vinner.',
+      ],
+    },
+  },
+  {
     id: 'vem-skrev',
     name: 'Vem skrev vad?',
     tagline: 'Alla svarar anonymt. Kan du lista ut vem som skrev vad?',

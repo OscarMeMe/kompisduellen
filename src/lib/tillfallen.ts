@@ -23,6 +23,7 @@ export const TILLFALLEN: Tillfalle[] = [
       { id: 'kortkaos', note: 'Bra när ni är många' },
       { id: 'narmast', note: 'Snabb uppvärmning' },
       { id: 'gissa-priset', note: 'Roligt att bråka om svaret' },
+      { id: 'tantpanik', note: 'Nervigt när högen krymper' },
     ],
   },
   {
@@ -34,6 +35,7 @@ export const TILLFALLEN: Tillfalle[] = [
       { id: 'gissa-priset', note: 'Tävla om vem som vet mest' },
       { id: 'imposterjakten', note: 'Ni säger orden högt' },
       { id: 'narmast', note: 'Bra mellan de andra spelen' },
+      { id: 'tantpanik', note: 'Ett kortspel för hela bordet' },
     ],
   },
   {
@@ -44,6 +46,7 @@ export const TILLFALLEN: Tillfalle[] = [
       { id: 'gissa-priset', note: 'Alla spelar på sin egen skärm' },
       { id: 'imposterjakten', note: 'Ni skriver orden i spelet' },
       { id: 'narmast', note: 'Snabb att dra igång' },
+      { id: 'tantpanik', note: 'Händerna är hemliga på varje skärm' },
       { id: 'kortkaos', note: 'Domaren läser upp i samtalet' },
     ],
   },
