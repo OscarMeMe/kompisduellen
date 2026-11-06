@@ -53,6 +53,7 @@ export function takeOverState(state: GameState, offset: number): GameState {
       choosingGame: false,
       cards: null,
       imposter: null,
+      tantpanik: null,
       notice: 'Matchen avbröts när värden lämnade. Starta om den när ni vill.',
     }
   }

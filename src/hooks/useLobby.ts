@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
+import { isTantSecrets, myTantView, setTantSettings, type MyTantView, type TantMove, type TantSettings } from '@/lib/tantpanik'
 import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
@@ -38,6 +39,7 @@ import {
   parseHand,
   parseHandover,
   parseImposterCard,
+  parseTantView,
   parseMove,
   parseRematchWish,
   parseStateMessage,
@@ -180,12 +182,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   const [hand, setHand] = useState<MyHand | null>(null)
   // Imposterjakten: mitt eget kort, som värden skickar bara till mig (på samma sätt som handen).
   const [imposterCard, setImposterCard] = useState<MyImposterCard | null>(null)
+  // Exploderande Tanter: min hand och det bara jag får veta, som värden skickar bara till mig.
+  const [tantView, setTantView] = useState<MyTantView | null>(null)
   const handRef = useRef<MyHand | null>(null)
   const imposterCardRef = useRef<MyImposterCard | null>(null)
+  const tantViewRef = useRef<MyTantView | null>(null)
   useEffect(() => {
     handRef.current = hand
     imposterCardRef.current = imposterCard
-  }, [hand, imposterCard])
+    tantViewRef.current = tantView
+  }, [hand, imposterCard, tantView])
   // Mina drag som läget ännu inte visar, och (hos värden) vilka drag som redan räknats (se leverans.ts).
   const pendingMovesRef = useRef<PendingMove[]>([])
   const [delivery, setDelivery] = useState<Delivery>('ok')
@@ -268,6 +274,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // närvarolistan visar vem som är värd, och då ska de inte slängas.
   const pendingHandRef = useRef<{ from: string; hand: MyHand | null } | null>(null)
   const pendingCardRef = useRef<{ from: string; card: MyImposterCard } | null>(null)
+  const pendingTantRef = useRef<{ from: string; view: MyTantView } | null>(null)
 
   const save = useCallback(() => {
     saveHostLobby(code, { state: stateRef.current, secrets: secretsRef.current } satisfies HostState)
@@ -304,6 +311,20 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     const secrets = secretsRef.current
     if (!secrets) {
       sentHandsRef.current = {}
+      return
+    }
+    if (isTantSecrets(secrets)) {
+      const table = stateRef.current.tantpanik
+      if (!table) return
+      for (const id of table.order) {
+        const view = myTantView(secrets, table, id)
+        const json = JSON.stringify(view)
+        if (sentHandsRef.current[id] === json) continue
+        sentHandsRef.current[id] = json
+        const seq = (handSeqRef.current[id] ?? 0) + 1
+        handSeqRef.current[id] = seq
+        void channelRef.current?.send({ type: 'broadcast', event: 'tant', payload: { to: id, from: meId, seq, view } })
+      }
       return
     }
     if (isImposterSecrets(secrets)) {
@@ -443,6 +464,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           pendingCardRef.current = null
           setImposterCard(pendingCard.card)
         }
+        const pendingTant = pendingTantRef.current
+        if (pendingTant && isFromHost(pendingTant.from, hosts())) {
+          pendingTantRef.current = null
+          setTantView(pendingTant.view)
+        }
 
         // Två värdar: den gamla värden kom tillbaka efter att en annan tagit över. Den som anslöt senast viker sig.
         const mine = players.find((p) => p.id === myId)
@@ -540,6 +566,19 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           setImposterCard((prev) => (isSameContent(prev, message.card) ? prev : message.card))
         } else if (message.from !== null) {
           pendingCardRef.current = { from: message.from, card: message.card }
+        }
+      })
+
+      // Min hand i Exploderande Tanter. Meddelanden till andra spelare slängs direkt.
+      channel.on('broadcast', { event: 'tant' }, ({ payload }) => {
+        const message = parseTantView(payload)
+        if (message?.to !== myId) return
+        myHandSeqRef.current = message.seq
+        if (isFromHost(message.from, hosts())) {
+          pendingTantRef.current = null
+          setTantView((prev) => (isSameContent(prev, message.view) ? prev : message.view))
+        } else if (message.from !== null) {
+          pendingTantRef.current = { from: message.from, view: message.view }
         }
       })
 
@@ -659,7 +698,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         if (!isHost || !message) return
         const { id, nr, move } = message
         const before = current()
-        const next = isSeenMove(seenMovesRef.current, id, nr) ? before : hostMove(before, id, move, activeIds(), Date.now())
+        const next = isSeenMove(seenMovesRef.current, id, nr) ? before : hostMove(before, id, move, activeIds(), Date.now(), Math.random, nr)
         if (next.state !== before.state || next.secrets !== before.secrets) {
           rememberMove(seenMovesRef.current, id, nr)
           commit(next)
@@ -798,6 +837,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     // oxlint-disable-next-line react-hooks/set-state-in-effect
     setHand(null)
     setImposterCard(null)
+    setTantView(null)
     myHandSeqRef.current = null
   }, [playing])
 
@@ -805,12 +845,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // som kan gå långsamt när fliken ligger i bakgrunden.
   useEffect(() => {
     if (!meId) return
-    const view = { state, id: meId, hand, card: imposterCard }
+    const view = { state, id: meId, hand, card: imposterCard, tant: tantView }
     for (const pending of pendingMovesRef.current) {
       const lost = moveArrived(pending, view) ? lostMove(pending, view) : null
       if (lost) setLostCard(lost)
     }
-  }, [state, hand, imposterCard, meId])
+  }, [state, hand, imposterCard, tantView, meId])
 
   // Mina drag skickas igen tills läget visar att de kommit fram, med en kort paus och en gräns (se leverans.ts).
   // Klockan börjar om när kanalen anslutit på nytt, så att försök som gjordes utan anslutning inte räknas.
@@ -820,7 +860,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     pendingMovesRef.current = pendingMovesRef.current.map((pending) => ({ ...pending, tries: 0, failed: false }))
     const timer = setInterval(() => {
       if (versionBlockedRef.current) return
-      const view = { state: stateRef.current, id: meId, hand: handRef.current, card: imposterCardRef.current }
+      const view = { state: stateRef.current, id: meId, hand: handRef.current, card: imposterCardRef.current, tant: tantViewRef.current }
       const { keep, send } = resendMoves(pendingMovesRef.current, view, Date.now())
       pendingMovesRef.current = keep
       setDelivery(moveDelivery(keep))
@@ -951,6 +991,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       setImposterSettings: (settings: Partial<ImposterSettings>) => {
         if (isHost) publish(setImposterSettings(stateRef.current, settings))
       },
+      // Exploderande Tanter: värdens val i väntrummet (Tantsnaran på eller av).
+      setTantSettings: (settings: Partial<TantSettings>) => {
+        if (isHost) publish(setTantSettings(stateRef.current, settings))
+      },
       imposterStartAnyway: () => {
         if (isHost) commit(hostImposterStartAnyway(current()))
       },
@@ -995,11 +1039,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare. Imposterjakten: läst kortet,
       // skriva ett ord, passa eller säga sitt ord högt.
-      move: (move: CardMove | ImposterMove) => {
+      move: (move: CardMove | ImposterMove | TantMove) => {
         if (!me || versionBlockedRef.current) return
         moveCountRef.current += 1
         const nr = `${me.id}-${Date.now()}-${moveCountRef.current}`
-        const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current }
+        const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current, tant: tantViewRef.current }
         pendingMovesRef.current = addPendingMove(pendingMovesRef.current, newPendingMove(nr, move, view, Date.now()))
         void channelRef.current?.send({
           type: 'broadcast',
@@ -1123,6 +1167,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     lostMove: me ? lostMoveText(state, me.id, guessRound, lostCard) : null,
     hand: state.phase === 'playing' ? hand : null,
     imposterCard: state.phase === 'playing' ? imposterCard : null,
+    tantView: state.phase === 'playing' ? tantView : null,
     floating,
     // Vem som skriver på sitt ord just nu i Imposterjakten (bara den som har tur), annars null.
     typing: typing && state.imposter && currentTurn(state.imposter) === typing.id ? typing.id : null,

@@ -14,23 +14,27 @@
 [data-spel] {
   --spel-yta: var(--card);
   --spel-text: var(--foreground);
+  /* Skapa lobby ser likadan ut på alla spelkort: mörk, och korallröd när musen är över. Därför har inget spel ett
+     mörkt eller korallrött kort. */
   --spel-knapp: var(--foreground);
   --spel-knapp-text: var(--card);
+  --spel-knapp-hover: var(--primary-button);
+  --spel-knapp-hover-text: var(--primary-foreground);
 }
 [data-spel='gissa-priset'] {
   --spel-yta: var(--sun);
 }
 [data-spel='narmast'] {
-  --spel-yta: oklch(0.82 0.1 30);
+  --spel-yta: var(--peach);
 }
 [data-spel='kortkaos'] {
   --spel-yta: var(--lilac);
 }
+[data-spel='tantpanik'] {
+  --spel-yta: var(--sky);
+}
 [data-spel='imposterjakten'] {
-  --spel-yta: var(--foreground);
-  --spel-text: var(--card);
-  --spel-knapp: var(--sun);
-  --spel-knapp-text: var(--foreground);
+  --spel-yta: var(--mint);
 }
 
 /* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
@@ -63,6 +67,7 @@
     --color-mint: var(--mint);
     --color-sun: var(--sun);
     --color-sky: var(--sky);
+    --color-peach: var(--peach);
     --color-lilac: var(--lilac);
     --color-coral-soft: var(--coral-soft);
     --color-mint-soft: var(--mint-soft);
@@ -76,6 +81,8 @@
     --color-spel-text: var(--spel-text);
     --color-spel-knapp: var(--spel-knapp);
     --color-spel-knapp-text: var(--spel-knapp-text);
+    --color-spel-knapp-hover: var(--spel-knapp-hover);
+    --color-spel-knapp-hover-text: var(--spel-knapp-hover-text);
     --color-sun-soft: var(--sun-soft);
     --color-sky-soft: var(--sky-soft);
     /* Kronan för den som leder, t.ex. text-crown */
@@ -202,8 +209,37 @@
     /* Startsidan: figurerna i hero guppar lite och långsamt hela tiden (hero-bob, figurerna är undantaget från regeln om att inget
        pågår hela tiden), och spelkorten tonas in en gång när de kommer i bild (card-in). Bara transform och opacity, så
        att det är lätt för en mobil. */
+    /* Exploderande Tanters spelkort: ett kort dras från högen (tant-draw), vänds (baksidan tonas bort, tant-cover) och
+       det smäller bakom tanten (tant-boom). Spelas en gång, som de andra spelkortens bilder. */
+    --animate-tant-draw: tant-draw 0.6s cubic-bezier(0.3, 0.8, 0.4, 1.15);
+    --animate-tant-cover: tant-cover 0.6s linear;
+    --animate-tant-boom: tant-boom 1s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+    /* Handen i samma bild fläktar ut lite och lägger sig igen (--fan = hur mycket varje kort vrids). */
+    --animate-fan-spread: fan-spread 0.8s ease-in-out both;
     --animate-hero-bob: hero-bob 5s ease-in-out infinite;
     --animate-card-in: card-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+
+    @keyframes tant-draw {
+        0% { translate: -58px 40px; rotate: -8deg; scale: 0.9; }
+        60% { translate: -8px -6px; rotate: 4deg; scale: 1.05; }
+        100% { translate: 0 0; rotate: 0deg; scale: 1; }
+    }
+
+    @keyframes fan-spread {
+        0%, 100% { rotate: 0deg; translate: 0 0; }
+        40% { rotate: var(--fan, 0deg); translate: 0 -3px; }
+    }
+
+    @keyframes tant-cover {
+        0%, 55% { opacity: 1; }
+        75%, 100% { opacity: 0; }
+    }
+
+    @keyframes tant-boom {
+        0%, 55% { scale: 0; opacity: 0; }
+        70% { scale: 1.15; opacity: 1; }
+        100% { scale: 1; opacity: 1; }
+    }
 
     @keyframes hero-bob {
         0%, 100% { transform: translateY(0); }
@@ -648,6 +684,8 @@
     --mint: oklch(0.83 0.1 165);
     --sun: oklch(0.89 0.13 90);
     --sky: oklch(0.82 0.08 235);
+    /* Persika: Närmast vinners kort, en släkting till korallen men tydligt skild från korallknapparna */
+    --peach: oklch(0.86 0.09 65);
     --lilac: oklch(0.85 0.06 300);
     --coral-soft: oklch(0.94 0.04 30);
     --mint-soft: oklch(0.955 0.04 165);

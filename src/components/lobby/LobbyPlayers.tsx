@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Crown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
+import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { useReactions } from '@/hooks/useReactions'
 import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 
@@ -25,20 +26,24 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
   }, [happening])
   // Ögat tittar mot den som nyss reagerade eller kastade, så länge raden syns.
   const lookAt = latest?.from ? players.findIndex((player) => player.id === latest.from) : -1
+  // Med mus följer allas figurer muspekaren med blicken, som figurerna på startsidan.
+  const listRef = useRef<HTMLUListElement>(null)
+  const gaze = useGazeFollow(listRef)
 
   return (
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-x-2 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))]">
+    <ul ref={listRef} className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-x-2 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))]">
       {players.map((player, i) => (
         <li key={player.id} className="flex min-w-0 flex-col items-center gap-1.5 text-center motion-safe:animate-pop">
           <div className="relative">
             {findBlob(player.avatar) ? (
-              <span className="block text-5xl leading-none sm:text-6xl">
+              <span data-gaze className="block text-5xl leading-none sm:text-6xl">
                 <LobbyFigur
                   playerId={player.id}
                   avatar={player.avatar}
                   delay={i * 0.7}
                   asleep={asleep}
                   look={lookDirection(i, lookAt)}
+                  gaze={gaze}
                   className="block"
                 />
               </span>

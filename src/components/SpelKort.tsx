@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -108,6 +108,108 @@ const PREVIEWS: Record<string, ReactNode> = {
       />
     </svg>
   ),
+  tantpanik: (
+    // Handen som en solfjäder till vänster och draghögen i mitten. Ett kort dras från högen, vänds och visar sig vara
+    // en exploderande tant (svart kort, arg tant i röd kavaj som pekar på dig), och det smäller bakom henne. Spelas en gång när kortet syns och igen vid hover. Utan rörelse
+    // ligger tanten redan uppvänd bredvid högen med smällen bakom sig.
+    <svg viewBox="0 0 220 92" className="h-22 w-auto overflow-visible">
+      {/* Min hand. Korten fläktar ut lite och lägger sig igen, ett i taget. */}
+      <g>
+        <g transform="rotate(-30 41 96)">
+          <g
+            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': '-14deg', animationDelay: '0ms' } as CSSProperties}
+          >
+            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-mint stroke-foreground/25" strokeWidth="1.5" />
+            <circle cx="33" cy="42" r="2.6" className="fill-card" />
+          </g>
+        </g>
+        <g transform="rotate(-15 41 96)">
+          <g
+            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': '-7deg', animationDelay: '60ms' } as CSSProperties}
+          >
+            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-sky stroke-foreground/25" strokeWidth="1.5" />
+            <circle cx="33" cy="42" r="2.6" className="fill-card" />
+          </g>
+        </g>
+        <g transform="rotate(0 41 96)">
+          <g
+            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': '0deg', animationDelay: '120ms' } as CSSProperties}
+          >
+            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-lilac stroke-foreground/25" strokeWidth="1.5" />
+            <circle cx="33" cy="42" r="2.6" className="fill-card" />
+          </g>
+        </g>
+        <g transform="rotate(15 41 96)">
+          <g
+            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': '7deg', animationDelay: '180ms' } as CSSProperties}
+          >
+            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-sun stroke-foreground/25" strokeWidth="1.5" />
+            <circle cx="33" cy="42" r="2.6" className="fill-card" />
+          </g>
+        </g>
+        <g transform="rotate(30 41 96)">
+          <g
+            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': '14deg', animationDelay: '240ms' } as CSSProperties}
+          >
+            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-coral-soft stroke-foreground/25" strokeWidth="1.5" />
+            <circle cx="33" cy="42" r="2.6" className="fill-card" />
+          </g>
+        </g>
+      </g>
+      {/* Draghögen. */}
+      <rect x="88" y="58" width="40" height="50" rx="5" transform="rotate(-6 108 80)" className="fill-foreground stroke-card" strokeWidth="2" />
+      <rect x="92" y="56" width="40" height="50" rx="5" transform="rotate(4 112 78)" className="fill-foreground stroke-card" strokeWidth="2" />
+      <rect x="90" y="54" width="40" height="50" rx="5" className="fill-foreground stroke-card" strokeWidth="2" />
+      <text x="110" y="80" textAnchor="middle" fontSize="15" className="fill-card font-heading font-bold">
+        ?
+      </text>
+      {/* Smällen bakom tanten. */}
+      <g className="origin-center [transform-box:fill-box] motion-safe:group-hover:animate-tant-boom motion-safe:group-data-[play=true]:animate-tant-boom">
+        <polygon points="168.0,-14.0 176.2,8.2 195.0,-6.1 189.9,17.0 213.5,15.2 196.7,31.9 217.5,43.1 194.4,48.0 205.8,68.7 183.7,60.4 182.1,84.0 168.0,65.0 153.9,84.0 152.3,60.4 130.2,68.7 141.6,48.0 118.5,43.1 139.3,31.9 122.5,15.2 146.1,17.0 141.0,-6.1 159.8,8.2" className="fill-sun" />
+        <polygon points="168.0,2.0 174.5,18.1 189.9,10.0 184.5,26.5 201.5,30.1 186.7,39.3 197.4,53.0 180.2,50.6 179.6,67.9 168.0,55.0 156.4,67.9 155.8,50.6 138.6,53.0 149.3,39.3 134.5,30.1 151.5,26.5 146.1,10.0 161.5,18.1" className="fill-primary" />
+      </g>
+      {/* Kortet som dras: från högen upp till höger, där det vänds och visar tanten. */}
+      <g transform="rotate(8 168 40)">
+        <g className="origin-[168px_40px] motion-safe:group-hover:animate-tant-draw motion-safe:group-data-[play=true]:animate-tant-draw">
+          {/* Den exploderande tanten, som på kortbilden: svart kort, blont hår med en grå slinga, svarta glasögon,
+              pärlörhängen, röd kavaj och svart tröja. Arg blick och ett finger som pekar rakt på dig. */}
+          <rect x="145" y="9" width="46" height="62" rx="6" className="fill-foreground stroke-card" strokeWidth="2" />
+          <g transform="translate(68 0)">
+            <circle cx="100" cy="15" r="4.5" className="fill-sun" />
+            <ellipse cx="100" cy="26" rx="13" ry="9" className="fill-sun" />
+            <path d="M93 19 Q97 22 96 28" fill="none" strokeWidth="2.4" strokeLinecap="round" className="stroke-muted-foreground" />
+            <circle cx="100" cy="32" r="10" className="fill-coral-soft" />
+            <circle cx="89.6" cy="35.5" r="1.7" className="fill-card stroke-foreground/30" strokeWidth="0.6" />
+            <circle cx="110.4" cy="35.5" r="1.7" className="fill-card stroke-foreground/30" strokeWidth="0.6" />
+            <path d="M91.5 26.5 L98 29.5 M108.5 26.5 L102 29.5" strokeWidth="2" strokeLinecap="round" className="stroke-foreground" />
+            <circle cx="95.5" cy="32" r="3" fill="none" strokeWidth="2.2" className="stroke-foreground" />
+            <circle cx="104.5" cy="32" r="3" fill="none" strokeWidth="2.2" className="stroke-foreground" />
+            <path d="M98.5 32 H101.5" strokeWidth="1.6" className="stroke-foreground" />
+            <path d="M95.5 39.5 Q100 36.5 104.5 39.5" fill="none" strokeWidth="1.8" strokeLinecap="round" className="stroke-foreground" />
+            <path d="M81 71 Q81 47 100 44 Q119 47 119 71 Z" className="fill-destructive" />
+            <path d="M95 44.5 L100 53 L105 44.5 Z" className="fill-foreground" />
+            {/* Armen kommer fram mot dig, och fingret pekar rakt ut ur kortet. */}
+            <path d="M113 50 Q118 58 108 62" fill="none" strokeWidth="6" strokeLinecap="round" className="stroke-destructive" />
+            <circle cx="105" cy="62" r="5" className="fill-coral-soft stroke-foreground/30" strokeWidth="1" />
+            <circle cx="102" cy="64.5" r="3.2" className="fill-coral-soft stroke-foreground/40" strokeWidth="1" />
+            <path d="M95 62 L92 61 M95.5 66 L92.5 67.5 M98 69 L96.5 71.5" strokeWidth="1.3" strokeLinecap="round" className="stroke-sun" />
+          </g>
+          {/* Baksidan, som syns tills kortet vänts. */}
+          <g className="opacity-0 motion-safe:group-hover:animate-tant-cover motion-safe:group-data-[play=true]:animate-tant-cover">
+            <rect x="145" y="9" width="46" height="62" rx="6" className="fill-foreground stroke-card" strokeWidth="2" />
+            <text x="168" y="46" textAnchor="middle" fontSize="16" className="fill-card font-heading font-bold">
+              ?
+            </text>
+          </g>
+        </g>
+      </g>
+    </svg>
+  ),
 }
 
 // Ett svarskort på Kortkaos spelkort. Det ligger med baksidan upp tills delay (ms) har gått.
@@ -205,7 +307,7 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
             <Info aria-hidden />
             Så spelar man
           </Button>
-          <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp/90">
+          <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp-hover hover:text-spel-knapp-hover-text">
             <Link to={createLobbyHref(game.id, tillfalle)}>
               Skapa lobby
               <ArrowRight aria-hidden />

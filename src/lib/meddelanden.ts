@@ -8,6 +8,8 @@ import type { ImposterCard, ImposterMove, ImposterTable, MyImposterCard } from '
 import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
 import { upgradeAvatars, initialState, type GameState, type RoundResult } from '@/lib/match'
+import { isCardType, type MyTantView, type TantMove, type TantTable } from '@/lib/tantpanik'
+import type { CardType } from '@/lib/tantpanik-kort'
 
 type Unknown = Record<string, unknown>
 
@@ -105,6 +107,38 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     ),
   })(value)
 
+const isTantEvent = shape({ n: isNumber, text: isString })
+
+const isTantTable = (value: unknown): value is TantTable =>
+  shape({
+    order: listOf(isString),
+    out: listOf(isString),
+    current: isString,
+    turnsLeft: isNumber,
+    attacked: isBoolean,
+    step: (step) => isString(step) && ['turn', 'window', 'give', 'arrange', 'place'].includes(step),
+    pending: orNull(
+      shape({
+        by: isString,
+        kind: (kind) => isString(kind) && ['single', 'pair', 'triple'].includes(kind),
+        cards: listOf(isCardType),
+        target: orNull(isString),
+        request: orNull(isCardType),
+        nopes: isNumber,
+        lastNopeBy: orNull(isString),
+      }),
+    ),
+    favor: orNull(shape({ from: isString, to: isString })),
+    deckCount: isNumber,
+    discardTop: listOf(isCardType),
+    discardCount: isNumber,
+    handCounts: recordOf(isNumber),
+    log: listOf(isTantEvent),
+    trap: isBoolean,
+    winner: orNull(isString),
+    error: orNull(isString),
+  })(value)
+
 const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
 
 const isGameState = shape({
@@ -141,6 +175,8 @@ const isGameState = shape({
   imposterSettings: isImposterSettings,
   usedWordIds: listOf(isString),
   imposterMatch: shape({ wordIds: listOf(isString), imposterCounts: recordOf(isNumber) }),
+  tantpanik: orNull(isTantTable),
+  tantSettings: shape({ trap: isBoolean }),
 })
 
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.
@@ -207,16 +243,18 @@ export function parseThrow(
 // Ett drag i ett kortspel eller i Imposterjakten. Ett skrivet ord får vara högst 100 tecken (värden kontrollerar det
 // närmare, se checkClue).
 // nr = dragets eget nummer, så att värden kan känna igen ett drag som skickats igen. Saknas hos äldre versioner av sajten.
-export function parseMove(payload: unknown): { id: string; nr: string | null; move: CardMove | ImposterMove } | null {
+export function parseMove(payload: unknown): { id: string; nr: string | null; move: CardMove | ImposterMove | TantMove } | null {
   const parsed = parseMoveBody(payload)
   if (!parsed) return null
   const { nr } = payload as Unknown
   return { ...parsed, nr: isString(nr) ? nr : null }
 }
 
-function parseMoveBody(payload: unknown): { id: string; move: CardMove | ImposterMove } | null {
+function parseMoveBody(payload: unknown): { id: string; move: CardMove | ImposterMove | TantMove } | null {
   if (!isObject(payload) || !isString(payload.id) || !isObject(payload.move)) return null
   const move = payload.move
+  const tant = parseTantMove(move)
+  if (tant) return { id: payload.id, move: tant }
   if (move.type === 'read' || move.type === 'pass') return { id: payload.id, move: { type: move.type } }
   if (move.type === 'said') {
     const typed = isString(move.word) && move.word.length <= 100
@@ -242,6 +280,47 @@ function parseMoveBody(payload: unknown): { id: string; move: CardMove | Imposte
   if (move.type === 'done') return { id: payload.id, move: { type: 'done' } }
   if (move.type === 'judge' && isString(move.key)) return { id: payload.id, move: { type: 'judge', key: move.key } }
   return null
+}
+
+// Exploderande Tanter. Värden kontrollerar resten: att korten finns på handen, att det är rätt fas och att målet går att välja.
+function parseTantMove(move: Unknown): TantMove | null {
+  switch (move.type) {
+    case 'tDraw':
+      return { type: 'tDraw' }
+    case 'tPlay': {
+      if (!listOf(isString)(move.cards) || move.cards.length < 1 || move.cards.length > 3) return null
+      if (!(move.target === undefined || orNull(isString)(move.target))) return null
+      if (!(move.request === undefined || orNull(isCardType)(move.request))) return null
+      return { type: 'tPlay', cards: move.cards, target: (move.target as string | null | undefined) ?? null, request: (move.request as CardType | null | undefined) ?? null }
+    }
+    case 'tNope':
+      return isString(move.card) && isNumber(move.level) ? { type: 'tNope', card: move.card, level: move.level } : null
+    case 'tGive':
+      return isString(move.card) ? { type: 'tGive', card: move.card } : null
+    case 'tPlace':
+      return isNumber(move.position) ? { type: 'tPlace', position: move.position } : null
+    case 'tArrange':
+      return listOf(isNumber)(move.order) && move.order.length <= 3 ? { type: 'tArrange', order: move.order } : null
+    default:
+      return null
+  }
+}
+
+const isTantCard = shape({ id: isString, type: isCardType })
+
+// Exploderande Tanter: min hand och det bara jag får veta. Meddelanden till andra spelare slängs.
+export function parseTantView(payload: unknown): { to: string; from: string | null; seq: number | null; view: MyTantView } | null {
+  if (!isObject(payload) || !isString(payload.to)) return null
+  const view = payload.view
+  const ok = shape({
+    hand: listOf(isTantCard),
+    peek: orNull(listOf(isCardType)),
+    arrange: orNull(listOf(isCardType)),
+    notice: orNull(isTantEvent),
+    handled: listOf(isString),
+  })(view)
+  if (!ok) return null
+  return { to: payload.to, from: isString(payload.from) ? payload.from : null, seq: isNumber(payload.seq) ? payload.seq : null, view: view as MyTantView }
 }
 
 const isMyHand = shape({ cards: listOf(isString), blank: isBoolean, pick: orNull(isPick) })

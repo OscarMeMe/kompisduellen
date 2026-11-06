@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { roundWords, type GameInfo } from '@/lib/games'
 import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
+import { TANT_GAME } from '@/lib/tantpanik'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
@@ -94,7 +95,9 @@ export function FinishedView({
         <h1 className="text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
           {game.name} ·{' '}
-          {endedEarly
+          {state.game === TANT_GAME
+            ? 'sist kvar vinner'
+            : endedEarly
             ? `slutade i ${words.one} ${state.round} av ${state.rounds}`
             : state.rounds === 1
               ? `1 ${words.one} spelad`
@@ -198,7 +201,8 @@ export function FinishedView({
         )}
       </div>
 
-      {isHost && !state.practice && (
+      {/* Exploderande Tanter har inga inställningar att ändra inför revanschen. */}
+      {isHost && !state.practice && state.game !== TANT_GAME && (
         <div className="space-y-3">
           <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
             <span>{settingsSummary} ·</span>
