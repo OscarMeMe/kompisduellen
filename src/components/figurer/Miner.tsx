@@ -1,6 +1,6 @@
 import type { BlobFigure, Mood } from '@/lib/figurer'
 
-// De sex minerna. De är samma för alla figurer och ritas i kroppens koordinater (200 × 200). Ögonen sitter på samma
+// De sju minerna. De är samma för alla figurer och ritas i kroppens koordinater (200 × 200). Ögonen sitter på samma
 // plats i alla miner, så att prylar som glasögon alltid passar. Ögat (cyclops) har ett enda stort öga mitt i ansiktet,
 // och då ritas varje min med det ögat och ett ögonbryn i stället för två.
 const EYE_Y = 108
@@ -18,6 +18,7 @@ function Stroke({ d, width = 7 }: { d: string; width?: number }) {
 }
 
 // Öppna ögon. look flyttar pupillerna åt sidan och lid är ögonlockets färg när ögonen är halvstängda.
+// pupilClass = en rörelse för pupillerna (Ögat som sveper med blicken i väntrummet).
 function OpenEyes({
   eyes,
   r = 14,
@@ -25,6 +26,7 @@ function OpenEyes({
   look = [0, 0],
   lid,
   blink = false,
+  pupilClass,
 }: {
   eyes: Eyes
   r?: number
@@ -32,6 +34,7 @@ function OpenEyes({
   look?: readonly number[]
   lid?: string
   blink?: boolean
+  pupilClass?: string
 }) {
   const size = r * eyes.scale
   return (
@@ -39,7 +42,9 @@ function OpenEyes({
       {eyes.xs.map((x, i) => (
         <g key={x}>
           <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
-          <circle cx={x + (look[i] ?? 0) * eyes.scale} cy={EYE_Y + 1} r={pupil * eyes.scale} className="fill-foreground" />
+          <g className={pupilClass}>
+            <circle cx={x + (look[i] ?? 0) * eyes.scale} cy={EYE_Y + 1} r={pupil * eyes.scale} className="fill-foreground" />
+          </g>
           {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
         </g>
       ))}
@@ -70,13 +75,47 @@ function Brows({ eyes, left, right, single }: { eyes: Eyes; left: string; right:
   )
 }
 
-function Waiting({ figure, animated }: { figure: BlobFigure; animated: boolean }) {
+// Hur figuren beter sig i väntrummet: lively = sin egen rörelse, asleep = Sjusovaren har somnat, look = Ögat tittar åt
+// vänster (-1) eller höger (1) där någon nyss gjorde något.
+export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1 }
+
+function Waiting({ figure, animated, lively = false, look = 0 }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
   const eyes = eyesFor(figure)
-  const { crossEyed, sleepy } = figure.traits ?? {}
+  const { crossEyed, sleepy, haughty } = figure.traits ?? {}
+  // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn.
+  if (lively && haughty) {
+    return (
+      <>
+        <OpenEyes eyes={eyes} look={[3, 3]} lid={figure.palette.base} />
+        <Brows eyes={eyes} left="M60 90L92 90" right="M108 82Q124 70 142 80" single="M68 76Q100 66 132 72" />
+        <Stroke d={eyes.cyclops ? 'M88 148L114 146' : 'M88 140L114 137'} />
+      </>
+    )
+  }
+  // Ögat sveper med blicken, eller tittar dit något nyss hände.
+  const scan = lively && eyes.cyclops
+  const lookAt = scan && look !== 0 ? [look * 8] : crossEyed ? [5, -5] : [0, 0]
   return (
     <>
-      <OpenEyes eyes={eyes} look={crossEyed ? [5, -5] : [0, 0]} lid={sleepy ? figure.palette.base : undefined} blink={animated} />
+      <OpenEyes
+        eyes={eyes}
+        look={lookAt}
+        lid={sleepy ? figure.palette.base : undefined}
+        blink={animated}
+        pupilClass={scan && look === 0 ? 'motion-safe:animate-blob-scan' : undefined}
+      />
       <Stroke d={crossEyed ? 'M78 136Q100 158 122 136' : eyes.cyclops ? 'M84 146Q100 156 116 146' : 'M84 138Q100 150 116 138'} />
+    </>
+  )
+}
+
+// Sjusovaren har somnat: slutna ögon och en liten öppen mun.
+function Sleeping({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
+  return (
+    <>
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 14 * s} ${EYE_Y}Q${x} ${EYE_Y + 8 * s} ${x + 14 * s} ${EYE_Y}`} width={6} />
+      <ellipse cx="100" cy={eyes.cyclops ? 150 : 142} rx="6" ry="7" className="fill-foreground" />
     </>
   )
 }
@@ -151,10 +190,23 @@ function VotedOut({ figure }: { figure: BlobFigure }) {
   )
 }
 
-export function Face({ mood, figure, animated }: { mood: Mood; figure: BlobFigure; animated: boolean }) {
+// Sur: halvstängda ögon som sneglar åt sidan (mot vinnaren), bryn som sänks inåt och en trutande mun.
+function Sulky({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
+  return (
+    <>
+      <OpenEyes eyes={eyes} look={[-6, -6]} lid={figure.palette.base} />
+      <Brows eyes={eyes} left="M58 82L92 94" right="M108 94L142 82" single="M64 68L100 80L136 68" />
+      <Stroke d={eyes.cyclops ? 'M86 156Q100 146 114 156' : 'M86 148Q100 138 114 148'} />
+      <ellipse cx={eyes.cyclops ? 122 : 120} cy={eyes.cyclops ? 154 : 146} rx="4" ry="3" className="fill-foreground" />
+    </>
+  )
+}
+
+export function Face({ mood, figure, animated, lively, asleep, look }: { mood: Mood; figure: BlobFigure; animated: boolean } & FaceExtras) {
   switch (mood) {
     case 'vantar':
-      return <Waiting figure={figure} animated={animated} />
+      return asleep ? <Sleeping figure={figure} /> : <Waiting figure={figure} animated={animated} lively={lively} look={look} />
     case 'misstankt':
       return <Suspicious figure={figure} />
     case 'anklagad':
@@ -165,5 +217,7 @@ export function Face({ mood, figure, animated }: { mood: Mood; figure: BlobFigur
       return <Won figure={figure} />
     case 'utrostad':
       return <VotedOut figure={figure} />
+    case 'sur':
+      return <Sulky figure={figure} />
   }
 }

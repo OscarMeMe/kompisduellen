@@ -54,8 +54,8 @@ describe('blobbarnas värden', () => {
     }
   })
 
-  it('har namn och rörelse för alla sex miner', () => {
-    expect(MOODS).toHaveLength(6)
+  it('har namn och rörelse för alla sju miner', () => {
+    expect(MOODS).toHaveLength(7)
     for (const mood of MOODS) {
       expect(MOOD_NAMES[mood]).toBeTruthy()
       expect(MOOD_MOTION[mood]).toMatch(/^motion-safe:animate-/)
