@@ -107,14 +107,16 @@ export function hasJoinedInThisTab(code: string): boolean {
 
 // Fliken minns också vem den är i lobbyn. Namnet i webbläsaren (localStorage) delas av alla flikar, så utan
 // det kunde en andra person i samma webbläsare döpa om den första vid omladdning.
+const TAB_PLAYER_PREFIX = 'kd-me:'
+
 export function markJoinedInThisTab(code: string, player?: Player) {
   safeSet('session', `kd-joined:${code}`, '1')
-  if (player) safeSet('session', `kd-me:${code}`, JSON.stringify(player))
+  if (player) safeSet('session', TAB_PLAYER_PREFIX + code, JSON.stringify(player))
 }
 
 export function loadPlayerInThisTab(code: string): Player | null {
   try {
-    const saved = JSON.parse(safeGet('session', `kd-me:${code}`) ?? 'null') as Partial<Player> | null
+    const saved = JSON.parse(safeGet('session', TAB_PLAYER_PREFIX + code) ?? 'null') as Partial<Player> | null
     return saved?.id && saved.name && saved.avatar ? { id: saved.id, name: saved.name, avatar: saved.avatar } : null
   } catch {
     return null
@@ -149,7 +151,24 @@ export function loadPlayer(): Player | null {
 export function savePlayer(name: string, avatar: string): Player {
   const profile = { name: name.trim().slice(0, 20), avatar }
   safeSet('local', PROFILE_KEY, JSON.stringify(profile))
-  return { id: playerId(), ...profile }
+  const player = { id: playerId(), ...profile }
+  updatePlayerInThisTab(player)
+  return player
+}
+
+// Nytt namn eller ny figur (t.ex. på profilsidan): lobbyerna som den här fliken är med i som samma spelare får det
+// också, så att lobbyn och de andra spelarna ser ändringen när man kommer tillbaka. Andra flikar påverkas inte.
+export function updatePlayerInThisTab(player: Player) {
+  try {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i)
+      if (!key?.startsWith(TAB_PLAYER_PREFIX)) continue
+      const saved = JSON.parse(sessionStorage.getItem(key) ?? 'null') as Partial<Player> | null
+      if (saved?.id === player.id) sessionStorage.setItem(key, JSON.stringify(player))
+    }
+  } catch {
+    // Blockerad lagring: då finns inget sparat i fliken.
+  }
 }
 
 // Förvalt namn och figur för den som testar direkt utan att ha skrivit något (Testa själv).
