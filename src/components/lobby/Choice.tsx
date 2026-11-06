@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type ChoiceProps = {
   label: string
@@ -8,12 +9,14 @@ type ChoiceProps = {
   // Förklaring under hela raden, i liten dämpad text.
   note?: string
   options: { value: number; label: string }[]
+  // Smalare knappar för korta sifferval, så att många (t.ex. 1, 2, 3, 5 och 10) får plats på en rad på mobil.
+  compact?: boolean
   selected: number
   onSelect: (value: number) => void
 }
 
 // En rad med val, t.ex. antal rundor. Valt alternativ har en bock, så att det inte bara syns på färgen.
-export function Choice({ label, hint, note, options, selected, onSelect }: ChoiceProps) {
+export function Choice({ label, hint, note, options, compact = false, selected, onSelect }: ChoiceProps) {
   const labelId = useId()
   const row = (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -23,7 +26,7 @@ export function Choice({ label, hint, note, options, selected, onSelect }: Choic
         </p>
         {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
       </div>
-      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-1.5 sm:gap-2">
+      <div role="group" aria-labelledby={labelId} className={cn('flex flex-wrap sm:gap-2', compact ? 'gap-1' : 'gap-1.5')}>
         {options.map((option) => {
           const active = option.value === selected
           return (
@@ -31,7 +34,7 @@ export function Choice({ label, hint, note, options, selected, onSelect }: Choic
               key={option.value}
               variant={active ? 'default' : 'outline'}
               aria-pressed={active}
-              className="h-11 min-w-16 px-3 text-base sm:px-4"
+              className={cn('h-11 text-base', compact ? 'min-w-11 px-2 sm:min-w-14 sm:px-3' : 'min-w-16 px-3 sm:px-4')}
               onClick={() => onSelect(option.value)}
             >
               {active && <Check aria-hidden />}
