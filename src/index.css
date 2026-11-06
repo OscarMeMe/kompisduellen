@@ -207,8 +207,37 @@
     /* Startsidan: figurerna i hero guppar lite och långsamt hela tiden (hero-bob, figurerna är undantaget från regeln om att inget
        pågår hela tiden), och spelkorten tonas in en gång när de kommer i bild (card-in). Bara transform och opacity, så
        att det är lätt för en mobil. */
+    /* Exploderande Tanters spelkort: ett kort dras från högen (tant-draw), vänds (baksidan tonas bort, tant-cover) och
+       det smäller bakom tanten (tant-boom). Spelas en gång, som de andra spelkortens bilder. */
+    --animate-tant-draw: tant-draw 0.6s cubic-bezier(0.3, 0.8, 0.4, 1.15);
+    --animate-tant-cover: tant-cover 0.6s linear;
+    --animate-tant-boom: tant-boom 1s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+    /* Handen i samma bild fläktar ut lite och lägger sig igen (--fan = hur mycket varje kort vrids). */
+    --animate-fan-spread: fan-spread 0.8s ease-in-out both;
     --animate-hero-bob: hero-bob 5s ease-in-out infinite;
     --animate-card-in: card-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+
+    @keyframes tant-draw {
+        0% { translate: -58px 40px; rotate: -8deg; scale: 0.9; }
+        60% { translate: -8px -6px; rotate: 4deg; scale: 1.05; }
+        100% { translate: 0 0; rotate: 0deg; scale: 1; }
+    }
+
+    @keyframes fan-spread {
+        0%, 100% { rotate: 0deg; translate: 0 0; }
+        40% { rotate: var(--fan, 0deg); translate: 0 -3px; }
+    }
+
+    @keyframes tant-cover {
+        0%, 55% { opacity: 1; }
+        75%, 100% { opacity: 0; }
+    }
+
+    @keyframes tant-boom {
+        0%, 55% { scale: 0; opacity: 0; }
+        70% { scale: 1.15; opacity: 1; }
+        100% { scale: 1; opacity: 1; }
+    }
 
     @keyframes hero-bob {
         0%, 100% { transform: translateY(0); }
