@@ -24,6 +24,11 @@ type RevealStepProps = {
 // ställningen och nedräkningen till nästa runda (med Nästa nu, reaktioner och kast).
 const STEP_MS = [0, 2500, 5000] as const
 
+// Fler andra kort än så visas som en tät lista, och fler spelare än så ger ställningen i två kolumner på dator,
+// så att allt får plats på en bärbar dator även med 9 spelare.
+const MANY_OTHERS = 4
+const MANY_PLAYERS = 6
+
 // Vilket steg som visas nu. Den som kommer in mitt i avslöjandet (eller laddar om) hoppar till rätt steg.
 function useRevealStep(deadline: number | null, clockOffset: number): number {
   const [step, setStep] = useState(() => {
@@ -86,7 +91,31 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
         )}
 
         {/* Steg 3: de andra korten med namn. */}
-        {step >= 3 && others.length > 0 && (
+        {step >= 3 && others.length > MANY_OTHERS && (
+          <ul className="grid gap-2 sm:grid-cols-2" aria-label="De andra korten">
+            {others.map((submission, i) => {
+              const player = state.players[owners[submission.key]]
+              return (
+                <li
+                  key={submission.key}
+                  className="rounded-md border-2 bg-card px-3 py-1 text-foreground shadow-soft-sm motion-safe:animate-pop motion-reduce:animate-fade"
+                  style={{ animationDelay: `${i * 120}ms` }}
+                >
+                  <span className="font-heading text-[0.8125rem] leading-tight font-bold break-words hyphens-manual">
+                    {capitalize(submission.text)}
+                  </span>{' '}
+                  {player && (
+                    <span className="inline-flex items-center gap-1 align-baseline text-xs font-semibold whitespace-nowrap text-muted-foreground">
+                      <Emoji emoji={player.avatar} className="text-sm" />
+                      {owners[submission.key] === me.id ? 'Ditt kort' : player.name}
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        {step >= 3 && others.length > 0 && others.length <= MANY_OTHERS && (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="De andra korten">
             {others.map((submission, i) => {
               const player = state.players[owners[submission.key]]
@@ -141,11 +170,11 @@ function Winner({ visible, avatar, text }: { visible: boolean; avatar: string; t
       )}
     >
       {visible && <Konfetti />}
-      <Emoji emoji={avatar} className={cn('text-5xl', visible && 'motion-safe:animate-hop')} />
-      <p className="font-heading text-2xl font-bold sm:text-3xl">{text}</p>
+      <Emoji emoji={avatar} className={cn('text-5xl lg:text-4xl', visible && 'motion-safe:animate-hop')} />
+      <p className="font-heading text-2xl font-bold sm:text-3xl lg:text-2xl">{text}</p>
       <span
         className={cn(
-          '-rotate-6 rounded-full bg-primary px-4 py-1.5 font-heading text-xl font-bold text-primary-foreground shadow-primary sm:text-2xl',
+          '-rotate-6 rounded-full bg-primary px-4 py-1.5 font-heading text-xl font-bold whitespace-nowrap text-primary-foreground shadow-primary sm:text-2xl lg:text-xl',
           visible && 'motion-safe:animate-stamp motion-safe:[animation-delay:300ms]',
         )}
       >
@@ -156,21 +185,24 @@ function Winner({ visible, avatar, text }: { visible: boolean; avatar: string; t
 }
 
 function Standings({ state, meId }: { state: GameState; meId: string }) {
+  const ranked = rankPlayers(state)
+  const many = ranked.length > MANY_PLAYERS
   return (
     <section className="space-y-2 rounded-lg border bg-card p-4 text-foreground shadow-soft lg:p-3">
       <h2 className="text-lg lg:text-base">Ställning</h2>
-      <ol className="space-y-1.5 lg:space-y-1">
-        {rankPlayers(state).map((p) => (
+      <ol className={cn('space-y-1.5 lg:space-y-1', many && 'lg:grid lg:grid-flow-col lg:grid-rows-5 lg:gap-x-2 lg:gap-y-1 lg:space-y-0')}>
+        {ranked.map((p) => (
           <li
             key={p.id}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-1.5 lg:py-1',
+              many && 'lg:gap-1.5 lg:px-2 lg:text-sm',
               p.place === 1 && p.score > 0 ? 'bg-sun-soft font-bold' : 'bg-muted',
             )}
           >
             <span className="w-5 text-center font-heading font-bold tabular-nums">{p.place}</span>
             <Emoji emoji={p.avatar} className="text-xl" />
-            <span className="flex-1 truncate">
+            <span className="flex-1 truncate" title={p.name}>
               {p.name}
               {p.id === meId && <span className="font-normal text-muted-foreground"> (du)</span>}
             </span>
