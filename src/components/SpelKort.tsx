@@ -307,7 +307,7 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
             <Info aria-hidden />
             Så spelar man
           </Button>
-          <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp/90">
+          <Button asChild size="lg" className="w-full bg-spel-knapp text-spel-knapp-text shadow-none hover:bg-spel-knapp-hover hover:text-spel-knapp-hover-text">
             <Link to={createLobbyHref(game.id, tillfalle)}>
               Skapa lobby
               <ArrowRight aria-hidden />

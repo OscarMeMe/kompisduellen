@@ -108,7 +108,7 @@ export const GAMES: GameInfo[] = [
     tagline: 'Dra kort och håll tummarna. Den som drar en exploderande tant utan fikapaus åker ut.',
     quickRule: 'Spela kort och dra ur högen. Drar du en exploderande tant utan Fikapaus är du ute.',
     emoji: '💥',
-    color: 'bg-coral-soft',
+    color: 'bg-sky-soft',
     minPlayers: 2,
     maxPlayers: 10,
     feel: 'Nervigt',

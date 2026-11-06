@@ -16,20 +16,24 @@
   --spel-text: var(--foreground);
   --spel-knapp: var(--foreground);
   --spel-knapp-text: var(--card);
+  /* Skapa lobby på spelkorten byter färg när musen är över knappen. Korallen om spelet inte har en egen. */
+  --spel-knapp-hover: var(--primary-button);
+  --spel-knapp-hover-text: var(--primary-foreground);
 }
 [data-spel='gissa-priset'] {
   --spel-yta: var(--sun);
 }
 [data-spel='narmast'] {
   --spel-yta: oklch(0.82 0.1 30);
+  /* Korallen syns dåligt mot det korallröda kortet, så här blir knappen mintgrön. */
+  --spel-knapp-hover: var(--mint);
+  --spel-knapp-hover-text: var(--foreground);
 }
 [data-spel='kortkaos'] {
   --spel-yta: var(--lilac);
 }
 [data-spel='tantpanik'] {
-  --spel-yta: var(--coral-soft);
-  --spel-knapp: var(--primary-button);
-  --spel-knapp-text: var(--primary-foreground);
+  --spel-yta: var(--sky);
 }
 [data-spel='imposterjakten'] {
   --spel-yta: var(--foreground);
@@ -81,6 +85,8 @@
     --color-spel-text: var(--spel-text);
     --color-spel-knapp: var(--spel-knapp);
     --color-spel-knapp-text: var(--spel-knapp-text);
+    --color-spel-knapp-hover: var(--spel-knapp-hover);
+    --color-spel-knapp-hover-text: var(--spel-knapp-hover-text);
     --color-sun-soft: var(--sun-soft);
     --color-sky-soft: var(--sky-soft);
     /* Kronan för den som leder, t.ex. text-crown */
