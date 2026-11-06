@@ -151,7 +151,7 @@ describe('efter facit', () => {
     const playing = startGame(lobby('gissa-priset', ['a', 'b']), ['a', 'b'], NOW)
     const reveal = playRound(playing, { a: 100, b: 200 }, 100, NOW + 5000)
     expect(reveal.phase).toBe('reveal')
-    expect(reveal.deadline).toBe(NOW + 5000 + 12_000)
+    expect(reveal.deadline).toBe(NOW + 5000 + 15_000)
   })
 
   it('står kvar utan klocka när värden går vidare själv', () => {

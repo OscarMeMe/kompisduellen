@@ -20,7 +20,10 @@ type GuessStatusListProps = {
 
 function useAnswerStatus({ state, online, clockOffset, meId, locked }: GuessStatusListProps) {
   const { secondsLeft } = useCountdown(state.deadline, clockOffset, guessSecondsFor(state))
-  const activePlayers = online.filter((p) => state.players[p.id])
+  // I matchens ordning, inte närvarolistans, som ändras när någon laddar om sidan eller ansluter på nytt.
+  const activePlayers = Object.keys(state.players)
+    .map((id) => online.find((p) => p.id === id))
+    .filter((p) => p !== undefined)
   const hasAnswered = (id: string) => state.guesses[id] !== undefined || (id === meId && locked !== null)
   const answered = activePlayers.filter((p) => hasAnswered(p.id)).length
   return { secondsLeft, activePlayers, hasAnswered, answered }
