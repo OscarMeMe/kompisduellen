@@ -5,12 +5,12 @@ const NOW = 1_000_000_000_000
 const HOUR = 60 * 60 * 1000
 
 function saved(extra: object = {}) {
-  return JSON.stringify({ id: 'abc', name: 'Kim', avatar: '👻', at: NOW, ...extra })
+  return JSON.stringify({ id: 'abc', name: 'Kim', avatar: '😳', at: NOW, ...extra })
 }
 
 describe('parseLobbyIdentity', () => {
   it('ger id, namn och figur för en färsk identitet', () => {
-    expect(parseLobbyIdentity(saved(), NOW + HOUR)).toEqual({ id: 'abc', name: 'Kim', avatar: '👻' })
+    expect(parseLobbyIdentity(saved(), NOW + HOUR)).toEqual({ id: 'abc', name: 'Kim', avatar: '😳' })
   })
 
   it('glömmer en identitet som är äldre än tolv timmar', () => {
@@ -54,15 +54,15 @@ describe('nytt namn eller ny figur i fliken', () => {
 
   it('följer med till lobbyerna där fliken är samma spelare, men inte där den är någon annan', () => {
     vi.stubGlobal('sessionStorage', memoryStorage())
-    markJoinedInThisTab('ABCD', { id: 'a', name: 'Kim', avatar: '👻' })
-    markJoinedInThisTab('EFGH', { id: 'b', name: 'Lisa', avatar: '🤖' })
+    markJoinedInThisTab('ABCD', { id: 'a', name: 'Kim', avatar: '😳' })
+    markJoinedInThisTab('EFGH', { id: 'b', name: 'Lisa', avatar: '🤓' })
     updatePlayerInThisTab({ id: 'a', name: 'Kimpa', avatar: '🎩' })
     expect(loadPlayerInThisTab('ABCD')).toEqual({ id: 'a', name: 'Kimpa', avatar: '🎩' })
-    expect(loadPlayerInThisTab('EFGH')).toEqual({ id: 'b', name: 'Lisa', avatar: '🤖' })
+    expect(loadPlayerInThisTab('EFGH')).toEqual({ id: 'b', name: 'Lisa', avatar: '🤓' })
   })
 
   it('kraschar inte när lagringen är blockerad', () => {
     vi.stubGlobal('sessionStorage', undefined)
-    expect(() => updatePlayerInThisTab({ id: 'a', name: 'Kim', avatar: '👻' })).not.toThrow()
+    expect(() => updatePlayerInThisTab({ id: 'a', name: 'Kim', avatar: '😳' })).not.toThrow()
   })
 })

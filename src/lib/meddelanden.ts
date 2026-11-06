@@ -7,7 +7,7 @@
 import type { ImposterCard, ImposterMove, ImposterTable, MyImposterCard } from '@/lib/imposterjakten'
 import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
-import { initialState, type GameState, type RoundResult } from '@/lib/match'
+import { upgradeAvatars, initialState, type GameState, type RoundResult } from '@/lib/match'
 
 type Unknown = Record<string, unknown>
 
@@ -158,7 +158,7 @@ export function parseStateMessage(payload: unknown): StateMessage | null {
   const outcome = (state as GameState).imposter?.outcome
   if (outcome && outcome.imposterWord !== undefined && !isString(outcome.imposterWord)) return null
   const hands = isObject(payload.hands) && Object.values(payload.hands).every(isNumber) ? (payload.hands as Record<string, number>) : {}
-  return { state: state as GameState, sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands, version: isNumber(payload.version) ? payload.version : null }
+  return { state: upgradeAvatars(state as GameState), sentAt: payload.sentAt, from: isString(payload.from) ? payload.from : null, hands, version: isNumber(payload.version) ? payload.version : null }
 }
 
 // En värd enligt närvarolistan. sendsFrom = värden skickar alltid med sitt id (from). Värdar med en äldre version

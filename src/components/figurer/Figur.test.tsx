@@ -68,9 +68,9 @@ describe('Emoji med blobbar', () => {
     expect(renderToStaticMarkup(<Emoji emoji={'🎩️'} />)).toContain('aria-label="Spionen"')
   })
 
-  it('visar de gamla figurerna som förut', () => {
-    const html = renderToStaticMarkup(<Emoji emoji="👻" className="text-2xl" />)
-    expect(html).toContain('/emoji/ghost.png')
+  it('visar vanliga emoji som bilder som förut, även de som var figurer (flikarna på startsidan använder dem)', () => {
+    const html = renderToStaticMarkup(<Emoji emoji="🤖" className="text-2xl" />)
+    expect(html).toContain('/emoji/robot.png')
     expect(html).not.toContain('<svg')
   })
 })

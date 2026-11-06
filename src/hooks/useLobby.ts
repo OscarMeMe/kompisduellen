@@ -49,6 +49,7 @@ import { measureSplatPlace } from '@/lib/splatt'
 import { APP_VERSION, versionStatus } from '@/lib/version'
 import { supabase } from '@/lib/supabase'
 import { leaveHostRole, loadHostLobby, lobbyPreset, markAsHost, saveHostLobby, type Player } from '@/lib/player'
+import { upgradeAvatar } from '@/lib/figurer'
 import { createHitTracker, type FigureHits } from '@/lib/figurTraffar'
 import { pickSuccessor, shouldYieldHost, takeOverState, TAKEOVER_MS, TAKEOVER_SETTLE_MS } from '@/lib/vardbyte'
 import { acceptReaction, canSendReaction, findReaction, REACTION_VISIBLE_MS } from '@/lib/reaktioner'
@@ -410,7 +411,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           .map(({ id, name, avatar, host, joinedAt, sendsFrom, noThrows }) => ({
             id,
             name,
-            avatar,
+            // En flik med en äldre version av sajten skickar sin gamla emoji-figur.
+            avatar: upgradeAvatar(avatar),
             host,
             joinedAt,
             sendsFrom,

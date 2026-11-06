@@ -6,6 +6,7 @@
 // värdens funktioner tar och ger HostState.
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa och läsa.
 
+import { upgradeAvatar } from '@/lib/figurer'
 import { findGame } from '@/lib/games'
 import { addThrow, EMPTY_THROW_STATS, type ThrowItemId, type ThrowStats } from '@/lib/kast'
 import {
@@ -308,6 +309,18 @@ function lobbyName(wanted: string, current: string | undefined, taken: readonly 
 }
 
 // Nya spelare och ändrade namn. Värden bestämmer namnen, så att alla ser samma och ingen heter likadant.
+// Gamla emoji-figurer i läget blir blobbar (upgradeAvatar). Samma läge tillbaka om inget behövde ändras.
+export function upgradeAvatars(state: GameState): GameState {
+  const fix = <T extends PlayerInfo>(list: Record<string, T>): Record<string, T> | null => {
+    if (Object.values(list).every((entry) => upgradeAvatar(entry.avatar) === entry.avatar)) return null
+    return Object.fromEntries(Object.entries(list).map(([id, entry]) => [id, { ...entry, avatar: upgradeAvatar(entry.avatar) }]))
+  }
+  const players = fix(state.players)
+  const leaderboard = fix(state.leaderboard)
+  if (!players && !leaderboard) return state
+  return { ...state, players: players ?? state.players, leaderboard: leaderboard ?? state.leaderboard }
+}
+
 export function addPlayers(state: GameState, players: Record<string, PlayerInfo>): GameState {
   let changed = false
   const nextPlayers = { ...state.players }
@@ -316,8 +329,9 @@ export function addPlayers(state: GameState, players: Record<string, PlayerInfo>
     const existing = nextPlayers[id]
     const taken = Object.entries(nextPlayers).filter(([other]) => other !== id).map(([, player]) => player.name)
     const name = lobbyName(info.name, existing?.name, taken)
-    if (!existing || existing.name !== name || existing.avatar !== info.avatar) {
-      nextPlayers[id] = { ...info, name }
+    const avatar = upgradeAvatar(info.avatar)
+    if (!existing || existing.name !== name || existing.avatar !== avatar) {
+      nextPlayers[id] = { ...info, name, avatar }
       changed = true
     }
     if (nextScores[id] === undefined) {
@@ -844,7 +858,7 @@ export function restoreHostState(saved: unknown): HostState | null {
   if (!saved || typeof saved !== 'object') return null
   const { state, secrets } = saved as Partial<HostState>
   if (!state || typeof state.phase !== 'string' || typeof state.game !== 'string') return null
-  const restored: GameState = { ...initialState(state.game), ...state }
+  const restored: GameState = upgradeAvatars({ ...initialState(state.game), ...state })
   if (restored.phase === 'playing' && !secrets) return null
   // Sparat av en äldre version av sajten: Imposterjaktens nya fält får sina startvärden, så att omgången kan fortsätta.
   if (restored.imposter) {
