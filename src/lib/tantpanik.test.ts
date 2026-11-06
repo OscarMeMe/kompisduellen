@@ -12,12 +12,20 @@ import {
   sync,
   tantDeadline,
   tantMove,
+  END_MS,
+  tantPlacementText,
   type TantHost,
   type TantMove,
+  type TantLevel,
   type TantSecrets,
   type TantTable,
+  bombCount,
+  bombsInDeck,
+  levelFor,
+  levelLine,
+  validTargets,
 } from '@/lib/tantpanik'
-import { CARDS, type CardType } from '@/lib/tantpanik-kort'
+import { CARDS, NOPE_SECONDS, trapCount, type CardType } from '@/lib/tantpanik-kort'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
 function seeded(seed = 1): () => number {
@@ -30,11 +38,11 @@ function seeded(seed = 1): () => number {
   }
 }
 
-function lobby(count: number, trap = true): GameState {
+function lobby(count: number, trap = true, level: TantLevel = 'normal'): GameState {
   const state = initialState('tantpanik')
   const players: GameState['players'] = {}
   for (let i = 1; i <= count; i++) players[`p${i}`] = { name: `Spelare ${i}`, avatar: '🙂' }
-  return { ...state, players, tantSettings: { trap } }
+  return { ...state, players, tantSettings: { trap, level } }
 }
 
 // En match med bestämda händer och draghög (överst först). Spelarna sitter i den ordning händerna står, och den första
@@ -69,6 +77,13 @@ let moveNr = 0
 function move(host: TantHost, player: string, m: TantMove, now = 1000): TantHost {
   moveNr += 1
   return tantMove(host, player, m, `nr${moveNr}`, now, random)
+}
+
+// Par: tjuven väljer kortet på plats index bland baksidorna.
+function pick(host: TantHost, index = 0): TantHost {
+  const chooser = table(host).pick?.by
+  if (!chooser) throw new Error('Ingen väljer ett kort')
+  return move(host, chooser, { type: 'tPick', index })
 }
 
 // Låter Nope!-tiden gå ut.
@@ -120,7 +135,7 @@ describe('leken och utdelningen', () => {
         const total = deck.length + ids.reduce((sum, id) => sum + hands[id].length, 0)
         expect(total).toBe(deckTypes(players, trap).length + players - 1)
         const all = [...deck, ...ids.flatMap((id) => hands[id])]
-        expect(all.filter((card) => card.type === 'snara')).toHaveLength(trap ? 2 : 0)
+        expect(all.filter((card) => card.type === 'snara')).toHaveLength(trap ? trapCount(players) : 0)
         expect(new Set(all.map((card) => card.id)).size).toBe(all.length)
       })
     }
@@ -195,9 +210,14 @@ describe('drag, utslagning och vinst', () => {
   it('utan Desarmera-kort åker man ut, och sist kvar vinner', () => {
     let host = setup({ a: ['regnbage'], b: ['fika'] }, ['tant', 'kupong'])
     const before = host
-    host = move(host, 'a', { type: 'tDraw' })
+    host = move(host, 'a', { type: 'tDraw' }, 1000)
     expect(table(host).out).toEqual(['a'])
     expect(table(host).winner).toBe('b')
+    // Vinnaren firas vid bordet en stund innan slutskärmen.
+    expect(host.state.phase).toBe('playing')
+    expect(host.state.deadline).toBe(1000 + END_MS)
+    expect(table(move(host, 'b', { type: 'tDraw' })).deckCount).toBe(table(host).deckCount)
+    host = settle(host)
     expect(host.state.phase).toBe('finished')
     expect(host.state.scores).toEqual({ a: 1, b: 2 })
     expect(host.secrets.removed.map((card) => card.type)).toEqual(['regnbage'])
@@ -219,6 +239,8 @@ describe('drag, utslagning och vinst', () => {
     const start = setup({ a: [], b: ['fika'] }, ['tant'])
     let host: HostState = start
     host = hostMove(host, 'a', { type: 'tDraw' }, ['a', 'b'], 0, random, 'x1')
+    expect(host.state.phase).toBe('playing')
+    host = hostDeadline(host, host.state.deadline!, host.state.deadline!, [], random)
     expect(host.state.phase).toBe('finished')
     expect(host.secrets).toBeNull()
     expect(host.state.leaderboard.b.wins).toBe(1)
@@ -410,7 +432,7 @@ describe('Nope!', () => {
     host = play(host, 'a', ['blanda'])
     const first = host.state.deadline!
     host = move(host, 'b', { type: 'tNope', card: cardId(host, 'b', 'nadu'), level: 0 }, 3000)
-    expect(host.state.deadline).toBe(8000)
+    expect(host.state.deadline).toBe(3000 + NOPE_SECONDS * 1000)
     expect(tantDeadline(host, first, first, random)).toBe(host)
   })
 
@@ -474,10 +496,10 @@ describe('titta, möblera och blanda', () => {
 })
 
 describe('par, tretal, jokrar och tjänster', () => {
-  it('ett par tar ett slumpat kort från målet', () => {
+  it('ett par låter tjuven välja ett av målets kort', () => {
     let host = setup({ a: ['kupong', 'kupong'], b: ['regnbage', 'tjuvkika'] }, ['regnbage'])
     const before = host
-    host = settle(play(host, 'a', ['kupong', 'kupong'], { target: 'b' }))
+    host = pick(settle(play(host, 'a', ['kupong', 'kupong'], { target: 'b' })))
     expect(host.secrets.hands.a).toHaveLength(1)
     expect(host.secrets.hands.b).toHaveLength(1)
     expectSameCount(before, host)
@@ -485,7 +507,7 @@ describe('par, tretal, jokrar och tjänster', () => {
 
   it('ett par av vanliga kort med samma titel går också', () => {
     let host = setup({ a: ['blanda', 'blanda'], b: ['regnbage'] }, ['regnbage'])
-    host = settle(play(host, 'a', ['blanda', 'blanda'], { target: 'b' }))
+    host = pick(settle(play(host, 'a', ['blanda', 'blanda'], { target: 'b' })))
     expect(types(host, 'a')).toEqual(['regnbage'])
   })
 
@@ -552,15 +574,38 @@ describe('par, tretal, jokrar och tjänster', () => {
 })
 
 describe('Tantsnaran', () => {
-  it('slår igen vid ett par och ger ägaren två kort från tjuven', () => {
+  it('finns 1 gång med 2–3 spelare, 2 med 4–7 och 3 med 8–10', () => {
+    expect([2, 3, 4, 7, 8, 10].map(trapCount)).toEqual([1, 1, 2, 2, 3, 3])
+  })
+
+  it('slår igen för alla vid ett par, och ägaren väljer två kort ur tjuvens hand utan att se dem', () => {
     let host = setup({ a: ['regnbage', 'regnbage', 'kupong', 'tradgard', 'nadu'], b: ['snara'] }, ['regnbage'])
     const before = host
-    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
-    expect(host.secrets.hands.a).toHaveLength(1)
-    expect(host.secrets.hands.b).toHaveLength(2)
+    host = pick(settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })))
+    // Fällan slår igen, syns för alla och ligger i slänghögen.
+    expect(table(host).lastAction).toMatchObject({ kind: 'trap', player: 'b', from: 'a', card: 'snara' })
     expect(host.secrets.discard.map((card) => card.type)).toContain('snara')
     expect(table(host).log.at(-1)?.text).toContain('Tantsnara!')
+    // Ägaren väljer bland tjuvens kort, med baksidan upp.
+    expect(table(host)).toMatchObject({ step: 'pick', pick: { by: 'b', from: 'a', count: 3, trap: true, left: 2 } })
+    expect(JSON.stringify(myTantView(host.secrets, table(host), 'b'))).not.toMatch(/kupong|tradgard|nadu/)
+    host = pick(host, 0)
+    expect(table(host)).toMatchObject({ step: 'pick', pick: { by: 'b', from: 'a', count: 2, left: 1 } })
+    host = pick(host, 1)
+    expect(table(host)).toMatchObject({ step: 'turn', current: 'a', pick: null })
+    expect(host.secrets.hands.a).toHaveLength(1)
+    expect(host.secrets.hands.b).toHaveLength(2)
     expectSameCount(before, host)
+  })
+
+  it('tjuven ser vilka kort som togs, de andra bara att kort byter hand', () => {
+    let host = setup({ a: ['regnbage', 'regnbage', 'kupong'], b: ['snara'], c: [] }, ['regnbage'])
+    host = pick(pick(settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))))
+    const action = table(host).lastAction!
+    expect(action).toMatchObject({ kind: 'take', player: 'b', from: 'a', card: null })
+    expect(myTantView(host.secrets, table(host), 'a').lost).toEqual({ n: action.n, type: 'kupong', to: 'b' })
+    expect(myTantView(host.secrets, table(host), 'b').drew).toMatchObject({ type: 'kupong', from: 'a' })
+    expect(myTantView(host.secrets, table(host), 'c').drew).toBeNull()
   })
 
   it('slår igen vid ett tretal som ber om den', () => {
@@ -571,6 +616,8 @@ describe('Tantsnaran', () => {
         request: 'snara',
       }),
     )
+    expect(table(host)).toMatchObject({ step: 'pick', pick: { by: 'b', from: 'a', count: 1, left: 1 } })
+    host = pick(host)
     expect(types(host, 'a')).toEqual([])
     expect(types(host, 'b')).toEqual(['fika', 'kupong'])
   })
@@ -583,7 +630,9 @@ describe('Tantsnaran', () => {
     it(`tjuven har ${left} kort kvar: ägaren får ${back}`, () => {
       const extra: CardType[] = ['kupong', 'tradgard'].slice(0, left) as CardType[]
       let host = setup({ a: ['regnbage', 'regnbage', ...extra], b: ['snara'] }, ['regnbage'])
-      host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+      host = pick(settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })))
+      for (let i = 0; i < back; i++) host = pick(host)
+      expect(table(host).step).toBe('turn')
       expect(host.secrets.hands.b).toHaveLength(back)
       expect(host.secrets.hands.a).toHaveLength(left - back)
     })
@@ -591,7 +640,8 @@ describe('Tantsnaran', () => {
 
   it('motstölden utlöser inga nya fällor: en snara hos tjuven blir ett vanligt kort', () => {
     let host = setup({ a: ['regnbage', 'regnbage', 'snara'], b: ['snara'] }, ['regnbage'])
-    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+    host = pick(settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })))
+    host = pick(host)
     expect(types(host, 'b')).toEqual(['snara'])
     expect(host.secrets.discard.filter((card) => card.type === 'snara')).toHaveLength(1)
   })
@@ -677,7 +727,8 @@ describe('hemligheter och dubbla drag', () => {
       for (let step = 0; step < 600 && host.state.phase === 'playing'; step++) {
         const t = table(host)
         const now = step * 10_000
-        if (t.step === 'window') host = tantDeadline(host, host.state.deadline!, host.state.deadline!, rnd)
+        if (t.winner) host = tantDeadline(host, host.state.deadline!, host.state.deadline!, rnd)
+        else if (t.step === 'window') host = tantDeadline(host, host.state.deadline!, host.state.deadline!, rnd)
         else if (t.step === 'place')
           host = tantMove(host, t.current, { type: 'tPlace', position: Math.floor(rnd() * (t.deckCount + 1)) }, null, now, rnd)
         else if (t.step === 'arrange')
@@ -692,13 +743,21 @@ describe('hemligheter och dubbla drag', () => {
             now,
             rnd,
           )
+        else if (t.step === 'pick')
+          host = tantMove(host, t.pick!.by, { type: 'tPick', index: Math.floor(rnd() * t.pick!.count) }, null, now, rnd)
         else if (t.step === 'give')
           host = tantMove(host, t.favor!.from, { type: 'tGive', card: host.secrets.hands[t.favor!.from][0].id }, null, now, rnd)
         else {
           const hand = host.secrets.hands[t.current]
           const action = hand.find((card) => CARDS[card.type].kind === 'action' && card.type !== 'dudar' && card.type !== 'tjanst')
+          // Par med samma kort, mot den första som har kort, så att valet bland baksidorna också körs.
+          const first = hand.find((card) => hand.some((other) => other !== card && other.type === card.type))
+          const second = first && hand.find((other) => other !== first && other.type === first.type)
+          const victim = validTargets(t, t.current, true)[0]
           host =
-            action && rnd() < 0.4
+            first && second && victim && rnd() < 0.3
+              ? tantMove(host, t.current, { type: 'tPlay', cards: [first.id, second.id], target: victim }, null, now, rnd)
+              : action && rnd() < 0.4
               ? tantMove(host, t.current, { type: 'tPlay', cards: [action.id] }, null, now, rnd)
               : tantMove(host, t.current, { type: 'tDraw' }, null, now, rnd)
         }
@@ -717,7 +776,7 @@ describe('händelserna vid bordet', () => {
     host = move(host, 'a', { type: 'tDraw' })
     const action = table(host).lastAction!
     expect(action).toMatchObject({ kind: 'draw', player: 'a', card: null })
-    expect(myTantView(host.secrets, table(host), 'a').drew).toEqual({ n: action.n, type: 'stickning' })
+    expect(myTantView(host.secrets, table(host), 'a').drew).toEqual({ n: action.n, type: 'stickning', id: cardId(host, 'a', 'stickning') })
     expect(myTantView(host.secrets, table(host), 'b').drew).toBeNull()
     expect(JSON.stringify(host.state)).not.toContain('stickning')
   })
@@ -752,5 +811,185 @@ describe('händelserna vid bordet', () => {
     let host = setup({ a: [], b: [] }, Array.from({ length: 40 }, () => 'regnbage' as const))
     for (let i = 0; i < 40; i++) host = move(host, i % 2 === 0 ? 'a' : 'b', { type: 'tDraw' })
     expect(table(host).log).toHaveLength(30)
+  })
+})
+
+describe('par: tjuven väljer bland baksidor', () => {
+  it('ett par som går igenom låter tjuven välja, och inget annat går under tiden', () => {
+    let host = setup({ a: ['regnbage', 'regnbage', 'blanda'], b: ['fika', 'nadu', 'kupong'], c: ['regnbage'] }, ['regnbage'])
+    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+    expect(table(host)).toMatchObject({ step: 'pick', pick: { by: 'a', from: 'b', count: 3 } })
+    expect(myTantView(host.secrets, table(host), 'b').notice?.text).toBe('Spelare 1 väljer ett kort ur din hand…')
+    // Ingen annan kan välja, och tjuven kan inte göra något annat.
+    expect(table(move(host, 'b', { type: 'tPick', index: 0 })).step).toBe('pick')
+    expect(table(move(host, 'a', { type: 'tDraw' })).step).toBe('pick')
+    expect(table(play(host, 'a', ['blanda'])).step).toBe('pick')
+    expect(table(move(host, 'a', { type: 'tPick', index: 3 })).step).toBe('pick')
+    expect(table(move(host, 'a', { type: 'tPick', index: -1 })).step).toBe('pick')
+  })
+
+  it('tjuven får kortet på platsen den valde', () => {
+    let host = setup({ a: ['regnbage', 'regnbage'], b: ['fika', 'nadu', 'kupong'] }, ['regnbage'])
+    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+    const before = host
+    const chosen = host.secrets.pickOrder![2]
+    const type = host.secrets.hands.b.find((card) => card.id === chosen)!.type
+    host = pick(host, 2)
+    expect(types(host, 'a')).toEqual([type])
+    expect(host.secrets.hands.b.map((card) => card.id)).not.toContain(chosen)
+    expect(table(host)).toMatchObject({ step: 'turn', current: 'a', pick: null })
+    expect(myTantView(host.secrets, table(host), 'b').notice?.text).toMatch(/^Spelare 1 tog .+ från dig.$/)
+    expectSameCount(before, host)
+  })
+
+  it('inget om målets kort syns innan valet, bara antalet', () => {
+    let host = setup({ a: ['regnbage', 'regnbage'], b: ['fika', 'nadu', 'kupong'] }, ['regnbage'])
+    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+    const state = JSON.stringify(host.state)
+    const view = JSON.stringify(myTantView(host.secrets, table(host), 'a'))
+    for (const card of host.secrets.hands.b) {
+      expect(state).not.toContain(card.id)
+      expect(view).not.toContain(card.id)
+      expect(view).not.toContain(card.type)
+    }
+  })
+
+  it('ordningen blandas om varje gång', () => {
+    const orders = new Set<string>()
+    for (let seed = 1; seed <= 12; seed++) {
+      const host = setup({ a: ['regnbage', 'regnbage'], b: ['fika', 'nadu', 'kupong', 'blanda'] }, ['regnbage'])
+      const played = play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })
+      const done = tantDeadline(played, played.state.deadline!, played.state.deadline!, seeded(seed))
+      const hand = done.secrets.hands.b.map((card) => card.id)
+      expect([...done.secrets.pickOrder!].sort()).toEqual([...hand].sort())
+      orders.add(done.secrets.pickOrder!.join())
+    }
+    expect(orders.size).toBeGreaterThan(3)
+  })
+
+  it('ett stoppat par ger inget val', () => {
+    let host = setup({ a: ['regnbage', 'regnbage'], b: ['nadu', 'kupong'] }, ['regnbage'])
+    host = play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })
+    host = settle(move(host, 'b', { type: 'tNope', card: cardId(host, 'b', 'nadu'), level: 0 }))
+    expect(table(host)).toMatchObject({ step: 'turn', pick: null })
+    expect(types(host, 'b')).toEqual(['kupong'])
+  })
+
+  it('draget tPick går igenom kontrollen', () => {
+    expect(parseMove({ id: 'a', nr: 'x', move: { type: 'tPick', index: 2 } })?.move).toEqual({ type: 'tPick', index: 2 })
+    expect(parseMove({ id: 'a', nr: 'x', move: { type: 'tPick', index: 'två' } })).toBeNull()
+  })
+})
+
+describe('svårigheten', () => {
+  const levels: TantLevel[] = ['normal', 'svar', 'kaos']
+  for (let players = 2; players <= 10; players++) {
+    for (const level of levels) {
+      it(`${players} spelare, ${level}`, () => {
+        const ids = Array.from({ length: players }, (_, i) => `p${i}`)
+        const { deck } = dealTant(ids, true, seeded(players), level)
+        // Kaos med färre än fem spelare blir Svår.
+        const extra = level === 'normal' ? 0 : level === 'svar' || players < 5 ? 1 : 2
+        expect(deck.filter((card) => card.type === 'tant')).toHaveLength(players - 1 + extra)
+        expect(bombCount(players, level)).toBe(players - 1 + extra)
+      })
+    }
+  }
+
+  it('Kaos kräver minst fem spelare, annars blir det Svår', () => {
+    expect(levelFor('kaos', 4)).toBe('svar')
+    expect(levelFor('kaos', 5)).toBe('kaos')
+    expect(levelFor(undefined, 3)).toBe('normal')
+  })
+
+  it('värden väljer i väntrummet, och valet låses när matchen startar', () => {
+    let state = setTantSettings(initialState('tantpanik'), { level: 'svar' })
+    expect(state.tantSettings).toEqual({ trap: true, level: 'svar' })
+    state = setTantSettings(state, { trap: false })
+    expect(state.tantSettings).toEqual({ trap: false, level: 'svar' })
+    const host = startTantMatch(lobby(4, true, 'svar'), seeded(2))
+    expect(table(host).level).toBe('svar')
+    expect(host.secrets.deck.filter((card) => card.type === 'tant')).toHaveLength(4)
+    expect(setTantSettings(host.state, { level: 'normal' })).toBe(host.state)
+  })
+
+  it('statusraden räknar tanterna i högen', () => {
+    let host = setup({ a: [], b: ['fika'], c: [] }, ['tant', 'regnbage', 'tant'])
+    host = { ...host, state: { ...host.state, tantpanik: { ...table(host), level: 'svar' } } }
+    expect(levelLine(table(host))).toBe('Svår: 3 tanter i högen')
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(table(host).out).toEqual(['a'])
+    expect(bombsInDeck(table(host))).toBe(2)
+    expect(levelLine({ ...table(host), level: undefined })).toBe('Normal: 1 tant i högen')
+  })
+
+  it('en värd med en äldre version utan svårighet går igenom kontrollen', () => {
+    const host = startTantMatch(lobby(3), seeded(1))
+    const { level: _level, pick: _pick, ...older } = table(host)
+    const message = { state: { ...host.state, tantpanik: older, tantSettings: { trap: true } }, from: 'p1', sentAt: 1 }
+    expect(parseStateMessage(message)).not.toBeNull()
+    const bad = { state: { ...host.state, tantSettings: { trap: true, level: 'omöjlig' } }, from: 'p1', sentAt: 1 }
+    expect(parseStateMessage(bad)).toBeNull()
+  })
+})
+
+describe('Nope!-fönstret', () => {
+  it('varar i sex sekunder', () => {
+    expect(NOPE_SECONDS).toBe(6)
+    const host = play(setup({ a: ['blanda'], b: [] }, ['regnbage']), 'a', ['blanda'])
+    expect(host.state.deadline).toBe(1000 + 6000)
+  })
+})
+
+describe('kort som byter hand', () => {
+  it('en stöld visar alla att ett kort tas, men bara tjuven och den bestulna ser vilket', () => {
+    let host = setup({ a: ['regnbage', 'regnbage'], b: ['blanda'], c: [] }, ['regnbage'])
+    host = pick(settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' })))
+    const action = table(host).lastAction!
+    expect(action).toMatchObject({ kind: 'take', player: 'a', from: 'b', card: null })
+    expect(myTantView(host.secrets, table(host), 'a').drew).toMatchObject({ n: action.n, type: 'blanda', from: 'b', gift: false })
+    expect(myTantView(host.secrets, table(host), 'b').lost).toEqual({ n: action.n, type: 'blanda', to: 'a' })
+    expect(myTantView(host.secrets, table(host), 'c').drew).toBeNull()
+    expect(JSON.stringify(host.state)).not.toContain('blanda')
+  })
+
+  it('en tjänst syns som en gåva hos den som bad om den', () => {
+    let host = setup({ a: ['tjanst'], b: ['blanda'] }, ['regnbage'])
+    host = settle(play(host, 'a', ['tjanst'], { target: 'b' }))
+    host = move(host, 'b', { type: 'tGive', card: cardId(host, 'b', 'blanda') })
+    expect(myTantView(host.secrets, table(host), 'a').drew).toMatchObject({ type: 'blanda', from: 'b', gift: true })
+  })
+})
+
+describe('slutet av matchen', () => {
+  it('ett tryck hoppar vidare till slutskärmen, men bara för den som var med', () => {
+    let host = setup({ a: [], b: ['fika'] }, ['tant'])
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(tantMove(host, 'x', { type: 'tFinish' }, null, 2000, random).state.phase).toBe('playing')
+    host = tantMove(host, 'a', { type: 'tFinish' }, null, 2000, random)
+    expect(host.state.phase).toBe('finished')
+    expect(host.state.scores).toEqual({ a: 1, b: 2 })
+  })
+
+  it('tFinish går igenom kontrollen', () => {
+    expect(parseMove({ id: 'a', nr: 'x', move: { type: 'tFinish' } })?.move).toEqual({ type: 'tFinish' })
+  })
+})
+
+describe('prispallen', () => {
+  it('säger Sist kvar! och i vilken ordning de andra exploderade', () => {
+    expect(tantPlacementText(4, 4)).toBe('Sist kvar!')
+    expect(tantPlacementText(1, 4)).toBe('Exploderade som 1:a')
+    expect(tantPlacementText(2, 4)).toBe('Exploderade som 2:a')
+    expect(tantPlacementText(3, 4)).toBe('Exploderade som 3:e')
+  })
+})
+
+describe('statusraden medan tanten göms', () => {
+  it('räknar tanten som göms, så att det aldrig står 0 tanter i högen', () => {
+    let host = setup({ a: ['fika'], b: [] }, ['tant', 'regnbage'])
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(table(host).step).toBe('place')
+    expect(levelLine(table(host))).toBe('Normal: 1 tant i högen')
   })
 })

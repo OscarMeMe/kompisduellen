@@ -48,7 +48,7 @@ export type CardDef = {
 // Tantkorten har samma text. Regnbågstanten och Kupongtanten har den på sina bilder.
 const COLLECT_TEXT = 'Kan inte spelas ensamt. Spela två lika och stjäl ett slumpat kort från en annan spelare.'
 const COLLECT_RULE =
-  'Gör inget ensam. Två lika (eller en med en Vild tant): ta ett slumpat kort från någon. Tre lika: be om ett visst kort.'
+  'Gör inget ensam. Två lika (eller en med en Vild tant): välj ett av någons kort med baksidan upp. Tre lika: be om ett visst kort.'
 
 export const CARDS: Record<CardType, CardDef> = {
   tant: {
@@ -218,7 +218,8 @@ export const CARDS: Record<CardType, CardDef> = {
     type: 'snara',
     name: 'Tantsnara',
     symbol: '🪤',
-    text: 'Stjäl någon det här kortet från dig slår fällan igen. Du får två slumpade kort från tjuven, och fällan slängs.',
+    text: 'Stjäl någon det här kortet från dig slår fällan igen. Du väljer två kort ur tjuvens hand, med baksidan upp, och fällan slängs.',
+    rule: 'Gör inget ensam. Stjäl någon den med ett par eller tretal slår fällan igen för alla att se, och du väljer två kort ur tjuvens hand (färre om tjuven har färre) utan att se vad de är. Fällan läggs i slänghögen. En tjänst utlöser den inte.',
     kind: 'trap',
     color: 'bg-mint-soft',
   },
@@ -234,7 +235,7 @@ export function cardName(type: CardType): string {
 }
 
 // Två kortgrupper. Med 2–3 spelare används den lilla, med 4–7 den stora och med 8–10 båda. Exploderande tanter läggs
-// till separat (en färre än antalet spelare), och Tantsnaran också (TRAP_COUNT), så de finns inte här.
+// till separat (en färre än antalet spelare), och Tantsnaran också (trapCount), så de finns inte här.
 export type DeckGroup = 'liten' | 'stor'
 
 export const DECK: Record<DeckGroup, Partial<Record<CardType, number>>> = {
@@ -279,11 +280,14 @@ export const DECK: Record<DeckGroup, Partial<Record<CardType, number>>> = {
 // Antal exploderande tanter som finns totalt. En färre än antalet spelare läggs i högen.
 export const BOMBS_TOTAL = 9
 // Tantsnaror som läggs i leken när fällan är påslagen, i alla spelarantal.
-export const TRAP_COUNT = 2
+// Tantsnaror i leken: 1 med 2–3 spelare, 2 med 4–7 och 3 med 8–10.
+export function trapCount(players: number): number {
+  return players <= 3 ? 1 : players <= 7 ? 2 : 3
+}
 // Korten man har på handen från början, utöver sitt Desarmera-kort.
 export const START_CARDS = 7
 // Hur länge (s) ett kort kan stoppas med Nä du! innan det händer. Varje Nä du! börjar om tiden.
-export const NOPE_SECONDS = 5
+export const NOPE_SECONDS = 6
 
 export function groupsFor(players: number): DeckGroup[] {
   if (players <= 3) return ['liten']
