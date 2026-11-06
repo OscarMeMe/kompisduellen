@@ -1,5 +1,6 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
+import { flyToGap } from '@/components/kort/flyga'
 import { Solfjader } from '@/components/kort/Solfjader'
 import { PromptCard } from '@/components/kort/PlayingCard'
 import { Center, Middle } from '@/components/kortkaos/Kortbord'
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { hasFinePointer } from '@/lib/device'
 import { cleanBlank, type CardMove, type MyHand, type Pick } from '@/lib/kort'
 import { kortkaosRules } from '@/lib/kortkaos'
+import { cn } from '@/lib/utils'
 
 type ChoosingStepProps = {
   prompt: string
@@ -22,13 +24,17 @@ type ChoosingStepProps = {
 }
 
 // Välj kort: varje val skickas direkt till värden, så att det räknas även utan Spela kortet.
-// Valet går att byta tills man trycker på Spela kortet eller tiden tar slut. Det valda kortet syns i frågans lucka.
+// Valet går att byta tills man trycker på Spela kortet eller tiden tar slut. Det valda kortet glider upp och syns i
+// frågans lucka. På dator går kortet också att dra upp till frågekortet.
 export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingStepProps) {
   // Mitt senaste val, innan värden hunnit bekräfta det i handen.
   const [picked, setPicked] = useState<Pick | null>(null)
   const [sentDone, setSentDone] = useState(false)
   const [writing, setWriting] = useState(false)
   const gapRef = useRef<HTMLElement>(null)
+  const promptRef = useRef<HTMLDivElement>(null)
+  // Ett kort dras och släpps det nu hamnar det i luckan.
+  const [dropReady, setDropReady] = useState(false)
   const current = picked ?? hand.pick
   const locked = done || sentDone
   const preview = current && (current.kind === 'card' ? kortkaosRules.answerText(current.card) : current.text)
@@ -41,10 +47,11 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
     onMove({ type: 'pick', pick })
   }
 
-  function select(key: string) {
+  function select(key: string, el: HTMLElement) {
     if (locked) return
-    if (key === BLANK_KEY) setWriting(true)
-    else choose({ kind: 'card', card: key })
+    if (key === BLANK_KEY) return setWriting(true)
+    if (current?.kind !== 'card' || current.card !== key) flyToGap(el, gapRef.current)
+    choose({ kind: 'card', card: key })
   }
 
   function finish() {
@@ -56,14 +63,14 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
 
   return (
     <Middle>
-      <Center>
+      <Center ref={promptRef}>
         <PromptCard
           prompt={prompt}
           answer={preview ?? undefined}
           gapRef={gapRef}
           footer={footer}
           stamp={locked ? 'Spelat' : undefined}
-          className="lg:w-full lg:max-w-2xl"
+          className={cn('lg:w-full lg:max-w-2xl lg:transition-shadow', dropReady && 'ring-4 ring-sun')}
         />
       </Center>
 
@@ -96,7 +103,15 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
             </p>
           ) : (
             <div className="relative">
-              <Solfjader label="Din hand" cards={cards} selected={selectedKey} onSelect={select} shortcuts />
+              <Solfjader
+                label="Din hand"
+                cards={cards}
+                selected={selectedKey}
+                onSelect={select}
+                shortcuts
+                dropTarget={promptRef}
+                onDropReady={setDropReady}
+              />
               {writing && (
                 <BlankCardForm
                   initial={current?.kind === 'blank' ? current.text : ''}

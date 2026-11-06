@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { cn } from '@/lib/utils'
 
 // Kortkaos spelbord: en mörk, petroleumgrön yta med en ljusare kant, sajtens prickmönster och lite mörkare hörn.
@@ -25,7 +25,7 @@ export function Middle({ children, className }: { children: ReactNode; className
   return <div className={cn('flex flex-col gap-4 lg:min-h-0 lg:flex-1 lg:gap-3', className)}>{children}</div>
 }
 
-// Frågekortet mitt på bordet.
-export function Center({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('lg:flex lg:flex-1 lg:items-center lg:justify-center', className)}>{children}</div>
+// Frågekortet mitt på bordet. ref = ytan dit ett kort kan dras.
+export function Center({ children, className, ref }: { children: ReactNode; className?: string; ref?: Ref<HTMLDivElement> }) {
+  return <div ref={ref} className={cn('lg:flex lg:flex-1 lg:items-center lg:justify-center', className)}>{children}</div>
 }
