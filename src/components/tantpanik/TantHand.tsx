@@ -77,36 +77,39 @@ export function TantHand({
           <section
             aria-label="Valda kort"
             {...SPLAT_SHIELD}
-            className="fixed inset-x-0 bottom-[calc(10rem+env(safe-area-inset-bottom))] z-40 mx-auto max-h-[calc(100dvh-11rem)] w-full max-w-md overflow-y-auto px-3"
+            className="fixed inset-x-0 bottom-[calc(10rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-3"
           >
-            <div className="space-y-3 rounded-lg bg-card p-3 shadow-lift">
-              <div className="flex justify-center gap-2">
+            {/* Kortbilden överst skrollar när rutan inte räcker till. Valen och knappen längst ner syns alltid. */}
+            <div className="flex max-h-[calc(100dvh-11rem)] flex-col gap-3 rounded-lg bg-card p-3 shadow-lift">
+              <div className="flex min-h-0 shrink items-start justify-center gap-2 overflow-x-hidden overflow-y-auto">
                 {chosen.map((card) => (
                   // Ett kort visas förstorat, så att bildens regeltext går att läsa. Par och tretal står bredvid varandra.
                   <TantKort
                     key={card.id}
                     type={card.type}
                     size={chosen.length === 1 ? 'zoom' : 'large'}
-                    className={cn('motion-safe:animate-pop', chosen.length === 3 && 'w-24 sm:w-28')}
+                    className={cn('motion-safe:animate-pop', chosen.length === 3 && 'w-20 sm:w-28')}
                   />
                 ))}
               </div>
-              <Choice
-                state={state}
-                table={table}
-                meId={meId}
-                types={types}
-                giving={giving}
-                myTurn={myTurn}
-                nopeLevel={pending && chosen.length === 1 && types[0] === 'nadu' && nope ? pending.nopes : null}
-                target={target}
-                request={request}
-                onTarget={setTarget}
-                onRequest={setRequest}
-                onPlay={() => send({ type: 'tPlay', cards: chosen.map((card) => card.id), target, request })}
-                onGive={() => send({ type: 'tGive', card: chosen[0].id })}
-                onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level })}
-              />
+              <div className="flex shrink-0 flex-col">
+                <Choice
+                  state={state}
+                  table={table}
+                  meId={meId}
+                  types={types}
+                  giving={giving}
+                  myTurn={myTurn}
+                  nopeLevel={pending && chosen.length === 1 && types[0] === 'nadu' && nope ? pending.nopes : null}
+                  target={target}
+                  request={request}
+                  onTarget={setTarget}
+                  onRequest={setRequest}
+                  onPlay={() => send({ type: 'tPlay', cards: chosen.map((card) => card.id), target, request })}
+                  onGive={() => send({ type: 'tGive', card: chosen[0].id })}
+                  onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level })}
+                />
+              </div>
             </div>
           </section>
         </>
@@ -262,55 +265,58 @@ function Choice({
 
   return (
     <div className="space-y-3">
-      {combo && (
-        <p className="text-center text-sm font-semibold">
-          {triple ? 'Be en spelare om ett visst kort. Har den det får du det.' : 'Ta ett slumpat kort från en spelare.'}
-        </p>
-      )}
-      {wantsTarget &&
-        (targets.length === 0 ? (
-          <p className="text-center text-sm font-semibold text-primary">Ingen går att välja just nu.</p>
-        ) : (
+      {/* Valen skrollar för sig om de är många (tretalets kort), så att knappen nedanför alltid syns. */}
+      <div className="max-h-[38dvh] space-y-3 overflow-y-auto">
+        {combo && (
+          <p className="text-center text-sm font-semibold">
+            {triple ? 'Be en spelare om ett visst kort. Har den det får du det.' : 'Ta ett slumpat kort från en spelare.'}
+          </p>
+        )}
+        {wantsTarget &&
+          (targets.length === 0 ? (
+            <p className="text-center text-sm font-semibold text-primary">Ingen går att välja just nu.</p>
+          ) : (
+            <div className="space-y-1.5">
+              <p className="text-sm font-bold">
+                {combo ? 'Från vem?' : types[0] === 'tjanst' ? 'Vem ska ge dig ett kort?' : 'Vem får turerna?'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {targets.map((id) => (
+                  <Button
+                    key={id}
+                    variant="outline"
+                    aria-pressed={target === id}
+                    className={cn(target === id && 'border-primary bg-coral-soft')}
+                    onClick={() => onTarget(id)}
+                  >
+                    <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-xl" />
+                    {state.players[id]?.name}
+                    <span className="text-xs font-normal text-muted-foreground">{table.handCounts[id]} kort</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ))}
+        {triple && (
           <div className="space-y-1.5">
-            <p className="text-sm font-bold">
-              {combo ? 'Från vem?' : types[0] === 'tjanst' ? 'Vem ska ge dig ett kort?' : 'Vem får turerna?'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {targets.map((id) => (
+            <p className="text-sm font-bold">Vilket kort ber du om?</p>
+            <div className="flex flex-wrap gap-1.5">
+              {REQUESTABLE.map((type) => (
                 <Button
-                  key={id}
+                  key={type}
                   variant="outline"
-                  aria-pressed={target === id}
-                  className={cn(target === id && 'border-primary bg-coral-soft')}
-                  onClick={() => onTarget(id)}
+                  aria-pressed={request === type}
+                  className={cn(request === type && 'border-primary bg-coral-soft')}
+                  onClick={() => onRequest(type)}
                 >
-                  <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-xl" />
-                  {state.players[id]?.name}
-                  <span className="text-xs font-normal text-muted-foreground">{table.handCounts[id]} kort</span>
+                  <span aria-hidden>{CARDS[type].symbol}</span>
+                  {cardName(type)}
                 </Button>
               ))}
             </div>
           </div>
-        ))}
-      {triple && (
-        <div className="space-y-1.5">
-          <p className="text-sm font-bold">Vilket kort ber du om?</p>
-          <div className="flex flex-wrap gap-1.5">
-            {REQUESTABLE.map((type) => (
-              <Button
-                key={type}
-                variant="outline"
-                aria-pressed={request === type}
-                className={cn(request === type && 'border-primary bg-coral-soft')}
-                onClick={() => onRequest(type)}
-              >
-                <span aria-hidden>{CARDS[type].symbol}</span>
-                {cardName(type)}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
       <Button size="lg" className="w-full" disabled={!ready} onClick={onPlay}>
         {label}
       </Button>
