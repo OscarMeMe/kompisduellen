@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Lock } from 'lucide-react'
 import { GuessStatusList } from '@/components/lobby/GuessStatusList'
-import { SPLAT_SHIELD } from '@/lib/splatt'
+import { AnswerDock } from '@/components/lobby/AnswerDock'
 import { WaitingStanding } from '@/components/lobby/WaitingStanding'
 import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
 import { SendStatus } from '@/components/lobby/SendStatus'
@@ -50,8 +50,9 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
         </p>
       )}
 
-      {/* Svarsdelen. En splatt från ett kast täcker den aldrig. */}
-      <div {...SPLAT_SHIELD} className="rounded-lg border bg-card p-6 shadow-soft sm:p-8">
+      {/* Svarsdelen med tiden kvar ovanför, som i Gissa priset. På mobil ligger den fast i nederkant, så att tiden och
+          Lås svaret alltid syns. En splatt från ett kast täcker den aldrig. */}
+      <AnswerDock state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} warning={warning}>
         {!inGame ? (
           <p className="py-8 text-center font-semibold text-muted-foreground">Du är med från nästa match. Häng kvar!</p>
         ) : locked !== null ? (
@@ -64,7 +65,7 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
             <WaitingStanding text={waitingStanding(state, me.id)} />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <h1 className="text-center text-2xl">
               Vilket tal mellan {MIN_NUMBER} och {MAX_NUMBER}?
             </h1>
@@ -134,9 +135,9 @@ export function GuessingView({ state, me, online, clockOffset, onGuess }: Guessi
             </Button>
           </form>
         )}
-      </div>
+      </AnswerDock>
 
-      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} warning={warning} />
+      <GuessStatusList state={state} online={online} clockOffset={clockOffset} meId={me.id} locked={locked} hideLine />
     </Wide>
   )
 }
