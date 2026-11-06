@@ -43,7 +43,8 @@ export const CARDS: Record<CardType, CardDef> = {
     symbol: '💥',
     text: 'Visas direkt när du drar det. Har du en Fikapaus gömmer du tanten i högen igen. Annars är du ute.',
     kind: 'bomb',
-    color: 'bg-destructive text-primary-foreground',
+    // Svart kort, som kortbilden: en arg tant i röd kavaj som pekar på dig.
+    color: 'bg-foreground text-card',
   },
   fika: {
     type: 'fika',
