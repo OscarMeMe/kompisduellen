@@ -28,9 +28,9 @@ const ARC = 0.05
 export const ROW_OFFSET = 0.34
 // Plats ovanför korten (ingen: ett lyft kort sticker upp över bordet), och under dem, så att inget skärs av.
 export const FAN_TOP = 0
-export const FAN_BOTTOM = 10
+export const FAN_BOTTOM = 18
 // Så mycket av korten (andel av höjden) som ligger över bordets nederkant.
-export const TABLE_OVERLAP = 0.3
+export const TABLE_OVERLAP = 0.42
 
 // Hur breda korten är i en hand som är width bred, på en skärm som är screenHeight hög.
 export function handCardWidth(width: number, screenHeight: number): number {

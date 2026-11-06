@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { ArrowDownUp } from 'lucide-react'
 import { Solfjader } from '@/components/tantpanik/Solfjader'
 import type { Incoming } from '@/components/tantpanik/TantAnimationer'
 import { TantKort } from '@/components/tantpanik/TantKort'
@@ -204,12 +205,15 @@ export function TantHand({
           <>
             {/* Ordnar handen som förut: likadana kort bredvid varandra. */}
             {cards.length > 1 && (
+              // En liten ikon i vänstra kanten, ovanför handen, så att den aldrig ligger över korten.
               <button
                 type="button"
+                aria-label="Sortera handen"
+                title="Sortera handen"
                 onClick={() => setOrder(sortHand(hand).map((card) => card.id))}
-                className="absolute left-3 bottom-full z-50 mb-1 rounded-full bg-card/90 px-3 py-1.5 text-xs font-bold shadow-soft-sm hover:bg-card md:text-sm"
+                className="absolute bottom-full left-1 z-50 mb-1 flex size-9 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm hover:bg-card"
               >
-                Sortera
+                <ArrowDownUp aria-hidden className="size-4" />
               </button>
             )}
             <Solfjader

@@ -54,7 +54,7 @@ export function Solfjader({
   onReorder: (ids: string[]) => void
   // Hur mycket handen ligger över bordets nederkant (px), så att bordet kan lämna plats för den.
   onOverlap?: (px: number) => void
-  // Inte min tur: handen är lätt dämpad och ligger lite lägre, och åker upp mjukt när det blir min tur.
+  // Inte min tur: handen är svagt dämpad och tänds upp mjukt när det blir min tur.
   dimmed?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -202,7 +202,8 @@ export function Solfjader({
       ref={ref}
       className={cn(
         'relative mx-auto w-full max-w-6xl touch-none select-none transition-[filter] duration-400 motion-safe:transition-[filter,translate]',
-        handDimmed && 'translate-y-[12%] brightness-[0.82] saturate-[0.7]',
+        // Bara en svag dämpning, så att korten ser normala ut.
+        handDimmed && 'brightness-[0.88] saturate-[0.85]',
       )}
       style={{ height: layout.height, marginTop: -overlap }}
       onPointerDown={down}

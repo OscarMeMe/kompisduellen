@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronRight, ChevronUp, CircleHelp, Menu } from 'lucide-react'
+import { CircleHelp, Menu, ScrollText } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import type { TantViewProps } from '@/components/lobby/types'
@@ -18,7 +18,7 @@ import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import { levelLine, waitingFor, type TantEvent, type TantTable } from '@/lib/tantpanik'
+import { bombsInDeck, waitingFor, type TantEvent, type TantTable } from '@/lib/tantpanik'
 import { cn } from '@/lib/utils'
 
 // Hur länge ett besked syns innan det försvinner (ms).
@@ -58,6 +58,12 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   const [bombShowing, setBombShowing] = useState(false)
   // När Nope!-fönstret stängs syns en kort stämpel (KÖR! eller STOPPAT!), så att man förstår att det är över.
   const verdict = useNopeVerdict(table)
+  // Det som händer vid bordet, en pratbubbla i taget. Det som redan syns på annat sätt (Nope!-fönstret, explosioner,
+  // väntebesked och popuper) hoppas över.
+  const quiet =
+    !!table &&
+    ((table.step === 'window' && table.pending !== null) || bombShowing || table.step === 'pick' || table.step === 'give' || table.step === 'place' || table.step === 'arrange')
+  const bubble = useEventBubbles(table?.log ?? [], quiet)
   // Bakgrundsmusiken: volymen sparas för sig, och "Stäng av allt" (ljudet av) stänger av den också.
   const [musicVolume, setMusicVolume] = useState(loadMusicVolume)
   const soundReactions = useReactions()
@@ -65,6 +71,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   const playing = !!table && state.phase === 'playing' && table.order.includes(me.id)
   const musicWanted = playing && soundOn && musicVolume > 0
   useEffect(() => {
+    tantMusic.setLevel('match')
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])
   useEffect(() => () => tantMusic.setWanted(false), [])
@@ -178,13 +185,17 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
     <div
       ref={rootRef}
       data-spel="tantpanik"
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-room pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      // Mönstret från väntrummet bakom hela matchen. Högarna och handen ligger direkt på det.
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      style={{ backgroundImage: `url(${TANT_PATTERN})`, backgroundSize: '512px 512px' }}
     >
       <StatusBar
         state={state}
         table={table}
         meId={me.id}
         bombShowing={bombShowing}
+        canNope={canNope}
+        history={<HistoryButton table={table} onOpen={() => setHistory(true)} />}
         sound={
           <SoundControl
             soundOn={soundOn}
@@ -196,18 +207,12 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         onRules={() => setRules(true)} onMenu={() => setMenu(true)} />
       <Opponents state={state} table={table} meId={me.id} />
 
-      {/* Medan ett kort väntar på Nope! står allt om det i mitten av bordet, inte här också. */}
-      <LogLine table={table} hidden={nopeOpen || bombShowing || activity !== null} onOpen={() => setHistory(true)} />
 
       {/* Bordet i mitten: högarna, och ovanpå dem det som väntar eller pågår. */}
       <section
         aria-label="Bordet"
-        // Ett kortbord: filt med träkant, som Imposterjaktens bord.
-        // Inte min tur: bordet är lätt dämpat, och tänds upp mjukt när det blir min tur.
-        className={cn(
-          'relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-[1.75rem] border-[7px] border-wood bg-felt p-2 shadow-[inset_0_2px_14px_rgb(0_0_0/0.15)] ring-2 ring-wood-edge transition-[filter] duration-400',
-          dimmed && 'brightness-[0.82] saturate-[0.7]',
-        )}
+        // Högarna ligger direkt på mönstret och dämpas aldrig. Vems tur det är syns på statusraden och spelaren överst.
+        className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-2"
       >
         {/* Högarna växer och fyller bordet när det finns plats. */}
         <div ref={pileRef} className="flex min-h-0 w-full flex-1 items-center justify-center" style={{ paddingBottom: handOverlap }}>
@@ -237,6 +242,12 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
             <p role="alert" className="rounded-lg bg-card px-3 py-3 text-center font-semibold text-destructive shadow-lift">
               {table.error}
             </p>
+          </div>
+        )}
+        {/* Det senaste som hänt, som en pratbubbla vid högarna. En i taget. */}
+        {bubble && !nopeOpen && !bombShowing && !popup && (
+          <div className="pointer-events-none absolute inset-x-2 top-1 z-20 flex justify-center">
+            <EventBubble key={bubble.n} event={bubble} state={state} />
           </div>
         )}
         {/* Någon väljer ett kort (Tjänst, par): etiketten överst på bordet, nära spelarnas platser. */}
@@ -279,6 +290,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         />
       )}
       <TurnBanner state={state} table={table} meId={me.id} />
+      <DealIntro state={state} table={table} meId={me.id} />
       {nopeOpen && (
         // Det spelade kortet stort mellan statusraden och handen, så att det syns även när handen tar mycket plats på en
         // telefon. Rutan tar inga tryck, så att Nope!-knappen och korten i handen går att trycka på.
@@ -643,6 +655,8 @@ function StatusBar({
   onRules,
   onMenu,
   bombShowing,
+  canNope,
+  history,
   sound,
 }: {
   state: GameState
@@ -650,67 +664,120 @@ function StatusBar({
   meId: string
   // Under den sista explosionen avslöjas inte vinnaren än.
   bombShowing: boolean
+  canNope: boolean
+  // Knappen med historiken.
+  history: ReactNode
   // Högtalarikonen med volymen för ljudeffekter och musik.
   sound: ReactNode
   onRules: () => void
   onMenu: () => void
 }) {
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
-  const turns = table.turnsLeft > 1 ? `${table.turnsLeft} turer kvar` : null
-  let text: string
-  let extra: string | null = null
-  let mine = false
-  if (table.winner) text = bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`
-  else if (table.out.includes(meId)) text = 'Du är ute'
-  else if (table.step === 'pick') {
-    mine = table.pick?.by === meId
-    text = mine ? 'Välj ett kort!' : table.pick?.from === meId ? `${name(table.pick.by)} tar ett kort från dig` : `${name(table.pick!.by)} tar ett kort…`
-  }
-  else if (table.step === 'give') {
-    mine = table.favor?.from === meId
-    text = mine ? `Ge ett kort till ${name(table.favor!.to)}` : 'Väntar på en tjänst…'
-  } else if (table.current === meId) {
-    mine = true
-    text = table.step === 'place' ? 'Göm tanten!' : table.step === 'arrange' ? 'Ordna korten' : 'Din tur!'
-    extra = table.step === 'turn' ? turns : null
-  } else {
-    text = `${name(table.current)}s tur`
-    extra = turns
-  }
+  const status = statusText(table, meId, name, bombShowing, canNope)
   return (
-    <div className="flex h-16 shrink-0 items-center gap-2 px-2 lg:h-20">
+    <div className="flex shrink-0 items-center gap-1.5 px-2 py-1.5 lg:gap-2 lg:py-2">
       <button
         type="button"
         aria-label="Så spelas det"
         onClick={onRules}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card shadow-soft-sm"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm"
       >
         <CircleHelp aria-hidden className="size-5" />
       </button>
-      <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
-        <p
-          role="status"
-          className={cn(
-            'w-full truncate rounded-full px-3 py-1 text-center font-heading text-xl leading-tight font-bold lg:text-3xl',
-            mine ? 'bg-primary-button text-primary-foreground shadow-primary' : 'bg-card shadow-soft-sm',
-          )}
-        >
-          {text}
-          {extra && <span className="ml-2 text-sm font-semibold opacity-90 lg:text-lg">{extra}</span>}
-        </p>
-        {/* Svårigheten och hur många tanter som ligger kvar i högen. */}
-        <p className="text-xs leading-none font-semibold text-foreground/75 tabular-nums lg:text-sm">{levelLine(table)}</p>
-      </div>
+      {/* Vad jag ska göra just nu. Korallröd när det är något jag ska göra. */}
+      <p
+        role="status"
+        className={cn(
+          'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-3xl px-3 py-1 text-center font-heading text-base leading-tight font-bold text-balance backdrop-blur-sm sm:text-lg lg:text-2xl',
+          status.mine ? 'bg-primary-button text-primary-foreground shadow-primary' : 'bg-card/90 shadow-soft-sm',
+        )}
+      >
+        {status.waitingFor && (
+          <LobbyFigur playerId={status.waitingFor} avatar={state.players[status.waitingFor]?.avatar ?? ''} className="shrink-0 text-2xl lg:text-3xl" />
+        )}
+        <span className="min-w-0">
+          {status.text}
+          {status.waitingFor && <Dots />}
+        </span>
+      </p>
+      {history}
       {sound}
       <button
         type="button"
         aria-label="Meny"
         onClick={onMenu}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card shadow-soft-sm"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm"
       >
         <Menu aria-hidden className="size-5" />
       </button>
     </div>
+  )
+}
+
+// Statusradens text: vad jag ska göra, eller vem vi väntar på (waitingFor visar figuren och punkter som hoppar).
+function statusText(
+  table: TantTable,
+  meId: string,
+  name: (id: string) => string,
+  bombShowing: boolean,
+  canNope: boolean,
+): { text: string; mine: boolean; waitingFor: string | null } {
+  const turns = table.turnsLeft > 1 ? ` (${table.turnsLeft} turer kvar)` : ''
+  if (table.winner) return { text: bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`, mine: false, waitingFor: null }
+  if (table.out.includes(meId)) return { text: 'Du är ute. Följ resten av matchen', mine: false, waitingFor: null }
+  if (table.step === 'window') {
+    if (canNope) return { text: 'Säg Nope! om du vill stoppa kortet', mine: true, waitingFor: null }
+    return { text: 'Någon kan säga Nope!', mine: false, waitingFor: null }
+  }
+  if (table.step === 'pick' && table.pick) {
+    if (table.pick.by === meId) return { text: `Välj ett kort ur ${name(table.pick.from)}s hand`, mine: true, waitingFor: null }
+    return { text: `${name(table.pick.by)} väljer ett kort`, mine: false, waitingFor: table.pick.by }
+  }
+  if (table.step === 'give' && table.favor) {
+    if (table.favor.from === meId) return { text: `Välj ett kort att ge ${name(table.favor.to)}`, mine: true, waitingFor: null }
+    return { text: `${name(table.favor.from)} väljer ett kort`, mine: false, waitingFor: table.favor.from }
+  }
+  if (table.current === meId) {
+    if (table.step === 'place') return { text: 'Göm tanten i högen', mine: true, waitingFor: null }
+    if (table.step === 'arrange') return { text: 'Ordna de översta korten', mine: true, waitingFor: null }
+    return { text: `Din tur! Spela kort eller dra från högen${turns}`, mine: true, waitingFor: null }
+  }
+  return { text: `${name(table.current)} funderar`, mine: false, waitingFor: table.current }
+}
+
+// Tre punkter som hoppar efter texten (står still med "minska rörelse").
+function Dots() {
+  return (
+    <span aria-hidden className="ml-1 inline-flex gap-0.5 align-middle">
+      {[0, 1, 2].map((i) => (
+        <span key={i} className="size-1.5 rounded-full bg-current opacity-60 motion-safe:animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+      ))}
+    </span>
+  )
+}
+
+// Historiken bakom en liten knapp uppe till höger, med en siffra för händelser som kommit sedan man tittade senast.
+function HistoryButton({ table, onOpen }: { table: TantTable; onOpen: () => void }) {
+  const lastN = table.log.at(-1)?.n ?? 0
+  const [seen, setSeen] = useState(lastN)
+  const unread = table.log.filter((event) => event.n > seen).length
+  return (
+    <button
+      type="button"
+      aria-label={unread > 0 ? `Det som hänt, ${unread} nya` : 'Det som hänt'}
+      onClick={() => {
+        setSeen(lastN)
+        onOpen()
+      }}
+      className="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm"
+    >
+      <ScrollText aria-hidden className="size-5" />
+      {unread > 0 && (
+        <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-primary-button px-1 text-[11px] font-bold text-primary-foreground tabular-nums">
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
   )
 }
 
@@ -724,7 +791,7 @@ function Opponents({ state, table, meId }: { state: GameState; table: TantTable;
     current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
   }, [table.current])
   return (
-    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1 overflow-x-auto px-3 pt-2.5 pb-7 [scrollbar-width:none]">
+    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1.5 overflow-x-auto px-3 pt-1.5 pb-2 [scrollbar-width:none]">
       {ids.map((id) => {
         const out = table.out.includes(id)
         const turn = table.current === id && !out && !table.winner
@@ -762,23 +829,18 @@ function Opponent({
   const seat = (
     <span
       className={cn(
-        'relative flex flex-col items-center rounded-lg px-1 pt-1 pb-0.5 motion-safe:transition-[transform,background-color] motion-safe:duration-300',
-        narrow ? 'w-16 md:w-24' : 'w-20 md:w-28',
-        // Den som har tur är större, lyser och har en pil under sig.
-        turn && 'z-10 mx-2 scale-115 bg-coral-soft shadow-[0_0_22px_6px] shadow-primary/60 ring-4 ring-primary',
+        'relative flex items-center gap-1.5 rounded-full bg-card/85 py-0.5 pr-2.5 pl-0.5 shadow-soft-sm backdrop-blur-sm motion-safe:transition-[transform,background-color] motion-safe:duration-300',
+        narrow ? 'max-w-32 md:max-w-40' : 'max-w-40 md:max-w-52',
+        // Den som har tur är större och lyser.
+        turn && 'z-10 mx-1.5 scale-110 bg-coral-soft shadow-[0_0_18px_5px] shadow-primary/60 ring-3 ring-primary',
         out && 'opacity-45 grayscale',
       )}
     >
-      <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-3xl md:text-5xl" />
-      <span className="w-full truncate text-center text-xs font-bold md:text-sm">{name}</span>
-      {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
-      {turn && (
-        <ChevronUp
-          aria-hidden
-          strokeWidth={3.5}
-          className="absolute -bottom-5 left-1/2 size-6 -translate-x-1/2 text-primary motion-safe:animate-bounce"
-        />
-      )}
+      <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="shrink-0 text-3xl md:text-4xl" />
+      <span className="flex min-w-0 flex-col items-start leading-tight">
+        <span className="max-w-full truncate text-xs font-bold md:text-sm">{name}</span>
+        {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
+      </span>
     </span>
   )
   const label = `${name}, ${out ? 'ute' : `${count} kort`}${turn ? ', har turen' : ''}`
@@ -823,7 +885,7 @@ function MiniFan({ count }: { count: number }) {
   const shown = Math.min(5, count)
   const mid = (shown - 1) / 2
   return (
-    <span aria-hidden className="flex h-6 items-end gap-1">
+    <span aria-hidden className="flex h-5 items-end gap-1">
       <span className="relative h-5 w-9">
         {Array.from({ length: shown }, (_, i) => (
           <TantBaksida
@@ -912,9 +974,18 @@ function Piles({
           ) : (
             <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
           )}
-          <span className="absolute -top-2 -left-2 rounded-full bg-foreground px-2.5 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm md:text-base">
-            {table.deckCount}
+          {/* Antalet kort och tanter i högen. */}
+          <span className="absolute -top-2.5 -left-2 z-10 rounded-full bg-foreground px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-background tabular-nums shadow-soft-sm md:text-sm">
+            {table.deckCount} kort · {bombText(table)}
           </span>
+          {/* Min tur: Dra! på själva högen. */}
+          {canDraw && (
+            <span className="absolute inset-x-0 bottom-[12%] z-10 flex justify-center">
+              <span className="rounded-full bg-primary-button px-5 py-1 font-heading text-xl font-bold text-primary-foreground shadow-primary md:text-3xl">
+                Dra!
+              </span>
+            </span>
+          )}
           <PileActivity kind={activity?.kind ?? null} size={size} />
           {activity && (
             <span className="pointer-events-none absolute inset-x-0 -bottom-3 z-20 flex justify-center">
@@ -922,22 +993,14 @@ function Piles({
             </span>
           )}
         </button>
-        {canDraw ? (
-          <span className="rounded-full bg-primary-button px-4 py-0.5 font-heading text-xl font-bold text-primary-foreground shadow-primary md:text-2xl">
-            Dra!
-          </span>
-        ) : (
-          <span className="text-xs font-semibold md:text-sm">Draghögen</span>
-        )}
+        <span className="rounded-full bg-card/85 px-2.5 py-0.5 text-xs font-semibold shadow-soft-sm backdrop-blur-sm md:text-sm">Draghögen</span>
       </div>
 
       {/* Slänghögen tar inga tryck. */}
       <div aria-label={`Slänghögen, ${table.discardCount} kort`} className="pointer-events-none flex flex-col items-center gap-1.5" style={{ width: discard }}>
         <div className="relative aspect-[107/147] w-full" style={{ marginBottom: thickness }}>
           {/* Platsen på filten, så att slänghögen syns även när den är tom. */}
-          <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-foreground/10 text-center text-xs font-semibold text-foreground/60 ring-2 ring-foreground/15 ring-inset md:text-sm">
-            {shown.length === 0 && 'Slänghögen'}
-          </span>
+          <span className="absolute inset-0 rounded-lg bg-card/40 ring-2 ring-foreground/20 ring-inset" />
           {shown.map((type, i) => {
             const latest = i === shown.length - 1
             return (
@@ -952,32 +1015,153 @@ function Piles({
             )
           })}
         </div>
-        <span className="text-xs font-semibold tabular-nums md:text-sm">Slänghögen {table.discardCount}</span>
+        <span className="rounded-full bg-card/85 px-2.5 py-0.5 text-xs font-semibold tabular-nums shadow-soft-sm backdrop-blur-sm md:text-sm">
+          Slänghögen {table.discardCount}
+        </span>
       </div>
     </div>
   )
 }
 
-// Det senaste som hänt, på en rad. Ett tryck visar historiken. Skärmläsare får nya rader upplästa.
-function LogLine({ table, hidden = false, onOpen }: { table: TantTable; hidden?: boolean; onOpen: () => void }) {
-  const last = table.log.at(-1)
+// Bakgrundsmönstret i hela Exploderande Tanter (samma som i väntrummet).
+const TANT_PATTERN = '/images/tantpanik/vantrum-monster.webp'
+
+// "1 tant" eller "3 tanter", för etiketten på draghögen.
+function bombText(table: TantTable): string {
+  const bombs = bombsInDeck(table)
+  return bombs === 1 ? '1 tant' : `${bombs} tanter`
+}
+
+// Hur länge en pratbubbla syns (ms), och hur många som får vänta på sin tur (de äldsta hoppas över).
+const BUBBLE_MS = 2600
+const BUBBLE_QUEUE = 3
+
+// Det som händer vid bordet, en händelse i taget. quiet = det syns redan på annat sätt (Nope!-fönstret, en explosion,
+// en popup eller ett väntebesked), så händelserna hoppas över. Det som fanns när bordet visades visas inte.
+function useEventBubbles(log: TantEvent[], quiet: boolean): TantEvent | null {
+  const seen = useRef(log.at(-1)?.n ?? 0)
+  // Den första i kön är den som syns. Den tas bort när tiden gått.
+  const [queue, setQueue] = useState<TantEvent[]>([])
+  useEffect(() => {
+    const fresh = log.filter((event) => event.n > seen.current)
+    if (fresh.length === 0) return
+    seen.current = fresh.at(-1)!.n
+    if (quiet) return
+    setQueue((list) => [list[0], ...[...list.slice(1), ...fresh].slice(-BUBBLE_QUEUE)].filter((event) => event !== undefined))
+  }, [log, quiet])
+  const shown = queue[0] ?? null
+  useEffect(() => {
+    if (!shown) return
+    const timer = setTimeout(() => setQueue((list) => (list[0] === shown ? list.slice(1) : list)), BUBBLE_MS)
+    return () => clearTimeout(timer)
+  }, [shown])
+  return quiet ? null : shown
+}
+
+// Vem händelsen handlar om: den spelare vars namn texten börjar med (det längsta namnet vinner, "Mia 2" före "Mia").
+function eventPlayer(state: GameState, text: string): string | null {
+  let best: string | null = null
+  let length = 0
+  for (const [id, player] of Object.entries(state.players)) {
+    if (text.startsWith(player.name) && player.name.length > length) {
+      best = id
+      length = player.name.length
+    }
+  }
+  return best
+}
+
+// En händelse som en stor pratbubbla med spelarens figur. Tonas in och ut (med "minska rörelse" utan rörelse).
+function EventBubble({ event, state }: { event: TantEvent; state: GameState }) {
+  const player = eventPlayer(state, event.text)
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Det senaste: ${last?.text ?? ''}. Visa allt som hänt`}
-      aria-hidden={hidden || undefined}
-      tabIndex={hidden ? -1 : undefined}
-      // Dold men med samma höjd, så att bordet inte hoppar.
-      className={cn(
-        'mx-2 mb-1.5 flex h-9 shrink-0 items-center gap-1 rounded-full bg-card/80 px-3 text-left text-sm shadow-soft-sm',
-        hidden && 'invisible',
-      )}
+    <div
+      role="status"
+      className="relative flex max-w-[min(32rem,100%)] items-center gap-2.5 rounded-3xl bg-card/95 py-2 pr-4 pl-2 shadow-lift motion-safe:animate-pop"
     >
-      <span aria-live="polite" className="min-w-0 flex-1 truncate font-semibold">
-        {last?.text}
-      </span>
-      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      {player && <LobbyFigur playerId={player} avatar={state.players[player]?.avatar ?? ''} className="shrink-0 text-4xl md:text-5xl" />}
+      <p className="font-heading text-base leading-snug font-bold text-balance md:text-xl">{event.text}</p>
+      {/* Pratbubblans spets, nedåt mot högarna. */}
+      <span aria-hidden className="absolute -bottom-2 left-10 size-4 rotate-45 bg-card/95" />
+    </div>
+  )
+}
+
+// Hur länge utdelningen och banderollen vid matchstart varar (ms).
+const DEAL_MS = 1500
+const START_BANNER_MS = 1300
+
+// Matchstart: korten delas ut från högen och flyger till varje spelare (och min hand), och sedan "[namn] börjar!" som
+// en stor banderoll. Bara när inget har hänt än i matchen. Ett tryck hoppar över. Med "minska rörelse" bara banderollen.
+function DealIntro({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
+  const fresh = table.lastAction === null && table.log.length === 1 && !table.winner
+  const [stage, setStage] = useState<'deal' | 'banner' | 'done'>(() => (fresh ? (reducedMotionNow() ? 'banner' : 'deal') : 'done'))
+  const [flights, setFlights] = useState<{ key: string; from: { x: number; y: number }; to: { x: number; y: number }; delay: number }[]>([])
+  const [flying, setFlying] = useState(false)
+  useLayoutEffect(() => {
+    if (stage !== 'deal') return
+    const pile = document.querySelector('[data-tant-pile]')?.getBoundingClientRect()
+    if (!pile) return
+    const from = { x: pile.left + pile.width / 2, y: pile.top + pile.height / 2 }
+    const targets = table.order.map((id) => {
+      const element = id === meId ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(id)}"]`)
+      const box = element?.getBoundingClientRect()
+      return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null
+    })
+    const list: typeof flights = []
+    for (let round = 0; round < 3; round++) {
+      targets.forEach((to, i) => {
+        if (to) list.push({ key: `${round}-${i}`, from, to, delay: (round * targets.length + i) * (DEAL_MS * 0.6) / (3 * targets.length) })
+      })
+    }
+    setFlights(list)
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setFlying(true)))
+    const timer = setTimeout(() => setStage('banner'), DEAL_MS)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(timer)
+    }
+    // Bara en gång, när bordet visas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage])
+  useEffect(() => {
+    if (stage !== 'banner') return
+    const timer = setTimeout(() => setStage('done'), START_BANNER_MS)
+    return () => clearTimeout(timer)
+  }, [stage])
+  if (stage === 'done') return null
+  const starter = table.order[0]
+  const width = 56
+  return (
+    <button type="button" aria-label="Hoppa över utdelningen" onClick={() => setStage('done')} className="fixed inset-0 z-[58] cursor-default">
+      {stage === 'deal' &&
+        flights.map((flight) => (
+          <span
+            key={flight.key}
+            aria-hidden
+            className="pointer-events-none fixed transition-[transform,opacity] duration-500 ease-out"
+            style={{
+              left: flight.from.x - width / 2,
+              top: flight.from.y - (width * 147) / 107 / 2,
+              width,
+              transitionDelay: `${flight.delay}ms`,
+              transform: flying ? `translate(${flight.to.x - flight.from.x}px, ${flight.to.y - flight.from.y}px) scale(0.5)` : 'none',
+              opacity: flying ? 0.2 : 1,
+            }}
+          >
+            <TantBaksida sizes={`${width}px`} className="w-full drop-shadow-lg" />
+          </span>
+        ))}
+      {stage === 'banner' && (
+        <span className="pointer-events-none fixed inset-x-0 top-[30%] flex justify-center px-2">
+          <span className="flex items-center gap-3 rounded-full bg-card px-6 py-3 shadow-lift motion-safe:animate-pop md:px-10 md:py-5">
+            <LobbyFigur playerId={starter} avatar={state.players[starter]?.avatar ?? ''} className="text-5xl md:text-7xl" />
+            <span className="font-heading text-3xl font-bold whitespace-nowrap md:text-5xl">
+              {starter === meId ? 'Du börjar!' : `${state.players[starter]?.name ?? 'Någon'} börjar!`}
+            </span>
+          </span>
+        </span>
+      )}
     </button>
   )
 }
