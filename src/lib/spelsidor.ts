@@ -88,7 +88,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       'En av er skapar en lobby och delar koden på fyra bokstäver.',
       'Alla går med från sin egen mobil eller dator.',
       'Gissa ett tal mellan 1 och 100 innan tiden tar slut.',
-      'Rätt tal slumpas fram. Närmast får 3 poäng, tvåan 2 och trean 1, och exakt rätt ger 5.',
+      'Rätt tal slumpas fram. Ju närmare du var, desto fler poäng. Exakt rätt ger 10, och den som var närmast får 1 bonuspoäng.',
       'Sista rundan ger dubbla poäng. Flest poäng efter sista rundan vinner matchen.',
     ],
     time: '2–5 minuter',

@@ -10,10 +10,14 @@ export type ResultRowProps = {
   // Hur långt ifrån, t.ex. "12 % för högt", och åt vilket håll (exact = rätt eller nästan rätt).
   difference?: { text: string; direction: 'up' | 'down' | 'exact' }
   points: number
+  // Poängen är multiplicerade, t.ex. 2 i Närmast vinners sista runda. Visas som "+14 (×2)".
+  factor?: number
   total: number
   // Bäst i rundan. shared = flera delar bästa resultatet.
   winner: boolean
   shared: boolean
+  // Etiketten för bäst i rundan, om spelet vill säga något eget (t.ex. bonuspoängen i Närmast vinner).
+  winnerLabel?: string
   // Leder matchen efter rundan. crownLands = tog ledningen i den här rundan, så kronan faller ned på namnet.
   leader: boolean
   crownLands?: boolean
@@ -28,9 +32,11 @@ export function ResultRow({
   guess,
   difference,
   points,
+  factor = 1,
   total,
   winner,
   shared,
+  winnerLabel,
   leader,
   crownLands = false,
   index = 0,
@@ -71,12 +77,15 @@ export function ResultRow({
           )}
           {winner && (
             <span className="shrink-0 rounded-full bg-mint px-2 py-0.5 text-xs font-bold whitespace-nowrap text-accent-foreground">
-              {shared ? 'Delad etta' : 'Närmast!'}
+              {winnerLabel ?? (shared ? 'Delad etta' : 'Närmast!')}
             </span>
           )}
         </div>
         <span className="shrink-0 text-right whitespace-nowrap tabular-nums">
-          <span className="block font-heading text-2xl leading-tight font-bold">+{points}</span>
+          <span className="block font-heading text-2xl leading-tight font-bold">
+            +{points}
+            {factor > 1 && points > 0 && <span className="ml-1 text-base text-primary">(×{factor})</span>}
+          </span>
           <span className="block text-xs text-muted-foreground sm:text-sm">{total} totalt</span>
         </span>
       </div>

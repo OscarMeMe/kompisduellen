@@ -9,6 +9,7 @@ import type { RevealViewProps } from '@/components/lobby/types'
 import { Tallinje } from '@/components/narmast/Tallinje'
 import { loadSoundOn, playBullseye } from '@/lib/ljud'
 import { roundStanding } from '@/lib/match'
+import { CLOSEST_BONUS, LAST_ROUND_FACTOR } from '@/lib/narmast'
 import { cn } from '@/lib/utils'
 
 // Så länge markören rullar längs tallinjen (samma tid som animate-tallinje-markor i index.css).
@@ -51,7 +52,8 @@ export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, o
   )
   const scorers = Object.keys(result.points).filter((id) => (result.points[id] ?? 0) > 0)
 
-  const lastRound = state.round >= state.rounds && state.rounds > 1
+  // Samma villkor som när poängen räknas (resolveRound), så att ×2 bara syns när poängen faktiskt dubblats.
+  const lastRound = state.round >= state.rounds
   const nextIsLast = state.round === state.rounds - 1 && state.rounds > 1
 
   return (
@@ -83,6 +85,13 @@ export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, o
         )}
       </div>
 
+      {/* Sista rundan: det ska synas att poängen på raderna är dubblade. */}
+      {done && lastRound && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-heading text-lg font-bold motion-safe:animate-pop">
+          Sista rundan. Alla poäng är dubblade!
+        </p>
+      )}
+
       {done && (
         <ul className="space-y-2 motion-safe:animate-fade" aria-label="Allas gissningar">
           {rows.map((row, index) => (
@@ -94,9 +103,11 @@ export function RevealView({ state, me, isHost, clockOffset, lostMove, onNext, o
               guess={row.guess === undefined ? undefined : String(row.guess)}
               difference={row.guess === undefined ? undefined : numberDifference(row.guess, result.target)}
               points={result.points[row.id] ?? 0}
+              factor={lastRound ? LAST_ROUND_FACTOR : 1}
               total={state.scores[row.id] ?? 0}
               winner={result.winners.includes(row.id)}
               shared={result.winners.length > 1}
+              winnerLabel={`${result.winners.length > 1 ? 'Delad etta' : 'Närmast!'} +${CLOSEST_BONUS} bonus`}
               leader={leaderIds.includes(row.id)}
               crownLands={newLeaderIds.includes(row.id)}
             />
@@ -123,7 +134,7 @@ function headline(state: RevealViewProps['state'], meId: string, lastRound: bool
   const result = state.lastResult!
   const mine = result.points[meId] ?? 0
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
-  const double = lastRound ? '. Dubbla poäng!' : ''
+  const double = lastRound ? ` (×${LAST_ROUND_FACTOR})` : ''
   if (Object.keys(result.guesses).length === 0) return 'Ingen hann gissa den här gången'
   const exact = result.winners.filter((id) => result.guesses[id] === result.target)
   if (exact.includes(meId)) return `Pricken mitt i! +${mine} poäng${double}`
@@ -131,16 +142,16 @@ function headline(state: RevealViewProps['state'], meId: string, lastRound: bool
   if (exact.length > 1) return 'Flera prickade exakt!'
   if (result.winners.includes(meId)) return `${result.winners.length > 1 ? 'Delad etta!' : 'Du var närmast!'} +${mine} poäng${double}`
   if (result.winners.length > 1) return 'Delad etta! Flera var lika nära.'
-  return `${name(result.winners[0])} var närmast!${mine > 0 ? ` Du fick ${mine} poäng.` : ''}`
+  return `${name(result.winners[0])} var närmast!${mine > 0 ? ` Du fick ${mine} poäng${double}.` : ''}`
 }
 
 function distance(guess: number | undefined, target: number) {
   return guess === undefined ? Infinity : Math.abs(guess - target)
 }
 
-// "8 för lågt" med en pil nedåt, eller "Exakt rätt!".
+// "8 ifrån" med en pil nedåt när gissningen var för låg, eller "Exakt rätt!".
 function numberDifference(guess: number, target: number): ResultRowProps['difference'] {
   const diff = guess - target
   if (diff === 0) return { text: 'Exakt rätt!', direction: 'exact' }
-  return { text: `${Math.abs(diff)} för ${diff > 0 ? 'högt' : 'lågt'}`, direction: diff > 0 ? 'up' : 'down' }
+  return { text: `${Math.abs(diff)} ifrån`, direction: diff > 0 ? 'up' : 'down' }
 }

@@ -47,7 +47,7 @@ export const GAMES: GameInfo[] = [
     id: 'narmast',
     name: 'Närmast vinner',
     tagline: 'Välj ett tal mellan 1 och 100. Sedan slumpas ett tal fram. Vem kom närmast?',
-    quickRule: 'Gissa ett tal mellan 1 och 100. De tre närmaste får poäng, och sista rundan ger dubbelt.',
+    quickRule: 'Gissa ett tal mellan 1 och 100. Ju närmare, desto fler poäng, och sista rundan ger dubbelt.',
     emoji: '🎯',
     color: 'bg-peach',
     minPlayers: 2,
@@ -60,7 +60,7 @@ export const GAMES: GameInfo[] = [
       steps: [
         'Alla gissar i hemlighet ett tal mellan 1 och 100, eller trycker Slumpa åt mig.',
         'När tiden är ute rullar en markör längs tallinjen och stannar på rätt tal.',
-        'Närmast får 3 poäng, tvåan 2 och trean 1. Exakt rätt ger 5.',
+        'Ju närmare, desto fler poäng. Exakt rätt ger 10, och den som var närmast får 1 bonuspoäng.',
         'Sista rundan ger dubbla poäng. Flest poäng efter sista rundan vinner.',
       ],
     },
