@@ -160,6 +160,14 @@
     --animate-burst: star-burst 0.55s cubic-bezier(0.2, 0.8, 0.3, 1) both;
     --animate-shake: impact-shake 0.25s ease-out;
     --animate-turn-pulse: turn-pulse 0.55s ease-out;
+    /* Exploderande Tanters bord. animate-tant-reveal: det dragna kortet glider upp från högen (--from-x, --from-y)
+       och vänds i 3D (behöver transform-3d och backface-hidden). animate-tant-to-hand: kortet åker ner till handen
+       (--to-y). animate-tant-fly: en baksida glider från högen till en motspelares plats (--tx, --ty).
+       animate-table-shake: bordet skakar när en exploderande tant vänds. */
+    --animate-tant-reveal: tant-reveal 0.6s cubic-bezier(0.3, 0.7, 0.3, 1.05) both;
+    --animate-tant-to-hand: tant-to-hand 0.45s cubic-bezier(0.5, 0, 0.75, 0.4) both;
+    --animate-tant-fly: tant-fly 0.6s cubic-bezier(0.3, 0.6, 0.3, 1) both;
+    --animate-table-shake: table-shake 0.5s ease-out;
     --animate-light-pulse: light-pulse 2.8s ease-in-out infinite;
     /* animate-arrow-draw: en pil ritas från den ena spelaren till den andra (Imposterjaktens bord). Linjen behöver
        pathLength="1" och stroke-dasharray 1. Med fördröjning (--d) ritas rösterna en i taget. */
@@ -595,6 +603,31 @@
     @keyframes fade-in {
         0% { opacity: 0; }
         100% { opacity: 1; }
+    }
+
+    @keyframes tant-reveal {
+        0% { transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(0.3) rotateY(180deg); }
+        55% { transform: translate(0, 0) scale(1.04) rotateY(160deg); }
+        100% { transform: translate(0, 0) scale(1) rotateY(0deg); }
+    }
+
+    @keyframes tant-to-hand {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        100% { transform: translate(0, var(--to-y, 60vh)) scale(0.25); opacity: 0.3; }
+    }
+
+    @keyframes tant-fly {
+        0% { transform: translate(0, 0) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.25) rotate(12deg); opacity: 0.4; }
+    }
+
+    @keyframes table-shake {
+        0%, 100% { transform: translate(0, 0); }
+        15% { transform: translate(-9px, 5px) rotate(-0.6deg); }
+        30% { transform: translate(8px, -6px) rotate(0.5deg); }
+        45% { transform: translate(-6px, 4px); }
+        60% { transform: translate(5px, -3px); }
+        80% { transform: translate(-2px, 2px); }
     }
 
     /* Kortet börjar med baksidan mot en och vänds runt Y-axeln (FlipCard har transform-3d och backface-hidden). */

@@ -1,143 +1,260 @@
-import { useState } from 'react'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { ChevronRight, CircleHelp, Menu } from 'lucide-react'
+import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
-import { Wide } from '@/components/lobby/LobbyLayout'
 import type { TantViewProps } from '@/components/lobby/types'
+import { TableAnimations } from '@/components/tantpanik/TantAnimationer'
 import { TantHand } from '@/components/tantpanik/TantHand'
 import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
-import { Button } from '@/components/ui/button'
-import { useCountdown } from '@/hooks/useCountdown'
+import { HistoryDialog, MenuDialog, RulesDialog } from '@/components/tantpanik/TantMenyer'
+import { Arrange, NopeWindow, Peek, Place, Waiting } from '@/components/tantpanik/TantSteg'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useThrows } from '@/hooks/useReactions'
+import { useThrowWait } from '@/hooks/useThrowWait'
+import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import type { TantMove, TantTable } from '@/lib/tantpanik'
-import { CARDS, CARD_TYPES, NOPE_SECONDS, cardName, type CardType } from '@/lib/tantpanik-kort'
+import type { TantEvent, TantTable } from '@/lib/tantpanik'
 import { cn } from '@/lib/utils'
 
-// Exploderande Tanter: hela matchen i en vy. Överst vad jag ska göra just nu, sedan bordet (spelarna, högen och slänghögen),
-// det som väntar på Nope!, steget som pågår, min hand och vad som hänt. Prispallen efteråt är gemensam för alla spel.
-export function TantpanikView({ state, me, clockOffset, tantView, onMove }: TantViewProps) {
+// Hur länge ett besked syns innan det försvinner (ms).
+const NOTICE_MS = 2500
+
+// Exploderande Tanter: hela matchen som ett kortbord som tar hela skärmen. Överst vad jag ska göra, sedan motspelarna,
+// högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
+// Prispallen efteråt är gemensam för alla spel.
+export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove, onAbort, onLeave }: TantViewProps) {
   const table = state.tantpanik
+  const [rules, setRules] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const [history, setHistory] = useState(false)
+  const notice = useFleeting(tantView?.notice ?? null)
+  // Bordet skakar när en exploderande tant vänds (ny key startar om skakningen).
+  const [shake, setShake] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!shake || !root) return
+    // Klassen tas bort och läggs till igen, så att skakningen börjar om utan att något ritas om.
+    root.classList.remove('motion-safe:animate-table-shake')
+    void root.offsetWidth
+    root.classList.add('motion-safe:animate-table-shake')
+  }, [shake])
+  const [pileRef, pileSize] = usePileSize()
   if (!table) return null
   const inMatch = table.order.includes(me.id)
   const out = table.out.includes(me.id)
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
+  // Göm tanten och Ändra framtiden tar handens plats, eftersom inget annat kan spelas medan de pågår.
+  const sheet =
+    table.step === 'place' && table.current === me.id ? (
+      <Place deckCount={table.deckCount} onMove={onMove} />
+    ) : table.step === 'arrange' && tantView?.arrange ? (
+      <Arrange key={tantView.arrange.join()} cards={tantView.arrange} onMove={onMove} />
+    ) : null
+  const waiting =
+    table.step === 'arrange' && !tantView?.arrange
+      ? `${name(table.current)} möblerar om högen…`
+      : table.step === 'place' && table.current !== me.id
+        ? `${name(table.current)} gömmer tanten någonstans i högen…`
+        : table.step === 'give' && table.favor && table.favor.from !== me.id
+          ? `${name(table.favor.from)} väljer ett kort att ge ${table.favor.to === me.id ? 'dig' : name(table.favor.to)}…`
+          : null
+  const canDraw = inMatch && !out && table.step === 'turn' && table.current === me.id && !table.error
 
   return (
-    <Wide>
-      <Instruction state={state} table={table} meId={me.id} />
-      {tantView?.notice && (
-        <p
-          key={tantView.notice.n}
-          role="status"
-          className="rounded-md bg-sun-soft px-3 py-2 text-center text-sm font-semibold motion-safe:animate-pop"
-        >
-          {tantView.notice.text}
-        </p>
-      )}
-      {table.error && (
-        <p role="alert" className="rounded-md bg-destructive/10 px-3 py-3 text-center font-semibold text-destructive">
-          {table.error}
-        </p>
-      )}
+    <div
+      ref={rootRef}
+      data-spel="tantpanik"
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-room pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+    >
+      <StatusBar state={state} table={table} meId={me.id} onRules={() => setRules(true)} onMenu={() => setMenu(true)} />
+      <Opponents state={state} table={table} meId={me.id} />
 
-      <Players state={state} table={table} meId={me.id} />
-      <Piles table={table} />
+      {/* Bordet i mitten: högarna, och ovanpå dem det som väntar eller pågår. */}
+      <section
+        aria-label="Bordet"
+        // Ett kortbord: filt med träkant, som Imposterjaktens bord.
+        className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-[1.75rem] border-[7px] border-wood bg-felt p-2 shadow-[inset_0_2px_14px_rgb(0_0_0/0.15)] ring-2 ring-wood-edge"
+      >
+        {/* Högarna växer och fyller bordet när det finns plats. */}
+        <div ref={pileRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
+          <Piles table={table} size={pileSize} canDraw={canDraw} onDraw={() => onMove({ type: 'tDraw' })} />
+        </div>
+        {/* Se framtiden ligger överst på bordet, ovanpå högarna, så att draghögen behåller sin storlek. */}
+        {tantView?.peek && table.step !== 'arrange' && (
+          <div className="absolute inset-x-0 top-1.5 z-10 flex justify-center px-1.5">
+            <Peek cards={tantView.peek} />
+          </div>
+        )}
+        {notice && (
+          <p
+            key={notice.n}
+            role="status"
+            className="pointer-events-none absolute inset-x-3 top-2 z-20 mx-auto w-fit max-w-full rounded-full bg-sun-soft px-4 py-1.5 text-center text-sm font-semibold shadow-soft motion-safe:animate-pop"
+          >
+            {notice.text}
+          </p>
+        )}
+        {(table.error || waiting || (table.step === 'window' && table.pending)) && (
+          <div className="absolute inset-x-2 top-1/2 z-10 -translate-y-1/2">
+            {table.error ? (
+              <p role="alert" className="rounded-lg bg-card px-3 py-3 text-center font-semibold text-destructive shadow-lift">
+                {table.error}
+              </p>
+            ) : table.step === 'window' && table.pending ? (
+              <NopeWindow state={state} table={table} meId={me.id} clockOffset={clockOffset} />
+            ) : (
+              waiting && <Waiting text={waiting} />
+            )}
+          </div>
+        )}
+      </section>
 
-      {table.step === 'window' && table.pending && <NopeWindow state={state} table={table} meId={me.id} clockOffset={clockOffset} />}
-      {tantView?.peek && table.step !== 'arrange' && <Peek cards={tantView.peek} />}
-      {table.step === 'arrange' &&
-        (tantView?.arrange ? (
-          <Arrange key={tantView.arrange.join()} cards={tantView.arrange} onMove={onMove} />
+      <LogLine table={table} onOpen={() => setHistory(true)} />
+
+      {/* Min hand, eller steget som tar handens plats. Det dragna kortet åker ner hit (data-tant-hand). */}
+      <div data-tant-hand className="relative shrink-0">
+        {sheet ? (
+          <div className="px-2 pb-2">{sheet}</div>
+        ) : inMatch && !out && tantView ? (
+          <TantHand
+            // Valen börjar om när turen eller steget byts.
+            key={`${table.current}-${table.step}-${table.turnsLeft}`}
+            state={state}
+            table={table}
+            meId={me.id}
+            hand={tantView.hand}
+            giving={table.step === 'give' && table.favor?.from === me.id}
+            clockOffset={clockOffset}
+            onMove={onMove}
+          />
         ) : (
-          <Waiting text={`${name(table.current)} möblerar om högen…`} />
-        ))}
-      {table.step === 'place' &&
-        (table.current === me.id ? (
-          <Place deckCount={table.deckCount} onMove={onMove} />
-        ) : (
-          <Waiting text={`${name(table.current)} gömmer tanten någonstans i högen…`} />
-        ))}
-      {table.step === 'give' && table.favor && table.favor.from !== me.id && (
-        <Waiting text={`${name(table.favor.from)} väljer ett kort att ge ${table.favor.to === me.id ? 'dig' : name(table.favor.to)}…`} />
-      )}
+          <p className="mx-2 mb-3 rounded-md bg-card px-3 py-3 text-center text-sm font-semibold shadow-soft-sm">
+            {!inMatch ? 'Du är med från nästa match.' : out ? 'Du är ute. Följ resten av matchen.' : 'Din hand kommer strax…'}
+          </p>
+        )}
+      </div>
 
-      {inMatch && !out && tantView && (
-        <TantHand
-          // Valen börjar om när turen eller steget byts.
-          key={`${table.current}-${table.step}-${table.turnsLeft}`}
-          state={state}
-          table={table}
-          meId={me.id}
-          hand={tantView.hand}
-          giving={table.step === 'give' && table.favor?.from === me.id}
-          clockOffset={clockOffset}
-          onMove={onMove}
-        />
-      )}
-      {!inMatch && <p className="rounded-md bg-muted px-3 py-3 text-center text-sm font-semibold">Du är med från nästa match.</p>}
-
-      <Log table={table} />
-      <CardList />
-      {/* Plats för handen, som ligger fast längst ner på skärmen. */}
-      {inMatch && !out && <div aria-hidden className="h-56 shrink-0" />}
-    </Wide>
+      <TableAnimations state={state} table={table} meId={me.id} tantView={tantView} onShake={setShake} />
+      <RulesDialog open={rules} onOpenChange={setRules} />
+      <MenuDialog open={menu} onOpenChange={setMenu} isHost={isHost} onAbort={onAbort} onLeave={onLeave} />
+      <HistoryDialog open={history} onOpenChange={setHistory} table={table} />
+    </div>
   )
 }
 
-// Den stora raden överst: vad jag ska göra just nu, och korallröd när det är något jag ska göra.
-function Instruction({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
+// Hur bred draghögen får vara (px): den fyller bordets höjd, men slänghögen ska få plats bredvid (DISCARD_SPREAD).
+// På 360 × 640 blir den cirka 120 px.
+function usePileSize() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState(112)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => {
+      // Plats för texten under högarna och kortlekens tjocklek, och lite luft runt om.
+      const byHeight = (element.clientHeight - 36) * 0.76 * (107 / 147)
+      const byWidth = (element.clientWidth - 8) / DISCARD_SPREAD
+      setSize(Math.round(Math.max(72, Math.min(byHeight, byWidth, 240))))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, size] as const
+}
+
+// Ett besked visas en gång, en kort stund, och aldrig igen (samma nummer visas inte två gånger).
+function useFleeting(event: TantEvent | null): TantEvent | null {
+  const [shown, setShown] = useState<TantEvent | null>(null)
+  const seen = useRef(new Set<number>())
+  useEffect(() => {
+    if (!event || seen.current.has(event.n)) return
+    seen.current.add(event.n)
+    setShown(event)
+    const timer = setTimeout(() => setShown((current) => (current?.n === event.n ? null : current)), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [event])
+  return shown
+}
+
+// Raden överst: reglerna, vad JAG ska göra just nu (korallröd när det är något jag ska göra) och menyn.
+function StatusBar({
+  state,
+  table,
+  meId,
+  onRules,
+  onMenu,
+}: {
+  state: GameState
+  table: TantTable
+  meId: string
+  onRules: () => void
+  onMenu: () => void
+}) {
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
-  const turns = table.turnsLeft > 1 ? ` (${table.turnsLeft} turer kvar)` : ''
+  const turns = table.turnsLeft > 1 ? ` · ${table.turnsLeft} turer` : ''
   let text: string
   let mine = false
-  if (table.out.includes(meId)) text = 'Du är ute. Följ resten av matchen.'
-  else if (table.step === 'window') text = 'Ett kort spelades. Stoppa det med Nope! eller vänta.'
+  if (table.winner) text = `${name(table.winner)} vinner!`
+  else if (table.out.includes(meId)) text = 'Du är ute'
+  else if (table.step === 'window') text = 'Nope! eller vänta…'
   else if (table.step === 'give') {
     mine = table.favor?.from === meId
-    text = mine ? `Ge ett kort till ${name(table.favor!.to)}.` : 'Väntar på en tjänst…'
+    text = mine ? `Ge ett kort till ${name(table.favor!.to)}` : 'Väntar på en tjänst…'
   } else if (table.current === meId) {
     mine = true
-    text =
-      table.step === 'place' ? 'Göm tanten i högen!' : table.step === 'arrange' ? 'Lägg korten i den ordning du vill.' : `Din tur!${turns}`
-  } else text = `${name(table.current)} har turen${turns}`
+    text = table.step === 'place' ? 'Göm tanten!' : table.step === 'arrange' ? 'Ordna korten' : `Din tur!${turns}`
+  } else text = `${name(table.current)}s tur${turns}`
   return (
-    <p
-      role="status"
-      className={cn(
-        'rounded-lg px-4 py-3 text-center font-heading text-xl font-bold',
-        mine ? 'bg-primary-button text-primary-foreground' : 'bg-card shadow-soft-sm',
-      )}
-    >
-      {text}
-    </p>
+    <div className="flex h-12 shrink-0 items-center gap-2 px-2">
+      <button
+        type="button"
+        aria-label="Så spelas det"
+        onClick={onRules}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card shadow-soft-sm"
+      >
+        <CircleHelp aria-hidden className="size-5" />
+      </button>
+      <p
+        role="status"
+        className={cn(
+          'min-w-0 flex-1 truncate rounded-full px-3 py-1.5 text-center font-heading text-lg font-bold',
+          mine ? 'bg-primary-button text-primary-foreground' : 'bg-card shadow-soft-sm',
+        )}
+      >
+        {text}
+      </p>
+      <button
+        type="button"
+        aria-label="Meny"
+        onClick={onMenu}
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card shadow-soft-sm"
+      >
+        <Menu aria-hidden className="size-5" />
+      </button>
+    </div>
   )
 }
 
-// Spelarna i turordning: figur, namn och antal kort. Den som har tur är markerad, och de som är ute är nedtonade.
-function Players({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
+// Motspelarna i turordning, från den som kommer efter mig: figur, namn och en liten solfjäder med baksidor. Den som har
+// tur lyser. Raden går att svepa när de inte får plats, och den som har tur scrollas fram.
+function Opponents({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
+  const start = Math.max(0, table.order.indexOf(meId))
+  const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
+  const current = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  }, [table.current])
   return (
-    <ul aria-label="Spelarna" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-      {table.order.map((id) => {
+    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1 overflow-x-auto px-2 pt-1 pb-2 [scrollbar-width:none]">
+      {ids.map((id) => {
         const out = table.out.includes(id)
-        const current = table.current === id && !out
+        const turn = table.current === id && !out && !table.winner
         return (
-          <li
-            key={id}
-            className={cn(
-              'flex items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-soft-sm',
-              current && 'border-primary ring-2 ring-primary',
-              out && 'opacity-50',
-            )}
-          >
-            <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-3xl" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">
-                {state.players[id]?.name}
-                {id === meId && ' (du)'}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {out ? 'Ute' : `${table.handCounts[id] ?? 0} kort${current && table.turnsLeft > 1 ? ` · ${table.turnsLeft} turer` : ''}`}
-              </span>
-            </span>
+          <li key={id} ref={turn ? current : undefined} data-seat={id} className="shrink-0">
+            <Opponent state={state} id={id} out={out} turn={turn} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
       })}
@@ -145,232 +262,200 @@ function Players({ state, table, meId }: { state: GameState; table: TantTable; m
   )
 }
 
-// Draghögen med antal kort, och slänghögens översta kort.
-function Piles({ table }: { table: TantTable }) {
-  const top = table.discardTop.at(-1)
+// narrow: med fler än fyra motspelare blir platserna smalare, så att fem får plats på 360 px.
+function Opponent({
+  state,
+  id,
+  out,
+  turn,
+  count,
+  narrow,
+}: {
+  state: GameState
+  id: string
+  out: boolean
+  turn: boolean
+  count: number
+  narrow: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const throws = useThrows()
+  const wait = useThrowWait(throws?.lastThrowAt ?? null)
+  const name = state.players[id]?.name ?? 'Någon'
+  const canThrow = !!throws?.allowed && throws.targets.some((target) => target.id === id)
+  const seat = (
+    <span
+      className={cn(
+        'flex flex-col items-center rounded-lg px-1 pt-1 pb-0.5 motion-safe:transition-colors',
+        narrow ? 'w-16' : 'w-20',
+        turn && 'bg-coral-soft shadow-[0_0_16px_2px] shadow-primary/40 ring-2 ring-primary',
+        out && 'opacity-45 grayscale',
+      )}
+    >
+      <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="text-3xl" />
+      <span className="w-full truncate text-center text-xs font-bold">{name}</span>
+      {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
+    </span>
+  )
+  const label = `${name}, ${out ? 'ute' : `${count} kort`}${turn ? ', har turen' : ''}`
+  if (!canThrow) return <div aria-label={label}>{seat}</div>
   return (
-    <div className="flex items-center justify-center gap-6 rounded-lg bg-muted/60 py-4">
-      <div className="flex flex-col items-center gap-1">
-        <TantBaksida>{table.deckCount}</TantBaksida>
-        <span className="text-sm font-semibold">Draghögen</span>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        aria-label={`${label}. Kasta något`}
+        className="rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
+      >
+        {seat}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] p-3" side="bottom">
+        <p className="text-center font-heading font-bold">{name}</p>
+        <p className="text-center text-xs font-semibold text-muted-foreground tabular-nums">
+          {wait > 0 ? `Du kan kasta igen om ${wait} s` : 'Kasta något'}
+        </p>
+        <div className="mt-1 flex justify-center gap-1.5">
+          {THROW_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              disabled={wait > 0}
+              aria-label={`Kasta ${item.text} på ${name}`}
+              className="flex h-11 w-10 items-center justify-center rounded-md border bg-card text-2xl shadow-soft-sm hover:bg-sun-soft disabled:opacity-40"
+              onClick={() => {
+                throws?.throwAt(id, item.id)
+                setOpen(false)
+              }}
+            >
+              <Emoji emoji={item.emoji} />
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// En liten solfjäder med baksidor (högst fem) och antalet kort.
+function MiniFan({ count }: { count: number }) {
+  const shown = Math.min(5, count)
+  const mid = (shown - 1) / 2
+  return (
+    <span aria-hidden className="flex h-6 items-end gap-1">
+      <span className="relative h-5 w-9">
+        {Array.from({ length: shown }, (_, i) => (
+          <TantBaksida
+            key={i}
+            sizes="16px"
+            className="absolute bottom-0 w-3.5 origin-bottom drop-shadow-sm"
+            style={{ left: `${10 + (i - mid) * 5}px`, rotate: `${(i - mid) * 12}deg` }}
+          />
+        ))}
+      </span>
+      <span className="text-xs font-bold tabular-nums">{count}</span>
+    </span>
+  )
+}
+
+// Slänghögen är mindre än draghögen, ligger snett och överlappar draghögens högra kant (andelar av draghögens bredd).
+const DISCARD_SCALE = 0.6
+const DISCARD_OVERLAP = 0.35
+// Hur många draghögsbredder högarna tar tillsammans när draghögen står i mitten: slänghögen sticker ut åt höger, och
+// lika mycket plats lämnas till vänster.
+const DISCARD_SPREAD = 1 + 2 * DISCARD_SCALE * (1 - DISCARD_OVERLAP)
+// De översta korten i slänghögen ligger åt lite olika håll, som om de slängts dit (grader, översta sist).
+const DISCARD_TILT = [-7, 4, 11]
+
+// Draghögen är huvudsaken: stor, i mitten och tjock som en riktig kortlek. Tryck på den för att dra när det är min tur.
+// Slänghögen ligger mindre och snett över draghögens hörn, med de senaste korten åt olika håll.
+function Piles({ table, size, canDraw, onDraw }: { table: TantTable; size: number; canDraw: boolean; onDraw: () => void }) {
+  const sizes = `${size}px`
+  const discard = Math.round(size * DISCARD_SCALE)
+  const layers = Math.min(6, Math.ceil(table.deckCount / 5))
+  const shown = table.discardTop.slice(-3)
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: size }}>
+        <button
+          type="button"
+          disabled={!canDraw}
+          onClick={onDraw}
+          aria-label={canDraw ? `Dra ett kort. ${table.deckCount} kort i högen` : `Draghögen, ${table.deckCount} kort`}
+          className={cn(
+            'relative block w-full rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
+            canDraw && 'ring-4 ring-primary motion-safe:animate-turn-pulse',
+          )}
+          data-tant-pile
+        >
+          {/* Kortleken: baksidor förskjutna några pixlar, så att den ser tjock ut. */}
+          {Array.from({ length: layers }, (_, i) => (
+            <TantBaksida
+              key={i}
+              sizes={sizes}
+              className="absolute inset-0 w-full"
+              style={{ transform: `translate(${(layers - i) * 2}px, ${(layers - i) * 2}px)` }}
+            />
+          ))}
+          {table.deckCount > 0 ? (
+            <TantBaksida sizes={sizes} className="relative w-full drop-shadow-md" />
+          ) : (
+            <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
+          )}
+          <span className="absolute -top-2 -left-2 rounded-full bg-foreground px-2 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm">
+            {table.deckCount}
+          </span>
+        </button>
+
+        {/* Slänghögen tar inga tryck, så att hela draghögen går att trycka på. */}
+        <div
+          aria-label={`Slänghögen, ${table.discardCount} kort`}
+          className="pointer-events-none absolute bottom-[6%] z-10"
+          style={{ left: size - discard * DISCARD_OVERLAP, width: discard }}
+        >
+          {shown.length === 0 ? (
+            <span className="block aspect-[107/147] w-full rotate-6 rounded-lg border-2 border-dashed border-foreground/30" />
+          ) : (
+            <div className="relative aspect-[107/147] w-full">
+              {shown.map((type, i) => {
+                const latest = i === shown.length - 1
+                return (
+                  <div
+                    key={`${table.discardCount - shown.length + i}-${type}`}
+                    aria-hidden={!latest}
+                    className={cn('absolute inset-0 drop-shadow-lg', latest && 'motion-safe:animate-pop')}
+                    style={{ rotate: `${DISCARD_TILT[i + 3 - shown.length]}deg` }}
+                  >
+                    <TantKort type={type} size="small" sizes={`${discard}px`} className="w-full" />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <span className="absolute -bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap shadow-soft-sm">
+            Slänghögen {table.discardCount}
+          </span>
+        </div>
       </div>
-      <div className="flex flex-col items-center gap-1">
-        {top ? (
-          <TantKort type={top} size="small" />
-        ) : (
-          <div className="aspect-[107/147] w-18 rounded-lg border-2 border-dashed border-border" />
-        )}
-        <span className="text-sm font-semibold">Slänghögen ({table.discardCount})</span>
-      </div>
+      {/* Under kortlekens tjocklek, så att texten inte hamnar bakom den. */}
+      <span className={cn('text-xs font-semibold', canDraw && 'font-bold text-primary-button')} style={{ marginTop: layers * 2 + 2 }}>
+        {canDraw ? 'Tryck för att dra' : 'Draghögen'}
+      </span>
     </div>
   )
 }
 
-// Ett spelat kort väntar: nedräkningen och hur kedjan av Nope! står. Den som har ett Nope! får en egen stor knapp
-// vid handen (TantHand), så att det här ser likadant ut för alla och inte avslöjar vem som har ett.
-function NopeWindow({ state, table, meId, clockOffset }: { state: GameState; table: TantTable; meId: string; clockOffset: number }) {
-  const pending = table.pending!
-  const { secondsLeft, progress } = useCountdown(state.deadline, clockOffset, NOPE_SECONDS)
-  const stopped = pending.nopes % 2 === 1
-  const name = (id: string) => state.players[id]?.name ?? 'Någon'
-  const what =
-    pending.kind === 'pair'
-      ? `ett par mot ${name(pending.target!)}`
-      : pending.kind === 'triple'
-        ? `ett tretal och ber ${name(pending.target!)} om ${cardName(pending.request!)}`
-        : pending.target
-          ? `${cardName(pending.cards[0])} på ${name(pending.target)}`
-          : cardName(pending.cards[0])
+// Det senaste som hänt, på en rad. Ett tryck visar historiken. Skärmläsare får nya rader upplästa.
+function LogLine({ table, onOpen }: { table: TantTable; onOpen: () => void }) {
+  const last = table.log.at(-1)
   return (
-    <section aria-label="Spelat kort" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
-      <div className="flex items-center gap-3">
-        <div className="flex -space-x-8">
-          {pending.cards.map((type, i) => (
-            <TantKort key={i} type={type} size="small" />
-          ))}
-        </div>
-        <p className="font-semibold">
-          {pending.by === meId ? 'Du' : name(pending.by)} spelade {what}.
-        </p>
-      </div>
-      <p
-        role="status"
-        className={cn(
-          'rounded-md px-3 py-2 text-center font-heading font-bold',
-          stopped ? 'bg-destructive/10 text-destructive' : 'bg-mint-soft',
-        )}
-      >
-        {pending.nopes === 0
-          ? 'Händer om ingen säger Nope!'
-          : stopped
-            ? `Stoppat av ${name(pending.lastNopeBy!)}!`
-            : `${name(pending.lastNopeBy!)} stoppade stoppet. Kortet gäller igen!`}
-      </p>
-      <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
-        <div
-          className="h-full rounded-full bg-primary motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-linear"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
-      <p className="text-center text-sm text-muted-foreground">{secondsLeft} s kvar</p>
-    </section>
-  )
-}
-
-// Se framtiden: de översta korten, bara för mig. Överst först.
-function Peek({ cards }: { cards: CardType[] }) {
-  return (
-    <section aria-label="Överst i högen" className="space-y-2 rounded-lg border bg-lilac/40 p-3">
-      <p className="font-semibold">Överst i högen (bara du ser det):</p>
-      {cards.length === 0 ? (
-        <p className="text-sm">Högen är tom.</p>
-      ) : (
-        <ol className="flex gap-2">
-          {cards.map((type, i) => (
-            <li key={i} className="flex flex-col items-center gap-1 text-xs font-semibold">
-              <TantKort type={type} size="small" />
-              {i === 0 ? 'Överst' : `${i + 1}`}
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  )
-}
-
-// Ändra framtiden: flytta korten upp och ned med knappar och tryck Klar. Överst först.
-function Arrange({ cards, onMove }: { cards: CardType[]; onMove: (move: TantMove) => void }) {
-  const [order, setOrder] = useState(() => cards.map((_, i) => i))
-  function swap(a: number, b: number) {
-    setOrder((list) => {
-      const next = [...list]
-      ;[next[a], next[b]] = [next[b], next[a]]
-      return next
-    })
-  }
-  return (
-    <section aria-label="Ändra framtiden" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
-      <p className="font-semibold">Ordna de översta korten. Det översta dras först.</p>
-      <ol className="space-y-2">
-        {order.map((index, position) => (
-          <li key={index} className="flex items-center gap-3">
-            <span className="w-14 text-sm font-semibold">{position === 0 ? 'Överst' : `${position + 1}`}</span>
-            <TantKort type={cards[index]} size="small" />
-            <div className="flex gap-1">
-              <Button
-                variant="outline"
-                size="icon-lg"
-                aria-label="Flytta upp"
-                disabled={position === 0}
-                onClick={() => swap(position, position - 1)}
-              >
-                <ArrowUp aria-hidden />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-lg"
-                aria-label="Flytta ned"
-                disabled={position === order.length - 1}
-                onClick={() => swap(position, position + 1)}
-              >
-                <ArrowDown aria-hidden />
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ol>
-      <Button size="lg" className="w-full" onClick={() => onMove({ type: 'tArrange', order })}>
-        Klar
-      </Button>
-    </section>
-  )
-}
-
-// Göm tanten: hur många kort som ska ligga ovanför den. 0 = överst, högens storlek = underst. Ingen annan ser valet.
-function Place({ deckCount, onMove }: { deckCount: number; onMove: (move: TantMove) => void }) {
-  const [position, setPosition] = useState(() => Math.floor(deckCount / 2))
-  const label = position === 0 ? 'Överst' : position === deckCount ? 'Underst' : `under ${position} kort`
-  return (
-    <section aria-label="Göm tanten" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
-      <p className="font-semibold">Desarmera räddade dig! Var vill du gömma tanten? Ingen annan ser vad du väljer.</p>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => setPosition(0)}>
-          Överst
-        </Button>
-        <Button variant="outline" onClick={() => setPosition(Math.floor(deckCount / 2))}>
-          I mitten
-        </Button>
-        <Button variant="outline" onClick={() => setPosition(deckCount)}>
-          Underst
-        </Button>
-        <Button variant="outline" onClick={() => setPosition(Math.floor(Math.random() * (deckCount + 1)))}>
-          Slumpa
-        </Button>
-      </div>
-      {deckCount > 0 && (
-        <label className="block space-y-1">
-          <span className="text-sm font-semibold">Kort ovanför tanten: {position}</span>
-          <input
-            type="range"
-            min={0}
-            max={deckCount}
-            value={position}
-            onChange={(event) => setPosition(Number(event.target.value))}
-            className="h-11 w-full accent-primary"
-          />
-        </label>
-      )}
-      <Button size="lg" className="w-full" onClick={() => onMove({ type: 'tPlace', position })}>
-        Göm tanten: {label}
-      </Button>
-    </section>
-  )
-}
-
-function Waiting({ text }: { text: string }) {
-  return <p className="rounded-md bg-coral-soft px-3 py-3 text-center font-semibold">{text}</p>
-}
-
-// Det senaste som hänt, nyast överst. Skärmläsare får nya rader upplästa.
-function Log({ table }: { table: TantTable }) {
-  return (
-    <section aria-label="Det senaste" className="space-y-2 rounded-lg border bg-card p-4 shadow-soft-sm">
-      <h2 className="text-lg">Det senaste</h2>
-      <ol aria-live="polite" className="space-y-1 text-sm">
-        {[...table.log]
-          .reverse()
-          .slice(0, 6)
-          .map((event, i) => (
-            <li key={event.n} className={cn(i === 0 ? 'font-semibold' : 'text-muted-foreground')}>
-              {event.text}
-            </li>
-          ))}
-      </ol>
-    </section>
-  )
-}
-
-// Alla kort och vad de gör, hopfällt.
-function CardList() {
-  return (
-    <details className="rounded-lg border bg-card px-4 text-sm shadow-soft-sm">
-      <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Korten och reglerna</summary>
-      <ul className="space-y-2 pb-3">
-        {CARD_TYPES.map((type) => (
-          <li key={type} className="flex gap-2">
-            <span aria-hidden className="w-6 shrink-0 text-center">
-              {CARDS[type].symbol}
-            </span>
-            <span>
-              <span className="font-bold">{CARDS[type].name}:</span> {CARDS[type].rule ?? CARDS[type].text}
-            </span>
-          </li>
-        ))}
-        <li className="pt-1 text-muted-foreground">
-          Två kort med samma namn tar ett slumpat kort från någon. Tre lika låter dig be om ett visst kort. En Vild tant kan ersätta en tant
-          i paret eller tretalet. Sist kvar vinner.
-        </li>
-      </ul>
-    </details>
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Det senaste: ${last?.text ?? ''}. Visa allt som hänt`}
+      className="mx-2 mt-1.5 flex h-9 shrink-0 items-center gap-1 rounded-full bg-card/80 px-3 text-left text-sm shadow-soft-sm"
+    >
+      <span aria-live="polite" className="min-w-0 flex-1 truncate font-semibold">
+        {last?.text}
+      </span>
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+    </button>
   )
 }

@@ -710,3 +710,47 @@ describe('hemligheter och dubbla drag', () => {
     }
   })
 })
+
+describe('händelserna vid bordet', () => {
+  it('ett vanligt drag visar för alla att någon drog, men bara den som drog ser kortet', () => {
+    let host = setup({ a: ['fika'], b: ['fika'] }, ['stickning', 'regnbage', 'tant'])
+    host = move(host, 'a', { type: 'tDraw' })
+    const action = table(host).lastAction!
+    expect(action).toMatchObject({ kind: 'draw', player: 'a', card: null })
+    expect(myTantView(host.secrets, table(host), 'a').drew).toEqual({ n: action.n, type: 'stickning' })
+    expect(myTantView(host.secrets, table(host), 'b').drew).toBeNull()
+    expect(JSON.stringify(host.state)).not.toContain('stickning')
+  })
+
+  it('en exploderande tant visas för alla, med om spelaren klarade sig', () => {
+    let host = setup({ a: ['fika'], b: [], c: [] }, ['tant', 'regnbage', 'tant'])
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(table(host).lastAction).toMatchObject({ kind: 'bomb', player: 'a', card: 'tant', saved: true })
+    host = move(host, 'a', { type: 'tPlace', position: 0 })
+    host = move(host, 'b', { type: 'tDraw' })
+    expect(table(host).lastAction).toMatchObject({ kind: 'bomb', player: 'b', card: 'tant', saved: false })
+  })
+
+  it('ett spelat kort syns för alla', () => {
+    let host = setup({ a: ['blanda'], b: [] }, ['regnbage'])
+    host = play(host, 'a', ['blanda'])
+    expect(table(host).lastAction).toMatchObject({ kind: 'play', player: 'a', card: 'blanda' })
+  })
+
+  it('ett gammalt besked står inte kvar när det blir ens tur, och tanten ger ett nytt besked', () => {
+    let host = setup({ a: ['fika'], b: ['fika'] }, ['stickning', 'regnbage', 'tant', 'kupong'])
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(myTantView(host.secrets, table(host), 'a').notice?.text).toBe('Du drog Sticktanten.')
+    host = move(host, 'b', { type: 'tDraw' })
+    // Det blir a:s tur igen, och det gamla beskedet är borta.
+    expect(myTantView(host.secrets, table(host), 'a').notice).toBeNull()
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(myTantView(host.secrets, table(host), 'a').notice?.text).toContain('exploderande tant')
+  })
+
+  it('historiken sparar de 30 senaste händelserna', () => {
+    let host = setup({ a: [], b: [] }, Array.from({ length: 40 }, () => 'regnbage' as const))
+    for (let i = 0; i < 40; i++) host = move(host, i % 2 === 0 ? 'a' : 'b', { type: 'tDraw' })
+    expect(table(host).log).toHaveLength(30)
+  })
+})

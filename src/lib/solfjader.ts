@@ -4,16 +4,17 @@
 import { isCombo, type TantCard } from '@/lib/tantpanik'
 import { CARDS, CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 
-// Kortens storlek i solfjädern (px), i kortbildernas format 107 × 147. Samma mått som klasserna i Solfjader.tsx (w-21 h-29).
-export const FAN_CARD_WIDTH = 84
-export const FAN_CARD_HEIGHT = 116
+// Kortens storlek i solfjädern (px), i kortbildernas format 107 × 147. Samma mått som klasserna i Solfjader.tsx (w-25 h-[137px]).
+// Så stora att symbolen och färgen syns utan förstoring.
+export const FAN_CARD_WIDTH = 100
+export const FAN_CARD_HEIGHT = 137
 // Plats på sidorna, så att de yttersta korten inte når kanten när de lutar.
-export const FAN_SIDE = 26
+export const FAN_SIDE = 24
 // Störst avstånd mellan korten. Med fler kort krymper avståndet, så att alla får plats.
 const MAX_STEP = FAN_CARD_WIDTH * 0.72
 // Hur mycket ett kort lutar per steg från mitten, och mest totalt åt varje håll (grader).
 const MAX_ANGLE_STEP = 5
-const MAX_ANGLE = 12
+const MAX_ANGLE = 10
 // Hur mycket de yttersta korten sjunker (px), så att solfjädern blir en båge.
 const ARC = 10
 
@@ -43,6 +44,28 @@ export function fanIndexAt(x: number, layout: FanLayout): number {
   if (step === 0) return 0
   const index = Math.floor((x - slots[0].x) / step)
   return Math.max(0, Math.min(slots.length - 1, index))
+}
+
+// Avståndet från rutans nederkant till korten (px), som bottom-3.5 i Solfjader.tsx.
+export const FAN_BOTTOM = 14
+
+// Kortet under fingret, med hänsyn till att korten lutar: punkten räknas om till varje korts egen, lutade ruta, och det
+// översta kortet som träffas vinner (korten längre till höger ligger ovanpå). Utanför alla kort (t.ex. under dem) avgör
+// sidled som i fanIndexAt. x och y räknas från rutans övre vänstra hörn, height är rutans höjd.
+export function fanIndexAtPoint(x: number, y: number, layout: FanLayout, height: number): number {
+  for (let i = layout.slots.length - 1; i >= 0; i--) {
+    const slot = layout.slots[i]
+    // Kortet vrids runt mitten av sin nederkant.
+    const pivotX = slot.x + FAN_CARD_WIDTH / 2
+    const pivotY = height - FAN_BOTTOM + slot.y
+    const angle = (-slot.rotate * Math.PI) / 180
+    const dx = x - pivotX
+    const dy = y - pivotY
+    const localX = dx * Math.cos(angle) - dy * Math.sin(angle)
+    const localY = dx * Math.sin(angle) + dy * Math.cos(angle)
+    if (Math.abs(localX) <= FAN_CARD_WIDTH / 2 && localY <= 0 && localY >= -FAN_CARD_HEIGHT) return i
+  }
+  return fanIndexAt(x, layout)
 }
 
 // Likadana kort bredvid varandra, i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).

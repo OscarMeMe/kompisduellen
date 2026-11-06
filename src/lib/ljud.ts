@@ -188,6 +188,21 @@ export function playThrow(item: ThrowItemId, impactSeconds: number) {
   }
 }
 
+// Smällen när en exploderande tant vänds: en djup duns och ett brus som rullar ut.
+export function playBoom() {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const ctx = context
+    const now = ctx.currentTime
+    tone(ctx, now, 110, 35, 0.4, 0.7)
+    noise(ctx, now, 0.9, 'lowpass', 2600, 120, 0.45)
+    noise(ctx, now + 0.05, 0.35, 'bandpass', 1800, 500, 0.15, { q: 1.2 })
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
 // Själva träffen, olika för varje sak.
 function throwHit(ctx: AudioContext, item: ThrowItemId, hit: number) {
   if (item === 'tomat') {
