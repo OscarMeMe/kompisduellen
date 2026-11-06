@@ -63,11 +63,11 @@ describe('högst 9 spelare i Kortkaos', () => {
 })
 
 describe('korten', () => {
-  it('har 60 frågor och 150 svar utan dubbletter', () => {
-    expect(kort.fragor).toHaveLength(60)
-    expect(kort.svar).toHaveLength(150)
-    expect(new Set(kort.fragor).size).toBe(60)
-    expect(new Set(kort.svar).size).toBe(150)
+  it('har 100 frågor och 300 svar utan dubbletter', () => {
+    expect(kort.fragor).toHaveLength(100)
+    expect(kort.svar).toHaveLength(300)
+    expect(new Set(kort.fragor).size).toBe(100)
+    expect(new Set(kort.svar).size).toBe(300)
   })
 
   it('har mjuka bindestreck i alla ord på minst 10 bokstäver, så att de bara bryts mellan orddelarna', () => {
