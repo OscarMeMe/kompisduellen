@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { ChevronRight, CircleHelp, Menu } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import type { TantViewProps } from '@/components/lobby/types'
+import { TableAnimations } from '@/components/tantpanik/TantAnimationer'
 import { TantHand } from '@/components/tantpanik/TantHand'
 import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { HistoryDialog, MenuDialog, RulesDialog } from '@/components/tantpanik/TantMenyer'
@@ -27,6 +28,18 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   const [menu, setMenu] = useState(false)
   const [history, setHistory] = useState(false)
   const notice = useFleeting(tantView?.notice ?? null)
+  // Bordet skakar när en exploderande tant vänds (ny key startar om skakningen).
+  const [shake, setShake] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!shake || !root) return
+    // Klassen tas bort och läggs till igen, så att skakningen börjar om utan att något ritas om.
+    root.classList.remove('motion-safe:animate-table-shake')
+    void root.offsetWidth
+    root.classList.add('motion-safe:animate-table-shake')
+  }, [shake])
+  const [pileRef, pileSize] = usePileSize()
   if (!table) return null
   const inMatch = table.order.includes(me.id)
   const out = table.out.includes(me.id)
@@ -50,6 +63,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
 
   return (
     <div
+      ref={rootRef}
       data-spel="tantpanik"
       className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-room pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     >
@@ -59,10 +73,14 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
       {/* Bordet i mitten: högarna, och ovanpå dem det som väntar eller pågår. */}
       <section
         aria-label="Bordet"
-        className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-lg bg-spel-yta/70 p-2 shadow-[inset_0_2px_12px_rgb(0_0_0/0.12)]"
+        // Ett kortbord: filt med träkant, som Imposterjaktens bord.
+        className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-[1.75rem] border-[7px] border-wood bg-felt p-2 shadow-[inset_0_2px_14px_rgb(0_0_0/0.15)] ring-2 ring-wood-edge"
       >
         {tantView?.peek && table.step !== 'arrange' && <Peek cards={tantView.peek} />}
-        <Piles table={table} canDraw={canDraw} onDraw={() => onMove({ type: 'tDraw' })} />
+        {/* Högarna växer och fyller bordet när det finns plats. */}
+        <div ref={pileRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
+          <Piles table={table} size={pileSize} canDraw={canDraw} onDraw={() => onMove({ type: 'tDraw' })} />
+        </div>
         {notice && (
           <p
             key={notice.n}
@@ -89,8 +107,8 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
 
       <LogLine table={table} onOpen={() => setHistory(true)} />
 
-      {/* Min hand, eller steget som tar handens plats. */}
-      <div className="relative shrink-0">
+      {/* Min hand, eller steget som tar handens plats. Det dragna kortet åker ner hit (data-tant-hand). */}
+      <div data-tant-hand className="relative shrink-0">
         {sheet ? (
           <div className="px-2 pb-2">{sheet}</div>
         ) : inMatch && !out && tantView ? (
@@ -112,11 +130,34 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         )}
       </div>
 
+      <TableAnimations state={state} table={table} meId={me.id} tantView={tantView} onShake={setShake} />
       <RulesDialog open={rules} onOpenChange={setRules} />
       <MenuDialog open={menu} onOpenChange={setMenu} isHost={isHost} onAbort={onAbort} onLeave={onLeave} />
       <HistoryDialog open={history} onOpenChange={setHistory} table={table} />
     </div>
   )
+}
+
+// Hur breda högarna får vara (px): de fyller bordets höjd, men får inte bli bredare än att båda ryms bredvid varandra.
+// På 360 × 640 blir de cirka 112 px.
+function usePileSize() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState(112)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => {
+      // Plats för texten under högarna och kortlekens tjocklek, och lite luft runt om.
+      const byHeight = (element.clientHeight - 36) * 0.72 * (107 / 147)
+      const byWidth = (element.clientWidth - 16) / 2 - 6
+      setSize(Math.round(Math.max(72, Math.min(byHeight, byWidth, 240))))
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, size] as const
 }
 
 // Ett besked visas en gång, en kort stund, och aldrig igen (samma nummer visas inte två gånger).
@@ -207,7 +248,7 @@ function Opponents({ state, table, meId }: { state: GameState; table: TantTable;
         const out = table.out.includes(id)
         const turn = table.current === id && !out && !table.winner
         return (
-          <li key={id} ref={turn ? current : undefined} className="shrink-0">
+          <li key={id} ref={turn ? current : undefined} data-seat={id} className="shrink-0">
             <Opponent state={state} id={id} out={out} turn={turn} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
@@ -311,11 +352,13 @@ function MiniFan({ count }: { count: number }) {
 
 // Draghögen som en riktig kortlek (tjockare ju fler kort) och slänghögen med det översta kortet. Tryck på högen för att
 // dra när det är min tur.
-function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean; onDraw: () => void }) {
+function Piles({ table, size, canDraw, onDraw }: { table: TantTable; size: number; canDraw: boolean; onDraw: () => void }) {
+  const width = { width: size }
+  const sizes = `${size}px`
   const top = table.discardTop.at(-1)
   const layers = Math.min(6, Math.ceil(table.deckCount / 5))
   return (
-    <div className="flex items-end justify-center gap-6">
+    <div className="flex items-end justify-center gap-4" style={{ '--pile-w': `${size}px` } as CSSProperties}>
       <div className="flex flex-col items-center gap-1">
         <button
           type="button"
@@ -323,24 +366,25 @@ function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean;
           onClick={onDraw}
           aria-label={canDraw ? `Dra ett kort. ${table.deckCount} kort i högen` : `Draghögen, ${table.deckCount} kort`}
           className={cn(
-            'relative w-28 [@media(min-height:760px)]:w-36 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
+            'relative block rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
             canDraw && 'ring-4 ring-primary motion-safe:animate-turn-pulse',
           )}
-          style={{ marginTop: layers * 2, marginLeft: layers * 2 }}
+          style={{ ...width, marginTop: layers * 2, marginLeft: layers * 2 }}
+          data-tant-pile
         >
           {/* Kortleken: baksidor förskjutna några pixlar, så att den ser tjock ut. */}
           {Array.from({ length: layers }, (_, i) => (
             <TantBaksida
               key={i}
-              sizes="144px"
-              className="absolute inset-0 w-28 [@media(min-height:760px)]:w-36"
+              sizes={sizes}
+              className="absolute inset-0 w-full"
               style={{ transform: `translate(${-(layers - i) * 2}px, ${-(layers - i) * 2}px)` }}
             />
           ))}
           {table.deckCount > 0 ? (
-            <TantBaksida sizes="144px" className="relative w-28 [@media(min-height:760px)]:w-36 drop-shadow-md" />
+            <TantBaksida sizes={sizes} className="relative w-full drop-shadow-md" />
           ) : (
-            <span className="block aspect-[107/147] w-28 [@media(min-height:760px)]:w-36 rounded-lg border-2 border-dashed border-foreground/30" />
+            <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
           )}
           <span className="absolute -right-2 -bottom-2 rounded-full bg-foreground px-2 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm">
             {table.deckCount}
@@ -355,11 +399,12 @@ function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean;
           <TantKort
             key={`${table.discardCount}-${top}`}
             type={top}
-            size="small"
-            className="w-28 [@media(min-height:760px)]:w-36 motion-safe:animate-pop"
+            size={size >= 140 ? 'large' : 'small'}
+            sizes={sizes}
+            className="w-(--pile-w) motion-safe:animate-pop sm:w-(--pile-w)"
           />
         ) : (
-          <span className="block aspect-[107/147] w-28 [@media(min-height:760px)]:w-36 rounded-lg border-2 border-dashed border-foreground/30" />
+          <span style={width} className="block aspect-[107/147] rounded-lg border-2 border-dashed border-foreground/30" />
         )}
         <span className="text-xs font-semibold">Slänghögen ({table.discardCount})</span>
       </div>

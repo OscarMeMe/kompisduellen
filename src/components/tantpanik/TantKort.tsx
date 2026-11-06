@@ -17,9 +17,21 @@ const SIZES: Record<TantKortSize, { width: string; sizes: string }> = {
 
 // Ett kort i Exploderande Tanter. Har kortet en bild (tantpanik-kort.ts) visas den hel, med ram och text, och inget
 // läggs ovanpå. Annars ett textkort med symbol, namn och regeltext på kortets färg.
-export function TantKort({ type, size = 'large', className }: { type: CardType; size?: TantKortSize; className?: string }) {
+// sizes ersätter storlekens sizes när kortet visas i en annan bredd (t.ex. högarna som växer med bordet).
+export function TantKort({
+  type,
+  size = 'large',
+  className,
+  sizes: sizesOverride,
+}: {
+  type: CardType
+  size?: TantKortSize
+  className?: string
+  sizes?: string
+}) {
   const card = CARDS[type]
-  const { width, sizes } = SIZES[size]
+  const { width, sizes: sizesForSize } = SIZES[size]
+  const sizes = sizesOverride ?? sizesForSize
   const srcSet = cardSrcSet(type)
   if (srcSet) {
     return (
