@@ -78,7 +78,7 @@ export function Solfjader({
   return (
     <div
       ref={ref}
-      className="relative mx-auto h-43 w-full max-w-xl touch-none select-none"
+      className="relative mx-auto h-[164px] w-full max-w-xl touch-none select-none"
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -111,7 +111,7 @@ export function Solfjader({
               if (event.detail === 0) onTap(card.id)
             }}
             className={cn(
-              'absolute bottom-6 h-29 w-21 origin-bottom rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out',
+              'absolute bottom-3.5 h-[137px] w-25 origin-bottom rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out',
               isSelected && 'ring-4 ring-primary',
               lit && !isSelected && 'shadow-[0_0_18px_4px] shadow-sun ring-4 ring-sun',
             )}
@@ -137,10 +137,10 @@ function FanCard({ type }: { type: TantCard['type'] }) {
   if (src) return <img src={src} alt="" draggable={false} className="size-full object-contain drop-shadow-sm select-none" />
   return (
     <span className={cn('flex size-full flex-col rounded-lg border border-foreground/15 p-1.5 text-left shadow-soft-sm', card.color)}>
-      <span aria-hidden className="text-lg leading-none">
+      <span aria-hidden className="text-2xl leading-none">
         {card.symbol}
       </span>
-      <span className="mt-auto font-heading text-[11px] leading-tight font-bold">{card.name}</span>
+      <span className="mt-auto font-heading text-xs leading-tight font-bold">{card.name}</span>
     </span>
   )
 }

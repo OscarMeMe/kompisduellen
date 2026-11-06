@@ -202,13 +202,13 @@ function Opponents({ state, table, meId }: { state: GameState; table: TantTable;
     current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
   }, [table.current])
   return (
-    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1 overflow-x-auto px-2 pt-1 pb-2">
+    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1 overflow-x-auto px-2 pt-1 pb-2 [scrollbar-width:none]">
       {ids.map((id) => {
         const out = table.out.includes(id)
         const turn = table.current === id && !out && !table.winner
         return (
           <li key={id} ref={turn ? current : undefined} className="shrink-0">
-            <Opponent state={state} id={id} out={out} turn={turn} count={table.handCounts[id] ?? 0} />
+            <Opponent state={state} id={id} out={out} turn={turn} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
       })}
@@ -216,7 +216,22 @@ function Opponents({ state, table, meId }: { state: GameState; table: TantTable;
   )
 }
 
-function Opponent({ state, id, out, turn, count }: { state: GameState; id: string; out: boolean; turn: boolean; count: number }) {
+// narrow: med fler än fyra motspelare blir platserna smalare, så att fem får plats på 360 px.
+function Opponent({
+  state,
+  id,
+  out,
+  turn,
+  count,
+  narrow,
+}: {
+  state: GameState
+  id: string
+  out: boolean
+  turn: boolean
+  count: number
+  narrow: boolean
+}) {
   const [open, setOpen] = useState(false)
   const throws = useThrows()
   const wait = useThrowWait(throws?.lastThrowAt ?? null)
@@ -225,7 +240,8 @@ function Opponent({ state, id, out, turn, count }: { state: GameState; id: strin
   const seat = (
     <span
       className={cn(
-        'flex w-20 flex-col items-center rounded-lg px-1 pt-1 pb-0.5 motion-safe:transition-colors',
+        'flex flex-col items-center rounded-lg px-1 pt-1 pb-0.5 motion-safe:transition-colors',
+        narrow ? 'w-16' : 'w-20',
         turn && 'bg-coral-soft shadow-[0_0_16px_2px] shadow-primary/40 ring-2 ring-primary',
         out && 'opacity-45 grayscale',
       )}
@@ -307,7 +323,7 @@ function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean;
           onClick={onDraw}
           aria-label={canDraw ? `Dra ett kort. ${table.deckCount} kort i högen` : `Draghögen, ${table.deckCount} kort`}
           className={cn(
-            'relative w-28 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
+            'relative w-28 [@media(min-height:760px)]:w-36 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
             canDraw && 'ring-4 ring-primary motion-safe:animate-turn-pulse',
           )}
           style={{ marginTop: layers * 2, marginLeft: layers * 2 }}
@@ -316,15 +332,15 @@ function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean;
           {Array.from({ length: layers }, (_, i) => (
             <TantBaksida
               key={i}
-              sizes="112px"
-              className="absolute inset-0 w-28"
+              sizes="144px"
+              className="absolute inset-0 w-28 [@media(min-height:760px)]:w-36"
               style={{ transform: `translate(${-(layers - i) * 2}px, ${-(layers - i) * 2}px)` }}
             />
           ))}
           {table.deckCount > 0 ? (
-            <TantBaksida sizes="112px" className="relative w-28 drop-shadow-md" />
+            <TantBaksida sizes="144px" className="relative w-28 [@media(min-height:760px)]:w-36 drop-shadow-md" />
           ) : (
-            <span className="block aspect-[107/147] w-28 rounded-lg border-2 border-dashed border-foreground/30" />
+            <span className="block aspect-[107/147] w-28 [@media(min-height:760px)]:w-36 rounded-lg border-2 border-dashed border-foreground/30" />
           )}
           <span className="absolute -right-2 -bottom-2 rounded-full bg-foreground px-2 py-0.5 text-sm font-bold text-background tabular-nums shadow-soft-sm">
             {table.deckCount}
@@ -336,9 +352,14 @@ function Piles({ table, canDraw, onDraw }: { table: TantTable; canDraw: boolean;
       </div>
       <div className="flex flex-col items-center gap-1">
         {top ? (
-          <TantKort key={`${table.discardCount}-${top}`} type={top} size="small" className="w-28 motion-safe:animate-pop" />
+          <TantKort
+            key={`${table.discardCount}-${top}`}
+            type={top}
+            size="small"
+            className="w-28 [@media(min-height:760px)]:w-36 motion-safe:animate-pop"
+          />
         ) : (
-          <span className="block aspect-[107/147] w-28 rounded-lg border-2 border-dashed border-foreground/30" />
+          <span className="block aspect-[107/147] w-28 [@media(min-height:760px)]:w-36 rounded-lg border-2 border-dashed border-foreground/30" />
         )}
         <span className="text-xs font-semibold">Slänghögen ({table.discardCount})</span>
       </div>

@@ -77,7 +77,7 @@ export function TantHand({
           <section
             aria-label="Valda kort"
             {...SPLAT_SHIELD}
-            className="fixed inset-x-0 bottom-[calc(10rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-3"
+            className="fixed inset-x-0 bottom-[calc(10.75rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-md px-3"
           >
             {/* Kortbilden överst skrollar när rutan inte räcker till. Valen och knappen längst ner syns alltid. */}
             <div className="flex max-h-[calc(100dvh-11rem)] flex-col gap-3 rounded-lg bg-card p-3 shadow-lift">
@@ -164,7 +164,7 @@ function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null
         setSent(true)
         onNope()
       }}
-      className="fixed right-3 bottom-[calc(11rem+env(safe-area-inset-bottom))] z-50 flex size-28 items-center justify-center rounded-full bg-primary-button font-heading text-xl font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:animate-pop motion-safe:active:scale-95"
+      className="fixed right-3 bottom-[calc(11.5rem+env(safe-area-inset-bottom))] z-50 flex size-28 items-center justify-center rounded-full bg-primary-button font-heading text-xl font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:animate-pop motion-safe:active:scale-95"
     >
       <svg aria-hidden viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
         <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="8" className="stroke-primary-foreground/25" />
