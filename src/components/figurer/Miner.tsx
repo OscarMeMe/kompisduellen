@@ -1,9 +1,15 @@
 import type { BlobFigure, Mood } from '@/lib/figurer'
 
 // De sex minerna. De är samma för alla figurer och ritas i kroppens koordinater (200 × 200). Ögonen sitter på samma
-// plats i alla miner, så att prylar som glasögon alltid passar.
-const EYES = [78, 122] as const
+// plats i alla miner, så att prylar som glasögon alltid passar. Ögat (cyclops) har ett enda stort öga mitt i ansiktet,
+// och då ritas varje min med det ögat och ett ögonbryn i stället för två.
 const EYE_Y = 108
+
+type Eyes = { xs: readonly number[]; scale: number; cyclops: boolean }
+
+function eyesFor(figure: BlobFigure): Eyes {
+  return figure.traits?.cyclops ? { xs: [100], scale: 1.7, cyclops: true } : { xs: [78, 122], scale: 1, cyclops: false }
+}
 
 const LINE = { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
@@ -13,99 +19,134 @@ function Stroke({ d, width = 7 }: { d: string; width?: number }) {
 
 // Öppna ögon. look flyttar pupillerna åt sidan och lid är ögonlockets färg när ögonen är halvstängda.
 function OpenEyes({
+  eyes,
   r = 14,
   pupil = 7,
   look = [0, 0],
   lid,
   blink = false,
 }: {
+  eyes: Eyes
   r?: number
   pupil?: number
-  look?: readonly [number, number]
+  look?: readonly number[]
   lid?: string
   blink?: boolean
 }) {
+  const size = r * eyes.scale
   return (
     <g className={blink ? 'origin-center [transform-box:fill-box] motion-safe:animate-blob-blink' : undefined}>
-      {EYES.map((x, i) => (
+      {eyes.xs.map((x, i) => (
         <g key={x}>
-          <circle cx={x} cy={EYE_Y} r={r} className="fill-card" />
-          <circle cx={x + look[i]} cy={EYE_Y + 1} r={pupil} className="fill-foreground" />
-          {lid && <path d={`M${x - r - 1} ${EYE_Y - 1}A${r + 1} ${r + 1} 0 0 1 ${x + r + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
+          <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
+          <circle cx={x + (look[i] ?? 0) * eyes.scale} cy={EYE_Y + 1} r={pupil * eyes.scale} className="fill-foreground" />
+          {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
         </g>
       ))}
     </g>
   )
 }
 
+// Ögon som båge, kryss och liknande: ritas runt varje öga, större för Ögat.
+function EyeStrokes({ eyes, draw, width = 8 }: { eyes: Eyes; draw: (x: number, s: number) => string; width?: number }) {
+  return (
+    <>
+      {eyes.xs.map((x) => (
+        <Stroke key={x} d={draw(x, eyes.scale)} width={width * Math.min(eyes.scale, 1.3)} />
+      ))}
+    </>
+  )
+}
+
+// Ögonbrynen: två vanligtvis, ett brett för Ögat. left och right är bryn för vänster och höger öga, single för Ögat.
+function Brows({ eyes, left, right, single }: { eyes: Eyes; left: string; right: string; single: string }) {
+  return eyes.cyclops ? (
+    <Stroke d={single} />
+  ) : (
+    <>
+      <Stroke d={left} />
+      <Stroke d={right} />
+    </>
+  )
+}
+
 function Waiting({ figure, animated }: { figure: BlobFigure; animated: boolean }) {
+  const eyes = eyesFor(figure)
   const { crossEyed, sleepy } = figure.traits ?? {}
   return (
     <>
-      <OpenEyes look={crossEyed ? [5, -5] : [0, 0]} lid={sleepy ? figure.palette.base : undefined} blink={animated} />
-      <Stroke d={crossEyed ? 'M78 136Q100 158 122 136' : 'M84 138Q100 150 116 138'} />
+      <OpenEyes eyes={eyes} look={crossEyed ? [5, -5] : [0, 0]} lid={sleepy ? figure.palette.base : undefined} blink={animated} />
+      <Stroke d={crossEyed ? 'M78 136Q100 158 122 136' : eyes.cyclops ? 'M84 146Q100 156 116 146' : 'M84 138Q100 150 116 138'} />
     </>
   )
 }
 
 function Suspicious({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
   return (
     <>
-      <OpenEyes look={[6, 6]} lid={figure.palette.base} />
-      <Stroke d="M58 86L92 92" />
-      <Stroke d="M108 84Q124 72 142 84" />
-      <Stroke d="M84 142Q102 134 118 140" />
+      <OpenEyes eyes={eyes} look={[6, 6]} lid={figure.palette.base} />
+      <Brows eyes={eyes} left="M58 86L92 92" right="M108 84Q124 72 142 84" single="M66 76L134 68" />
+      <Stroke d={eyes.cyclops ? 'M84 150Q102 144 118 148' : 'M84 142Q102 134 118 140'} />
     </>
   )
 }
 
-function Accused() {
+function Accused({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
   return (
     <>
-      <OpenEyes r={16} pupil={4} />
-      <Stroke d="M58 84Q74 72 92 82" />
-      <Stroke d="M108 82Q126 72 142 84" />
-      <ellipse cx="100" cy="146" rx="10" ry="13" className="fill-foreground" />
+      <OpenEyes eyes={eyes} r={16} pupil={4} />
+      <Brows eyes={eyes} left="M58 84Q74 72 92 82" right="M108 82Q126 72 142 84" single="M66 72Q100 56 134 72" />
+      <ellipse cx="100" cy={eyes.cyclops ? 154 : 146} rx="10" ry="13" className="fill-foreground" />
       <path d="M152 74Q160 88 152 94Q144 88 152 74Z" className="fill-sky" />
     </>
   )
 }
 
-function Hit() {
+function Hit({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
   return (
     <>
-      {EYES.map((x) => (
-        <Stroke key={x} d={`M${x - 11} ${EYE_Y - 11}L${x + 11} ${EYE_Y + 11}M${x + 11} ${EYE_Y - 11}L${x - 11} ${EYE_Y + 11}`} width={8} />
-      ))}
-      <Stroke d="M76 146Q84 134 92 146T108 146T124 146" />
+      <EyeStrokes
+        eyes={eyes}
+        draw={(x, s) => {
+          const d = 11 * s
+          return `M${x - d} ${EYE_Y - d}L${x + d} ${EYE_Y + d}M${x + d} ${EYE_Y - d}L${x - d} ${EYE_Y + d}`
+        }}
+      />
+      <Stroke d={eyes.cyclops ? 'M76 154Q84 142 92 154T108 154T124 154' : 'M76 146Q84 134 92 146T108 146T124 146'} />
       <path d="M38 74l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z" className="fill-sun" />
       <path d="M160 66l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" className="fill-sun" />
     </>
   )
 }
 
-function Won() {
+function Won({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
+  const mouthY = eyes.cyclops ? 8 : 0
   return (
     <>
-      <Stroke d="M62 112Q78 92 94 112" width={8} />
-      <Stroke d="M106 112Q122 92 138 112" width={8} />
-      <path d="M72 130Q100 136 128 130Q124 166 100 166Q76 166 72 130Z" className="fill-foreground" />
-      <ellipse cx="100" cy="156" rx="14" ry="8" className="fill-coral-soft" />
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 16 * s} ${EYE_Y + 4 * s}Q${x} ${EYE_Y - 16 * s} ${x + 16 * s} ${EYE_Y + 4 * s}`} />
+      <path
+        d={`M72 ${130 + mouthY}Q100 ${136 + mouthY} 128 ${130 + mouthY}Q124 ${166 + mouthY} 100 ${166 + mouthY}Q76 ${166 + mouthY} 72 ${130 + mouthY}Z`}
+        className="fill-foreground"
+      />
+      <ellipse cx="100" cy={156 + mouthY} rx="14" ry="8" className="fill-coral-soft" />
       <ellipse cx="54" cy="130" rx="11" ry="7" className="fill-coral-soft opacity-70" />
       <ellipse cx="146" cy="130" rx="11" ry="7" className="fill-coral-soft opacity-70" />
     </>
   )
 }
 
-function VotedOut() {
+function VotedOut({ figure }: { figure: BlobFigure }) {
+  const eyes = eyesFor(figure)
   return (
     <>
-      <Stroke d="M62 108Q78 120 94 108" width={8} />
-      <Stroke d="M106 108Q122 120 138 108" width={8} />
-      <Stroke d="M60 92L88 82" />
-      <Stroke d="M112 82L140 92" />
-      <Stroke d="M80 152Q100 132 120 152" />
-      <path d="M78 122Q88 138 78 144Q68 138 78 122Z" className="fill-sky" />
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 16 * s} ${EYE_Y}Q${x} ${EYE_Y + 12 * s} ${x + 16 * s} ${EYE_Y}`} />
+      <Brows eyes={eyes} left="M60 92L88 82" right="M112 82L140 92" single="M70 82Q100 70 130 82" />
+      <Stroke d={eyes.cyclops ? 'M80 158Q100 140 120 158' : 'M80 152Q100 132 120 152'} />
+      <path d={eyes.cyclops ? 'M82 128Q92 144 82 150Q72 144 82 128Z' : 'M78 122Q88 138 78 144Q68 138 78 122Z'} className="fill-sky" />
     </>
   )
 }
@@ -117,12 +158,12 @@ export function Face({ mood, figure, animated }: { mood: Mood; figure: BlobFigur
     case 'misstankt':
       return <Suspicious figure={figure} />
     case 'anklagad':
-      return <Accused />
+      return <Accused figure={figure} />
     case 'traffad':
-      return <Hit />
+      return <Hit figure={figure} />
     case 'vann':
-      return <Won />
+      return <Won figure={figure} />
     case 'utrostad':
-      return <VotedOut />
+      return <VotedOut figure={figure} />
   }
 }

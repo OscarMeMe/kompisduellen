@@ -537,16 +537,56 @@
     --coral-soft: oklch(0.94 0.04 30);
     --mint-soft: oklch(0.955 0.04 165);
     --room: oklch(0.885 0.03 65);
-    /* Blobbarnas kroppar: högdager, bas och skugga. Står fast även i det mörka läget. */
+    /* Blobbarnas kroppar: högdager (-ljus), bas och skugga (-mork). Basen skiljer sig tydligt från alla andras, så att
+       figurerna går att skilja åt i emoji-storlek (testet i figurer.test.ts mäter det). Står fast i det mörka läget. */
+    /* Klumpen, korall */
     --figur-klump-ljus: oklch(0.82 0.13 32);
     --figur-klump: oklch(0.68 0.18 30);
     --figur-klump-mork: oklch(0.5 0.16 28);
+    /* Bråkis, vinröd */
+    --figur-brak-ljus: oklch(0.58 0.14 18);
+    --figur-brak: oklch(0.44 0.15 15);
+    --figur-brak-mork: oklch(0.32 0.11 15);
+    /* Burret, bärnsten */
+    --figur-burr-ljus: oklch(0.88 0.11 78);
+    --figur-burr: oklch(0.78 0.16 70);
+    --figur-burr-mork: oklch(0.62 0.15 62);
+    /* Ögat, gul */
+    --figur-oga-ljus: oklch(0.95 0.1 104);
+    --figur-oga: oklch(0.89 0.16 100);
+    --figur-oga-mork: oklch(0.74 0.15 92);
+    /* Plugghästen, lime */
+    --figur-plugg-ljus: oklch(0.9 0.12 138);
+    --figur-plugg: oklch(0.8 0.19 142);
+    --figur-plugg-mork: oklch(0.62 0.17 145);
+    /* Kungen, skogsgrön */
+    --figur-kung-ljus: oklch(0.67 0.1 156);
+    --figur-kung: oklch(0.52 0.12 158);
+    --figur-kung-mork: oklch(0.38 0.09 160);
+    /* Smältis, turkos */
+    --figur-smalt-ljus: oklch(0.87 0.08 195);
+    --figur-smalt: oklch(0.75 0.12 195);
+    --figur-smalt-mork: oklch(0.57 0.1 200);
+    /* Droppan, blå */
+    --figur-droppe-ljus: oklch(0.76 0.11 252);
+    --figur-droppe: oklch(0.6 0.17 258);
+    --figur-droppe-mork: oklch(0.44 0.15 262);
+    /* Sjusovaren, lila */
+    --figur-sova-ljus: oklch(0.78 0.1 305);
+    --figur-sova: oklch(0.62 0.15 305);
+    --figur-sova-mork: oklch(0.46 0.13 305);
+    /* Festis, magenta */
+    --figur-fest-ljus: oklch(0.76 0.16 350);
+    --figur-fest: oklch(0.62 0.22 350);
+    --figur-fest-mork: oklch(0.48 0.19 350);
+    /* Blygis, ljusrosa */
+    --figur-blyg-ljus: oklch(0.94 0.04 15);
+    --figur-blyg: oklch(0.86 0.085 12);
+    --figur-blyg-mork: oklch(0.68 0.12 10);
+    /* Spionen, grå */
     --figur-spion-ljus: oklch(0.84 0.008 260);
     --figur-spion: oklch(0.66 0.012 260);
     --figur-spion-mork: oklch(0.46 0.014 260);
-    --figur-sova-ljus: oklch(0.84 0.09 305);
-    --figur-sova: oklch(0.66 0.14 305);
-    --figur-sova-mork: oklch(0.46 0.13 305);
     --figur-svart: oklch(0.22 0.012 260);
     --wood: oklch(0.74 0.085 65);
     --felt: oklch(0.9 0.06 165);

@@ -1,11 +1,29 @@
-import type { BlobFigure, BlobId } from '@/lib/figurer'
+import type { ReactNode } from 'react'
+import type { BlobFigure, BlobId, BlobShape } from '@/lib/figurer'
 
-// Samma mjuka kropp för alla blobbar. Koordinaterna är 200 × 200, och minen (Miner.tsx) ritas ovanpå i samma koordinater.
-const BODY_PATH = 'M100 48C140 48 168 78 170 118C172 156 146 178 100 178C54 178 28 156 30 118C32 78 60 48 100 48Z'
+// Kropparna i koordinaterna 200 × 200. Minen (Miner.tsx) ritas ovanpå, och ögonen sitter alltid kring y = 108.
+const BODY_PATHS: Record<BlobShape, string> = {
+  // Den mjuka grundformen.
+  blob: 'M100 48C140 48 168 78 170 118C172 156 146 178 100 178C54 178 28 156 30 118C32 78 60 48 100 48Z',
+  // En droppe med spetsen uppåt.
+  droppe: 'M100 26C110 50 168 86 168 126C168 158 140 180 100 180C60 180 32 158 32 126C32 86 90 50 100 26Z',
+  // Rinner ut nertill, med droppar längs kanten.
+  smalt:
+    'M100 50C138 50 162 78 164 112C166 138 162 150 172 160C182 170 170 182 152 178C140 176 134 186 120 182C108 179 98 188 86 182C72 176 60 184 46 178C30 172 30 160 38 152C42 140 34 130 36 112C38 78 62 50 100 50Z',
+}
+
+// Högdagern, där ljuset träffar. Droppen är smalare upptill, så där sitter den längre in.
+const SHINE: Record<BlobShape, { cx: number; cy: number }> = {
+  blob: { cx: 68, cy: 82 },
+  droppe: { cx: 76, cy: 88 },
+  smalt: { cx: 68, cy: 82 },
+}
 
 // Radiella gradienter i stället för filter, så att tio figurer inte blir tunga på en mobil.
 export function BlobShape({ figure, uid }: { figure: BlobFigure; uid: string }) {
   const { light, base, dark } = figure.palette
+  const shape = figure.shape ?? 'blob'
+  const shine = SHINE[shape]
   return (
     <>
       <defs>
@@ -24,20 +42,20 @@ export function BlobShape({ figure, uid }: { figure: BlobFigure; uid: string }) 
         </radialGradient>
       </defs>
       <ellipse cx="100" cy="182" rx="68" ry="12" fill={`url(#${uid}-skugga)`} />
-      <path d={BODY_PATH} fill={`url(#${uid}-kropp)`} />
-      <ellipse cx="68" cy="82" rx="24" ry="14" transform="rotate(-32 68 82)" fill={`url(#${uid}-glans)`} />
+      <path
+        d={BODY_PATHS[shape]}
+        fill={`url(#${uid}-kropp)`}
+        style={figure.outline ? { stroke: dark, strokeWidth: 4 } : undefined}
+      />
+      <ellipse cx={shine.cx} cy={shine.cy} rx="24" ry="14" transform={`rotate(-32 ${shine.cx} ${shine.cy})`} fill={`url(#${uid}-glans)`} />
     </>
   )
 }
 
-// Hårtussen gör Klumpen lite korkad. Den ligger bakom kroppen, så att den växer ur huvudet.
+// Hårtussen gör Klumpen lite korkad. Den har kroppens egen färg och ligger bakom kroppen, så att den växer ur huvudet
+// och inte liknar tomatens stjälk.
 function Tuft({ figure }: { figure: BlobFigure }) {
-  return (
-    <path
-      d="M88 56Q78 28 96 22Q90 38 102 48Q104 24 124 28Q108 38 114 56Z"
-      style={{ fill: figure.palette.dark }}
-    />
-  )
+  return <path d="M88 56Q78 28 96 22Q90 38 102 48Q104 24 124 28Q108 38 114 56Z" style={{ fill: figure.palette.base }} />
 }
 
 // Spionens svarta hatt.
@@ -67,13 +85,72 @@ function Nightcap({ figure }: { figure: BlobFigure }) {
   )
 }
 
-// Prylar och drag som hör till kroppen: Under ritas före kroppen och Over ovanpå den, men båda under minen.
-const UNDER: Partial<Record<BlobId, (figure: BlobFigure) => React.ReactNode>> = {
-  klumpen: (figure) => <Tuft figure={figure} />,
+// Festis partyhatt, lite på sned, med ränder och en tofs.
+function PartyHat() {
+  return (
+    <g transform="rotate(12 100 56)">
+      <path d="M74 62L104 0L130 62Z" className="fill-sun" />
+      <path d="M86 38L120 38M80 50L126 50M94 22L112 22" className="fill-none stroke-sky" strokeWidth="6" strokeLinecap="round" />
+      <ellipse cx="102" cy="62" rx="30" ry="6" style={{ fill: 'var(--figur-fest-mork)' }} />
+      <circle cx="104" cy="2" r="9" className="fill-card" />
+    </g>
+  )
 }
-const OVER: Partial<Record<BlobId, (figure: BlobFigure) => React.ReactNode>> = {
+
+// Kungens krona i guld, med en ädelsten i mitten.
+function Crown() {
+  return (
+    <g>
+      <path d="M64 62L60 26L82 44L100 18L118 44L140 26L136 62Z" style={{ fill: 'var(--crown)' }} />
+      <rect x="64" y="54" width="72" height="10" rx="4" style={{ fill: 'var(--crown)' }} />
+      <circle cx="100" cy="46" r="6" className="fill-destructive" />
+      <path d="M70 34L74 52" className="fill-none stroke-card opacity-40" strokeWidth="4" strokeLinecap="round" />
+    </g>
+  )
+}
+
+// Burrets spretiga hår, bakom kroppen.
+function SpikyHair({ figure }: { figure: BlobFigure }) {
+  return (
+    <path
+      d="M44 84L30 48L60 62L58 22L82 50L98 10L110 48L134 18L134 56L166 44L156 84Z"
+      style={{ fill: figure.palette.dark }}
+    />
+  )
+}
+
+// Bråkis små horn, bakom kroppen så att bara spetsarna sticker upp. Mörkare än kroppen, så att de syns mot ljus bakgrund.
+function Horns({ figure }: { figure: BlobFigure }) {
+  return (
+    <g style={{ fill: figure.palette.dark }}>
+      <path d="M58 76Q48 44 66 30Q64 52 82 62Z" />
+      <path d="M142 76Q152 44 134 30Q136 52 118 62Z" />
+    </g>
+  )
+}
+
+// Blygis rodnar alltid lite.
+function Blush() {
+  return (
+    <g className="fill-destructive opacity-30">
+      <ellipse cx="56" cy="130" rx="14" ry="8" />
+      <ellipse cx="144" cy="130" rx="14" ry="8" />
+    </g>
+  )
+}
+
+// Prylar och drag som hör till kroppen: Under ritas före kroppen och Over ovanpå den, men båda under minen.
+const UNDER: Partial<Record<BlobId, (figure: BlobFigure) => ReactNode>> = {
+  klumpen: (figure) => <Tuft figure={figure} />,
+  burret: (figure) => <SpikyHair figure={figure} />,
+  brakis: (figure) => <Horns figure={figure} />,
+}
+const OVER: Partial<Record<BlobId, (figure: BlobFigure) => ReactNode>> = {
   spionen: () => <SpyHat />,
   sjusovaren: (figure) => <Nightcap figure={figure} />,
+  festis: () => <PartyHat />,
+  kungen: () => <Crown />,
+  blygis: () => <Blush />,
 }
 
 // Bakre lagret: skugga, kropp och prylar som ligger under minen.
@@ -99,7 +176,22 @@ function Sunglasses() {
   )
 }
 
+// Plugghästens stora runda glasögon. Glasen är genomskinliga, så att ögonen och minen syns.
+function BigGlasses() {
+  return (
+    <g className="fill-none" style={{ stroke: 'var(--figur-svart)' }} strokeWidth="6">
+      <circle cx="78" cy="108" r="22" className="fill-card/25" />
+      <circle cx="122" cy="108" r="22" className="fill-card/25" />
+      <path d="M100 104Q100 98 100 104" strokeLinecap="round" />
+      <path d="M96 104Q100 98 104 104" strokeLinecap="round" />
+      <path d="M56 104L36 96M144 104L164 96" strokeLinecap="round" />
+    </g>
+  )
+}
+
 // Främre lagret: prylar över minen. De flesta figurer har inget.
 export function DrawnFront({ figure }: { figure: BlobFigure }) {
-  return figure.id === 'spionen' ? <Sunglasses /> : null
+  if (figure.id === 'spionen') return <Sunglasses />
+  if (figure.id === 'plugghasten') return <BigGlasses />
+  return null
 }
