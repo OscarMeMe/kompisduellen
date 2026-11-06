@@ -70,50 +70,9 @@ function difficultyName(settings: ImposterSettings): string {
   return settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'
 }
 
-// Inställningarna på en rad, för gästerna i väntrummet: "2 omgångar · Normal · Blandat · Vi skriver orden".
-export function imposterSettingsLine(settings: ImposterSettings, rounds: number): string {
-  return [
-    `${rounds} ${rounds === 1 ? 'omgång' : 'omgångar'}`,
-    difficultyName(settings),
-    settings.category ?? 'Blandat',
-    settings.aloud ? 'Vi säger orden högt' : 'Vi skriver orden',
-  ].join(' · ')
-}
-
-// Replikerna i väntrummets rubrikrad, som byter var tredje sekund.
-export const IMPOSTER_LOBBY_LINES: readonly string[] = [
-  'Någon bland er ljuger…',
-  'Vem ser mest skyldig ut?',
-  'Vem undviker din blick?',
-  'Alla ser oskyldiga ut. Nästan alla.',
-  'Lita inte på den som ler.',
-]
-export const IMPOSTER_LOBBY_LINE_MS = 3000
-
-// Väntrummets status i klartext. tooMany kommer från tooManyPlayers i match.ts.
-export function imposterLobbyStatus({
-  count,
-  minPlayers,
-  maxPlayers,
-  tooMany,
-  isHost,
-  hostName,
-}: {
-  count: number
-  minPlayers: number
-  maxPlayers: number
-  tooMany: boolean
-  isHost: boolean
-  hostName?: string
-}): string {
-  if (tooMany) return `Ni är för många. Högst ${maxPlayers} spelare kan vara med.`
-  if (count < minPlayers) return `Väntar på ${minPlayers - count} till.`
-  return `Ni är tillräckligt många. ${isHost ? 'Du kan starta.' : `Väntar på ${hostName ?? 'värden'}.`}`
-}
-
-// Hur många streckade ringar för lediga platser som visas: en för varje som saknas, annars en så länge det finns plats.
-export function imposterEmptySeats(count: number, minPlayers: number, maxPlayers: number): number {
-  return count >= maxPlayers ? 0 : Math.max(1, minPlayers - count)
+// Värdens val i ord, för gästernas rad i väntrummet (settingsLine i vantrum.ts): "Normal", "Blandat", "Vi skriver orden".
+export function imposterSettingsParts(settings: ImposterSettings): string[] {
+  return [difficultyName(settings), settings.category ?? 'Blandat', settings.aloud ? 'Vi säger orden högt' : 'Vi skriver orden']
 }
 
 // kort: alla läser sitt kort. ledtradar: ett ord var i turordning, tre varv. diskussion: allas ord syns kvar och man

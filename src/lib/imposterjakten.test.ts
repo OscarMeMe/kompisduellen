@@ -21,9 +21,6 @@ import {
   IMPOSTER_ESCAPES,
   imposterInstruction,
   IMPOSTER_GUESSES_RIGHT,
-  imposterEmptySeats,
-  imposterLobbyStatus,
-  imposterSettingsLine,
   isCorrectGuess,
   moreThanHalf,
   myImposterCard,
@@ -1048,41 +1045,5 @@ describe('Imposterjakten: peka ut och rösterna vid lika', () => {
     const tied = vote(vote(vote(vote(voting, 'a', 'b'), 'b', 'a'), 'c', 'a'), 'd', 'b')
     expect(table(tied)).toMatchObject({ step: 'diskussion', tieVotes: { a: 'b', b: 'a', c: 'a', d: 'b' }, votes: null })
     expect(table(readyAll(tied, ABCD))).toMatchObject({ step: 'rostning', tieVotes: null })
-  })
-})
-
-describe('väntrummet', () => {
-  const lobby = { minPlayers: 3, maxPlayers: 10, tooMany: false, isHost: false, hostName: 'Oscar1' }
-
-  it('säger hur många som saknas', () => {
-    expect(imposterLobbyStatus({ ...lobby, count: 2 })).toBe('Väntar på 1 till.')
-    expect(imposterLobbyStatus({ ...lobby, count: 1 })).toBe('Väntar på 2 till.')
-  })
-
-  it('säger vem gästerna väntar på när ni är tillräckligt många', () => {
-    expect(imposterLobbyStatus({ ...lobby, count: 3 })).toBe('Ni är tillräckligt många. Väntar på Oscar1.')
-    expect(imposterLobbyStatus({ ...lobby, count: 3, hostName: undefined })).toBe('Ni är tillräckligt många. Väntar på värden.')
-  })
-
-  it('säger till värden att den kan starta', () => {
-    expect(imposterLobbyStatus({ ...lobby, count: 4, isHost: true })).toBe('Ni är tillräckligt många. Du kan starta.')
-  })
-
-  it('säger till när ni är för många', () => {
-    expect(imposterLobbyStatus({ ...lobby, count: 11, tooMany: true })).toBe('Ni är för många. Högst 10 spelare kan vara med.')
-  })
-
-  it('visar lediga platser för dem som saknas och en till så länge det finns plats', () => {
-    expect(imposterEmptySeats(1, 3, 10)).toBe(2)
-    expect(imposterEmptySeats(3, 3, 10)).toBe(1)
-    expect(imposterEmptySeats(9, 3, 10)).toBe(1)
-    expect(imposterEmptySeats(10, 3, 10)).toBe(0)
-    expect(imposterEmptySeats(12, 3, 10)).toBe(0)
-  })
-
-  it('skriver inställningarna på en rad', () => {
-    expect(imposterSettingsLine({ hard: false, category: null, aloud: false }, 2)).toBe('2 omgångar · Normal · Blandat · Vi skriver orden')
-    expect(imposterSettingsLine({ hard: true, category: 'Mat', aloud: true }, 1)).toBe('1 omgång · Svår · Mat · Vi säger orden högt')
-    expect(imposterSettingsLine({ hard: false, tricky: true, category: null, aloud: false }, 3)).toBe('3 omgångar · Lurig · Blandat · Vi skriver orden')
   })
 })

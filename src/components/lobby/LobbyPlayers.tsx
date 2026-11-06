@@ -3,11 +3,11 @@ import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { findBlob } from '@/lib/figurer'
 
-export type Suspect = { id: string; name: string; avatar: string; host: boolean }
+export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean }
 
-// Spelarna i Imposterjaktens väntrum: stora figurer som gungar lätt, med namnet under. emptySeats = streckade ringar
+// Spelarna i väntrummet: stora figurer som gungar lätt, med namnet under. emptySeats = streckade ringar
 // för lediga platser. Figurerna gungar i otakt, så att de inte rör sig som en enda.
-export function Suspects({ players, meId, emptySeats }: { players: readonly Suspect[]; meId: string; emptySeats: number }) {
+export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly LobbyPlayer[]; meId: string; emptySeats: number }) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-x-2 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))]">
       {players.map((player, i) => (
