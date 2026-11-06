@@ -24,7 +24,7 @@ const FACIT_SECONDS = 5
 // facit en stund (FACIT_SECONDS) och sedan kommer nästa fråga av sig själv. Efter fråga 3 blir kortet suddigt bakom en
 // resultatruta med totalen, och då går det inte att gissa igen förrän man trycker på Spela igen. Kortet har samma höjd
 // hela tiden, så att sidan inte rycker.
-export function ExempelRunda() {
+export function ExempelRunda({ className }: { className?: string }) {
   const order = EXAMPLE_ITEMS
   const [index, setIndex] = useState(0)
   // Poängen för varje besvarad fråga.
@@ -117,7 +117,10 @@ export function ExempelRunda() {
       ref={sectionRef}
       tabIndex={-1}
       aria-labelledby={titleId}
-      className="relative mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-lg border bg-card shadow-soft outline-none md:h-full md:max-w-none"
+      className={cn(
+        'relative mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-lg border bg-card shadow-soft outline-none md:h-full md:max-w-none',
+        className,
+      )}
     >
       {/* Kortets innehåll. Efter sista frågan blir det suddigt och nedtonat bakom resultatrutan (bara nedtonat med minskad rörelse). */}
       <div

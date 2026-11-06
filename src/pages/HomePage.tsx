@@ -6,6 +6,7 @@ import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { ExempelRunda } from '@/components/ExempelRunda'
+import { HeroFigurer } from '@/components/HeroFigurer'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { Button } from '@/components/ui/button'
 import { GAMES, type GameInfo } from '@/lib/games'
@@ -58,9 +59,11 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
-      {/* Hero */}
-      <section className="grid items-start gap-8 md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
+      {/* Hero. På mobil ligger exempelrundan under spelen (order), så att spelkorten syns tidigt. Därför är sektionen
+          bara en låda från md och uppåt (contents), och sektionerna efter spelen får order-2 på mobil. */}
+      <section className="contents md:grid md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
         <div className="space-y-5 text-center md:space-y-6 md:self-center md:text-left">
+          <HeroFigurer className="justify-center md:justify-start" />
           <div className="space-y-2">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
             <p className="text-sm font-bold text-muted-foreground">
@@ -99,7 +102,7 @@ export function HomePage() {
         </div>
 
         {/* En liten spelbar exempelrunda, helt lokal. */}
-        <ExempelRunda />
+        <ExempelRunda className="max-md:order-1" />
       </section>
 
       {/* Alla spel */}
@@ -110,8 +113,13 @@ export function HomePage() {
           </h2>
           <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
         </div>
-        {/* Vad är det för kväll? Flikarna sorterar spelen så att det som passar bäst kommer först. */}
-        <div role="group" aria-label="Vad är det för kväll?" className="flex flex-wrap gap-2 py-1">
+        {/* Vad är det för kväll? Flikarna sorterar spelen så att det som passar bäst kommer först. På mobil står de på en
+            rad som går att svepa, så att spelkorten kommer högre upp. */}
+        <div
+          role="group"
+          aria-label="Vad är det för kväll?"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+        >
           {TILLFALLEN.map((item) => (
             <Button
               key={item.id}
@@ -144,9 +152,10 @@ export function HomePage() {
         )}
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {gamesForTillfalle(tillfalle, GAMES.filter((game) => game.playable)).map(({ game, note }) => (
+          {gamesForTillfalle(tillfalle, GAMES.filter((game) => game.playable)).map(({ game, note }, index) => (
             <SpelKort
               key={game.id}
+              index={index}
               game={game}
               note={note}
               tillfalle={tillfalle}
@@ -159,7 +168,7 @@ export function HomePage() {
       <GameIntroDialog game={introGame} open={introOpen} onOpenChange={setIntroOpen} />
 
       {/* Så fungerar det, efter spelen så att spellistan syns direkt */}
-      <section id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-6 space-y-4">
+      <section id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-6 space-y-4 max-md:order-2">
         <h2 id="sa-funkar-rubrik" className="text-3xl">
           Så fungerar det
         </h2>
@@ -184,7 +193,7 @@ export function HomePage() {
       </section>
 
       {/* Guiderna, för den som vill läsa mer. */}
-      <section aria-labelledby="tips-rubrik" className="space-y-3">
+      <section aria-labelledby="tips-rubrik" className="space-y-3 max-md:order-2">
         <h2 id="tips-rubrik" className="text-xl">
           Tips inför kvällen
         </h2>
@@ -200,7 +209,7 @@ export function HomePage() {
       </section>
 
       {/* Kommande spel, diskret och utan knappar */}
-      <section aria-labelledby="kommande-rubrik" className="space-y-3 border-t pt-6">
+      <section aria-labelledby="kommande-rubrik" className="space-y-3 border-t pt-6 max-md:order-2">
         <h2 id="kommande-rubrik" className="text-xl">
           Fler dueller är på väg.
         </h2>

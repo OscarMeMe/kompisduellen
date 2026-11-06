@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link } from 'react-router'
 import { ArrowRight, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils'
 
 // Små förhandsvisningar med egen karaktär för varje spel. De är bara dekoration (göms för skärmläsare), och texten i dem
 // är påhittad för att visa idén, inte riktiga rundor eller spelare.
-// De får liv när man håller musen över kortet (group-hover), och på pekskärmar en gång när kortet syns eller när man
-// trycker på det (group-data-[play=true]). Allt med motion-safe:, så att det stängs av med "minska rörelse".
+// De får liv en gång när kortet kommer i bild, och på pekskärmar igen när man trycker på det (group-data-[play=true]),
+// och när man håller musen över kortet (group-hover). Mellan gångerna står de still. Allt med motion-safe:, så att det
+// stängs av med "minska rörelse".
 const PREVIEWS: Record<string, ReactNode> = {
   'gissa-priset': (
     // En prislapp som hänger i ett snöre. Den svänger till medan påhittade priser rullar förbi som på en spelautomat, och
@@ -135,13 +136,16 @@ type SpelKortProps = {
   game: GameInfo
   // Kortet lyser upp en kort stund när besökaren tryckt på Välj spel.
   highlight?: boolean
+  // Kortets plats i listan, så att korten tonas in ett i taget.
+  index?: number
   onShowRules: () => void
 }
 
 // Ett spelkort på startsidan: förhandsvisning, namn, spelarantal och känsla, kort beskrivning och två tydliga knappar.
 // Kortet är inte en enda stor klickyta, så att reglerna och Skapa lobby inte konkurrerar.
-export function SpelKort({ game, highlight = false, note, tillfalle = 'alla', onShowRules }: SpelKortProps) {
+export function SpelKort({ game, highlight = false, index = 0, note, tillfalle = 'alla', onShowRules }: SpelKortProps) {
   const { ref, playing, play } = usePlayOnce()
+  const reveal = useRevealOnScroll(ref, highlight)
   // Ny key vid varje tryck, så att bildens rörelse börjar om, även när musen redan är över kortet.
   const [plays, setPlays] = useState(0)
   const page = gamePageFor(game.id)
@@ -150,9 +154,16 @@ export function SpelKort({ game, highlight = false, note, tillfalle = 'alla', on
       ref={ref}
       data-play={playing}
       data-spel={game.id}
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget && reveal.state === 'shown') reveal.done()
+      }}
+      style={reveal.state === 'shown' ? { animationDelay: `${index * 90}ms` } : undefined}
       className={cn(
-        // Lyfter lite med större skugga när musen är över kortet (hover gäller bara enheter med mus).
-        'group flex h-full flex-col overflow-hidden rounded-lg bg-spel-yta text-spel-text shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-lift motion-safe:hover:-translate-y-1',
+        // Lyfter och lutar lite med större skugga när musen är över kortet (hover gäller bara enheter med mus), åt olika
+        // håll varannan gång, och trycks ned lite när man trycker på det.
+        'group flex h-full flex-col overflow-hidden rounded-lg bg-spel-yta text-spel-text shadow-soft transition-[translate,rotate,scale,box-shadow] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:shadow-lift motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-1 motion-safe:even:hover:rotate-1 motion-safe:active:scale-[0.98] motion-safe:active:duration-100',
+        reveal.state === 'waiting' && 'opacity-0',
+        reveal.state === 'shown' && 'motion-safe:animate-card-in',
         highlight && 'motion-safe:animate-pop ring-4 ring-primary/40',
       )}
     >
@@ -206,10 +217,10 @@ export function SpelKort({ game, highlight = false, note, tillfalle = 'alla', on
   )
 }
 
-// Så länge räknas animationen som igång på pekskärmar. Spotlighten i Imposterjakten är längst.
+// Så länge räknas animationen som igång. Spotlighten i Imposterjakten är längst.
 const PLAY_MS = 2000
 
-// På pekskärmar (utan hover) spelas illustrationens animation en gång när kortet kommer in i bild, och igen när man
+// Illustrationens animation spelas en gång när kortet kommer in i bild, och på pekskärmar (utan hover) igen när man
 // trycker på den. playing är sant en kort stund, och då gäller group-data-[play=true]-klasserna.
 function usePlayOnce() {
   const ref = useRef<HTMLElement>(null)
@@ -227,7 +238,7 @@ function usePlayOnce() {
 
   useEffect(() => {
     const element = ref.current
-    if (!element || !window.matchMedia('(hover: none)').matches) return
+    if (!element) return
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return
@@ -245,4 +256,42 @@ function usePlayOnce() {
   }, [])
 
   return { ref, playing, play }
+}
+
+type RevealState = 'visible' | 'waiting' | 'shown'
+
+// Korten tonas in underifrån när de kommer i bild, ett i taget (index i SpelKort). I förrenderingen och med "minska
+// rörelse" syns de direkt. Kort som redan syns när sidan öppnas tonas också in, men bara en gång. Ett kort som hamnat
+// ovanför skärmen (man scrollade förbi snabbt eller sidan öppnades längre ned) syns direkt utan rörelse, så att inget
+// kort blir kvar osynligt. show = visa kortet direkt (när korten lyser upp efter Välj spel).
+function useRevealOnScroll(ref: RefObject<HTMLElement | null>, show: boolean) {
+  const [state, setState] = useState<RevealState>('visible')
+
+  // Före första ritningen i webbläsaren, så att kortet inte hinner synas och sedan försvinna.
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element || typeof IntersectionObserver === 'undefined') return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    // Bara i webbläsaren och före första ritningen: förrenderingen ska visa korten.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
+    setState('waiting')
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        const above = entry.boundingClientRect.bottom <= 0
+        setState((current) => (current !== 'waiting' ? current : above ? 'visible' : 'shown'))
+      },
+      // Ytan ovanför skärmen räknas också, så att ett kort som hoppar från under skärmen till ovanför den (ett snabbt
+      // svep eller en länk längre ned) också ger ett besked. rootMargin gäller bara med en uttalad root (även i en iframe).
+      { root: element.ownerDocument, threshold: 0.15, rootMargin: '100000px 0px 0px 0px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+
+  // Ändras under ritningen i stället för i en effekt, så att kortet syns direkt.
+  if (show && state !== 'visible') setState('visible')
+
+  return { state, done: () => setState('visible') }
 }
