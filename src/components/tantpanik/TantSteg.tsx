@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { TantKort } from '@/components/tantpanik/TantKort'
+import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { GameState } from '@/lib/match'
@@ -136,12 +136,14 @@ export function Arrange({ cards, onMove }: { cards: CardType[]; onMove: (move: T
 }
 
 // Göm tanten: hur många kort som ska ligga ovanför den. 0 = överst, högens storlek = underst. Ingen annan ser valet.
+// Högen bres ut i en rad (överst till vänster), och man trycker eller drar dit tanten ska. Knapparna finns kvar.
 export function Place({ deckCount, onMove }: { deckCount: number; onMove: (move: TantMove) => void }) {
   const [position, setPosition] = useState(() => Math.floor(deckCount / 2))
   const label = position === 0 ? 'Överst' : position === deckCount ? 'Underst' : `under ${position} kort`
   return (
     <section aria-label="Göm tanten" className={cn(PANEL, 'space-y-2 border-2 border-primary')}>
-      <p className="text-sm font-semibold">Desarmera räddade dig! Var vill du gömma tanten? Ingen annan ser vad du väljer.</p>
+      <p className="text-sm font-semibold">Desarmera räddade dig! Tryck där i högen du vill gömma tanten. Ingen annan ser var.</p>
+      <SpreadPile deckCount={deckCount} position={position} onPosition={setPosition} />
       <div className="grid grid-cols-4 gap-1.5">
         <Button variant="outline" onClick={() => setPosition(0)}>
           Överst
@@ -156,23 +158,93 @@ export function Place({ deckCount, onMove }: { deckCount: number; onMove: (move:
           Slumpa
         </Button>
       </div>
-      {deckCount > 0 && (
-        <label className="block">
-          <span className="text-xs font-semibold">Kort ovanför tanten: {position}</span>
-          <input
-            type="range"
-            min={0}
-            max={deckCount}
-            value={position}
-            onChange={(event) => setPosition(Number(event.target.value))}
-            className="h-9 w-full accent-primary"
-          />
-        </label>
-      )}
       <Button size="lg" className="w-full" onClick={() => onMove({ type: 'tPlace', position })}>
         Göm tanten: {label}
       </Button>
     </section>
+  )
+}
+
+// Måtten i den utbredda högen (px): baksidorna, tanten och luckan runt den.
+const SPREAD_CARD = 36
+const SPREAD_TANT = 48
+const SPREAD_GAP = SPREAD_TANT + 6
+
+// Högen utbredd i en rad med tanten i luckan där den ska ligga. Tryck eller dra längs raden för att flytta den.
+function SpreadPile({ deckCount, position, onPosition }: { deckCount: number; position: number; onPosition: (position: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(300)
+  const dragging = useRef(false)
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setWidth(element.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const step = deckCount > 1 ? Math.min(22, (width - SPREAD_CARD - SPREAD_GAP) / (deckCount - 1)) : 0
+  const total = (deckCount > 0 ? SPREAD_CARD + step * (deckCount - 1) : 0) + SPREAD_GAP
+  const start = Math.max(0, (width - total) / 2)
+  // Kort i (räknat från toppen) ligger till vänster om tanten om i < position.
+  const cardX = (i: number) => start + i * step + (i >= position ? SPREAD_GAP : 0)
+  const tantX = start + position * step + (position > 0 ? SPREAD_CARD - step : 0) + (SPREAD_GAP - SPREAD_TANT) / 2
+
+  function pick(clientX: number) {
+    const box = ref.current?.getBoundingClientRect()
+    if (!box || deckCount === 0) return
+    const x = clientX - box.left - start - SPREAD_GAP / 2
+    const next = step > 0 ? Math.round(x / step) : x > 0 ? deckCount : 0
+    onPosition(Math.max(0, Math.min(deckCount, next)))
+  }
+
+  return (
+    <div>
+      <div
+        ref={ref}
+        role="slider"
+        tabIndex={0}
+        aria-label="Var tanten gömmes i högen"
+        aria-valuemin={0}
+        aria-valuemax={deckCount}
+        aria-valuenow={position}
+        aria-valuetext={`${position} kort ovanför tanten`}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowLeft') onPosition(Math.max(0, position - 1))
+          if (event.key === 'ArrowRight') onPosition(Math.min(deckCount, position + 1))
+        }}
+        onPointerDown={(event) => {
+          dragging.current = true
+          event.currentTarget.setPointerCapture(event.pointerId)
+          pick(event.clientX)
+        }}
+        onPointerMove={(event) => dragging.current && pick(event.clientX)}
+        onPointerUp={() => (dragging.current = false)}
+        onPointerCancel={() => (dragging.current = false)}
+        className="relative h-24 touch-none rounded-md bg-felt outline-none select-none focus-visible:ring-4 focus-visible:ring-ring/50"
+      >
+        {Array.from({ length: deckCount }, (_, i) => (
+          <TantBaksida
+            key={i}
+            sizes="36px"
+            className="absolute top-6 drop-shadow-sm motion-safe:transition-[left] motion-safe:duration-150"
+            style={{ left: cardX(i), width: SPREAD_CARD }}
+          />
+        ))}
+        <div
+          className="absolute top-1 z-10 drop-shadow-lg motion-safe:transition-[left] motion-safe:duration-150"
+          style={{ left: tantX, width: SPREAD_TANT }}
+        >
+          <TantKort type="tant" size="small" sizes="48px" className="w-full" />
+        </div>
+      </div>
+      <div className="flex justify-between px-1 text-xs font-semibold text-muted-foreground">
+        <span>Överst (dras först)</span>
+        <span className="text-foreground tabular-nums">{position} kort ovanför</span>
+        <span>Underst</span>
+      </div>
+    </div>
   )
 }
 
