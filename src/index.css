@@ -199,15 +199,15 @@
     --animate-splat-fade: splat-fade 2s linear both;
     --animate-thrown-life: splat-life 1.6s linear both;
     --animate-toss: toss 0.55s ease-in-out;
-    /* Startsidan: figurerna i hero guppar lätt hela tiden (hero-bob, figurerna är undantaget från regeln om att inget
+    /* Startsidan: figurerna i hero guppar lite och långsamt hela tiden (hero-bob, figurerna är undantaget från regeln om att inget
        pågår hela tiden), och spelkorten tonas in en gång när de kommer i bild (card-in). Bara transform och opacity, så
        att det är lätt för en mobil. */
-    --animate-hero-bob: hero-bob 3.2s ease-in-out infinite;
+    --animate-hero-bob: hero-bob 5s ease-in-out infinite;
     --animate-card-in: card-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 
     @keyframes hero-bob {
         0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-4px); }
+        50% { transform: translateY(-2px); }
     }
 
     @keyframes card-in {
