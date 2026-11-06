@@ -90,11 +90,12 @@ const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc
 function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
   const eyes = eyesFor(figure)
   const { crossEyed, sleepy, haughty } = figure.traits ?? {}
-  // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn.
+  // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn. Med gaze sneglar han efter
+  // muspekaren under ögonlocken.
   if (lively && haughty) {
     return (
       <>
-        <OpenEyes eyes={eyes} look={[3, 3]} lid={figure.palette.base} />
+        <OpenEyes eyes={eyes} look={[3, 3]} lid={figure.palette.base} pupilClass={gaze ? GAZE_CLASS : undefined} />
         <Brows eyes={eyes} left="M60 90L92 90" right="M108 82Q124 70 142 80" single="M68 76Q100 66 132 72" />
         <Stroke d={eyes.cyclops ? 'M88 148L114 146' : 'M88 140L114 137'} />
       </>
