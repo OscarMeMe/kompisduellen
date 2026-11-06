@@ -128,16 +128,11 @@ export function TantHand({
       <section
         aria-label={`Din hand, ${cards.length} kort`}
         {...SPLAT_SHIELD}
-        className="fixed inset-x-0 bottom-0 z-40 bg-linear-to-t from-background via-background/95 to-background/0 px-2 pt-3 pb-[env(safe-area-inset-bottom)]"
+        className="relative z-40 px-2"
       >
-        {!popped && myTurn && (
-          <div className="mx-auto mb-1 max-w-sm px-2">
-            <Button size="lg" className="w-full" onClick={() => send({ type: 'tDraw' })}>
-              Dra ett kort och avsluta turen
-            </Button>
-          </div>
+        {!popped && giving && (
+          <p className="absolute inset-x-0 top-1 z-50 text-center text-sm font-bold">Tryck på kortet du vill ge bort.</p>
         )}
-        {!popped && giving && <p className="mb-1 text-center font-semibold">Tryck på kortet du vill ge bort.</p>}
         {cards.length === 0 ? (
           <p className="mx-auto mb-4 max-w-sm rounded-md bg-muted px-3 py-3 text-center text-sm text-muted-foreground">
             Du har inga kort. Du drar ändå på din tur.

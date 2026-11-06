@@ -368,7 +368,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react} throws={throws} seatedIds={seatedIds}>
       {phaseView()}
       {/* Värden kan avbryta en pågående match. Alla går tillbaka till väntrummet, och matchen räknas inte. */}
-      {inMatch && isHost && (
+      {inMatch && isHost && !(state.phase === 'playing' && 'Tant' in views) && (
         <Button variant="ghost" className="mx-auto mt-2 text-muted-foreground" onClick={() => setAborting(true)}>
           <Undo2 aria-hidden />
           Tillbaka till väntrummet
@@ -447,6 +447,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             clockOffset={clockOffset}
             tantView={tantView}
             onMove={actions.move}
+            onAbort={() => setAborting(true)}
+            onLeave={() => requestLeave('/')}
           />
         )
       }

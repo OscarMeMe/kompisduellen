@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { CARDS, cardImage, cardSrcSet, type CardType } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
@@ -57,16 +58,18 @@ export function TantKort({ type, size = 'large', className }: { type: CardType; 
   )
 }
 
-// Baksidan: likadan för alla kort, så att den inte säger något om vilket kort det är.
-export function TantBaksida({ className, children }: { className?: string; children?: React.ReactNode }) {
+// Baksidan: likadan för alla kort (public/images/tantpanik/baksida-*.webp), så att den inte säger något om vilket kort
+// det är. sizes = hur bred den visas, för att välja rätt bildstorlek.
+export function TantBaksida({ className, sizes = '72px', style }: { className?: string; sizes?: string; style?: CSSProperties }) {
   return (
-    <div
-      className={cn(
-        'flex aspect-[107/147] w-18 shrink-0 items-center justify-center rounded-lg border-4 border-card bg-foreground font-heading text-lg font-bold text-card shadow-soft-sm',
-        className,
-      )}
-    >
-      {children ?? <span aria-hidden>?</span>}
-    </div>
+    <img
+      src="/images/tantpanik/baksida-360.webp"
+      srcSet="/images/tantpanik/baksida-360.webp 360w, /images/tantpanik/baksida-960.webp 960w"
+      sizes={sizes}
+      alt=""
+      draggable={false}
+      style={style}
+      className={cn('aspect-[107/147] w-18 shrink-0 object-contain select-none', className)}
+    />
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Crosshair, Pointer, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { MoodFigur } from '@/components/figurer/MoodFigur'
@@ -7,9 +7,10 @@ import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
+import { useThrowWait } from '@/hooks/useThrowWait'
 import { clueLabels, clueLine, curvedArrow, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
-import { THROW_COOLDOWN_MS, THROW_ITEMS, throwCooldownSeconds } from '@/lib/kast'
+import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
@@ -518,20 +519,6 @@ function SeatMenu({
       </PopoverContent>
     </Popover>
   )
-}
-
-// Sekunder kvar av spärren efter ett kast.
-function useThrowWait(lastThrowAt: number | null): number {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (lastThrowAt === null) return
-    const timer = setInterval(() => {
-      setNow(Date.now())
-      if (Date.now() - lastThrowAt >= THROW_COOLDOWN_MS) clearInterval(timer)
-    }, 250)
-    return () => clearInterval(timer)
-  }, [lastThrowAt])
-  return throwCooldownSeconds(lastThrowAt, now)
 }
 
 // Samma information som bordet, som en lista för skärmläsare.
