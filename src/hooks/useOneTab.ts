@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { randomId } from '@/lib/slumpid'
 
 // En identitet i en flik åt gången. Öppnas lobbyn med samma spelare i en ny flik (t.ex. en kopierad flik)
 // frågar den nya fliken de andra flikarna via BroadcastChannel. Den äldsta fliken vinner, och den nya visar
@@ -20,7 +21,7 @@ export function useOneTab(code: string, playerId: string) {
 
   useEffect(() => {
     if (!supported) return
-    const tab = crypto.randomUUID()
+    const tab = randomId()
     const channel = new BroadcastChannel(`kd-flik:${code}:${playerId}`)
     // owner: den här fliken har bestämt sig för att vara spelarens flik och svarar andra att den är upptagen.
     let owner = false

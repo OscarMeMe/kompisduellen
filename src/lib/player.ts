@@ -4,6 +4,7 @@
 //   en egen spelare, och bara fliken som skapade lobbyn är värd.
 
 import { BLOB_AVATARS, upgradeAvatar } from '@/lib/figurer'
+import { randomId } from '@/lib/slumpid'
 
 export type Player = {
   id: string
@@ -42,7 +43,7 @@ let memoryId: string | null = null
 function playerId(): string {
   const saved = safeGet('session', PLAYER_ID_KEY) ?? memoryId
   if (saved) return saved
-  memoryId = crypto.randomUUID()
+  memoryId = randomId()
   safeSet('session', PLAYER_ID_KEY, memoryId)
   return memoryId
 }
@@ -131,7 +132,7 @@ export function adoptPlayer(player: Player): Player {
 
 // "Gå med som en annan spelare": fliken får ett nytt id.
 export function startNewIdentity() {
-  memoryId = crypto.randomUUID()
+  memoryId = randomId()
   safeSet('session', PLAYER_ID_KEY, memoryId)
 }
 

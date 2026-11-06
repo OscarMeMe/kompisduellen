@@ -4,6 +4,7 @@
 
 import { closeChannel, waitForChannel } from '@/lib/kanaler'
 import { supabase } from '@/lib/supabase'
+import { randomId } from '@/lib/slumpid'
 
 export type LobbyKoll = 'finns' | 'saknas' | 'fel'
 
@@ -28,7 +29,7 @@ export function felText(code: string, result: Exclude<LobbyKoll, 'finns'>): stri
 export async function checkLobby(code: string): Promise<LobbyKoll> {
   await waitForChannel(`lobby:${code}`)
   return new Promise((resolve) => {
-    const channel = supabase.channel(`lobby:${code}`, { config: { presence: { key: `koll-${crypto.randomUUID()}` } } })
+    const channel = supabase.channel(`lobby:${code}`, { config: { presence: { key: `koll-${randomId()}` } } })
     let done = false
     let settle: ReturnType<typeof setTimeout> | undefined
     const finish = (result: LobbyKoll) => {
