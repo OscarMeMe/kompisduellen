@@ -115,6 +115,34 @@ export function playCountdownTick(secondsLeft: number) {
   }
 }
 
+// Närmast vinner: någon prickade exakt. Fyra toner uppåt och en glittrig slutton.
+export function playBullseye() {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    for (const [at, frequency, length] of [
+      [0, 523, 0.12],
+      [0.09, 659, 0.12],
+      [0.18, 784, 0.12],
+      [0.27, 1047, 0.45],
+    ]) {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'triangle'
+      oscillator.frequency.setValueAtTime(frequency, now + at)
+      gain.gain.setValueAtTime(0.0001, now + at)
+      gain.gain.exponentialRampToValueAtTime(0.16, now + at + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + length)
+      oscillator.connect(gain).connect(context.destination)
+      oscillator.start(now + at)
+      oscillator.stop(now + at + length + 0.02)
+    }
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
 // Imposterjakten: det blev min tur. Två korta, ljusa toner.
 export function playTurn() {
   try {

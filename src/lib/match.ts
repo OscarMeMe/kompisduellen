@@ -460,7 +460,7 @@ export function resolveRound(state: GameState, now: number, target?: number): Ga
   if (state.phase !== 'guessing') return state
 
   const rules = rulesFor(state.game)
-  const outcome = rules.scoreRound(state.guesses, state.itemId, target)
+  const outcome = rules.scoreRound(state.guesses, state.itemId, target, state.round >= state.rounds)
   const best = Math.max(0, ...Object.values(outcome.points))
   const winners = best > 0 ? Object.keys(outcome.points).filter((id) => outcome.points[id] === best) : []
 

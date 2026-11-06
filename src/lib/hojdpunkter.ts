@@ -352,7 +352,7 @@ function spread(values: number[]): number {
 }
 
 // Den som fick jämnast poäng från runda till runda, om hen är ensam om det. Bara i Gissa priset, där poängen
-// går från 0 till 100. I Närmast vinner blir det bara 0 eller 1.
+// går från 0 till 100. I Närmast vinner är det bara några få poäng per runda.
 function steadiest(state: GameState, pick: Pick): Highlight | null {
   const ids = Object.keys(state.players)
   if (!isPriceGame(state) || ids.length < 2 || state.matchRounds.length < 3) return null

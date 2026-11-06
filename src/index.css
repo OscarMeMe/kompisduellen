@@ -216,6 +216,8 @@
     --animate-tant-boom: tant-boom 1s cubic-bezier(0.2, 0.9, 0.3, 1.3);
     /* Handen i samma bild fläktar ut lite och lägger sig igen (--fan = hur mycket varje kort vrids). */
     --animate-fan-spread: fan-spread 0.8s ease-in-out both;
+    /* Närmast vinners facit: markören rullar längs tallinjen från 1 och saktar in på rätt tal (--target). */
+    --animate-tallinje-markor: tallinje-markor 2s cubic-bezier(0.12, 0.8, 0.2, 1) both;
     --animate-hero-bob: hero-bob 5s ease-in-out infinite;
     --animate-card-in: card-in 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 
@@ -239,6 +241,11 @@
         0%, 55% { scale: 0; opacity: 0; }
         70% { scale: 1.15; opacity: 1; }
         100% { scale: 1; opacity: 1; }
+    }
+
+    @keyframes tallinje-markor {
+        0% { left: 0%; }
+        100% { left: var(--target); }
     }
 
     @keyframes hero-bob {
