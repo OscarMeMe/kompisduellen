@@ -30,7 +30,8 @@ export function FigurerPage() {
       {BLOBS.map((blob) => (
         <section key={blob.id} className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label={blob.name}>
           <h2 className="text-xl">{blob.name}</h2>
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
+          <p className="text-sm text-muted-foreground">{blob.line}</p>
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-7">
             {MOODS.map((mood) => (
               <li key={mood} className="flex flex-col items-center gap-1 text-center">
                 <Figur figure={blob} mood={mood} animated restartKey={replay} className="block text-7xl" />
@@ -40,6 +41,23 @@ export function FigurerPage() {
           </ul>
         </section>
       ))}
+
+      <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="I väntrummet">
+        <h2 className="text-xl">I väntrummet</h2>
+        <p className="text-sm text-muted-foreground">Var och en med sin egen rörelse. Sist Sjusovaren när den har somnat.</p>
+        <ul className="grid grid-cols-3 gap-4 sm:grid-cols-6">
+          {BLOBS.map((blob, i) => (
+            <li key={blob.id} className="flex flex-col items-center gap-1 text-center">
+              <Figur figure={blob} animated lively delay={i * 0.7} className="block text-6xl" />
+              <span className="text-sm font-semibold">{blob.name}</span>
+            </li>
+          ))}
+          <li className="flex flex-col items-center gap-1 text-center">
+            <Figur figure={BLOBS.find((blob) => blob.id === 'sjusovaren')!} animated lively asleep className="block text-6xl" />
+            <span className="text-sm font-semibold">Sjusovaren sover</span>
+          </li>
+        </ul>
+      </section>
 
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Blobbarna i liten storlek">
         <h2 className="text-xl">Blobbarna i liten storlek</h2>

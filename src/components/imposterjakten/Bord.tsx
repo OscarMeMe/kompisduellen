@@ -1,6 +1,8 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Crosshair, Pointer, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
+import { MoodFigur } from '@/components/figurer/MoodFigur'
+import { seatMood } from '@/lib/figurer'
 import { Stamp } from '@/components/Stamp'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -346,7 +348,13 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
           away && 'opacity-40',
         )}
       >
-        <Emoji emoji={player?.avatar ?? '🙂'} className={small ? 'text-xl tiny:text-lg sm:text-3xl sm:short:text-xl' : 'text-3xl tiny:text-2xl sm:text-4xl sm:short:text-2xl'} />
+        {/* Minen följer omgången (seatMood): misstänksam under diskussionen, svettig när man är anklagad och smälter när
+            man är utröstad. Den byts bara när det redan är offentligt. */}
+        <MoodFigur
+          avatar={player?.avatar ?? '🙂'}
+          mood={seatMood(table, seat.id)}
+          className={small ? 'text-xl tiny:text-lg sm:text-3xl sm:short:text-xl' : 'text-3xl tiny:text-2xl sm:text-4xl sm:short:text-2xl'}
+        />
         {votes !== null && votes > 0 && (
           <span
             className="absolute -top-1.5 -right-2 rounded-full bg-foreground px-1.5 text-[11px] font-bold text-background tabular-nums motion-safe:animate-pop motion-safe:[animation-delay:var(--d)]"

@@ -1,13 +1,31 @@
+import { useEffect, useState } from 'react'
 import { Crown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
-import { findBlob } from '@/lib/figurer'
+import { useReactions } from '@/hooks/useReactions'
+import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 
 export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean }
 
-// Spelarna i väntrummet: stora figurer som gungar lätt, med namnet under. emptySeats = streckade ringar
+// Spelarna i väntrummet: stora figurer med sin egen rörelse och personlighet (figurer.ts), med namnet under. emptySeats = streckade ringar
 // för lediga platser. Figurerna gungar i otakt, så att de inte rör sig som en enda.
 export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly LobbyPlayer[]; meId: string; emptySeats: number }) {
+  // Det senaste som hänt i väntrummet: en reaktion eller ett kast (med avsändaren), eller någon som gått med eller lämnat.
+  const reactions = useReactions()
+  const latest = reactions?.floating.at(-1)
+  const hits = Object.entries(reactions?.throws.hits ?? {}).map(([id, n]) => `${id}:${n}`).join()
+  const happening = `${players.map((player) => player.id).join()}|${latest?.key ?? ''}|${hits}`
+  // Sjusovaren somnar när inget har hänt på SLEEP_AFTER_MS. En timer för hela listan, och den vaknar när något händer.
+  // Värdet är det som gällde när timern löpte ut, så den sover inte från början och vaknar så fort något händer.
+  const [quietSince, setQuietSince] = useState<string | null>(null)
+  const asleep = quietSince === happening
+  useEffect(() => {
+    const timer = setTimeout(() => setQuietSince(happening), SLEEP_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [happening])
+  // Ögat tittar mot den som nyss reagerade eller kastade, så länge raden syns.
+  const lookAt = latest?.from ? players.findIndex((player) => player.id === latest.from) : -1
+
   return (
     <ul className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-x-2 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))]">
       {players.map((player, i) => (
@@ -15,7 +33,14 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
           <div className="relative">
             {findBlob(player.avatar) ? (
               <span className="block text-5xl leading-none sm:text-6xl">
-                <LobbyFigur playerId={player.id} avatar={player.avatar} delay={i * 0.7} className="block" />
+                <LobbyFigur
+                  playerId={player.id}
+                  avatar={player.avatar}
+                  delay={i * 0.7}
+                  asleep={asleep}
+                  look={lookDirection(i, lookAt)}
+                  className="block"
+                />
               </span>
             ) : (
               <span

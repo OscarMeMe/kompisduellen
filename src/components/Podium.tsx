@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
-import { Emoji } from '@/components/Emoji'
+import { MoodFigur } from '@/components/figurer/MoodFigur'
 import { Konfetti } from '@/components/Konfetti'
+import { podiumMood } from '@/lib/figurer'
 import { podiumShare, type RankedPlayer } from '@/lib/match'
 import { cn } from '@/lib/utils'
 
@@ -40,11 +41,10 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
               <div className="mb-2 flex flex-wrap justify-center gap-2">
                 {here.map((p) => (
                   <div key={p.id} className="flex flex-col items-center text-center">
-                    {/* Vinnaren hoppar en gång när stapeln har vuxit upp. */}
-                    <Emoji
-                      emoji={p.avatar}
-                      className={cn('text-4xl sm:text-5xl', place === 1 && 'motion-safe:animate-hop motion-safe:[animation-delay:800ms]')}
-                    />
+                    {/* Vinnaren jublar och hoppar en gång när stapeln har vuxit upp. De andra tittar surt på. */}
+                    <span className={cn('block', place === 1 && 'motion-safe:animate-hop motion-safe:[animation-delay:800ms]')}>
+                      <MoodFigur avatar={p.avatar} mood={podiumMood(place)} className="text-4xl sm:text-5xl" />
+                    </span>
                     <span className="max-w-28 truncate font-bold">{p.name}</span>
                     <span className="text-sm text-muted-foreground">{points(p.score)}</span>
                   </div>
@@ -69,7 +69,7 @@ export function Podium({ players }: { players: RankedPlayer[] }) {
           {rest.map((p) => (
             <li key={p.id} className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-soft-sm">
               <span className="w-8 font-heading text-lg font-bold text-muted-foreground">{p.place}.</span>
-              <Emoji emoji={p.avatar} className="text-2xl" />
+              <MoodFigur avatar={p.avatar} mood={podiumMood(p.place)} className="text-2xl" />
               <span className="flex-1 truncate font-semibold">{p.name}</span>
               <span className="text-sm text-muted-foreground">{points(p.score)}</span>
             </li>

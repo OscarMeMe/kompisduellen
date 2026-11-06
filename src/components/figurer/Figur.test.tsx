@@ -74,3 +74,45 @@ describe('Emoji med blobbar', () => {
     expect(html).not.toContain('<svg')
   })
 })
+
+describe('de nya minerna och personligheterna', () => {
+  it('ritar sur för alla tolv, även Ögat med ett enda öga och ett bryn', () => {
+    for (const blob of BLOBS) {
+      const html = renderToStaticMarkup(<Figur figure={blob} mood="sur" animated />)
+      expect(layer(html, 'min')).toMatch(/<(path|circle|ellipse)/)
+      expect(html).toContain('motion-safe:animate-blob-sulk')
+    }
+    const ogat = BLOBS.find((blob) => blob.id === 'ogat')!
+    expect((layer(renderToStaticMarkup(<Figur figure={ogat} mood="sur" />), 'min').match(/<circle/g) ?? []).length).toBe(2)
+  })
+
+  it('smälter vid utröstad', () => {
+    expect(renderToStaticMarkup(<Figur figure={BLOBS[0]} mood="utrostad" animated />)).toContain('motion-safe:animate-blob-melt')
+  })
+
+  it('har sin egen rörelse bara i väntrummet, och bara när den väntar', () => {
+    const klumpen = BLOBS.find((blob) => blob.id === 'klumpen')!
+    expect(renderToStaticMarkup(<Figur figure={klumpen} animated lively />)).toContain('motion-safe:animate-blob-bounce')
+    expect(renderToStaticMarkup(<Figur figure={klumpen} animated />)).not.toContain('animate-blob-bounce')
+    expect(renderToStaticMarkup(<Figur figure={klumpen} mood="traffad" animated lively />)).not.toContain('animate-blob-bounce')
+    const plugg = BLOBS.find((blob) => blob.id === 'plugghasten')!
+    expect(renderToStaticMarkup(<Figur figure={plugg} animated lively />)).toContain('motion-safe:animate-blob-glasses')
+    expect(renderToStaticMarkup(<Figur figure={plugg} />)).not.toContain('animate-blob-glasses')
+  })
+
+  it('visar Sjusovaren sovande med slutna ögon och ett z', () => {
+    const sova = BLOBS.find((blob) => blob.id === 'sjusovaren')!
+    const asleep = renderToStaticMarkup(<Figur figure={sova} animated lively asleep />)
+    expect(asleep).toContain('animate-blob-zzz')
+    expect(layer(asleep, 'min')).not.toContain('<circle')
+    expect(renderToStaticMarkup(<Figur figure={sova} animated lively />)).not.toContain('animate-blob-zzz')
+  })
+
+  it('låter bara Sjusovaren somna, även när hela väntrummet är tyst', () => {
+    for (const blob of BLOBS.filter((other) => other.id !== 'sjusovaren')) {
+      const html = renderToStaticMarkup(<Figur figure={blob} animated lively asleep />)
+      expect(html, blob.name).not.toContain('animate-blob-zzz')
+      expect(layer(html, 'min'), blob.name).toContain('<circle')
+    }
+  })
+})

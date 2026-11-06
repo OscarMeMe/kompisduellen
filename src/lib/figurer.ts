@@ -4,7 +4,9 @@
 // Värdet som sparas och skickas som avatar är en vanlig emoji som ingen annan figur använder. Då ser en flik med en
 // äldre version av sajten en emoji, och findBlob gör om den till blobben i den nya koden.
 
-export const MOODS = ['vantar', 'misstankt', 'anklagad', 'traffad', 'vann', 'utrostad'] as const
+import type { ImposterTable } from '@/lib/imposterjakten'
+
+export const MOODS = ['vantar', 'misstankt', 'anklagad', 'traffad', 'vann', 'utrostad', 'sur'] as const
 export type Mood = (typeof MOODS)[number]
 
 export const MOOD_NAMES: Record<Mood, string> = {
@@ -14,6 +16,7 @@ export const MOOD_NAMES: Record<Mood, string> = {
   traffad: 'Träffad',
   vann: 'Vann',
   utrostad: 'Utröstad',
+  sur: 'Sur',
 }
 
 // Hur figuren rör sig med varje min. Bara med motion-safe:, så att den står still med "minska rörelse".
@@ -23,7 +26,8 @@ export const MOOD_MOTION: Record<Mood, string> = {
   anklagad: 'motion-safe:animate-blob-shake',
   traffad: 'motion-safe:animate-blob-squash',
   vann: 'motion-safe:animate-blob-cheer',
-  utrostad: 'motion-safe:animate-blob-sink',
+  utrostad: 'motion-safe:animate-blob-melt',
+  sur: 'motion-safe:animate-blob-sulk',
 }
 
 // Hur frontlagret (t.ex. glasögon) hamnar snett med en viss min, i figurens koordinater (200 × 200).
@@ -63,7 +67,12 @@ export type BlobFigure = {
   outline?: boolean
   body: BlobBody
   // Små drag i minen. crossEyed och sleepy gäller bara öppna ögon. cyclops = ett enda stort öga i alla miner.
-  traits?: { crossEyed?: boolean; sleepy?: boolean; cyclops?: boolean }
+  // haughty = dömande blick när figuren väntar i väntrummet (Kungen).
+  traits?: { crossEyed?: boolean; sleepy?: boolean; cyclops?: boolean; haughty?: boolean }
+  // Repliken när man väljer figuren, och figurens egen rörelse i väntrummet (tom = står still). Rörelserna ligger i
+  // index.css och använder bara transform och opacity, så att tio figurer inte blir tunga på en mobil.
+  line: string
+  idle: string
   frontTilt?: Partial<Record<Mood, FrontTilt>>
 }
 
@@ -75,7 +84,16 @@ function colors(name: string): BlobFigure['palette'] {
 const SVG: BlobBody = { kind: 'svg' }
 
 export const BLOBS: readonly BlobFigure[] = [
-  { id: 'klumpen', emoji: '🤪', name: 'Klumpen', palette: colors('klump'), body: SVG, traits: { crossEyed: true } },
+  {
+    id: 'klumpen',
+    emoji: '🤪',
+    name: 'Klumpen',
+    palette: colors('klump'),
+    body: SVG,
+    traits: { crossEyed: true },
+    line: 'Jag fattar inte reglerna, men jag är taggad.',
+    idle: 'motion-safe:animate-blob-bounce',
+  },
   {
     id: 'spionen',
     emoji: '🎩',
@@ -87,16 +105,55 @@ export const BLOBS: readonly BlobFigure[] = [
       anklagad: { rotate: 14, x: 14, y: 8 },
       traffad: { rotate: -30, x: -24, y: 6 },
     },
+    line: 'Du såg mig inte.',
+    idle: 'motion-safe:animate-blob-glance',
   },
-  { id: 'sjusovaren', emoji: '😴', name: 'Sjusovaren', palette: colors('sova'), body: SVG, traits: { sleepy: true } },
-  { id: 'droppan', emoji: '💧', name: 'Droppan', palette: colors('droppe'), shape: 'droppe', body: SVG },
-  { id: 'festis', emoji: '🥳', name: 'Festis', palette: colors('fest'), body: SVG },
-  { id: 'kungen', emoji: '🤴', name: 'Kungen', palette: colors('kung'), body: SVG },
-  { id: 'ogat', emoji: '🧿', name: 'Ögat', palette: colors('oga'), body: SVG, traits: { cyclops: true } },
-  { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG },
-  { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG },
-  { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG },
-  { id: 'smaltis', emoji: '🧊', name: 'Smältis', palette: colors('smalt'), shape: 'smalt', body: SVG },
+  {
+    id: 'sjusovaren',
+    emoji: '😴',
+    name: 'Sjusovaren',
+    palette: colors('sova'),
+    body: SVG,
+    traits: { sleepy: true },
+    line: 'Väck mig när det är min tur.',
+    idle: 'motion-safe:animate-blob-idle',
+  },
+  {
+    id: 'droppan',
+    emoji: '💧',
+    name: 'Droppan',
+    palette: colors('droppe'),
+    shape: 'droppe',
+    body: SVG,
+    line: 'Det här slutar med tårar.',
+    idle: 'motion-safe:animate-blob-tremble',
+  },
+  { id: 'festis', emoji: '🥳', name: 'Festis', palette: colors('fest'), body: SVG, line: 'Är det här förfesten?', idle: 'motion-safe:animate-blob-dance' },
+  // Kungen står still och dömer: ingen rörelse, bara blicken.
+  { id: 'kungen', emoji: '🤴', name: 'Kungen', palette: colors('kung'), body: SVG, traits: { haughty: true }, line: 'Ni får gärna buga.', idle: '' },
+  {
+    id: 'ogat',
+    emoji: '🧿',
+    name: 'Ögat',
+    palette: colors('oga'),
+    body: SVG,
+    traits: { cyclops: true },
+    line: 'Jag såg det där.',
+    idle: 'motion-safe:animate-blob-idle',
+  },
+  { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG, line: 'Jag har inte sovit på tre dagar.', idle: 'motion-safe:animate-blob-idle' },
+  { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG, line: 'Vem kastade den där?', idle: 'motion-safe:animate-blob-stomp' },
+  { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG, line: 'Titta inte på mig.', idle: 'motion-safe:animate-blob-peek' },
+  {
+    id: 'smaltis',
+    emoji: '🧊',
+    name: 'Smältis',
+    palette: colors('smalt'),
+    shape: 'smalt',
+    body: SVG,
+    line: 'Ingen stress, jag rinner.',
+    idle: 'motion-safe:animate-blob-idle',
+  },
   {
     id: 'plugghasten',
     emoji: '🤓',
@@ -105,6 +162,8 @@ export const BLOBS: readonly BlobFigure[] = [
     body: SVG,
     // De stora glasögonen åker snett när den träffas.
     frontTilt: { traffad: { rotate: -14, x: -6, y: 10 } },
+    line: 'Rent statistiskt är det du.',
+    idle: 'motion-safe:animate-blob-idle',
   },
 ]
 
@@ -131,6 +190,42 @@ export const LEGACY_AVATARS: Readonly<Record<string, BlobId>> = {
 export function upgradeAvatar(avatar: string): string {
   const id = LEGACY_AVATARS[avatar.replace(/\uFE0F/g, '')]
   return id ? BLOBS.find((blob) => blob.id === id)!.emoji : avatar
+}
+
+// Sjusovaren somnar när inget har hänt i väntrummet på så här länge (ms): ingen har gått med, lämnat, reagerat eller kastat.
+export const SLEEP_AFTER_MS = 45_000
+
+// Minen vid Imposterjaktens bord. Alla är misstänksamma under diskussionen, så minen avslöjar inget. Den anklagade
+// svettas medan de andra röstar. Den som röstades eller anklagades ut smälter först när det redan är offentligt: vid
+// sista gissningen (då står det att just den gissar ordet) och i facit (som visar impostern).
+export function seatMood(table: Pick<ImposterTable, 'step' | 'accusation' | 'caught' | 'votes' | 'outcome' | 'order'>, playerId: string): Mood {
+  if (table.accusation?.accused === playerId) return 'anklagad'
+  if (table.step === 'gissning' || table.step === 'facit') return votedOut(table) === playerId ? 'utrostad' : 'vantar'
+  if (table.step === 'diskussion' && table.order.includes(playerId)) return 'misstankt'
+  return 'vantar'
+}
+
+// Den som röstades eller anklagades ut i omgången: impostern som fångades, eller en oskyldig som ensam fick flest röster.
+// null om ingen åkte ut (lika röster två gånger, eller en avbruten omgång).
+export function votedOut(table: Pick<ImposterTable, 'step' | 'caught' | 'votes' | 'outcome'>): string | null {
+  if (table.caught) return table.caught
+  if (table.step !== 'facit' || table.outcome?.kind !== 'undan' || !table.votes) return null
+  const counts: Record<string, number> = {}
+  for (const target of Object.values(table.votes)) counts[target] = (counts[target] ?? 0) + 1
+  const most = Math.max(0, ...Object.values(counts))
+  const top = Object.keys(counts).filter((id) => counts[id] === most)
+  return most > 0 && top.length === 1 ? top[0] : null
+}
+
+// Minen på prispallen: alla på förstaplatsen har vunnit, de andra är sura.
+export function podiumMood(place: number): Mood {
+  return place === 1 ? 'vann' : 'sur'
+}
+
+// Åt vilket håll Ögat tittar: mot spelaren som nyss gjorde något, räknat efter platsen i listan. 0 = rakt fram.
+export function lookDirection(myIndex: number, otherIndex: number): -1 | 0 | 1 {
+  if (otherIndex < 0 || otherIndex === myIndex) return 0
+  return otherIndex < myIndex ? -1 : 1
 }
 
 // Blobben för ett avatarvärde, eller undefined för alla andra figurer. Variantväljaren (U+FE0F) räknas inte.

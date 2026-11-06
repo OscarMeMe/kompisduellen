@@ -74,6 +74,12 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
             </button>
           ))}
         </div>
+        {/* Figurens replik när man väljer den. Poppar in vid varje nytt val. */}
+        {findBlob(avatar) && (
+          <p key={avatar} className="text-sm text-muted-foreground motion-safe:animate-pop" aria-live="polite">
+            <span className="font-semibold text-foreground">{findBlob(avatar)!.name}:</span> {findBlob(avatar)!.line}
+          </p>
+        )}
       </div>
 
       <Button type="submit" size="lg" disabled={!name.trim()}>

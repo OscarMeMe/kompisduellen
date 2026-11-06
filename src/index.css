@@ -113,6 +113,22 @@
     --animate-blob-shake: blob-shake 0.5s ease-in-out;
     --animate-blob-cheer: blob-cheer 0.6s cubic-bezier(0.3, 0.7, 0.4, 1.4);
     --animate-blob-sink: blob-sink 0.6s ease-out both;
+    /* utröstad smälter till en pöl, sur vänder sig lite bort. Spelas en gång när minen byts. */
+    --animate-blob-melt: blob-melt 0.6s ease-in both;
+    --animate-blob-sulk: blob-sulk 0.5s ease-out both;
+    /* Personligheterna i väntrummet (figurer.ts, idle). Långa perioder och bara transform och opacity, så att tio figurer
+       inte blir tunga på en mobil. Undantag från regeln om att inget pågår hela tiden. */
+    --animate-blob-bounce: blob-bounce 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
+    --animate-blob-tremble: blob-tremble 3s linear infinite;
+    --animate-blob-glance: blob-glance 5s ease-in-out infinite;
+    --animate-blob-dance: blob-dance 1.2s ease-in-out infinite;
+    --animate-blob-stomp: blob-stomp 3.2s ease-out infinite;
+    --animate-blob-peek: blob-peek 6s ease-in-out infinite;
+    --animate-blob-hair: blob-hair 4s ease-in-out infinite;
+    --animate-blob-drip: blob-drip 4.4s ease-in infinite;
+    --animate-blob-glasses: blob-glasses 5s ease-in-out infinite;
+    --animate-blob-scan: blob-scan 6s ease-in-out infinite;
+    --animate-blob-zzz: blob-zzz 2.6s ease-out infinite;
     /* Väntrummet: figurerna gungar lätt och spelets ikon i rubrikraden rör sig sakta. Undantag från regeln om att
        inget pågår hela tiden. Bara med motion-safe:, så att de står still med "minska rörelse". */
     --animate-sway: sway 3.2s ease-in-out infinite;
@@ -230,6 +246,90 @@
         0%, 100% { transform: translateY(0) scale(1, 1); }
         15% { transform: translateY(0) scale(1.1, 0.88); }
         55% { transform: translateY(-26px) scale(0.96, 1.06); }
+    }
+
+    @keyframes blob-melt {
+        0% { transform: scale(1, 1); }
+        60% { transform: scale(1.18, 0.62); }
+        100% { transform: scale(1.32, 0.42); }
+    }
+
+    @keyframes blob-sulk {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(-5deg) scale(0.97, 1); }
+    }
+
+    @keyframes blob-bounce {
+        0%, 100% { transform: translateY(0) scale(1.08, 0.9); }
+        15% { transform: translateY(0) scale(0.94, 1.08); }
+        50% { transform: translateY(-22px) scale(0.98, 1.02); }
+        85% { transform: translateY(0) scale(1, 1); }
+    }
+
+    @keyframes blob-tremble {
+        0%, 70%, 100% { transform: translateX(0); }
+        74% { transform: translateX(-1.5px); }
+        78% { transform: translateX(1.5px); }
+        82% { transform: translateX(-1.5px); }
+        86% { transform: translateX(1.5px); }
+        90% { transform: translateX(0); }
+    }
+
+    @keyframes blob-glance {
+        0%, 55%, 100% { transform: rotate(0deg) translateX(0); }
+        62%, 78% { transform: rotate(-9deg) translateX(-6px); }
+        84% { transform: rotate(3deg) translateX(2px); }
+    }
+
+    @keyframes blob-dance {
+        0%, 100% { transform: rotate(-7deg) translateY(0); }
+        25% { transform: rotate(0deg) translateY(-8px); }
+        50% { transform: rotate(7deg) translateY(0); }
+        75% { transform: rotate(0deg) translateY(-8px); }
+    }
+
+    @keyframes blob-stomp {
+        0%, 30%, 100% { transform: translateY(0) scale(1, 1); }
+        6% { transform: translateY(-10px) scale(0.96, 1.04); }
+        11% { transform: translateY(0) scale(1.1, 0.88); }
+        17% { transform: translateY(-10px) scale(0.96, 1.04); }
+        22% { transform: translateY(0) scale(1.1, 0.88); }
+    }
+
+    @keyframes blob-peek {
+        0%, 35%, 80%, 100% { transform: translate(0, 0) scale(1); }
+        45%, 65% { transform: translate(-10px, 34px) scale(0.86); }
+        55% { transform: translate(-6px, 26px) scale(0.88) rotate(6deg); }
+    }
+
+    @keyframes blob-hair {
+        0%, 100% { transform: scale(1, 1); }
+        50% { transform: scale(1.06, 0.8); }
+    }
+
+    @keyframes blob-drip {
+        0% { transform: translateY(0) scale(1); opacity: 0; }
+        15% { opacity: 1; }
+        80% { transform: translateY(34px) scale(0.8, 1.2); opacity: 1; }
+        100% { transform: translateY(40px) scale(0.6); opacity: 0; }
+    }
+
+    @keyframes blob-glasses {
+        0%, 70%, 100% { transform: translateY(0); }
+        76% { transform: translateY(5px); }
+        84% { transform: translateY(-3px); }
+        90% { transform: translateY(0); }
+    }
+
+    @keyframes blob-scan {
+        0%, 100% { transform: translateX(-10px); }
+        50% { transform: translateX(10px); }
+    }
+
+    @keyframes blob-zzz {
+        0% { transform: translate(0, 0) scale(0.7); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translate(14px, -30px) scale(1.2); opacity: 0; }
     }
 
     @keyframes blob-sink {

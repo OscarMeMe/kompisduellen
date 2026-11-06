@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { BlobFigure, BlobId, BlobShape } from '@/lib/figurer'
+import { cn } from '@/lib/utils'
 
 // Kropparna i koordinaterna 200 × 200. Minen (Miner.tsx) ritas ovanpå, och ögonen sitter alltid kring y = 108.
 const BODY_PATHS: Record<BlobShape, string> = {
@@ -110,9 +111,10 @@ function Crown() {
 }
 
 // Burrets spretiga hår, bakom kroppen.
-function SpikyHair({ figure }: { figure: BlobFigure }) {
+function SpikyHair({ figure, lively }: { figure: BlobFigure; lively: boolean }) {
   return (
     <path
+      className={lively ? 'origin-[100px_80px] [transform-box:view-box] motion-safe:animate-blob-hair' : undefined}
       d="M44 84L30 48L60 62L58 22L82 50L98 10L110 48L134 18L134 56L166 44L156 84Z"
       style={{ fill: figure.palette.dark }}
     />
@@ -139,13 +141,25 @@ function Blush() {
   )
 }
 
+// Smältis droppar rinner sakta nerför kroppen i väntrummet.
+function Drips({ figure }: { figure: BlobFigure }) {
+  return (
+    <g style={{ fill: figure.palette.base }}>
+      <ellipse cx="58" cy="132" rx="5" ry="7" className="motion-safe:animate-blob-drip" />
+      <ellipse cx="146" cy="128" rx="4" ry="6" className="motion-safe:animate-blob-drip motion-safe:[animation-delay:2.2s]" />
+    </g>
+  )
+}
+
 // Prylar och drag som hör till kroppen: Under ritas före kroppen och Over ovanpå den, men båda under minen.
-const UNDER: Partial<Record<BlobId, (figure: BlobFigure) => ReactNode>> = {
+// lively = figuren är i väntrummet och har sin egen rörelse.
+const UNDER: Partial<Record<BlobId, (figure: BlobFigure, lively: boolean) => ReactNode>> = {
   klumpen: (figure) => <Tuft figure={figure} />,
-  burret: (figure) => <SpikyHair figure={figure} />,
+  burret: (figure, lively) => <SpikyHair figure={figure} lively={lively} />,
   brakis: (figure) => <Horns figure={figure} />,
 }
-const OVER: Partial<Record<BlobId, (figure: BlobFigure) => ReactNode>> = {
+const OVER: Partial<Record<BlobId, (figure: BlobFigure, lively: boolean) => ReactNode>> = {
+  smaltis: (figure, lively) => (lively ? <Drips figure={figure} /> : null),
   spionen: () => <SpyHat />,
   sjusovaren: (figure) => <Nightcap figure={figure} />,
   festis: () => <PartyHat />,
@@ -154,12 +168,12 @@ const OVER: Partial<Record<BlobId, (figure: BlobFigure) => ReactNode>> = {
 }
 
 // Bakre lagret: skugga, kropp och prylar som ligger under minen.
-export function DrawnBack({ figure, uid }: { figure: BlobFigure; uid: string }) {
+export function DrawnBack({ figure, uid, lively = false }: { figure: BlobFigure; uid: string; lively?: boolean }) {
   return (
     <>
-      {UNDER[figure.id]?.(figure)}
+      {UNDER[figure.id]?.(figure, lively)}
       <BlobShape figure={figure} uid={uid} />
-      {OVER[figure.id]?.(figure)}
+      {OVER[figure.id]?.(figure, lively)}
     </>
   )
 }
@@ -177,9 +191,9 @@ function Sunglasses() {
 }
 
 // Plugghästens stora runda glasögon. Glasen är genomskinliga, så att ögonen och minen syns.
-function BigGlasses() {
+function BigGlasses({ lively }: { lively: boolean }) {
   return (
-    <g className="fill-none" style={{ stroke: 'var(--figur-svart)' }} strokeWidth="6">
+    <g className={cn('fill-none', lively && 'motion-safe:animate-blob-glasses')} style={{ stroke: 'var(--figur-svart)' }} strokeWidth="6">
       <circle cx="78" cy="108" r="22" className="fill-card/25" />
       <circle cx="122" cy="108" r="22" className="fill-card/25" />
       <path d="M100 104Q100 98 100 104" strokeLinecap="round" />
@@ -190,8 +204,8 @@ function BigGlasses() {
 }
 
 // Främre lagret: prylar över minen. De flesta figurer har inget.
-export function DrawnFront({ figure }: { figure: BlobFigure }) {
+export function DrawnFront({ figure, lively = false }: { figure: BlobFigure; lively?: boolean }) {
   if (figure.id === 'spionen') return <Sunglasses />
-  if (figure.id === 'plugghasten') return <BigGlasses />
+  if (figure.id === 'plugghasten') return <BigGlasses lively={lively} />
   return null
 }
