@@ -210,7 +210,10 @@ export function WaitingRoom({
             <div className="space-y-3">
               <p className="font-bold">Spel</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                {GAMES.filter((g) => g.playable).map((option) => {
+                {/* Det valda spelet först, de andra under i vanlig ordning. */}
+                {GAMES.filter((g) => g.playable)
+                  .sort((a, b) => Number(b.id === game.id) - Number(a.id === game.id))
+                  .map((option) => {
                   const selected = option.id === game.id
                   // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
                   const tooFew = online.length < option.minPlayers

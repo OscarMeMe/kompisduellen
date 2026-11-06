@@ -39,7 +39,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - shadcn-färgerna: `primary`, `background`, `foreground`, `card`, `muted`, `accent`, `border` osv.
   - pasteller: `mint`, `sun`, `sky`, `lilac` och de ljusa `coral-soft`, `mint-soft`, `sun-soft`, `sky-soft`
   - rummet runt Imposterjaktens bord: `room`, `felt` (bordsytan), `wood`, `wood-edge`, `chair`
-  - varje spels färg: `spel-yta`, `spel-text`, `spel-knapp` och `spel-knapp-text`. De följer `data-spel` på ett element (spelets id), och nytt spel får en rad i `src/index.css`. Spelkorten på startsidan går i spelets färg, och i lobbyn syns den som en rand högst upp och i väntrummets rubrik
+  - varje spels färg: `spel-yta`, `spel-text`, `spel-knapp` och `spel-knapp-text`, plus `spel-knapp-hover` och `spel-knapp-hover-text` som Skapa lobby på spelkorten byter till när musen är över (korallen, utom i Närmast vinner där den är mintgrön). De följer `data-spel` på ett element (spelets id), och nytt spel får en rad i `src/index.css`. Spelkorten på startsidan går i spelets färg, och i lobbyn syns den som en rand högst upp och i väntrummets rubrik
   - `crown`: guld för kronan hos den som leder (`text-crown`)
   - `destructive`: rött, t.ex. tidsstapeln när tiden nästan är ute
   - `primary-button`: den mörkare korallen på korallknapparna (`Button`), så att den vita texten klarar WCAG AA. Loggan och övriga detaljer använder `primary`
@@ -140,6 +140,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - `skillnad.ts`: hur långt ifrån rätt pris en gissning var, i ord (`differenceText`). Används i facit och i startsidans exempelrunda
   - `vardbyte.ts`: vem som tar över som värd, vem som viker sig vid två värdar och tillståndet vid övertagande. Rena funktioner
   - `granskning.ts`: reglerna för granskningssidan (omdömen, flytt från inkorgen, export). Rena funktioner
+  - `slumpid.ts`: `randomId()`, ett slumpat id. `crypto.randomUUID` finns bara på säkra sidor (https, localhost), så på datorns adress i nätverket (för att testa på telefonen med `npm run dev -- --host`) används `crypto.getRandomValues`. Använd `randomId()` i stället för `crypto.randomUUID()`
   - `device.ts`: `hasFinePointer()` (mus eller styrplatta). Används för att inte öppna mobilens tangentbord av sig självt
 - Importera med aliaset `@/` (pekar på `src/`)
 
