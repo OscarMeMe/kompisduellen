@@ -15,6 +15,8 @@
 // - give: Tjänst. Den utpekade väljer ett kort att ge (tGive).
 // - arrange: Ändra framtiden. Den som spelade lägger de översta korten i ny ordning (tArrange).
 // - place: den som drog en tant och hade ett Desarmera-kort gömmer tanten i högen (tPlace). Turen tar slut.
+// - pick: ett par har gått igenom. Tjuven väljer ett av målets kort, som visas med baksidan upp i en ny slumpad ordning
+//   (tPick med platsen i raden). Bara värden vet vilket kort som ligger var (TantSecrets.pickOrder).
 
 import type { GameState } from '@/lib/match'
 import {
@@ -24,7 +26,7 @@ import {
   DECK,
   NOPE_SECONDS,
   START_CARDS,
-  TRAP_COUNT,
+  trapCount,
   cardName,
   groupsFor,
   type CardType,
@@ -36,8 +38,31 @@ type Random = () => number
 
 export type TantCard = { id: string; type: CardType }
 
-export type TantSettings = { trap: boolean }
-export const DEFAULT_TANT_SETTINGS: TantSettings = { trap: true }
+// Svårigheten: hur många tanter som blandas in utöver en färre än antalet spelare. Kaos kräver minst KAOS_MIN_PLAYERS.
+export type TantLevel = 'normal' | 'svar' | 'kaos'
+export const TANT_LEVELS: readonly TantLevel[] = ['normal', 'svar', 'kaos']
+export const EXTRA_BOMBS: Record<TantLevel, number> = { normal: 0, svar: 1, kaos: 2 }
+export const KAOS_MIN_PLAYERS = 5
+export const LEVEL_NAMES: Record<TantLevel, string> = { normal: 'Normal', svar: 'Svår', kaos: 'Kaos' }
+
+// level saknas hos en värd med en äldre version, och räknas då som normal.
+export type TantSettings = { trap: boolean; level?: TantLevel }
+export const DEFAULT_TANT_SETTINGS: TantSettings = { trap: true, level: 'normal' }
+
+export function isTantLevel(value: unknown): value is TantLevel {
+  return typeof value === 'string' && (TANT_LEVELS as string[]).includes(value)
+}
+
+// Svårigheten som gäller med så många spelare. Kaos med för få blir Svår.
+export function levelFor(level: TantLevel | undefined, players: number): TantLevel {
+  const chosen = level ?? 'normal'
+  return chosen === 'kaos' && players < KAOS_MIN_PLAYERS ? 'svar' : chosen
+}
+
+// Hur många exploderande tanter som blandas in i högen.
+export function bombCount(players: number, level: TantLevel | undefined): number {
+  return players - 1 + EXTRA_BOMBS[levelFor(level, players)]
+}
 
 // Ett spelat kort (eller par, tretal) som väntar på att Nope!-tiden går ut.
 export type TantPending = {
@@ -53,7 +78,7 @@ export type TantPending = {
   lastNopeBy: string | null
 }
 
-export type TantStep = 'turn' | 'window' | 'give' | 'arrange' | 'place'
+export type TantStep = 'turn' | 'window' | 'give' | 'arrange' | 'place' | 'pick'
 
 export type TantEvent = { n: number; text: string }
 
@@ -62,11 +87,13 @@ export type TantEvent = { n: number; text: string }
 // animeras en gång.
 export type TantAction = {
   n: number
-  kind: 'draw' | 'bomb' | 'play'
+  kind: 'draw' | 'bomb' | 'play' | 'take' | 'trap'
   player: string
   // Kortet, när alla får se det (tanten, ett spelat kort). null för ett vanligt drag.
   card: CardType | null
   saved: boolean | null
+  // take: den som förlorade kortet (player tog det). Kortet syns inte för alla.
+  from?: string
 }
 
 // Det alla ser.
@@ -84,6 +111,9 @@ export type TantTable = {
   pending: TantPending | null
   // Tjänst: vem som ska ge till vem.
   favor: { from: string; to: string } | null
+  // Par: tjuven (by) väljer ett av målets (from) count kort. Tantsnara (trap): fällans ägare (by) väljer kort ur tjuvens
+  // hand (from), left kort till. Saknas hos en värd med en äldre version.
+  pick?: { by: string; from: string; count: number; trap?: boolean; left?: number } | null
   deckCount: number
   // De översta korten i slänghögen (överst sist) och hur många som ligger där.
   discardTop: CardType[]
@@ -91,7 +121,11 @@ export type TantTable = {
   handCounts: Record<string, number>
   log: TantEvent[]
   trap: boolean
+  // Svårigheten som gäller i matchen. Saknas hos en värd med en äldre version (normal).
+  level?: TantLevel
   winner: string | null
+  // Någon har vunnit och vinnaren firas vid bordet innan slutskärmen. Saknas hos en värd med en äldre version.
+  ending?: boolean
   // Något har gått fel som inte ska kunna hända (t.ex. tom draghög). Matchen står still tills värden avbryter.
   error: string | null
   // Det senaste som hänt vid bordet (se TantAction). null innan något hänt.
@@ -109,19 +143,27 @@ export type TantSecrets = {
   removed: TantCard[]
   // Tanten som ska gömmas (steget place).
   bomb: TantCard | null
+  // Par: målets kort i den slumpade ordning tjuven ser baksidorna i (steget pick). Saknas i äldre sparade matcher.
+  pickOrder?: string[]
   // Korten som tagits upp för Ändra framtiden (steget arrange).
   arranging: TantCard[]
   // Det någon tittat på med Se framtiden eller Ändra framtiden, och ett kort besked till var och en.
   peek: Record<string, CardType[]>
   notices: Record<string, TantEvent>
   // Kortet var och en senast drog, så att bara den som drog ser det vändas.
-  drew: Record<string, { n: number; type: CardType }>
+  drew: Record<string, TantDrew>
+  // Kortet var och en senast förlorade till någon annan (stöld eller tjänst). Saknas i äldre sparade matcher.
+  lost?: Record<string, TantLost>
   // Dragens nummer som värden har hanterat, per spelare, så att samma drag aldrig räknas två gånger.
   handled: Record<string, string[]>
   eventCount: number
 }
 
 export type TantHost = { state: GameState; secrets: TantSecrets }
+
+// Ett kort jag fick: draget ur högen, eller taget från en annan spelare (from).
+export type TantDrew = { n: number; type: CardType; id?: string; from?: string; gift?: boolean }
+export type TantLost = { n: number; type: CardType; to: string }
 
 // Det bara jag får se.
 export type MyTantView = {
@@ -131,7 +173,9 @@ export type MyTantView = {
   arrange: CardType[] | null
   notice: TantEvent | null
   // Kortet jag senast drog (inte tanten, som alla ser). n är samma nummer som i lastAction.
-  drew: { n: number; type: CardType } | null
+  drew: TantDrew | null
+  // Kortet jag senast förlorade (stöld eller tjänst), med samma nummer som lastAction.
+  lost?: TantLost | null
   handled: string[]
 }
 
@@ -147,8 +191,12 @@ export type TantMove =
   | { type: 'tGive'; card: string }
   | { type: 'tPlace'; position: number }
   | { type: 'tArrange'; order: number[] }
+  // Par: platsen i raden med baksidor som tjuven valde.
+  | { type: 'tPick'; index: number }
+  // Hoppa över firandet av vinnaren och gå till slutskärmen.
+  | { type: 'tFinish' }
 
-const MOVE_TYPES = ['tDraw', 'tPlay', 'tNope', 'tGive', 'tPlace', 'tArrange']
+const MOVE_TYPES = ['tDraw', 'tPlay', 'tNope', 'tGive', 'tPlace', 'tArrange', 'tPick', 'tFinish']
 
 export function isTantMove(move: { type: string }): move is TantMove {
   return MOVE_TYPES.includes(move.type)
@@ -162,7 +210,7 @@ export function isCardType(value: unknown): value is CardType {
   return typeof value === 'string' && (CARD_TYPES as string[]).includes(value)
 }
 
-// Hur många som får vara med. Det finns nio tanter, så tio spelare är högst.
+// Hur många som får vara med. Tio spelare är högst (se tooManyPlayers).
 export const MIN_PLAYERS = 2
 export const MAX_PLAYERS = BOMBS_TOTAL + 1
 
@@ -198,7 +246,7 @@ export function deckTypes(players: number, trap: boolean): CardType[] {
       for (let i = 0; i < count; i++) types.push(type)
     }
   }
-  if (trap) for (let i = 0; i < TRAP_COUNT; i++) types.push('snara')
+  if (trap) for (let i = 0; i < trapCount(players); i++) types.push('snara')
   return types
 }
 
@@ -207,9 +255,11 @@ export function dealTant(
   playerIds: readonly string[],
   trap: boolean,
   random: Random,
+  level: TantLevel = 'normal',
 ): { deck: TantCard[]; hands: Record<string, TantCard[]> } {
   const types = deckTypes(playerIds.length, trap)
-  const total = types.length + playerIds.length - 1
+  const bombs = bombCount(playerIds.length, level)
+  const total = types.length + bombs
   const ids = makeIds(total, random)
   let next = 0
   const make = (type: CardType): TantCard => ({ id: ids[next++], type })
@@ -222,15 +272,15 @@ export function dealTant(
   }
   let deck = shuffleCards(all, random)
   for (const id of playerIds) hands[id].push(...deck.splice(0, START_CARDS))
-  const bombs = Array.from({ length: playerIds.length - 1 }, () => make('tant'))
-  deck = shuffleCards([...deck, ...bombs], random)
+  deck = shuffleCards([...deck, ...Array.from({ length: bombs }, () => make('tant'))], random)
   return { deck, hands }
 }
 
 export function startTantMatch(ready: GameState, random: Random): TantHost {
   const ids = shuffleCards(Object.keys(ready.players), random)
   const trap = ready.tantSettings.trap
-  const { deck, hands } = dealTant(ids, trap, random)
+  const level = levelFor(ready.tantSettings.level, ids.length)
+  const { deck, hands } = dealTant(ids, trap, random, level)
   const secrets: TantSecrets = {
     kind: 'tantpanik',
     deck,
@@ -238,11 +288,13 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     discard: [],
     removed: [],
     bomb: null,
+    pickOrder: [],
     arranging: [],
     peek: {},
     notices: {},
     handled: {},
     drew: {},
+    lost: {},
     eventCount: 1,
   }
   const table: TantTable = {
@@ -254,12 +306,14 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     step: 'turn',
     pending: null,
     favor: null,
+    pick: null,
     deckCount: 0,
     discardTop: [],
     discardCount: 0,
     handCounts: {},
     log: [{ n: 1, text: `Matchen börjar. ${nameOf(ready, ids[0])} börjar.` }],
     trap,
+    level,
     winner: null,
     error: null,
     lastAction: null,
@@ -344,24 +398,37 @@ function draft(host: TantHost, random: Random): Draft {
       discard: [...secrets.discard],
       removed: [...secrets.removed],
       arranging: [...secrets.arranging],
+      pickOrder: [...(secrets.pickOrder ?? [])],
       peek: { ...secrets.peek },
       notices: { ...secrets.notices },
       drew: { ...secrets.drew },
+      lost: { ...(secrets.lost ?? {}) },
       handled: { ...secrets.handled },
     },
   }
 }
 
-function finish(d: Draft): TantHost {
+// När någon vunnit står matchen kvar vid bordet så här länge (ms): den sista explosionen och vinnaren firas, och
+// sedan kommer slutskärmen (endMatch, via värdens klocka i tantDeadline).
+export const END_MS = 6500
+
+function finish(d: Draft, now: number): TantHost {
   let state: GameState = { ...d.state, tantpanik: d.table }
-  if (d.table.winner) {
-    // Poängen är placeringen: den som åkte ut först får 1, vinnaren lika många som antalet spelare.
-    const scores: Record<string, number> = {}
-    d.table.out.forEach((id, index) => (scores[id] = index + 1))
-    scores[d.table.winner] = d.table.order.length
-    state = { ...state, phase: 'finished', deadline: null, scores }
+  // Nyss vunnet: klockan till slutskärmen startar.
+  if (d.table.winner && !d.table.ending) {
+    d.table.ending = true
+    state = { ...state, tantpanik: d.table, deadline: now + END_MS }
   }
   return sync({ state, secrets: d.secrets })
+}
+
+// Slutskärmen: poängen är placeringen. Den som åkte ut först får 1, vinnaren lika många som antalet spelare.
+function endMatch(host: TantHost): TantHost {
+  const table = host.state.tantpanik!
+  const scores: Record<string, number> = {}
+  table.out.forEach((id, index) => (scores[id] = index + 1))
+  scores[table.winner!] = table.order.length
+  return { ...host, state: { ...host.state, phase: 'finished', deadline: null, scores } }
 }
 
 function log(d: Draft, text: string) {
@@ -443,7 +510,7 @@ function draw(d: Draft, from: 'top' | 'bottom') {
   if (card.type !== 'tant') {
     d.secrets.hands[id].push(card)
     const n = act(d, 'draw', id, null)
-    d.secrets.drew[id] = { n, type: card.type }
+    d.secrets.drew[id] = { n, type: card.type, id: card.id }
     notify(d, id, `Du drog ${endName(card.type)}`)
     log(d, from === 'top' ? `${name(d, id)} drog ett kort.` : `${name(d, id)} drog det understa kortet.`)
     endTurn(d)
@@ -482,23 +549,27 @@ function transfer(
   const [card] = from.splice(index, 1)
   const theft = reason === 'pair_theft' || reason === 'triple_request'
   if (card.type === 'snara' && theft) {
+    // Fällan slår igen för alla, och läggs i slänghögen. Ägaren väljer sedan kort ur tjuvens hand (steget pick).
     d.secrets.discard.push(card)
+    const n = act(d, 'trap', fromId, 'snara')
+    d.table.lastAction = { ...d.table.lastAction!, from: toId, n }
     const thief = d.secrets.hands[toId]
-    const back = shuffleCards(thief, d.random).slice(0, 2)
-    for (const taken of back) transfer(d, toId, fromId, taken.id, 'trap_retaliation')
-    log(d, `Tantsnara! ${name(d, toId)} gick i fällan, och ${name(d, fromId)} tog ${back.length} kort tillbaka.`)
-    notify(d, toId, `Det var en Tantsnara! ${name(d, fromId)} tog ${back.length} kort från dig.`)
-    notify(
-      d,
-      fromId,
-      back.length > 0
-        ? `Fällan slog igen! Du fick ${back.map((c) => cardName(c.type)).join(' och ')}.`
-        : 'Fällan slog igen, men tjuven hade inga kort.',
-    )
+    const count = Math.min(TRAP_TAKES, thief.length)
+    log(d, `Tantsnara! ${name(d, toId)} gick i fällan.`)
+    if (count === 0) {
+      notify(d, fromId, 'Fällan slog igen, men tjuven hade inga kort.')
+      return
+    }
+    notify(d, toId, `Det var en Tantsnara! ${name(d, fromId)} väljer ${count} kort ur din hand…`)
+    startPick(d, fromId, toId, true, count)
     return
   }
   d.secrets.hands[toId].push(card)
-  if (reason === 'trap_retaliation') return
+  // Alla ser att ett kort byter hand. Bara de två ser vilket.
+  const n = act(d, 'take', toId, null)
+  d.table.lastAction = { ...d.table.lastAction!, from: fromId }
+  d.secrets.drew[toId] = { n, type: card.type, id: card.id, from: fromId, gift: reason === 'favor' }
+  d.secrets.lost = { ...(d.secrets.lost ?? {}), [fromId]: { n, type: card.type, to: toId } }
   notify(
     d,
     toId,
@@ -507,8 +578,20 @@ function transfer(
   notify(
     d,
     fromId,
-    reason === 'favor' ? `Du gav ${cardName(card.type)} till ${name(d, toId)}.` : `${name(d, toId)} tog din ${endName(card.type)}`,
+    reason === 'favor' ? `Du gav ${cardName(card.type)} till ${name(d, toId)}.` : `${name(d, toId)} tog ${cardName(card.type)} från dig.`,
   )
+}
+
+// Så många kort fällans ägare får välja ur tjuvens hand.
+export const TRAP_TAKES = 2
+
+// Någon väljer ett kort ur någon annans hand (par eller Tantsnara). Korten visas med baksidan upp, i en ny slumpad
+// ordning varje gång, så att ingen kan räkna ut vilket kort som ligger var. Bara värden vet ordningen.
+function startPick(d: Draft, by: string, from: string, trap: boolean, left: number) {
+  const hand = d.secrets.hands[from] ?? []
+  d.secrets.pickOrder = shuffleCards(hand, d.random).map((card) => card.id)
+  d.table.step = 'pick'
+  d.table.pick = trap ? { by, from, count: hand.length, trap: true, left } : { by, from, count: hand.length }
 }
 
 // Kan korten spelas tillsammans som par eller tretal? Samma titel räcker, även för vanliga kort. En vild tant kan ersätta
@@ -649,9 +732,9 @@ function resolve(d: Draft, random: Random) {
       return
     }
     if (pending.kind === 'pair') {
-      const card = hand[Math.floor(random() * hand.length)]
-      log(d, `${name(d, by)} tog ett slumpat kort från ${name(d, target)}.`)
-      transfer(d, target, by, card.id, 'pair_theft')
+      startPick(d, by, target, false, 1)
+      log(d, `${name(d, by)} väljer ett kort från ${name(d, target)}.`)
+      notify(d, target, `${name(d, by)} väljer ett kort ur din hand…`)
       return
     }
     const matches = hand.filter((card) => card.type === pending.request)
@@ -739,6 +822,25 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
       endTurn(d)
       return d
     }
+    case 'tFinish':
+      // Hanteras i tantMove.
+      return 'invalid'
+    case 'tPick': {
+      const pick = table.pick
+      const order = d.secrets.pickOrder ?? []
+      if (table.step !== 'pick' || !pick || pick.by !== playerId) return 'invalid'
+      if (!Number.isInteger(move.index) || move.index < 0 || move.index >= order.length) return 'invalid'
+      const cardId = order[move.index]
+      d.secrets.pickOrder = []
+      table.pick = null
+      table.step = 'turn'
+      log(d, `${name(d, playerId)} tog ett kort från ${name(d, pick.from)}.`)
+      transfer(d, pick.from, playerId, cardId, pick.trap ? 'trap_retaliation' : 'pair_theft')
+      // Tantsnara: ett kort till, om tjuven har något kvar. Korten blandas om inför varje val.
+      const left = (pick.left ?? 1) - 1
+      if (pick.trap && left > 0 && d.secrets.hands[pick.from].length > 0) startPick(d, playerId, pick.from, true, left)
+      return d
+    }
     case 'tArrange': {
       const cards = d.secrets.arranging
       if (table.step !== 'arrange' || table.current !== playerId) return 'invalid'
@@ -760,6 +862,11 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
 // som hanterade (även ogiltiga), så att spelaren ser att värden fått dem.
 export function tantMove(host: TantHost, playerId: string, move: TantMove, nr: string | null, now: number, random: Random): TantHost {
   if (!host.state.tantpanik || host.state.phase !== 'playing') return host
+  // Efter vinsten går bara att hoppa vidare till slutskärmen, för den som var med i matchen.
+  if (move.type === 'tFinish') {
+    const table = host.state.tantpanik
+    return table.winner && table.order.includes(playerId) ? endMatch(host) : host
+  }
   const seen = host.secrets.handled[playerId] ?? []
   if (nr !== null && seen.includes(nr)) return host
   const d = draft(host, random)
@@ -767,16 +874,18 @@ export function tantMove(host: TantHost, playerId: string, move: TantMove, nr: s
   const done = result === 'invalid' ? draft(host, random) : result
   if (result === 'invalid') notify(done, playerId, 'Det gick inte just nu.')
   if (nr !== null) done.secrets.handled[playerId] = [...seen, nr].slice(-HANDLED_KEPT)
-  return finish(done)
+  return finish(done, now)
 }
 
 // Värdens klocka: Nope!-tiden är slut. Gäller bara om klockan som löpte ut fortfarande är den som gäller.
 export function tantDeadline(host: TantHost, now: number, deadline: number, random: Random): TantHost {
   const table = host.state.tantpanik
-  if (!table || host.state.deadline !== deadline || now < deadline || table.step !== 'window' || !table.pending) return host
+  if (!table || host.state.deadline !== deadline || now < deadline) return host
+  if (table.winner) return endMatch(host)
+  if (table.step !== 'window' || !table.pending) return host
   const d = draft(host, random)
   resolve(d, random)
-  return finish(d)
+  return finish(d, now)
 }
 
 // Det bara spelaren får se.
@@ -787,6 +896,7 @@ export function myTantView(secrets: TantSecrets, table: TantTable, playerId: str
     arrange: table.step === 'arrange' && table.current === playerId ? secrets.arranging.map((card) => card.type) : null,
     notice: secrets.notices[playerId] ?? null,
     drew: secrets.drew[playerId] ?? null,
+    lost: secrets.lost?.[playerId] ?? null,
     handled: secrets.handled[playerId] ?? [],
   }
 }
@@ -805,19 +915,42 @@ export function countAllCards(secrets: TantSecrets): number {
 
 // Väntrummets val. Gäller bara i väntrummet.
 export function setTantSettings(state: GameState, settings: Partial<TantSettings>): GameState {
-  if (state.phase !== 'waiting' || settings.trap === undefined || settings.trap === state.tantSettings.trap) return state
-  return {
-    ...state,
-    tantSettings: { ...state.tantSettings, trap: settings.trap },
-  }
+  if (state.phase !== 'waiting') return state
+  const next: TantSettings = { ...state.tantSettings }
+  if (typeof settings.trap === 'boolean') next.trap = settings.trap
+  if (isTantLevel(settings.level)) next.level = settings.level
+  if (next.trap === state.tantSettings.trap && next.level === state.tantSettings.level) return state
+  return { ...state, tantSettings: next }
+}
+
+// Tanterna i högen. Alla som åkt ut har dragit en tant, och en desarmerad tant göms i högen igen. Medan den göms
+// (steget place) räknas den redan, så att det aldrig står "0 tanter i högen" en kort stund.
+export function bombsInDeck(table: TantTable): number {
+  const alive = table.order.length - table.out.length
+  return Math.max(0, alive - 1 + EXTRA_BOMBS[table.level ?? 'normal'])
+}
+
+// Raden om svårigheten under matchen, t.ex. "Svår: 4 tanter i högen".
+export function levelLine(table: TantTable): string {
+  const bombs = bombsInDeck(table)
+  return `${LEVEL_NAMES[table.level ?? 'normal']}: ${bombs} ${bombs === 1 ? 'tant' : 'tanter'} i högen`
 }
 
 // Vem som ska göra något just nu: den som har tur, den som ska ge ett kort, eller alla med Nope! under ett spelat kort.
 export function waitingFor(table: TantTable): string | null {
   if (table.winner) return null
   if (table.step === 'give') return table.favor?.from ?? null
+  if (table.step === 'pick') return table.pick?.by ?? null
   if (table.step === 'window') return null
   return table.current
+}
+
+// Texten under namnet på prispallen. Poängen är placeringen: den som åkte ut först har 1, vinnaren lika många som
+// antalet spelare. "Sist kvar!" för vinnaren och "Exploderade som 1:a" och så vidare för de andra.
+export function tantPlacementText(score: number, players: number): string {
+  if (score >= players) return 'Sist kvar!'
+  const suffix = score % 10 === 1 || score % 10 === 2 ? ':a' : ':e'
+  return `Exploderade som ${score}${score > 10 && score < 13 ? ':e' : suffix}`
 }
 
 export const TANT_HOW_TO =

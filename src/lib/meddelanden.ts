@@ -8,7 +8,7 @@ import type { ImposterCard, ImposterMove, ImposterTable, MyImposterCard } from '
 import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
 import { upgradeAvatars, initialState, type GameState, type RoundResult } from '@/lib/match'
-import { isCardType, type MyTantView, type TantMove, type TantTable } from '@/lib/tantpanik'
+import { isCardType, isTantLevel, type MyTantView, type TantMove, type TantTable } from '@/lib/tantpanik'
 import type { CardType } from '@/lib/tantpanik-kort'
 
 type Unknown = Record<string, unknown>
@@ -116,7 +116,7 @@ const isTantTable = (value: unknown): value is TantTable =>
     current: isString,
     turnsLeft: isNumber,
     attacked: isBoolean,
-    step: (step) => isString(step) && ['turn', 'window', 'give', 'arrange', 'place'].includes(step),
+    step: (step) => isString(step) && ['turn', 'window', 'give', 'arrange', 'place', 'pick'].includes(step),
     pending: orNull(
       shape({
         by: isString,
@@ -129,6 +129,9 @@ const isTantTable = (value: unknown): value is TantTable =>
       }),
     ),
     favor: orNull(shape({ from: isString, to: isString })),
+    // pick och level saknas hos en värd med en äldre version.
+    pick: (pick: unknown) => pick === undefined || orNull(shape({ by: isString, from: isString, count: isNumber }))(pick),
+    level: (level: unknown) => level === undefined || isTantLevel(level),
     deckCount: isNumber,
     discardTop: listOf(isCardType),
     discardCount: isNumber,
@@ -143,7 +146,8 @@ const isTantTable = (value: unknown): value is TantTable =>
       orNull(
         shape({
           n: isNumber,
-          kind: (kind) => isString(kind) && ['draw', 'bomb', 'play'].includes(kind),
+          kind: (kind) => isString(kind) && ['draw', 'bomb', 'play', 'take', 'trap'].includes(kind),
+          from: (from: unknown) => from === undefined || isString(from),
           player: isString,
           card: orNull(isCardType),
           saved: orNull(isBoolean),
@@ -188,7 +192,7 @@ const isGameState = shape({
   usedWordIds: listOf(isString),
   imposterMatch: shape({ wordIds: listOf(isString), imposterCounts: recordOf(isNumber) }),
   tantpanik: orNull(isTantTable),
-  tantSettings: shape({ trap: isBoolean }),
+  tantSettings: shape({ trap: isBoolean, level: (level: unknown) => level === undefined || isTantLevel(level) }),
   matchPlayerIds: listOf(isString),
 })
 
@@ -314,6 +318,10 @@ function parseTantMove(move: Unknown): TantMove | null {
       return isNumber(move.position) ? { type: 'tPlace', position: move.position } : null
     case 'tArrange':
       return listOf(isNumber)(move.order) && move.order.length <= 3 ? { type: 'tArrange', order: move.order } : null
+    case 'tPick':
+      return isNumber(move.index) ? { type: 'tPick', index: move.index } : null
+    case 'tFinish':
+      return { type: 'tFinish' }
     default:
       return null
   }
@@ -331,6 +339,7 @@ export function parseTantView(payload: unknown): { to: string; from: string | nu
     arrange: orNull(listOf(isCardType)),
     notice: orNull(isTantEvent),
     drew: (drew: unknown) => drew === undefined || orNull(shape({ n: isNumber, type: isCardType }))(drew),
+    lost: (lost: unknown) => lost === undefined || orNull(shape({ n: isNumber, type: isCardType, to: isString }))(lost),
     handled: listOf(isString),
   })(view)
   if (!ok) return null

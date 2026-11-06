@@ -27,6 +27,8 @@ import {
 } from '@/lib/match'
 import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, type ImposterSettings } from '@/lib/imposterjakten'
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
+import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
+import { TantVantrum } from '@/components/tantpanik/TantVantrum'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
@@ -122,6 +124,8 @@ export function WaitingRoom({
 
   return (
     <Wide>
+      {/* Exploderande Tanter: mönstret, musiken och volymknappen. */}
+      {tant && <TantVantrum />}
       {state.rematchAt !== null && (
         <RematchCountdown
           at={state.rematchAt}
@@ -276,9 +280,13 @@ export function WaitingRoom({
             {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}
 
             {tant && (
+              <TantSvarighet settings={state.tantSettings} players={online.length} isHost onChange={onSetTantSettings} />
+            )}
+
+            {tant && (
               <Choice
                 label="Tantsnara"
-                hint="En fälla i leken: den som stjäl den får lämna tillbaka två kort"
+                hint="En fälla i leken: stjäl någon den väljer ägaren två kort ur tjuvens hand"
                 options={[
                   { value: 1, label: 'På' },
                   { value: 0, label: 'Av' },

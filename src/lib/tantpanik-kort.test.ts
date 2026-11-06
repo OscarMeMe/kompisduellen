@@ -21,7 +21,11 @@ describe('korten i Exploderande Tanter', () => {
       nadu: 'Nope!',
       regnbage: 'Regnbågstanten',
       kupong: 'Kupongtanten',
+      stickning: 'Sticktanten',
+      stavgang: 'Stavgångstanten',
+      tradgard: 'Trädgårdstanten',
       vild: 'Vild tant',
+      snara: 'Tantsnara',
     })
   })
 
@@ -32,7 +36,7 @@ describe('korten i Exploderande Tanter', () => {
 
   it('varje kort med bild har båda storlekarna i public/images/tantpanik', () => {
     const withImage = CARD_TYPES.filter((type) => CARDS[type].image)
-    expect(withImage).toHaveLength(14)
+    expect(withImage).toHaveLength(CARD_TYPES.length)
     for (const type of withImage) {
       for (const width of [360, 960] as const) {
         expect(images).toContain(cardImage(type, width))
@@ -41,9 +45,7 @@ describe('korten i Exploderande Tanter', () => {
     }
   })
 
-  it('kort utan bild visas som textkort: tre tantsorter och Tantsnara', () => {
-    expect(CARD_TYPES.filter((type) => !CARDS[type].image)).toEqual(['stickning', 'stavgang', 'tradgard', 'snara'])
-    expect(cardImage('stickning', 360)).toBeUndefined()
-    expect(cardSrcSet('snara')).toBeUndefined()
+  it('alla kort har en bild, så inga textkort finns kvar', () => {
+    expect(CARD_TYPES.filter((type) => !CARDS[type].image)).toEqual([])
   })
 })

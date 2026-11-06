@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { roundWords, type GameInfo } from '@/lib/games'
 import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
-import { TANT_GAME } from '@/lib/tantpanik'
+import { TANT_GAME, tantPlacementText } from '@/lib/tantpanik'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
@@ -128,7 +128,7 @@ export function FinishedView({
         </div>
       ) : (
         <div className="space-y-4">
-          <Podium players={ranked} />
+          <Podium players={ranked} label={state.game === TANT_GAME ? (p) => tantPlacementText(p.score, ranked.length) : undefined} />
           <p className="rounded-full bg-sun-soft px-5 py-2.5 text-center font-heading text-lg font-bold text-balance animate-pop sm:text-xl">
             {winnerSummary(state)}
           </p>

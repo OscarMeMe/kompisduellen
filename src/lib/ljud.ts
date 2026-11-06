@@ -1,6 +1,6 @@
 // Ljudeffekterna för reaktioner och kast (playReaction, playThrow). Allt ritas upp med Web Audio, så inga ljudfiler
 // behövs.
-// Valet att stänga av ljudet sparas i webbläsaren. Ljudet är på från början.
+// Valet att stänga av ljudet och volymen för ljudeffekterna sparas i webbläsaren. Ljudet är på från början.
 
 import { THROW_ITEMS, type ThrowItemId } from '@/lib/kast'
 
@@ -24,6 +24,42 @@ export function saveSoundOn(on: boolean) {
 
 let context: AudioContext | undefined
 
+// Volymen för alla ljudeffekter på sajten (0–1), sparad i webbläsaren. Den sätts på en gemensam GainNode, eftersom
+// Safari på iPhone inte bryr sig om volume på ljudelement. Ljudet av (loadSoundOn) gäller fortfarande för sig.
+const VOLUME_KEY = 'kd-ljud-volym'
+let effectsVolume = loadEffectsVolume()
+let effectsGain: GainNode | undefined
+
+export function loadEffectsVolume(): number {
+  try {
+    const saved = Number(localStorage.getItem(VOLUME_KEY))
+    return localStorage.getItem(VOLUME_KEY) !== null && Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 1
+  } catch {
+    return 1
+  }
+}
+
+// Ändrar volymen direkt, även för ljud som spelas just nu, och sparar den.
+export function setEffectsVolume(volume: number) {
+  effectsVolume = Math.max(0, Math.min(1, volume))
+  try {
+    localStorage.setItem(VOLUME_KEY, String(effectsVolume))
+  } catch {
+    // Går det inte att spara gäller valet bara tills sidan laddas om.
+  }
+  if (effectsGain && context) effectsGain.gain.setTargetAtTime(effectsVolume, context.currentTime, 0.02)
+}
+
+// Alla ljudeffekter går hit, och härifrån till högtalarna.
+function effectsOut(ctx: AudioContext): GainNode {
+  if (!effectsGain || effectsGain.context !== ctx) {
+    effectsGain = ctx.createGain()
+    effectsGain.gain.value = effectsVolume
+    effectsGain.connect(ctx.destination)
+  }
+  return effectsGain
+}
+
 export function playPop() {
   try {
     context ??= new AudioContext()
@@ -37,7 +73,7 @@ export function playPop() {
     gain.gain.setValueAtTime(0.0001, now)
     gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18)
-    oscillator.connect(gain).connect(context.destination)
+    oscillator.connect(gain).connect(effectsOut(context))
     oscillator.start(now)
     oscillator.stop(now + 0.2)
   } catch {
@@ -107,7 +143,7 @@ export function playCountdownTick(secondsLeft: number) {
     gain.gain.setValueAtTime(0.0001, now)
     gain.gain.exponentialRampToValueAtTime(0.14, now + 0.01)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16)
-    oscillator.connect(gain).connect(context.destination)
+    oscillator.connect(gain).connect(effectsOut(context))
     oscillator.start(now)
     oscillator.stop(now + 0.18)
   } catch {
@@ -134,7 +170,7 @@ export function playBullseye() {
       gain.gain.setValueAtTime(0.0001, now + at)
       gain.gain.exponentialRampToValueAtTime(0.16, now + at + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.0001, now + at + length)
-      oscillator.connect(gain).connect(context.destination)
+      oscillator.connect(gain).connect(effectsOut(context))
       oscillator.start(now + at)
       oscillator.stop(now + at + length + 0.02)
     }
@@ -160,7 +196,7 @@ export function playTurn() {
       gain.gain.setValueAtTime(0.0001, now + at)
       gain.gain.exponentialRampToValueAtTime(0.14, now + at + 0.01)
       gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.14)
-      oscillator.connect(gain).connect(context.destination)
+      oscillator.connect(gain).connect(effectsOut(context))
       oscillator.start(now + at)
       oscillator.stop(now + at + 0.16)
     }
@@ -270,7 +306,7 @@ function noise(
   filter.frequency.exponentialRampToValueAtTime(to, start + duration)
   const gain = ctx.createGain()
   gain.gain.value = volume
-  source.connect(filter).connect(gain).connect(ctx.destination)
+  source.connect(filter).connect(gain).connect(effectsOut(ctx))
   source.start(Math.max(start, ctx.currentTime))
   source.stop(start + duration + 0.01)
 }
@@ -285,7 +321,7 @@ function tone(ctx: AudioContext, start: number, from: number, to: number, durati
   gain.gain.setValueAtTime(0.0001, start)
   gain.gain.exponentialRampToValueAtTime(volume, start + 0.008)
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
-  oscillator.connect(gain).connect(ctx.destination)
+  oscillator.connect(gain).connect(effectsOut(ctx))
   oscillator.start(start)
   oscillator.stop(start + duration + 0.01)
 }

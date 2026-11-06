@@ -27,10 +27,17 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             </li>
           ))}
           <li className="pt-1 text-muted-foreground">
-            Två kort med samma namn tar ett slumpat kort från någon. Tre lika låter dig be om ett visst kort. En Vild tant kan ersätta en
+            Två kort med samma namn låter dig välja ett av någons kort, med baksidan upp. Tre lika låter dig be om ett visst kort. En Vild tant kan ersätta en
             tant i paret eller tretalet. Sist kvar vinner.
           </li>
         </ul>
+        {/* Krediten för musiken (se docs/ljud-licenser.md). */}
+        <p className="border-t pt-3 text-xs text-muted-foreground">
+          Musik: ”Happy” av{' '}
+          <a href="https://soundcloud.com/rezoner" target="_blank" rel="noreferrer" className="underline">
+            Rezoner
+          </a>
+        </p>
       </DialogContent>
     </Dialog>
   )
