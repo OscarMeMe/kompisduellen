@@ -23,6 +23,7 @@ import { PlayerSetup } from '@/components/PlayerSetup'
 import { Button } from '@/components/ui/button'
 import { useLayout } from '@/hooks/useLayout'
 import { useWakeLock } from '@/hooks/useWakeLock'
+import { shouldKeepScreenOn } from '@/lib/device'
 import { useLobby } from '@/hooks/useLobby'
 import { useNoIndex } from '@/hooks/useNoIndex'
 import { useOneTab } from '@/hooks/useOneTab'
@@ -286,8 +287,9 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     setInMatch(inMatch)
     return () => setInMatch(false)
   }, [inMatch, setInMatch])
-  // Värdens skärm hålls tänd under matchen. En låst telefon stoppar allt, och då står rundorna still för alla.
-  useWakeLock(isHost && inMatch)
+  // Värdens skärm hålls tänd under matchen, och i väntrummet och på slutskärmen när andra är med. En låst telefon
+  // stoppar allt, och då står rundorna still och ingen kan gå med.
+  useWakeLock(shouldKeepScreenOn({ isHost, connected: status === 'ready', inMatch, othersPresent }))
   useEffect(() => {
     setLeaveInMatch(leavingPractice)
     return () => setLeaveInMatch(false)
