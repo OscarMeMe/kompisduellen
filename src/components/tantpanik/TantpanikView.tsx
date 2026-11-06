@@ -13,7 +13,7 @@ import { CARDS, CARD_TYPES, NOPE_SECONDS, cardName, type CardType } from '@/lib/
 import { cn } from '@/lib/utils'
 
 // Exploderande Tanter: hela matchen i en vy. Överst vad jag ska göra just nu, sedan bordet (spelarna, högen och slänghögen),
-// det som väntar på Nä du!, steget som pågår, min hand och vad som hänt. Prispallen efteråt är gemensam för alla spel.
+// det som väntar på Nope!, steget som pågår, min hand och vad som hänt. Prispallen efteråt är gemensam för alla spel.
 export function TantpanikView({ state, me, clockOffset, tantView, onMove }: TantViewProps) {
   const table = state.tantpanik
   if (!table) return null
@@ -90,7 +90,7 @@ function Instruction({ state, table, meId }: { state: GameState; table: TantTabl
   let text: string
   let mine = false
   if (table.out.includes(meId)) text = 'Du är ute. Följ resten av matchen.'
-  else if (table.step === 'window') text = 'Ett kort spelades. Stoppa det med Nä du! eller vänta.'
+  else if (table.step === 'window') text = 'Ett kort spelades. Stoppa det med Nope! eller vänta.'
   else if (table.step === 'give') {
     mine = table.favor?.from === meId
     text = mine ? `Ge ett kort till ${name(table.favor!.to)}.` : 'Väntar på en tjänst…'
@@ -155,14 +155,18 @@ function Piles({ table }: { table: TantTable }) {
         <span className="text-sm font-semibold">Draghögen</span>
       </div>
       <div className="flex flex-col items-center gap-1">
-        {top ? <TantKort type={top} small /> : <div className="h-24 w-18 rounded-lg border-2 border-dashed border-border" />}
+        {top ? (
+          <TantKort type={top} size="small" />
+        ) : (
+          <div className="aspect-[107/147] w-18 rounded-lg border-2 border-dashed border-border" />
+        )}
         <span className="text-sm font-semibold">Slänghögen ({table.discardCount})</span>
       </div>
     </div>
   )
 }
 
-// Ett spelat kort väntar: nedräkningen och hur kedjan av Nä du! står. Den som har ett Nä du! får en egen stor knapp
+// Ett spelat kort väntar: nedräkningen och hur kedjan av Nope! står. Den som har ett Nope! får en egen stor knapp
 // vid handen (TantHand), så att det här ser likadant ut för alla och inte avslöjar vem som har ett.
 function NopeWindow({ state, table, meId, clockOffset }: { state: GameState; table: TantTable; meId: string; clockOffset: number }) {
   const pending = table.pending!
@@ -182,7 +186,7 @@ function NopeWindow({ state, table, meId, clockOffset }: { state: GameState; tab
       <div className="flex items-center gap-3">
         <div className="flex -space-x-8">
           {pending.cards.map((type, i) => (
-            <TantKort key={i} type={type} small />
+            <TantKort key={i} type={type} size="small" />
           ))}
         </div>
         <p className="font-semibold">
@@ -197,7 +201,7 @@ function NopeWindow({ state, table, meId, clockOffset }: { state: GameState; tab
         )}
       >
         {pending.nopes === 0
-          ? 'Händer om ingen säger Nä du!'
+          ? 'Händer om ingen säger Nope!'
           : stopped
             ? `Stoppat av ${name(pending.lastNopeBy!)}!`
             : `${name(pending.lastNopeBy!)} stoppade stoppet. Kortet gäller igen!`}
@@ -213,7 +217,7 @@ function NopeWindow({ state, table, meId, clockOffset }: { state: GameState; tab
   )
 }
 
-// Tjuvkika: de översta korten, bara för mig. Överst först.
+// Se framtiden: de översta korten, bara för mig. Överst först.
 function Peek({ cards }: { cards: CardType[] }) {
   return (
     <section aria-label="Överst i högen" className="space-y-2 rounded-lg border bg-lilac/40 p-3">
@@ -224,7 +228,7 @@ function Peek({ cards }: { cards: CardType[] }) {
         <ol className="flex gap-2">
           {cards.map((type, i) => (
             <li key={i} className="flex flex-col items-center gap-1 text-xs font-semibold">
-              <TantKort type={type} small />
+              <TantKort type={type} size="small" />
               {i === 0 ? 'Överst' : `${i + 1}`}
             </li>
           ))}
@@ -234,7 +238,7 @@ function Peek({ cards }: { cards: CardType[] }) {
   )
 }
 
-// Möblera om: flytta korten upp och ned med knappar och tryck Klar. Överst först.
+// Ändra framtiden: flytta korten upp och ned med knappar och tryck Klar. Överst först.
 function Arrange({ cards, onMove }: { cards: CardType[]; onMove: (move: TantMove) => void }) {
   const [order, setOrder] = useState(() => cards.map((_, i) => i))
   function swap(a: number, b: number) {
@@ -245,13 +249,13 @@ function Arrange({ cards, onMove }: { cards: CardType[]; onMove: (move: TantMove
     })
   }
   return (
-    <section aria-label="Möblera om" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
+    <section aria-label="Ändra framtiden" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
       <p className="font-semibold">Ordna de översta korten. Det översta dras först.</p>
       <ol className="space-y-2">
         {order.map((index, position) => (
           <li key={index} className="flex items-center gap-3">
             <span className="w-14 text-sm font-semibold">{position === 0 ? 'Överst' : `${position + 1}`}</span>
-            <TantKort type={cards[index]} small />
+            <TantKort type={cards[index]} size="small" />
             <div className="flex gap-1">
               <Button
                 variant="outline"
@@ -288,7 +292,7 @@ function Place({ deckCount, onMove }: { deckCount: number; onMove: (move: TantMo
   const label = position === 0 ? 'Överst' : position === deckCount ? 'Underst' : `under ${position} kort`
   return (
     <section aria-label="Göm tanten" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
-      <p className="font-semibold">Fikapausen räddade dig! Var vill du gömma tanten? Ingen annan ser vad du väljer.</p>
+      <p className="font-semibold">Desarmera räddade dig! Var vill du gömma tanten? Ingen annan ser vad du väljer.</p>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => setPosition(0)}>
           Överst
@@ -358,7 +362,7 @@ function CardList() {
               {CARDS[type].symbol}
             </span>
             <span>
-              <span className="font-bold">{CARDS[type].name}:</span> {CARDS[type].text}
+              <span className="font-bold">{CARDS[type].name}:</span> {CARDS[type].rule ?? CARDS[type].text}
             </span>
           </li>
         ))}

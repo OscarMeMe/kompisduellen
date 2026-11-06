@@ -38,12 +38,12 @@ describe('solfjädern', () => {
 
 describe('handens ordning och val', () => {
   it('likadana kort ligger bredvid varandra', () => {
-    const hand = [card('a', 'bingo'), card('b', 'fika'), card('c', 'vild'), card('d', 'bingo'), card('e', 'nadu')]
-    expect(sortHand(hand).map((c) => c.type)).toEqual(['fika', 'nadu', 'bingo', 'bingo', 'vild'])
+    const hand = [card('a', 'regnbage'), card('b', 'fika'), card('c', 'vild'), card('d', 'regnbage'), card('e', 'nadu')]
+    expect(sortHand(hand).map((c) => c.type)).toEqual(['fika', 'nadu', 'regnbage', 'regnbage', 'vild'])
   })
 
   it('tantkort kan väljas tillsammans med samma sort eller en Vild tant', () => {
-    const hand = [card('a', 'bingo'), card('b', 'bingo'), card('c', 'vild'), card('d', 'kaffe'), card('e', 'blanda')]
+    const hand = [card('a', 'regnbage'), card('b', 'regnbage'), card('c', 'vild'), card('d', 'kupong'), card('e', 'blanda')]
     let selected = nextSelection(hand, [], 'a')
     selected = nextSelection(hand, selected, 'c')
     selected = nextSelection(hand, selected, 'b')
@@ -55,9 +55,9 @@ describe('handens ordning och val', () => {
 
   it('knappens text följer valet', () => {
     expect(selectionLabel(['blanda'])).toBe('Spela')
-    expect(selectionLabel(['bingo'])).toBeNull()
-    expect(selectionLabel(['bingo', 'vild'])).toBe('Spela par')
-    expect(selectionLabel(['bingo', 'bingo', 'vild'])).toBe('Spela tretal')
+    expect(selectionLabel(['regnbage'])).toBeNull()
+    expect(selectionLabel(['regnbage', 'vild'])).toBe('Spela par')
+    expect(selectionLabel(['regnbage', 'regnbage', 'vild'])).toBe('Spela tretal')
     expect(selectionLabel(['vild', 'vild'])).toBeNull()
     expect(canJoin(['vild', 'vild'])).toBe(true)
     expect(canJoin(['vild', 'blanda'])).toBe(false)

@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils'
 
 // Min hand: en solfjäder längst ner på skärmen. Tryck på ett kort så hoppar det fram med hela texten och en stor knapp.
 // Tantkort (och kort med samma namn) kan väljas flera, och hoppar då fram tillsammans som par eller tretal. Tryck utanför
-// för att lägga tillbaka. När någon spelat ett kort och jag har Nä du! dyker en stor knapp upp nära tummen.
-// giving = Gör mig en tjänst: jag väljer ett kort att ge bort.
+// för att lägga tillbaka. När någon spelat ett kort och jag har Nope! dyker en stor knapp upp nära tummen.
+// giving = Tjänst: jag väljer ett kort att ge bort.
 export function TantHand({
   state,
   table,
@@ -42,9 +42,9 @@ export function TantHand({
   const myTurn = table.step === 'turn' && table.current === meId
   const popped = chosen.length > 0
 
-  // Nä du!: bara när ett kort väntar och jag har ett. Ingen annan ser att jag har det.
+  // Nope!: bara när ett kort väntar och jag har ett. Ingen annan ser att jag har det.
   const pending = table.step === 'window' ? table.pending : null
-  // Knappen visas inte för den som själv gjorde det senaste i kedjan (spelade kortet eller sa det senaste Nä du!).
+  // Knappen visas inte för den som själv gjorde det senaste i kedjan (spelade kortet eller sa det senaste Nope!).
   const ownLatest = pending !== null && (pending.lastNopeBy ?? pending.by) === meId
   const nope = pending && !ownLatest && !table.out.includes(meId) ? cards.find((card) => card.type === 'nadu') : undefined
 
@@ -82,10 +82,12 @@ export function TantHand({
             <div className="space-y-3 rounded-lg bg-card p-3 shadow-lift">
               <div className="flex justify-center gap-2">
                 {chosen.map((card) => (
+                  // Ett kort visas förstorat, så att bildens regeltext går att läsa. Par och tretal står bredvid varandra.
                   <TantKort
                     key={card.id}
                     type={card.type}
-                    className={cn('motion-safe:animate-pop', chosen.length === 3 && 'h-40 w-28 sm:h-44 sm:w-32')}
+                    size={chosen.length === 1 ? 'zoom' : 'large'}
+                    className={cn('motion-safe:animate-pop', chosen.length === 3 && 'w-24 sm:w-28')}
                   />
                 ))}
               </div>
@@ -145,7 +147,7 @@ export function TantHand({
   )
 }
 
-// Den stora Nä du!-knappen nära tummen, med en ring som visar tiden kvar. Telefonen vibrerar kort när den dyker upp.
+// Den stora Nope!-knappen nära tummen, med en ring som visar tiden kvar. Telefonen vibrerar kort när den dyker upp.
 // Ett tryck spelar kortet direkt.
 function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null; clockOffset: number; onNope: () => void }) {
   const { progress } = useCountdown(deadline, clockOffset, NOPE_SECONDS)
@@ -180,7 +182,7 @@ function NopeButton({ deadline, clockOffset, onNope }: { deadline: number | null
           className="stroke-sun motion-safe:transition-[stroke-dashoffset] motion-safe:duration-200 motion-safe:ease-linear"
         />
       </svg>
-      <span className="relative">Nä du!</span>
+      <span className="relative">Nope!</span>
     </button>
   )
 }
@@ -227,7 +229,7 @@ function Choice({
   if (nopeLevel !== null) {
     return (
       <Button size="lg" className="w-full" onClick={() => onNope(nopeLevel)}>
-        Nä du!
+        Nope!
       </Button>
     )
   }
@@ -240,9 +242,9 @@ function Choice({
           ? 'Lägg till en riktig tant, så blir det ett par eller tretal.'
           : 'De här korten går inte att spela tillsammans.'
         : kind === 'nope'
-          ? 'Nä du! spelar du när någon annan precis spelat ett kort.'
+          ? 'Nope! spelar du när någon annan precis spelat ett kort.'
           : kind === 'defuse'
-            ? 'Fikapausen används av sig själv när du drar en exploderande tant.'
+            ? 'Desarmera används av sig själv när du drar en exploderande tant.'
             : kind === 'trap'
               ? 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
               : 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'

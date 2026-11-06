@@ -4,9 +4,9 @@
 import { isCombo, type TantCard } from '@/lib/tantpanik'
 import { CARDS, CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 
-// Kortens storlek i solfjädern (px). Samma mått som klasserna i Solfjader.tsx (w-21 h-30).
+// Kortens storlek i solfjädern (px), i kortbildernas format 107 × 147. Samma mått som klasserna i Solfjader.tsx (w-21 h-29).
 export const FAN_CARD_WIDTH = 84
-export const FAN_CARD_HEIGHT = 120
+export const FAN_CARD_HEIGHT = 116
 // Plats på sidorna, så att de yttersta korten inte når kanten när de lutar.
 export const FAN_SIDE = 26
 // Störst avstånd mellan korten. Med fler kort krymper avståndet, så att alla får plats.
