@@ -50,7 +50,7 @@ export const LOBBY_THEMES: Record<string, LobbyTheme> = {
   },
   tantpanik: {
     playersTitle: 'Tantvakter',
-    lines: ['Någonstans i högen väntar en tant.', 'Har alla sin Fikapaus?', 'Dra lugnt. Andas.', 'Det här slutar med panik.'],
+    lines: ['Någonstans i högen väntar en tant.', 'Har alla sitt Desarmera-kort?', 'Dra lugnt. Andas.', 'Det här slutar med panik.'],
     icon: '💥',
   },
 }

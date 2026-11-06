@@ -1,5 +1,5 @@
 // Exploderande Tanter: alla turas om att dra kort ur en gemensam hög. Drar du en exploderande tant är du ute, om du inte har en
-// Fikapaus. Då gömmer du tanten i högen igen. Övriga kort hjälper dig att slippa dra, se vad som ligger överst, ta kort
+// Desarmera-kort. Då gömmer du tanten i högen igen. Övriga kort hjälper dig att slippa dra, se vad som ligger överst, ta kort
 // från andra eller skicka vidare turer. Sist kvar vinner. Reglerna och våra egna beslut står i docs/spec-tantpanik.md
 // (del 2 gäller före del 1) och sammanfattas i CLAUDE.md.
 //
@@ -10,11 +10,11 @@
 //
 // Faser (TantTable.step) och vad som får göras i dem:
 // - turn: den som har tur spelar kort (tPlay) eller drar (tDraw). Ingen annan gör något.
-// - window: ett spelat kort väntar i NOPE_SECONDS. Alla som är kvar och har Nä du! kan stoppa (tNope), även den som
-//   spelade kortet. Varje Nä du! börjar om tiden. När tiden gått händer kortet om antalet Nä du! är jämnt.
-// - give: Gör mig en tjänst. Den utpekade väljer ett kort att ge (tGive).
-// - arrange: Möblera om. Den som spelade lägger de översta korten i ny ordning (tArrange).
-// - place: den som drog en tant och hade en Fikapaus gömmer tanten i högen (tPlace). Turen tar slut.
+// - window: ett spelat kort väntar i NOPE_SECONDS. Alla som är kvar och har Nope! kan stoppa (tNope), även den som
+//   spelade kortet. Varje Nope! börjar om tiden. När tiden gått händer kortet om antalet Nope! är jämnt.
+// - give: Tjänst. Den utpekade väljer ett kort att ge (tGive).
+// - arrange: Ändra framtiden. Den som spelade lägger de översta korten i ny ordning (tArrange).
+// - place: den som drog en tant och hade ett Desarmera-kort gömmer tanten i högen (tPlace). Turen tar slut.
 
 import type { GameState } from '@/lib/match'
 import {
@@ -39,7 +39,7 @@ export type TantCard = { id: string; type: CardType }
 export type TantSettings = { trap: boolean }
 export const DEFAULT_TANT_SETTINGS: TantSettings = { trap: true }
 
-// Ett spelat kort (eller par, tretal) som väntar på att Nä du!-tiden går ut.
+// Ett spelat kort (eller par, tretal) som väntar på att Nope!-tiden går ut.
 export type TantPending = {
   by: string
   kind: 'single' | 'pair' | 'triple'
@@ -48,7 +48,7 @@ export type TantPending = {
   target: string | null
   // Tretal: kortet man ber om.
   request: CardType | null
-  // Hur många Nä du! som spelats. Udda = stoppat just nu.
+  // Hur många Nope! som spelats. Udda = stoppat just nu.
   nopes: number
   lastNopeBy: string | null
 }
@@ -70,7 +70,7 @@ export type TantTable = {
   attacked: boolean
   step: TantStep
   pending: TantPending | null
-  // Gör mig en tjänst: vem som ska ge till vem.
+  // Tjänst: vem som ska ge till vem.
   favor: { from: string; to: string } | null
   deckCount: number
   // De översta korten i slänghögen (överst sist) och hur många som ligger där.
@@ -95,9 +95,9 @@ export type TantSecrets = {
   removed: TantCard[]
   // Tanten som ska gömmas (steget place).
   bomb: TantCard | null
-  // Korten som tagits upp för Möblera om (steget arrange).
+  // Korten som tagits upp för Ändra framtiden (steget arrange).
   arranging: TantCard[]
-  // Det någon tittat på med Tjuvkika eller Möblera om, och ett kort besked till var och en.
+  // Det någon tittat på med Se framtiden eller Ändra framtiden, och ett kort besked till var och en.
   peek: Record<string, CardType[]>
   notices: Record<string, TantEvent>
   // Dragens nummer som värden har hanterat, per spelare, så att samma drag aldrig räknas två gånger.
@@ -111,7 +111,7 @@ export type TantHost = { state: GameState; secrets: TantSecrets }
 export type MyTantView = {
   hand: TantCard[]
   peek: CardType[] | null
-  // Möblera om: korten jag ska ordna (överst först).
+  // Ändra framtiden: korten jag ska ordna (överst först).
   arrange: CardType[] | null
   notice: TantEvent | null
   handled: string[]
@@ -183,7 +183,7 @@ export function deckTypes(players: number, trap: boolean): CardType[] {
   return types
 }
 
-// Delar ut och lägger tanterna i högen. Var och en får en Fikapaus och sju kort till. Ingen tant på handen från början.
+// Delar ut och lägger tanterna i högen. Var och en får ett Desarmera-kort och sju kort till. Ingen tant på handen från början.
 export function dealTant(
   playerIds: readonly string[],
   trap: boolean,
@@ -196,7 +196,7 @@ export function dealTant(
   const make = (type: CardType): TantCard => ({ id: ids[next++], type })
   const all = types.map(make)
   const hands: Record<string, TantCard[]> = {}
-  // En Fikapaus till var och en. Övriga Fikapauser blandas in i leken.
+  // Ett Desarmera-kort till var och en. Övriga blandas in i leken.
   for (const id of playerIds) {
     const index = all.findIndex((card) => card.type === 'fika')
     hands[id] = index >= 0 ? all.splice(index, 1) : []
@@ -255,6 +255,12 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     },
     secrets,
   })
+}
+
+// Ett kortnamn som avslutar en mening: "Du drog Blanda." men "Du drog Nope!", utan en extra punkt.
+function endName(type: CardType): string {
+  const name = cardName(type)
+  return /[.!?]$/.test(name) ? name : `${name}.`
 }
 
 function nameOf(state: GameState, id: string): string {
@@ -362,7 +368,7 @@ function endTurn(d: Draft) {
   d.table.attacked = false
 }
 
-// Dubbelpass och Du där!: turen slutar utan drag och target får två turer, eller alla turer kvar plus två om den som
+// Attack och Riktad attack: turen slutar utan drag och target får två turer, eller alla turer kvar plus två om den som
 // spelade själv var attackerad.
 function attack(d: Draft, target: string) {
   const turns = d.table.attacked ? d.table.turnsLeft + 2 : 2
@@ -404,7 +410,7 @@ function draw(d: Draft, from: 'top' | 'bottom') {
   d.secrets.peek = {}
   if (card.type !== 'tant') {
     d.secrets.hands[id].push(card)
-    notify(d, id, `Du drog ${cardName(card.type)}.`)
+    notify(d, id, `Du drog ${endName(card.type)}`)
     log(d, from === 'top' ? `${name(d, id)} drog ett kort.` : `${name(d, id)} drog det understa kortet.`)
     endTurn(d)
     return
@@ -415,7 +421,7 @@ function draw(d: Draft, from: 'top' | 'bottom') {
     d.secrets.discard.push(...hand.splice(fika, 1))
     d.secrets.bomb = card
     d.table.step = 'place'
-    log(d, `${name(d, id)} drog en exploderande tant, men tog en fikapaus! Nu gömmer ${name(d, id)} tanten i högen.`)
+    log(d, `${name(d, id)} drog en exploderande tant, men desarmerade den! Nu gömmer ${name(d, id)} tanten i högen.`)
     return
   }
   d.secrets.discard.push(card)
@@ -458,12 +464,12 @@ function transfer(
   notify(
     d,
     toId,
-    reason === 'favor' ? `${name(d, fromId)} gav dig ${cardName(card.type)}.` : `Du tog ${cardName(card.type)} från ${name(d, fromId)}.`,
+    reason === 'favor' ? `${name(d, fromId)} gav dig ${endName(card.type)}` : `Du tog ${cardName(card.type)} från ${name(d, fromId)}.`,
   )
   notify(
     d,
     fromId,
-    reason === 'favor' ? `Du gav ${cardName(card.type)} till ${name(d, toId)}.` : `${name(d, toId)} tog din ${cardName(card.type)}.`,
+    reason === 'favor' ? `Du gav ${cardName(card.type)} till ${name(d, toId)}.` : `${name(d, toId)} tog din ${endName(card.type)}`,
   )
 }
 
@@ -556,11 +562,11 @@ function playText(d: Draft, pending: TantPending): string {
   const who = name(d, pending.by)
   const target = pending.target ? name(d, pending.target) : ''
   if (pending.kind === 'pair') return `${who} spelade ett par och vill ta ett kort från ${target}.`
-  if (pending.kind === 'triple') return `${who} spelade ett tretal och ber ${target} om ${cardName(pending.request!)}.`
+  if (pending.kind === 'triple') return `${who} spelade ett tretal och ber ${target} om ${endName(pending.request!)}`
   const type = pending.cards[0]
-  if (type === 'dudar') return `${who} spelade Du där! på ${target}.`
+  if (type === 'dudar') return `${who} spelade Riktad attack på ${target}.`
   if (type === 'tjanst') return `${who} ber ${target} om en tjänst.`
-  return `${who} spelade ${cardName(type)}.`
+  return `${who} spelade ${endName(type)}`
 }
 
 function nope(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tNope' }>, now: number): Result {
@@ -578,13 +584,13 @@ function nope(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tNope
   log(
     d,
     nopes % 2 === 1
-      ? `${name(d, playerId)}: Nä du! Kortet stoppas.`
-      : `${name(d, playerId)}: Nä du! Stoppet stoppas, så kortet gäller igen.`,
+      ? `${name(d, playerId)}: Nope! Kortet stoppas.`
+      : `${name(d, playerId)}: Nope! Stoppet stoppas, så kortet gäller igen.`,
   )
   return d
 }
 
-// Nä du!-tiden är slut: kortet händer, om det inte är stoppat.
+// Nope!-tiden är slut: kortet händer, om det inte är stoppat.
 function resolve(d: Draft, random: Random) {
   const pending = d.table.pending!
   d.table.pending = null
@@ -611,10 +617,10 @@ function resolve(d: Draft, random: Random) {
     }
     const matches = hand.filter((card) => card.type === pending.request)
     if (matches.length === 0) {
-      log(d, `${name(d, target)} hade ingen ${cardName(pending.request!)}.`)
+      log(d, `${name(d, target)} hade ingen ${endName(pending.request!)}`)
       return
     }
-    log(d, `${name(d, target)} fick ge ${name(d, by)} ${cardName(pending.request!)}.`)
+    log(d, `${name(d, target)} fick ge ${name(d, by)} ${endName(pending.request!)}`)
     transfer(d, target, by, matches[Math.floor(random() * matches.length)].id, 'triple_request')
     return
   }
@@ -725,7 +731,7 @@ export function tantMove(host: TantHost, playerId: string, move: TantMove, nr: s
   return finish(done)
 }
 
-// Värdens klocka: Nä du!-tiden är slut. Gäller bara om klockan som löpte ut fortfarande är den som gäller.
+// Värdens klocka: Nope!-tiden är slut. Gäller bara om klockan som löpte ut fortfarande är den som gäller.
 export function tantDeadline(host: TantHost, now: number, deadline: number, random: Random): TantHost {
   const table = host.state.tantpanik
   if (!table || host.state.deadline !== deadline || now < deadline || table.step !== 'window' || !table.pending) return host
@@ -766,7 +772,7 @@ export function setTantSettings(state: GameState, settings: Partial<TantSettings
   }
 }
 
-// Vem som ska göra något just nu: den som har tur, den som ska ge ett kort, eller alla med Nä du! under ett spelat kort.
+// Vem som ska göra något just nu: den som har tur, den som ska ge ett kort, eller alla med Nope! under ett spelat kort.
 export function waitingFor(table: TantTable): string | null {
   if (table.winner) return null
   if (table.step === 'give') return table.favor?.from ?? null
@@ -775,7 +781,7 @@ export function waitingFor(table: TantTable): string | null {
 }
 
 export const TANT_HOW_TO =
-  'Turas om att spela kort och dra ur högen. Drar du en exploderande tant är du ute, om du inte har en Fikapaus. Sist kvar vinner.'
+  'Turas om att spela kort och dra ur högen. Drar du en exploderande tant är du ute, om du inte har ett Desarmera-kort. Sist kvar vinner.'
 
 export const TANT_SCORING = [
   'Vinnaren är den som är sist kvar.',
