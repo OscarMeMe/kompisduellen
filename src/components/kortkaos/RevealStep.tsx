@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Emoji } from '@/components/Emoji'
-import { AnswerCard, Sentence } from '@/components/kort/PlayingCard'
+import { FlipCard } from '@/components/kort/FlipCard'
+import { AnswerCard, PromptCard } from '@/components/kort/PlayingCard'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
 import { capitalize } from '@/lib/kort'
 import { kortkaosRules } from '@/lib/kortkaos'
@@ -16,7 +18,27 @@ type RevealStepProps = {
   onNext: (round: number) => void
 }
 
-// Avslöja: först vinnarkortet och vem som spelade det, sedan vem som spelade de andra korten.
+// När varje steg i avslöjandet börjar (ms efter att avslöjandet började):
+// 1) den färdiga meningen, 2) vem som spelade den och +1 poäng, 3) de andra korten, vem som spelade dem och
+// ställningen.
+const STEP_MS = [0, 2500, 5000] as const
+
+// Vilket steg som visas nu. Den som kommer in mitt i avslöjandet (eller laddar om) hoppar till rätt steg.
+function useRevealStep(deadline: number | null, clockOffset: number): number {
+  const [step, setStep] = useState(() => {
+    if (deadline === null) return 1
+    const elapsed = kortkaosRules.seconds.reveal * 1000 - (deadline + clockOffset - Date.now())
+    return STEP_MS.filter((ms) => elapsed >= ms).length || 1
+  })
+  useEffect(() => {
+    if (step >= STEP_MS.length) return
+    const timer = setTimeout(() => setStep((s) => s + 1), STEP_MS[step] - STEP_MS[step - 1])
+    return () => clearTimeout(timer)
+  }, [step])
+  return step
+}
+
+// Avslöja i tre steg med en paus mellan, så att varje steg hinner läsas.
 export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: RevealStepProps) {
   const table = state.cards!
   const owners = table.owners ?? {}
@@ -24,76 +46,102 @@ export function RevealStep({ state, me, prompt, isHost, clockOffset, onNext }: R
   const winnerId = table.winner ? owners[table.winner] : undefined
   const winner = winnerId ? state.players[winnerId] : undefined
   const others = table.submissions.filter((s) => s.key !== table.winner)
+  const step = useRevealStep(state.deadline, clockOffset)
 
-  // Rutorna är ljusa, så texten är mörk även på det mörka bordet.
   return (
-    <div className="contents text-foreground">
+    <>
       {table.skipped || !winning ? (
-        <div className="space-y-2 rounded-lg border bg-card p-6 text-center shadow-soft animate-pop">
+        <div className="space-y-2 rounded-lg border bg-card p-6 text-center text-foreground shadow-soft animate-pop">
           <h1 className="text-2xl">Ingen poäng den här rundan</h1>
           <p className="text-muted-foreground">För få kort kom in, även på det nya frågekortet.</p>
         </div>
       ) : (
-        <div className="space-y-4 rounded-lg border bg-mint-soft p-6 shadow-soft animate-pop sm:p-8">
+        <section aria-label="Vinnarkortet" aria-live="polite" className="flex flex-col items-center gap-4">
           {table.judgeAsleep && (
-            <p className="inline-flex rounded-full bg-card px-3 py-1 text-sm font-semibold">
+            <p className="rounded-full bg-card px-3 py-1 text-sm font-semibold text-foreground">
               Domaren somnade. Vinnaren lottades
             </p>
           )}
-          {/* Vinnarkortet vickar till när det avslöjas. */}
-          <p className="font-heading text-2xl leading-snug font-bold break-words hyphens-manual motion-safe:animate-wiggle motion-safe:[animation-delay:400ms] sm:text-3xl">
-            <Sentence prompt={prompt} answer={winning.text} />
-          </p>
+          {/* Steg 1: den färdiga meningen. Kortet vänds upp och vickar till. */}
+          <FlipCard className="w-full lg:max-w-2xl">
+            <PromptCard
+              prompt={prompt}
+              answer={winning.text}
+              className="motion-safe:animate-wiggle motion-safe:[animation-delay:600ms]"
+            />
+          </FlipCard>
+          {/* Steg 2: vem som spelade kortet och +1. Platsen finns redan, så att inget hoppar. */}
           {winner && (
-            <p className="flex items-center gap-2 text-lg font-bold">
+            <p
+              className={cn(
+                'flex items-center gap-3 rounded-full bg-mint-soft py-2 pr-2 pl-3 text-lg font-bold text-foreground shadow-soft-sm',
+                step < 2 ? 'invisible' : 'motion-safe:animate-pop motion-reduce:animate-fade',
+              )}
+            >
               <Emoji emoji={winner.avatar} className="text-3xl" />
-              {winnerId === me.id ? 'Ditt kort vann! +1 poäng' : `${winner.name} spelade kortet · +1 poäng`}
+              {winnerId === me.id ? 'Ditt kort vann!' : `${winner.name} spelade kortet`}
+              <span
+                className={cn(
+                  'rounded-full bg-primary px-3 py-1 font-heading text-base text-primary-foreground shadow-primary',
+                  step >= 2 && 'motion-safe:animate-stamp motion-safe:[animation-delay:250ms]',
+                )}
+              >
+                +1 poäng
+              </span>
             </p>
           )}
+        </section>
+      )}
+
+      {/* Steg 3: de andra korten med namn, och ställningen. */}
+      {step >= 3 && (
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+          {others.length > 0 && (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:col-span-2" aria-label="De andra korten">
+              {others.map((submission, i) => {
+                const player = state.players[owners[submission.key]]
+                return (
+                  <li key={submission.key}>
+                    <FlipCard delay={i * 200}>
+                      <AnswerCard
+                        className="min-h-0"
+                        footer={
+                          player && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Emoji emoji={player.avatar} className="text-lg" />
+                              {owners[submission.key] === me.id ? 'Ditt kort' : player.name}
+                            </span>
+                          )
+                        }
+                      >
+                        {capitalize(submission.text)}
+                      </AnswerCard>
+                    </FlipCard>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          <Standings state={state} meId={me.id} className={cn('animate-fade', others.length === 0 && 'lg:col-span-3')} />
         </div>
       )}
 
-      {others.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-2" aria-label="De andra korten">
-          {others.map((submission, i) => {
-            const player = state.players[owners[submission.key]]
-            return (
-              <li key={submission.key} className="animate-pop" style={{ animationDelay: `${600 + i * 250}ms` }}>
-                <AnswerCard
-                  className="min-h-0"
-                  footer={
-                    player && (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Emoji emoji={player.avatar} className="text-lg" />
-                        {owners[submission.key] === me.id ? 'Ditt kort' : player.name}
-                      </span>
-                    )
-                  }
-                >
-                  {capitalize(submission.text)}
-                </AnswerCard>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
-      <Standings state={state} meId={me.id} />
-
-      <RevealFooter
-        state={state}
-        isHost={isHost}
-        clockOffset={clockOffset}
-        onNext={onNext}
-        totalSeconds={kortkaosRules.seconds.reveal}
-      />
-    </div>
+      <div className="text-foreground">
+        <RevealFooter
+          state={state}
+          isHost={isHost}
+          clockOffset={clockOffset}
+          onNext={onNext}
+          totalSeconds={kortkaosRules.seconds.reveal}
+        />
+      </div>
+    </>
   )
 }
 
-function Standings({ state, meId }: { state: GameState; meId: string }) {
+function Standings({ state, meId, className }: { state: GameState; meId: string; className?: string }) {
   return (
-    <section className="space-y-3 rounded-lg border bg-card p-5 shadow-soft">
+    <section className={cn('space-y-3 rounded-lg border bg-card p-5 text-foreground shadow-soft', className)}>
       <h2 className="text-xl">Ställning</h2>
       <ol className="space-y-2">
         {rankPlayers(state).map((p) => (

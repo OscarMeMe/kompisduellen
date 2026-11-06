@@ -18,7 +18,7 @@ export const kortkaosRules: CardGameRules = {
   defaultRounds: 8,
   handSize: HAND_SIZE,
   blankMaxLength: BLANK_MAX_LENGTH,
-  seconds: { question: 8, choosing: 40, judging: 45, reveal: 12 },
+  seconds: { question: 8, choosing: 40, judging: 45, reveal: 16 },
   prompts: kort.fragor.map((_, i) => `f${i}`),
   answers: kort.svar.map((_, i) => `s${i}`),
   promptText: (id) => byId(kort.fragor, id),

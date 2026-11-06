@@ -40,9 +40,9 @@ export function JudgingStep({ state, prompt, isJudge, clockOffset, onMove }: Jud
         </p>
       </div>
 
-      <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Insända kort">
+      <ul {...SPLAT_SHIELD} className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:justify-center" aria-label="Insända kort">
         {table.submissions.map((submission, i) => (
-          <li key={submission.key}>
+          <li key={submission.key} className="lg:w-[calc((100%-1.5rem)/3)]">
             {/* Korten vänds upp ett i taget. */}
             <FlipCard delay={i * 180}>
               <AnswerCard

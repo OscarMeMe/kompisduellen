@@ -26,7 +26,7 @@ export function PromptCard({ prompt, answer, gapRef, footer, stamp, className }:
   return (
     <div
       className={cn(
-        'relative flex min-h-48 flex-col justify-between gap-6 rounded-lg bg-foreground p-6 text-background shadow-lift ring-2 ring-background/20 sm:min-h-56 sm:p-8 lg:short:min-h-40 lg:short:gap-4 lg:short:p-6',
+        'relative flex min-h-48 flex-col justify-between gap-6 rounded-lg bg-foreground p-6 text-background shadow-lift ring-2 ring-background/20 sm:min-h-56 sm:p-8 lg:short:min-h-36 lg:short:gap-3 lg:short:px-6 lg:short:py-5',
         className,
       )}
     >
@@ -44,7 +44,7 @@ export function PromptCard({ prompt, answer, gapRef, footer, stamp, className }:
           <WithGap prompt={prompt} gapRef={gapRef} />
         )}
       </p>
-      {footer && <div className="text-sm font-semibold opacity-70">{footer}</div>}
+      {footer && <div className="text-sm font-semibold opacity-70 lg:short:hidden">{footer}</div>}
       {stamp && (
         <span className="absolute -top-3 right-5 rotate-6 rounded-full border-2 border-foreground bg-mint px-3 py-1 font-heading text-sm font-bold text-foreground shadow-soft-sm motion-safe:animate-stamp">
           {stamp}

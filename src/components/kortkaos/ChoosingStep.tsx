@@ -83,19 +83,17 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
             <Check className="size-5" aria-hidden /> Klart! Väntar på de andra…
           </p>
           {/* På dator ligger handen kvar, nedsjunken och utan att gå att välja. */}
-          <div aria-hidden className="hidden translate-y-6 opacity-40 motion-safe:transition motion-safe:duration-200 lg:block">
+          <div aria-hidden className="pointer-events-none hidden translate-y-3 opacity-40 motion-safe:transition motion-safe:duration-200 lg:block">
             <Solfjader label="Din hand" cards={cards} />
           </div>
         </div>
       ) : (
         <div className="space-y-3 lg:space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:justify-center">
-            <h2 className="text-xl lg:sr-only">Välj ett kort</h2>
-            <span className="text-sm text-background/75 max-lg:hidden">
-              Klicka på ett kort, eller tryck 1–{Math.min(9, cards.length)}. Du kan byta tills du spelar kortet.
-            </span>
-            <span className="text-sm text-background/75 lg:hidden">Du kan byta kort tills du trycker på Spela kortet.</span>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:hidden">
+            <h2 className="text-xl">Välj ett kort</h2>
+            <span className="text-sm text-background/75">Du kan byta kort tills du trycker på Spela kortet.</span>
           </div>
+          <h2 className="sr-only max-lg:hidden">Välj ett kort</h2>
 
           {cards.length === 0 ? (
             <p className="rounded-md bg-muted px-4 py-3 text-center text-muted-foreground">
@@ -125,10 +123,17 @@ export function ChoosingStep({ prompt, hand, done, footer, onMove }: ChoosingSte
             </div>
           )}
 
-          <div {...SPLAT_SHIELD} className="lg:mx-auto lg:w-full lg:max-w-sm">
-            <Button size="lg" className="w-full" disabled={!current} onClick={finish}>
-              Spela kortet
-            </Button>
+          {/* På dator står tipsen bredvid knappen, så att handen får plats. */}
+          <div className="lg:grid lg:grid-cols-[1fr_minmax(0,20rem)_1fr] lg:items-center lg:gap-4">
+            <p className="hidden text-right text-sm text-background/75 lg:block">
+              Klicka, dra upp eller tryck 1–{Math.min(9, cards.length)}
+            </p>
+            <div {...SPLAT_SHIELD}>
+              <Button size="lg" className="w-full" disabled={!current} onClick={finish}>
+                Spela kortet
+              </Button>
+            </div>
+            <p className="hidden text-sm text-background/75 lg:block">Du kan byta tills du spelar kortet</p>
           </div>
         </div>
       )}

@@ -64,7 +64,9 @@ export function Solfjader({
   // Efter ett drag kommer ett klick som inte ska räknas.
   const skipClick = useRef(false)
   const n = cards.length
-  const active = drag?.moved ? drag.i : (hovered ?? focused)
+  // Det valda kortet ligger i luckan och lyfts inte (dess plats är bara en kontur).
+  const lifted = hovered ?? focused
+  const active = drag?.moved ? drag.i : lifted === selectedIndex ? null : lifted
   const tabStop = Math.min(tabIndex, n - 1)
 
   // Siffrorna 1–9 väljer kort, utom när man skriver i ett fält.
@@ -103,7 +105,6 @@ export function Solfjader({
     if (!onSelect || event.pointerType === 'touch' || event.button !== 0) return
     if (!window.matchMedia('(min-width: 1024px)').matches) return
     dragRef.current = { i, x0: event.clientX, y0: event.clientY, dx: 0, dy: 0, moved: false }
-    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function moveDrag(event: PointerEvent<HTMLLIElement>) {
@@ -112,6 +113,8 @@ export function Solfjader({
     const dx = event.clientX - d.x0
     const dy = event.clientY - d.y0
     if (!d.moved && Math.hypot(dx, dy) < 6) return
+    // Fångar musen först när kortet faktiskt dras, så att ett vanligt klick når knappen.
+    if (!d.moved) event.currentTarget.setPointerCapture(event.pointerId)
     const next = { ...d, dx, dy, moved: true }
     dragRef.current = next
     setDrag(next)
@@ -159,7 +162,7 @@ export function Solfjader({
       onMouseLeave={() => setHovered(null)}
       className={cn(
         '-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-2 pb-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 md:grid-cols-4',
-        'lg:flex lg:justify-center lg:gap-0 lg:px-8 lg:pt-8 lg:pb-1 lg:short:pt-6',
+        'lg:flex lg:justify-center lg:gap-0 lg:px-8 lg:pt-4 lg:pb-1 lg:short:pt-2',
         className,
       )}
     >
@@ -179,7 +182,7 @@ export function Solfjader({
             onPointerCancel={(event) => endDrag(event, true)}
             className={cn(
               'relative w-40 shrink-0 snap-start sm:w-auto',
-              'lg:-mx-5 lg:h-48 lg:w-36 lg:origin-bottom lg:transition-transform lg:duration-200 lg:ease-out lg:select-none lg:[transform:var(--fan)] lg:short:h-40 lg:short:w-32 motion-reduce:transition-none',
+              'lg:-mx-5 lg:h-48 lg:w-36 lg:origin-bottom lg:transition-transform lg:duration-200 lg:ease-out lg:select-none lg:[transform:var(--fan)] lg:short:h-36 lg:short:w-32 motion-reduce:transition-none',
               dragging && 'lg:cursor-grabbing lg:transition-none',
             )}
           >
@@ -212,7 +215,7 @@ export function Solfjader({
                 'lg:min-h-0 lg:gap-2 lg:p-3 lg:text-base lg:shadow-lift lg:hover:translate-y-0 lg:short:text-sm',
                 // På dator ligger det valda kortet i frågan, så här blir det en tom kontur.
                 isSelected &&
-                  'lg:translate-y-0 lg:border-dashed lg:border-background/60 lg:bg-background/10 lg:shadow-none lg:ring-0 lg:[&>span]:invisible',
+                  'lg:translate-y-0 lg:border-dashed lg:border-background/60 lg:bg-background/10 lg:shadow-none lg:ring-0 lg:hover:border-background/80 lg:[&>span]:invisible',
               )}
             >
               {card.text}

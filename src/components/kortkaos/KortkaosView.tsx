@@ -52,7 +52,7 @@ export function KortkaosView({ state, me, online, isHost, clockOffset, hand, los
       <RoundTimer state={state} clockOffset={clockOffset} totalSeconds={kortkaosRules.seconds[table.step]} warning={warning} />
 
       <Kortbord>
-        <div className="flex flex-col items-center gap-3 lg:flex-row lg:justify-between">
+        <div className={cn('flex flex-col items-center gap-3 lg:flex-row', table.step === 'choosing' && 'lg:justify-between')}>
           <JudgeBanner state={state} meId={me.id} />
           {table.step === 'choosing' && (
             <PlayerStatus state={state} online={online} clockOffset={clockOffset} compact className="hidden lg:flex" />
@@ -126,7 +126,7 @@ function JudgeBanner({ state, meId }: { state: GameState; meId: string }) {
     <div
       key={myTurn ? 'min-tur' : 'vantar'}
       className={cn(
-        'flex items-center justify-center gap-2 rounded-full border bg-sun-soft px-4 py-1.5 text-foreground shadow-soft-sm',
+        'flex items-center justify-center gap-2 rounded-full border bg-sun-soft px-4 py-1.5 whitespace-nowrap text-foreground shadow-soft-sm',
         myTurn && 'motion-safe:animate-turn-pulse',
       )}
     >
