@@ -11,6 +11,9 @@ export type LayoutContext = {
   setLeaveGuard: (guard: ((to: string) => void) | null) => void
   // Versionsbeskedet visas (VersionNotice). Då döljs raden om en ny version, så att bara ett besked syns åt gången.
   setVersionNotice: (shown: boolean) => void
+  // Spelaren som fliken är i lobbyn, med namnet som lobbyn visar. Sidhuvudet visar den i stället för profilen, så att
+  // sidhuvudet och lobbyn alltid visar samma spelare. null utanför en lobby.
+  setLobbyPlayer: (player: { name: string; avatar: string } | null) => void
 }
 
 // Det som sidorna kan ändra i Layout (sidhuvudet).

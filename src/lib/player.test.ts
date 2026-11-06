@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { AVATARS, defaultGuest, parseLobbyIdentity } from '@/lib/player'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AVATARS, defaultGuest, loadPlayerInThisTab, markJoinedInThisTab, parseLobbyIdentity, updatePlayerInThisTab } from '@/lib/player'
 
 const NOW = 1_000_000_000_000
 const HOUR = 60 * 60 * 1000
@@ -29,5 +29,40 @@ describe('defaultGuest', () => {
   it('ger namnet Gäst och en figur som går att välja', () => {
     expect(defaultGuest(() => 0)).toEqual({ name: 'Gäst', avatar: AVATARS[0] })
     expect(defaultGuest(() => 0.999).avatar).toBe(AVATARS[AVATARS.length - 1])
+  })
+})
+
+// En enkel lagring som i webbläsaren.
+function memoryStorage(): Storage {
+  const data = new Map<string, string>()
+  return {
+    get length() {
+      return data.size
+    },
+    key: (i: number) => [...data.keys()][i] ?? null,
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => void data.set(key, value),
+    removeItem: (key: string) => void data.delete(key),
+    clear: () => data.clear(),
+  }
+}
+
+describe('nytt namn eller ny figur i fliken', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('följer med till lobbyerna där fliken är samma spelare, men inte där den är någon annan', () => {
+    vi.stubGlobal('sessionStorage', memoryStorage())
+    markJoinedInThisTab('ABCD', { id: 'a', name: 'Kim', avatar: '👻' })
+    markJoinedInThisTab('EFGH', { id: 'b', name: 'Lisa', avatar: '🤖' })
+    updatePlayerInThisTab({ id: 'a', name: 'Kimpa', avatar: '🎩' })
+    expect(loadPlayerInThisTab('ABCD')).toEqual({ id: 'a', name: 'Kimpa', avatar: '🎩' })
+    expect(loadPlayerInThisTab('EFGH')).toEqual({ id: 'b', name: 'Lisa', avatar: '🤖' })
+  })
+
+  it('kraschar inte när lagringen är blockerad', () => {
+    vi.stubGlobal('sessionStorage', undefined)
+    expect(() => updatePlayerInThisTab({ id: 'a', name: 'Kim', avatar: '👻' })).not.toThrow()
   })
 })

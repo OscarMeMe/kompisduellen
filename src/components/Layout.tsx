@@ -13,6 +13,7 @@ export function Layout() {
   const [hops, setHops] = useState(0)
   const [leaveInMatch, setLeaveInMatch] = useState(false)
   const [versionNotice, setVersionNotice] = useState(false)
+  const [lobbyPlayer, setLobbyPlayer] = useState<{ name: string; avatar: string } | null>(null)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
   const setLeaveGuard = useCallback((guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard), [])
@@ -29,7 +30,7 @@ export function Layout() {
   const { showNotice } = useAppUpdate()
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   const { pathname } = useLocation()
-  const player = loadPlayer()
+  const player = lobbyPlayer ?? loadPlayer()
 
   return (
     <div className="flex min-h-svh flex-col overflow-x-clip">
@@ -82,7 +83,7 @@ export function Layout() {
         </p>
       )}
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
-        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice } satisfies LayoutContext} />
+        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer } satisfies LayoutContext} />
       </main>
     </div>
   )

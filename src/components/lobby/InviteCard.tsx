@@ -4,20 +4,18 @@ import { Check, Copy, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import type { GameInfo } from '@/lib/games'
-import { cn } from '@/lib/utils'
 import { copyInvite, inviteLink, shareInvite, shareMessage, type ShareResult } from '@/lib/inbjudan'
 
 type InviteCardProps = {
   code: string
   game: GameInfo
-  // Liten QR-kod som förstoras när man trycker på den, så att den går att skanna från en annan skärm.
-  compactQr?: boolean
 }
 
-// Inbjudan till lobbyn: kod, QR-kod och knappar för att dela eller kopiera länken.
+// Inbjudan till lobbyn: kod, en liten QR-kod som förstoras när man trycker på den (så att den går att skanna från en
+// annan skärm) och knappar för att dela eller kopiera länken.
 // Länken /lobby/KOD för med sig koden, så gästen slipper skriva den. QR-koden ritas här i appen
 // (qrcode.react), så länken skickas aldrig till någon extern tjänst.
-export function InviteCard({ code, game, compactQr = false }: InviteCardProps) {
+export function InviteCard({ code, game }: InviteCardProps) {
   const link = inviteLink(window.location.origin, code)
   const [message, setMessage] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -48,45 +46,32 @@ export function InviteCard({ code, game, compactQr = false }: InviteCardProps) {
       {/* Kod och QR bredvid varandra, så att kortet tar lite plats på en mobil. */}
       <div className="flex items-center gap-4">
         {/* marginSize ger den tysta vita zonen på 4 moduler runt koden som kameror behöver. */}
-        {compactQr ? (
-          <Dialog>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                aria-label="Visa QR-koden större"
-                className="shrink-0 cursor-zoom-in rounded-md border bg-white p-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <QRCodeSVG value={link} size={72} marginSize={4} level="M" fgColor="#2b303b" />
-              </button>
-            </DialogTrigger>
-            <DialogContent className="justify-items-center text-center">
-              <DialogTitle>Skanna för att gå med</DialogTitle>
-              <DialogDescription>Lobbykod {code}</DialogDescription>
-              <div className="w-full max-w-[min(100%,60dvh)] rounded-md border bg-white p-1">
-                <QRCodeSVG
-                  value={link}
-                  size={512}
-                  marginSize={4}
-                  level="M"
-                  fgColor="#2b303b"
-                  title={`QR-kod till lobby ${code}`}
-                  className="block h-auto w-full"
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <div className="shrink-0 rounded-md border bg-white p-1">
-            <QRCodeSVG
-              value={link}
-              size={128}
-              marginSize={4}
-              level="M"
-              fgColor="#2b303b"
-              title={`QR-kod till lobby ${code}`}
-            />
-          </div>
-        )}
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              aria-label="Visa QR-koden större"
+              className="shrink-0 cursor-zoom-in rounded-md border bg-white p-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <QRCodeSVG value={link} size={72} marginSize={4} level="M" fgColor="#2b303b" />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="justify-items-center text-center">
+            <DialogTitle>Skanna för att gå med</DialogTitle>
+            <DialogDescription>Lobbykod {code}</DialogDescription>
+            <div className="w-full max-w-[min(100%,60dvh)] rounded-md border bg-white p-1">
+              <QRCodeSVG
+                value={link}
+                size={512}
+                marginSize={4}
+                level="M"
+                fgColor="#2b303b"
+                title={`QR-kod till lobby ${code}`}
+                className="block h-auto w-full"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
         {/* Container: koden skalas efter bredden på rutan, så att den aldrig går utanför. */}
         <div className="@container min-w-0 flex-1 text-center">
           <p className="text-sm font-semibold text-muted-foreground">Lobbykod</p>
@@ -96,10 +81,10 @@ export function InviteCard({ code, game, compactQr = false }: InviteCardProps) {
           >
             {code}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">{compactQr ? 'Tryck på QR-koden så blir den större.' : 'Skanna, öppna länken eller skriv koden på sidan.'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Tryck på QR-koden så blir den större.</p>
         </div>
       </div>
-      <div className={cn('grid w-full gap-2', compactQr ? 'grid-cols-1 min-[360px]:grid-cols-2' : 'grid-cols-2')}>
+      <div className="grid w-full grid-cols-1 gap-2 min-[360px]:grid-cols-2">
         <Button size="lg" className="whitespace-nowrap" onClick={shareLink}>
           <Share2 />
           Dela

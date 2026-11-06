@@ -261,7 +261,13 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   }
 
   // Dölj menyn medan rundorna pågår, så att ingen lämnar lobbyn av misstag.
-  const { setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice } = useLayout()
+  const { setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer } = useLayout()
+  // Sidhuvudet visar samma spelare som lobbyn, med lobbyns namn (t.ex. "Pöki 2").
+  const lobbyName = state.players[me.id]?.name ?? me.name
+  useEffect(() => {
+    setLobbyPlayer({ name: lobbyName, avatar: me.avatar })
+  }, [setLobbyPlayer, lobbyName, me.avatar])
+  useEffect(() => () => setLobbyPlayer(null), [setLobbyPlayer])
   // Versionsbeskedet ersätter raden om en ny version i sidhuvudet.
   useEffect(() => {
     setVersionNotice(version !== 'ok')
