@@ -184,6 +184,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
   - egen musik för väntrummet och matchen, med källa och licens antecknade i `docs/ljud-licenser.md` (som `tantmusik.ts`)
   - ett anpassat tema: egna färger och egen stil som syns i väntrummet, spelvyn och spelkortet på startsidan
 - Fråga användaren om de här sakerna när ett nytt spel planeras (logga, mönster, musik och färger), och bygg dem så att de bara gäller det spelet. De andra spelen ska se ut som förut.
+- När ett nytt spel planeras: kopiera `docs/checklista-nytt-spel.md` till spelets spec och bocka av punkterna under arbetet. Visa användaren vilka punkter som är kvar innan spelet mergas till main.
 
 ## Imposterjakten
 
