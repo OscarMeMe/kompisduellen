@@ -11,6 +11,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { roundWords, type GameInfo } from '@/lib/games'
 import { matchHighlights, winnerSummary } from '@/lib/hojdpunkter'
 import { TANT_GAME, tantPlacementText } from '@/lib/tantpanik'
+import { TantSlutKnapp, TantSlutskarm } from '@/components/tantpanik/TantSlutskarm'
 import { bestCard, kortkaosRules } from '@/lib/kortkaos'
 import {
   canStart,
@@ -89,6 +90,68 @@ export function FinishedView({
   const words = roundWords(state.game)
   const roundsText = `${rounds} ${rounds === 1 ? words.one : words.many}`
   const settingsSummary = tempo ? `${roundsText} · ${guessSeconds} s` : roundsText
+
+  const leaderboard = (
+    // Raderna glider från ställningen före matchen till den nya.
+    <Leaderboard
+      entries={rankLeaderboard(state)}
+      matchesPlayed={state.matchesPlayed}
+      gamesPlayed={state.gamesPlayed}
+      lastWinners={state.practice ? [] : matchWinners(state)}
+      glideFrom={state.practice ? undefined : leaderboardOrderBefore(rankLeaderboard(state), matchWinners(state))}
+    />
+  )
+
+  // Exploderande Tanter har en egen slutskärm i spelets stil (TantSlutskarm), med samma val som de andra spelen.
+  const tantTable = state.game === TANT_GAME && !state.practice ? state.tantpanik : null
+  if (tantTable?.winner) {
+    return (
+      <TantSlutskarm
+        state={state}
+        table={tantTable}
+        meId={meId}
+        leaderboard={leaderboard}
+        actions={
+          <>
+            {isHost ? (
+              <>
+                {wishes.wanting > 0 && (
+                  <p className="text-center font-heading font-bold text-balance motion-safe:animate-pop">{wishes.wanting} vill försöka igen. Kör vi?</p>
+                )}
+                <div className="flex w-full gap-2.5">
+                  <TantSlutKnapp primary onClick={rematch} disabled={!canRematch}>
+                    Revansch
+                  </TantSlutKnapp>
+                  <TantSlutKnapp onClick={onChangeGame}>Byt spel</TantSlutKnapp>
+                </div>
+                {!canRematch && (
+                  <p className="text-center text-xs font-semibold text-balance">
+                    {tooManyPlayers(state.game, online.length)
+                      ? `${game.name} går att spela med högst ${game.maxPlayers} spelare.`
+                      : `Revansch kräver minst ${game.minPlayers} spelare, och några har lämnat lobbyn.`}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                {canWish && (
+                  <TantSlutKnapp primary={!iWish} aria-pressed={iWish} onClick={() => onWishRematch(!iWish)} className="w-full flex-none">
+                    {iWish ? 'Ångra önskemålet' : 'Jag vill ha revansch'}
+                  </TantSlutKnapp>
+                )}
+                <p className="text-center text-sm font-bold text-balance">
+                  {wishes.wanting > 0 ? `${wishes.wanting} av ${wishes.of} vill ha revansch. ` : ''}Värden väljer nästa steg.
+                </p>
+              </>
+            )}
+            <button type="button" onClick={onLeave} className="min-h-11 px-3 text-[15px] font-extrabold text-tant-vin underline-offset-4 hover:underline short:min-h-8">
+              Lämna lobby
+            </button>
+          </>
+        }
+      />
+    )
+  }
 
   return (
     <Wide>
@@ -262,14 +325,7 @@ export function FinishedView({
         </ul>
       )}
 
-      {/* Raderna glider från ställningen före matchen till den nya. */}
-      <Leaderboard
-        entries={rankLeaderboard(state)}
-        matchesPlayed={state.matchesPlayed}
-        gamesPlayed={state.gamesPlayed}
-        lastWinners={state.practice ? [] : matchWinners(state)}
-        glideFrom={state.practice ? undefined : leaderboardOrderBefore(rankLeaderboard(state), matchWinners(state))}
-      />
+      {leaderboard}
 
       <Button size="lg" variant="ghost" onClick={onLeave}>
         Lämna lobby
