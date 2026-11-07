@@ -218,3 +218,41 @@ export function moveCard(ids: readonly string[], id: string, to: number): string
   const index = Math.max(0, Math.min(rest.length, to))
   return [...rest.slice(0, index), id, ...rest.slice(index)]
 }
+
+const SPREAD_RATIO = 147 / 107
+// Marginal runt korten i ytan (andel).
+const FIT_MARGIN = 0.9
+
+// Nope!-fönstret: hur stort ett kort kan vara så att alla kort (förskjutna i sidled och lutade runt nederkantens mitt) ryms i ytan.
+// Ger kortets bredd, solfjäderns yttre mått och var kortet ligger i den.
+export function fitSpread(width: number, height: number, angles: number[], shiftPerCard: number) {
+  const mid = (angles.length - 1) / 2
+  // Hörnen för ett kort med bredden 1.
+  let minX = 0
+  let maxX = 1
+  let minY = 0
+  let maxY = SPREAD_RATIO
+  angles.forEach((deg, i) => {
+    const a = (deg * Math.PI) / 180
+    const shift = (i - mid) * shiftPerCard
+    for (const [x, y] of [
+      [0, 0],
+      [1, 0],
+      [0, SPREAD_RATIO],
+      [1, SPREAD_RATIO],
+    ]) {
+      const dx = x - 0.5
+      const dy = y - SPREAD_RATIO
+      const px = 0.5 + shift + dx * Math.cos(a) - dy * Math.sin(a)
+      const py = SPREAD_RATIO + dx * Math.sin(a) + dy * Math.cos(a)
+      minX = Math.min(minX, px)
+      maxX = Math.max(maxX, px)
+      minY = Math.min(minY, py)
+      maxY = Math.max(maxY, py)
+    }
+  })
+  const spanX = maxX - minX
+  const spanY = maxY - minY
+  const card = Math.max(0, Math.min((width * FIT_MARGIN) / spanX, (height * FIT_MARGIN) / spanY, 420))
+  return { card, width: spanX * card, height: spanY * card, left: -minX * card, top: -minY * card }
+}

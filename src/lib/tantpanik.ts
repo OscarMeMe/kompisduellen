@@ -168,7 +168,7 @@ export type TantHost = { state: GameState; secrets: TantSecrets }
 
 // Ett kort jag fick: draget ur högen, eller taget från en annan spelare (from).
 export type TantDrew = { n: number; type: CardType; id?: string; from?: string; gift?: boolean }
-export type TantLost = { n: number; type: CardType; to: string }
+export type TantLost = { n: number; type: CardType; to: string; gift?: boolean }
 
 // Det bara jag får se.
 export type MyTantView = {
@@ -575,7 +575,7 @@ function transfer(
   const n = act(d, 'take', toId, null)
   d.table.lastAction = { ...d.table.lastAction!, from: fromId }
   d.secrets.drew[toId] = { n, type: card.type, id: card.id, from: fromId, gift: reason === 'favor' }
-  d.secrets.lost = { ...(d.secrets.lost ?? {}), [fromId]: { n, type: card.type, to: toId } }
+  d.secrets.lost = { ...(d.secrets.lost ?? {}), [fromId]: { n, type: card.type, to: toId, ...(reason === 'favor' ? { gift: true } : {}) } }
   notify(
     d,
     toId,

@@ -99,7 +99,22 @@ export function MenuDialog({
 }
 
 // Allt som hänt i matchen, nyast överst.
-export function HistoryDialog({ open, onOpenChange, table }: { open: boolean; onOpenChange: (open: boolean) => void; table: TantTable }) {
+export function HistoryDialog({
+  open,
+  onOpenChange,
+  table,
+  mine = [],
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  table: TantTable
+  // Det bara jag vet (vilket kort som togs från mig eller som jag fick), på rätt plats bland händelserna.
+  mine?: { n: number; text: string }[]
+}) {
+  const oldest = table.log[0]?.n ?? 0
+  const events = [...table.log.map((event) => ({ ...event, own: false })), ...mine.filter((note) => note.n >= oldest).map((note) => ({ ...note, own: true }))].sort(
+    (a, b) => a.n - b.n || Number(a.own) - Number(b.own),
+  )
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
@@ -108,8 +123,11 @@ export function HistoryDialog({ open, onOpenChange, table }: { open: boolean; on
           <DialogDescription>De senaste händelserna, nyast överst.</DialogDescription>
         </DialogHeader>
         <ol className="space-y-1.5 text-sm">
-          {[...table.log].reverse().map((event, i) => (
-            <li key={event.n} className={i === 0 ? 'font-semibold' : 'text-muted-foreground'}>
+          {events.reverse().map((event, i) => (
+            <li
+              key={`${event.own ? 'm' : 'e'}${event.n}`}
+              className={event.own ? 'font-semibold text-destructive' : i === 0 ? 'font-semibold' : 'text-muted-foreground'}
+            >
               {event.text}
             </li>
           ))}

@@ -10,7 +10,7 @@ import { tantMusic } from '@/lib/tantmusik'
 import type { GameState } from '@/lib/match'
 import type { TantMove, TantTable } from '@/lib/tantpanik'
 import { NOPE_SECONDS, cardName, type CardType } from '@/lib/tantpanik-kort'
-import { fanLayout, handCardWidth } from '@/lib/solfjader'
+import { fanLayout, fitSpread, handCardWidth } from '@/lib/solfjader'
 import { Stamp } from '@/components/Stamp'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { ValPopup } from '@/components/tantpanik/TantVal'
@@ -25,6 +25,22 @@ const SPREAD_ANGLES: Record<number, number[]> = { 1: [0], 2: [-10, 10], 3: [-14,
 const SPREAD_SHIFT = 0.42
 // De sista sekunderna pulserar ramen och siffran, och det tickar.
 const NOPE_HURRY_SECONDS = 2
+
+const CARD_RATIO = 147 / 107
+
+function useSize(ref: React.RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setSize({ width: element.clientWidth, height: element.clientHeight })
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [ref])
+  return size
+}
 
 // Ett spelat kort väntar på Nope!: kortet (eller paret, tretalet) stort, med en tjock ram i Nope!-kortets färg runt
 // kortet som töms längs kanten medan tiden går. Under kortet "NOPE-CHANS!" och en stor siffra. De sista två sekunderna
@@ -78,6 +94,10 @@ export function NopeWindow({
     // En gång, när kortet spelas.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // Hur stora korten får vara: ytan mäts, och korten krymper så att hela solfjädern (med lutningen) får plats.
+  const areaRef = useRef<HTMLDivElement>(null)
+  const area = useSize(areaRef)
+  const fit = fitSpread(area.width, area.height, angles.slice(0, count), SPREAD_SHIFT)
   const roleText = canNope ? null : pending.by === meId ? 'Vågar någon säga Nope?' : 'Någon kan säga Nope!'
 
   return (
@@ -102,49 +122,23 @@ export function NopeWindow({
           </span>
         )}
       </div>
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center p-3">
+      {/* Ytan mellan rubrikraden och nedräkningen. Korten får exakt den storlek som får plats här, med marginal. */}
+      <div ref={areaRef} className="relative flex min-h-0 w-full flex-1 items-center justify-center">
         <div
           ref={boxRef}
-          className={cn('relative aspect-[107/147] max-h-full', pending.nopes > 0 && 'motion-safe:animate-stamp-shake')}
-          key={pending.nopes}
+          className="relative shrink-0"
           style={{
-            height: '100%',
-            maxWidth: `calc((100% - 24px) / ${1 + SPREAD_SHIFT * 2 * mid})`,
+            width: fit.width,
+            height: fit.height,
             transform: !arrived && from ? `translate(${from.x}px, ${from.y}px) scale(0.2)` : undefined,
             transition: arrived ? 'transform 450ms cubic-bezier(0.3, 0.7, 0.3, 1.05)' : undefined,
           }}
         >
-          {/* Tiden: en tjock ram runt kortet som töms längs kanten. Den ligger utanför kortet och täcker ingen text. */}
-          <svg
-            aria-hidden
-            className={cn(
-              'pointer-events-none absolute -inset-2.5 z-30 size-[calc(100%+1.25rem)] overflow-visible',
-              hurry && 'motion-safe:animate-light-pulse',
-            )}
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-          >
-            <rect x="0" y="0" width="100" height="100" rx="7" ry="5" fill="none" strokeWidth="7" vectorEffect="non-scaling-stroke" className="stroke-foreground/20" />
-            <rect
-              x="0"
-              y="0"
-              width="100"
-              height="100"
-              rx="7"
-              ry="5"
-              fill="none"
-              strokeWidth="9"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-              pathLength={1}
-              strokeDasharray="1 1"
-              strokeDashoffset={1 - progress}
-              className={cn(
-                stopped ? 'stroke-destructive' : hurry ? 'stroke-destructive' : 'stroke-primary',
-                'motion-safe:transition-[stroke-dashoffset] motion-safe:duration-200 motion-safe:ease-linear',
-              )}
-            />
-          </svg>
+        <div
+          className={cn('absolute', pending.nopes > 0 && 'motion-safe:animate-stamp-shake')}
+          key={pending.nopes}
+          style={{ left: fit.left, top: fit.top, width: fit.card, height: fit.card * CARD_RATIO }}
+        >
           {pending.cards.map((type, i) => (
             // Placeringen på det yttre elementet och rörelsen på det inre, så att animationen inte skriver över
             // placeringen (då hamnar korten i ett par på varandra).
@@ -183,6 +177,7 @@ export function NopeWindow({
             </span>
           ))}
         </div>
+        </div>
       </div>
       {pending.nopes > 0 && (
         <p
@@ -198,17 +193,30 @@ export function NopeWindow({
             : `Nope! ${name(pending.lastNopeBy!)} stoppade stoppet. Kortet gäller igen!`}
         </p>
       )}
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="flex items-center gap-1.5 rounded-full bg-primary-button px-2.5 py-0.5 font-heading text-sm font-bold tracking-wide whitespace-nowrap text-primary-foreground shadow-primary sm:px-3 sm:py-1 sm:text-base md:text-xl">
+      {/* Tiden: en tjock stapel mellan NOPE-CHANS! och siffran, som töms medan tiden går. */}
+      <div className="flex w-full max-w-lg shrink-0 items-center gap-2 pr-12 pl-2 sm:gap-3 sm:px-2">
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary-button px-2.5 py-0.5 font-heading text-sm font-bold tracking-wide whitespace-nowrap text-primary-foreground shadow-primary sm:px-3 sm:py-1 sm:text-base md:text-xl">
           <Hand aria-hidden className="size-4 sm:size-5 md:size-6" />
           NOPE-CHANS!
+        </span>
+        <span
+          aria-hidden
+          className={cn('relative h-3.5 min-w-12 flex-1 overflow-hidden rounded-full bg-foreground/25 shadow-inner sm:h-5', hurry && 'motion-safe:animate-light-pulse')}
+        >
+          <span
+            className={cn(
+              'absolute inset-y-0 left-0 rounded-full motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-linear',
+              stopped || hurry ? 'bg-destructive' : 'bg-primary',
+            )}
+            style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
+          />
         </span>
         <span
           role="timer"
           aria-label={`${secondsLeft} sekunder kvar`}
           key={secondsLeft}
           className={cn(
-            'font-heading text-4xl leading-none font-bold tabular-nums drop-shadow sm:text-5xl md:text-7xl',
+            'w-[1.2em] shrink-0 text-center font-heading text-4xl leading-none font-bold tabular-nums drop-shadow sm:text-5xl md:text-6xl',
             hurry ? 'text-destructive motion-safe:animate-pop' : 'text-background',
           )}
         >

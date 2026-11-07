@@ -19,7 +19,8 @@ import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import { bombsInDeck, waitingFor, type TantEvent, type TantTable } from '@/lib/tantpanik'
+import { bombsInDeck, waitingFor, type MyTantView, type TantEvent, type TantTable } from '@/lib/tantpanik'
+import { cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
 // Hur länge ett besked syns innan det försvinner (ms).
@@ -39,6 +40,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   const popupOpen = !!table && hasPopup(table, tantView, me.id, peekKey !== null && peekKey !== dismissedPeek)
   // Gamla besked försvinner när en popup öppnas, och visas aldrig ovanpå den.
   const notice = useFleeting(tantView?.notice ?? null, popupOpen)
+  const myNotes = useMyNotes(tantView, state)
   // Bordet skakar när en exploderande tant vänds (ny key startar om skakningen).
   const [shake, setShake] = useState(0)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -332,7 +334,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         <div
           className="pointer-events-none fixed inset-x-0 z-[44] bg-foreground/35 px-2 pt-1 motion-safe:animate-fade"
           // Under motspelarraden, och plats ovanför handen för kort som lyfts (t.ex. Nope!-kortet som hoppar upp).
-          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 }}
+          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 + (canNope ? 44 : 0) }}
         >
           <NopeWindow state={state} table={table} meId={me.id} clockOffset={clockOffset} canNope={canNope} />
         </div>
@@ -354,7 +356,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
       )}
       <RulesDialog open={rules} onOpenChange={setRules} />
       <MenuDialog open={menu} onOpenChange={setMenu} isHost={isHost} onAbort={onAbort} onLeave={onLeave} />
-      <HistoryDialog open={history} onOpenChange={setHistory} table={table} />
+      <HistoryDialog open={history} onOpenChange={setHistory} table={table} mine={myNotes} />
     </div>
   )
 }
@@ -555,6 +557,10 @@ function TargetArrow({ from, to, meId }: { from: string; to: string; meId: strin
       // Till handens överkant, eller mitt på en motspelares plats.
       setLine({ x1: a.left + a.width / 2, y1: a.top + a.height / 2, x2: b.left + b.width / 2, y2: to === meId ? b.top + 12 : b.top + b.height / 2 })
     }
+    // Raden med motspelare går att svepa: målet (eller den som spelar) rullas fram, så att pilen syns hela vägen.
+    const seat = (id: string) => (id === meId ? null : document.querySelector(`[data-seat="${CSS.escape(id)}"]`))
+    seat(to)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (to === meId) seat(from)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
@@ -989,10 +995,44 @@ function Opponent({
   )
 }
 
-// En liten solfjäder med baksidor (högst fem) och antalet kort.
+// Det bara jag vet om kort som bytt hand (vilket kort som togs från mig, vad jag tog eller fick), för historiken. Bara i
+// fliken, och bara från det att bordet visades.
+type Note = { n: number; text: string }
+function useMyNotes(tantView: MyTantView | null, state: GameState): Note[] {
+  const [notes, setNotes] = useState<Note[]>([])
+  const lost = tantView?.lost ?? null
+  const drew = tantView?.drew ?? null
+  const [seen, setSeen] = useState(() => ({ lost: lost?.n ?? 0, drew: drew?.n ?? 0 }))
+  const name = (id: string) => state.players[id]?.name ?? 'Någon'
+  const added: Note[] = []
+  if (lost && lost.n > seen.lost) {
+    added.push({ n: lost.n, text: lost.gift ? `Du gav ${cardName(lost.type)} till ${name(lost.to)}.` : `${name(lost.to)} tog ${cardName(lost.type)} från dig.` })
+  }
+  if (drew?.from && drew.n > seen.drew) {
+    added.push({ n: drew.n, text: drew.gift ? `${name(drew.from)} gav dig ${cardName(drew.type)}.` : `Du tog ${cardName(drew.type)} från ${name(drew.from)}.` })
+  }
+  if ((lost?.n ?? 0) > seen.lost || (drew?.n ?? 0) > seen.drew) {
+    setSeen({ lost: Math.max(seen.lost, lost?.n ?? 0), drew: Math.max(seen.drew, drew?.n ?? 0) })
+    if (added.length > 0) setNotes((list) => [...list, ...added].slice(-40))
+  }
+  return notes
+}
+
+// En liten solfjäder med baksidor (högst fem) och antalet kort. Får spelaren ett kort studsar antalet och "+1" (eller
+// "−1") syns en stund, även med "minska rörelse".
 function MiniFan({ count }: { count: number }) {
   const shown = Math.min(5, count)
   const mid = (shown - 1) / 2
+  const previous = useRef(count)
+  const [change, setChange] = useState<{ n: number; diff: number } | null>(null)
+  useEffect(() => {
+    const diff = count - previous.current
+    previous.current = count
+    if (diff === 0) return
+    setChange((c) => ({ n: (c?.n ?? 0) + 1, diff }))
+    const timer = setTimeout(() => setChange(null), 1000)
+    return () => clearTimeout(timer)
+  }, [count])
   return (
     <span aria-hidden className="flex h-5 items-end gap-1">
       <span className="relative h-5 w-9">
@@ -1005,7 +1045,19 @@ function MiniFan({ count }: { count: number }) {
           />
         ))}
       </span>
-      <span className="text-xs font-bold tabular-nums">{count}</span>
+      <span key={change?.n ?? 0} className={cn('relative text-xs font-bold tabular-nums', change && 'inline-block animate-pop')}>
+        {count}
+        {change && (
+          <span
+            className={cn(
+              'absolute -top-3.5 left-2 rounded-full px-1 text-[11px] font-bold whitespace-nowrap shadow-soft-sm',
+              change.diff > 0 ? 'bg-mint text-accent-foreground' : 'bg-destructive text-primary-foreground',
+            )}
+          >
+            {change.diff > 0 ? `+${change.diff}` : `−${-change.diff}`}
+          </span>
+        )}
+      </span>
     </span>
   )
 }

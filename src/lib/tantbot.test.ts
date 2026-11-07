@@ -3,7 +3,7 @@ import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, remove
 import { botSight, decideBotMove, observe, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import type { CardType } from '@/lib/tantpanik-kort'
 import type { DeckChange } from '@/lib/tantpanik'
-import { countAllCards, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
+import { countAllCards, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
 function seeded(seed = 1): () => number {
@@ -298,5 +298,33 @@ describe('risk och kunskap', () => {
     }
     expect(decideBotMove(botSight(arranging, me)!, 'svar', seeded(1))).toEqual({ type: 'tArrange', order: [1, 0, 2] })
     expect(decideBotMove(botSight(arranging, me)!, 'normal', seeded(1))).toEqual({ type: 'tArrange', order: [0, 2, 1] })
+  })
+})
+
+describe('stöld medan jag väljer ett kort', () => {
+  it('ett kort som just stulits går inte att spela, och inget annat ändras', () => {
+    let host = startTantMatch(lobby(2), seeded(8))
+    const [a, b] = host.state.tantpanik!.order
+    host = sync({
+      ...host,
+      state: { ...host.state, tantpanik: { ...host.state.tantpanik!, current: b } },
+      secrets: {
+        ...host.secrets,
+        hands: { ...host.secrets.hands, [a]: [{ id: 'blanda', type: 'blanda' }], [b]: [{ id: 'k1', type: 'kupong' }, { id: 'k2', type: 'kupong' }] },
+      },
+    })
+    // b spelar ett par mot a och tar a:s enda kort, Blanda.
+    host = tantMove(host, b, { type: 'tPlay', cards: ['k1', 'k2'], target: a }, null, 0, seeded(1))
+    host = tantDeadline(host, host.state.deadline!, host.state.deadline!, seeded(1))
+    host = tantMove(host, b, { type: 'tPick', index: 0 }, null, 0, seeded(1))
+    expect(host.secrets.hands[b].map((card) => card.id)).toContain('blanda')
+    // a trycker på Blanda (som inte längre finns), även när det blivit a:s tur.
+    const before = host
+    host = { ...host, state: { ...host.state, tantpanik: { ...host.state.tantpanik!, current: a } } }
+    const after = tantMove(host, a, { type: 'tPlay', cards: ['blanda'] }, 'x', 0, seeded(1))
+    expect(after.state.tantpanik!.step).toBe('turn')
+    expect(after.state.tantpanik!.discardCount).toBe(before.state.tantpanik!.discardCount)
+    expect(myTantView(after.secrets, after.state.tantpanik!, a).notice?.text).toBe('Det gick inte just nu.')
+    expect(after.secrets.hands[b].map((card) => card.id)).toContain('blanda')
   })
 })

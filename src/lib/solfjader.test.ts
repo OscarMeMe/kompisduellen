@@ -13,6 +13,7 @@ import {
   sortHand,
   type FanLayout,
   type FanSlot,
+  fitSpread,
 } from '@/lib/solfjader'
 import type { TantCard } from '@/lib/tantpanik'
 
@@ -158,4 +159,30 @@ describe('min egen ordning i handen', () => {
     expect(moveCard(['a', 'b', 'c'], 'b', 99)).toEqual(['a', 'c', 'b'])
     expect(moveCard(['a', 'b'], 'x', 0)).toEqual(['a', 'b'])
   })
+})
+
+describe('Nope!-fönstrets kort (fitSpread)', () => {
+  const spreads: [number[], number][] = [
+    [[0], 0.42],
+    [[-10, 10], 0.42],
+    [[-14, 0, 14], 0.42],
+  ]
+  for (const [width, height] of [
+    [1280, 520],
+    [360, 260],
+    [240, 180],
+  ]) {
+    for (const [angles, shift] of spreads) {
+      it(`${angles.length} kort ryms med marginal i ${width}×${height}`, () => {
+        const fit = fitSpread(width, height, angles, shift)
+        expect(fit.width).toBeLessThanOrEqual(width * 0.9 + 0.01)
+        expect(fit.height).toBeLessThanOrEqual(height * 0.9 + 0.01)
+        expect(fit.card).toBeGreaterThan(0)
+        // Kortet ligger inne i solfjäderns mått.
+        expect(fit.left).toBeGreaterThanOrEqual(0)
+        expect(fit.top).toBeGreaterThanOrEqual(0)
+        expect(fit.left + fit.card).toBeLessThanOrEqual(fit.width + 0.01)
+      })
+    }
+  }
 })

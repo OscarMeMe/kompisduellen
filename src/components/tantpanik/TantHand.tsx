@@ -81,6 +81,8 @@ export function TantHand({
 
   // Under Nope!-fönstret: alla mina Nope!-kort, som hoppar upp och lyser. De andra korten blir gråa.
   const nopeIds = nope ? cards.filter((card) => card.type === 'nadu').map((card) => card.id) : []
+  // Ett kort väntar och jag kan inte säga Nope! (inget kort): alla mina kort blir gråa, så att det syns direkt.
+  const noNope = pending !== null && !ownLatest && !table.out.includes(meId) && !nope && cards.length > 0
 
   function tap(id: string) {
     if (id === freshId) onFreshSeen?.()
@@ -89,7 +91,9 @@ export function TantHand({
       send({ type: 'tNope', card: id, level: pending.nopes })
       return
     }
-    setSelected((list) => nextSelection(cards, list, id))
+    // Inte min tur: ett tryck förstorar bara kortet. Inget lyfts eller läggs ihop till par, så att det aldrig ser ut som
+    // att kortet spelas.
+    setSelected((list) => (myTurn ? nextSelection(cards, list, id) : list.length === 1 && list[0] === id ? [] : [id]))
     setTarget(null)
     setAsking(null)
   }
@@ -229,7 +233,7 @@ export function TantHand({
             <div className="sm:mr-16">
               <Solfjader
                 cards={cards}
-                selected={chosen.map((card) => card.id)}
+                selected={myTurn ? chosen.map((card) => card.id) : []}
                 glow={nopeIds}
                 hiddenId={hiddenId}
                 freshId={freshId}
@@ -237,7 +241,13 @@ export function TantHand({
                 onReorder={setOrder}
                 onOverlap={onOverlap}
                 dimmed={dimmed}
+                grayAll={noNope}
               />
+              {noNope && (
+                <p className="pointer-events-none absolute inset-x-0 bottom-3 z-50 mx-auto w-fit rounded-full bg-foreground/90 px-4 py-1.5 text-center font-heading text-sm font-bold text-background shadow-soft-sm motion-safe:animate-pop sm:text-base">
+                  Du har inget Nope!
+                </p>
+              )}
             </div>
           </>
         )}
@@ -447,7 +457,7 @@ function Choice({
   }
   const label = selectionLabel(types)
   if (!label) return <p className={LABEL}>{cardHint(types)}</p>
-  if (!myTurn) return <p className={LABEL}>Du kan spela när det är din tur.</p>
+  if (!myTurn) return <p className={LABEL}>Bara förstorat. Du kan spela när det är din tur.</p>
   return (
     <Button size="lg" className="w-full" onClick={onPlay}>
       {label}
