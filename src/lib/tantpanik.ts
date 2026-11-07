@@ -80,7 +80,12 @@ export type TantPending = {
 
 export type TantStep = 'turn' | 'window' | 'give' | 'arrange' | 'place' | 'pick'
 
-export type TantEvent = { n: number; text: string }
+// En händelse i loggen. deck = vad som hände med draghögen, för den som vill räkna (t.ex. botarnas minne i tantbot.ts):
+// top = ett kort drogs uppifrån, bottom = underifrån, shuffle = högen blandades, arrange = de översta korten ordnades om,
+// place = en tant gömdes någonstans i högen. Saknas när högen inte ändrades (och hos en värd med en äldre version).
+export type DeckChange = 'top' | 'bottom' | 'shuffle' | 'arrange' | 'place'
+export const DECK_CHANGES: readonly DeckChange[] = ['top', 'bottom', 'shuffle', 'arrange', 'place']
+export type TantEvent = { n: number; text: string; deck?: DeckChange }
 
 // Det senaste som hänt vid bordet, för animationerna: ett kort dras (draw, kortet syns inte), en exploderande tant dras
 // (bomb, saved = hade Desarmera) eller ett kort spelas (play). n ökar för varje händelse, så att samma händelse bara
@@ -431,9 +436,10 @@ function endMatch(host: TantHost): TantHost {
   return { ...host, state: { ...host.state, phase: 'finished', deadline: null, scores } }
 }
 
-function log(d: Draft, text: string) {
+function log(d: Draft, text: string, deck?: DeckChange) {
   d.secrets.eventCount += 1
-  d.table.log = [...d.table.log, { n: d.secrets.eventCount, text }].slice(-LOG_KEPT)
+  const event: TantEvent = deck ? { n: d.secrets.eventCount, text, deck } : { n: d.secrets.eventCount, text }
+  d.table.log = [...d.table.log, event].slice(-LOG_KEPT)
 }
 
 function notify(d: Draft, id: string, text: string) {
@@ -512,7 +518,7 @@ function draw(d: Draft, from: 'top' | 'bottom') {
     const n = act(d, 'draw', id, null)
     d.secrets.drew[id] = { n, type: card.type, id: card.id }
     notify(d, id, `Du drog ${endName(card.type)}`)
-    log(d, from === 'top' ? `${name(d, id)} drog ett kort.` : `${name(d, id)} drog det understa kortet.`)
+    log(d, from === 'top' ? `${name(d, id)} drog ett kort.` : `${name(d, id)} drog det understa kortet.`, from)
     endTurn(d)
     return
   }
@@ -524,13 +530,13 @@ function draw(d: Draft, from: 'top' | 'bottom') {
     d.table.step = 'place'
     act(d, 'bomb', id, 'tant', true)
     notify(d, id, 'Du drog en exploderande tant! Desarmera räddade dig. Göm tanten i högen.')
-    log(d, `${name(d, id)} drog en exploderande tant, men desarmerade den! Nu gömmer ${name(d, id)} tanten i högen.`)
+    log(d, `${name(d, id)} drog en exploderande tant, men desarmerade den! Nu gömmer ${name(d, id)} tanten i högen.`, from)
     return
   }
   d.secrets.discard.push(card)
   act(d, 'bomb', id, 'tant', false)
   delete d.secrets.notices[id]
-  log(d, `${name(d, id)} drog en exploderande tant och är ute!`)
+  log(d, `${name(d, id)} drog en exploderande tant och är ute!`, from)
   eliminate(d, id)
 }
 
@@ -771,7 +777,7 @@ function resolve(d: Draft, random: Random) {
     case 'blanda':
       d.secrets.deck = shuffleCards(d.secrets.deck, random)
       d.secrets.peek = {}
-      log(d, 'Högen är blandad.')
+      log(d, 'Högen är blandad.', 'shuffle')
       return
     case 'underifran':
       draw(d, 'bottom')
@@ -818,7 +824,7 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
       d.secrets.deck.splice(move.position, 0, bomb)
       d.secrets.bomb = null
       table.step = 'turn'
-      log(d, `${name(d, playerId)} har gömt tanten i högen.`)
+      log(d, `${name(d, playerId)} har gömt tanten i högen.`, 'place')
       endTurn(d)
       return d
     }
@@ -852,7 +858,7 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
       d.secrets.arranging = []
       d.secrets.peek[playerId] = arranged.map((card) => card.type)
       table.step = 'turn'
-      log(d, `${name(d, playerId)} möblerade om högen.`)
+      log(d, `${name(d, playerId)} möblerade om högen.`, 'arrange')
       return d
     }
   }

@@ -1,14 +1,18 @@
 // Botar i Exploderande Tanter. Värdens webbläsare spelar för dem, men botens beslut (decideBotMove) får bara se det en
-// riktig spelare på botens plats får se: bordet som alla ser (state.tantpanik) och botens eget besked (myTantView: handen,
-// det den tittat på med Se framtiden och korten den ska ordna). Högen, andras händer och var tanten gömts finns aldrig
-// i det boten får (BotSight), och testerna i tantbot.test.ts kollar det. Rena funktioner, med slumpen som parameter.
+// riktig spelare på botens plats får se: bordet som alla ser (state.tantpanik, med händelseloggen) och botens eget besked
+// (myTantView: handen, det den tittat på med Se framtiden och korten den ska ordna). Högen, andras händer och var andra
+// gömt tanten finns aldrig i det boten får (BotSight), och testerna i tantbot.test.ts kollar det. Boten minns bara det
+// den själv sett eller gjort (BotMemory). Rena funktioner, med slumpen som parameter.
 //
 // Svårighet:
 // - Lätt: mest slump. Drar oftast, spelar ibland ett slumpat kort och säger sällan Nope!.
-// - Normal: enkla regler. Nope! mot attacker och stölder mot sig själv, Hoppa över eller Attack när Se framtiden visar en
-//   tant överst, gömmer tanten överst när nästa ska dra, och stjäl från den som har flest kort.
-// - Svår: som Normal, men räknar också risken att dra en tant (tanter i högen delat med kort i högen) och använder Se
-//   framtiden, Hoppa över och Attack när risken är hög, och ber om ett Desarmera-kort med tretal.
+// - Normal: riskregeln och enkel kunskap. Risken är tanter kvar i högen delat med kort i högen (offentligt). Låg risk:
+//   drar och sparar skyddskorten. Hög risk: spelar skyddskort oftare och tittar med Se framtiden före ett drag. Vet den
+//   att tanten ligger överst (Se framtiden, eller för att den själv gömde den där) drar den aldrig om den har ett
+//   skyddskort. Nope! mot attacker och stölder mot sig, gömmer tanten överst när nästa ska dra, och stjäl från den som
+//   har flest kort utan att slösa Nope! eller Desarmera.
+// - Svår: som Normal, men tar risken på större allvar, och försöker skicka tanten vidare: lägger den överst med Ändra
+//   framtiden innan den spelar Hoppa över eller Attack. Ber om Desarmera med tretal.
 
 import {
   bombsInDeck,
@@ -17,8 +21,9 @@ import {
   playableAlone,
   validTargets,
   type MyTantView,
-  type TantHost,
   type TantCard,
+  type TantEvent,
+  type TantHost,
   type TantMove,
   type TantTable,
 } from '@/lib/tantpanik'
@@ -39,6 +44,61 @@ export function isBotLevel(value: unknown): value is BotLevel {
 
 // Det enda boten får se: bordet som alla ser och sitt eget besked, precis som en riktig spelare.
 export type BotSight = { me: string; table: TantTable; view: MyTantView }
+
+// Det boten minns av det den själv sett eller gjort: var den vet att en tant ligger (antal kort ovanför), och vilken
+// händelse i loggen den läst fram till. bombAt glöms bort när någon blandar eller ändrar högen.
+export type BotMemory = { n: number; bombAt: number | null }
+
+export function newBotMemory(table: TantTable | null): BotMemory {
+  return { n: table?.log.at(-1)?.n ?? 0, bombAt: null }
+}
+
+// Vad en händelse i loggen gör med platsen boten minns, sett uppifrån. Läser spelmotorns strukturerade händelse
+// (deck i TantEvent), aldrig texten.
+function deckEffect(event: TantEvent): 'top' | 'none' | 'forget' {
+  switch (event.deck) {
+    case 'top':
+      return 'top'
+    case 'shuffle':
+    case 'arrange':
+    case 'place':
+      return 'forget'
+    default:
+      return 'none'
+  }
+}
+
+// Läser det som hänt vid bordet sedan sist: varje kort som dras uppifrån flyttar tanten ett steg närmare toppen, ett kort
+// underifrån ändrar inget, och blandas högen, ordnas den om eller göms en annan tant glöms platsen bort.
+export function observe(memory: BotMemory, table: TantTable): BotMemory {
+  let { bombAt } = memory
+  let n = memory.n
+  for (const event of table.log) {
+    if (event.n <= memory.n) continue
+    n = event.n
+    if (bombAt === null) continue
+    const effect = deckEffect(event)
+    if (effect === 'forget') bombAt = null
+    else if (effect === 'top') bombAt = bombAt === 0 ? null : bombAt - 1
+  }
+  return n === memory.n && bombAt === memory.bombAt ? memory : { n, bombAt }
+}
+
+// Efter botens eget drag: det den själv gjort med högen. table = bordet efter draget, så att botens egna händelser i
+// loggen inte läses en gång till.
+export function remember(memory: BotMemory, move: TantMove, sight: BotSight, after: TantTable): BotMemory {
+  let bombAt = memory.bombAt
+  if (move.type === 'tPlace') bombAt = move.position
+  else if (move.type === 'tArrange' && sight.view.arrange) {
+    const at = move.order.findIndex((index) => sight.view.arrange![index] === 'tant')
+    bombAt = at >= 0 ? at : bombAt
+  } else if (move.type === 'tDraw') bombAt = bombAt === null || bombAt === 0 ? null : bombAt - 1
+  return { n: after.log.at(-1)?.n ?? memory.n, bombAt }
+}
+
+// Skyddskort: tar boten undan att dra, eller ändrar högen.
+const ESCAPES: CardType[] = ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda']
+const PROTECTIVE: CardType[] = [...ESCAPES, 'tjuvkika', 'mobblera']
 
 // Kort boten helst behåller, och helst ger bort (lägst värde först).
 const KEEP_ORDER: CardType[] = ['fika', 'nadu', 'intemin', 'dubbelpass', 'dudar', 'tjuvkika', 'mobblera', 'underifran', 'blanda', 'tjanst', 'snara', 'vild']
@@ -67,9 +127,10 @@ function richest(table: TantTable, ids: string[]): string | null {
 }
 
 // Kort som en klok bot aldrig slösar på ett par eller tretal: de räddar livet eller stoppar attacker.
-const PRECIOUS: CardType[] = ['fika', 'nadu']
+const PRECIOUS: CardType[] = ['fika', 'nadu', ...PROTECTIVE]
 
-// Ett par eller tretal i handen: samma typ (eller en tant med en Vild tant). careful = aldrig Desarmera eller Nope!.
+// Ett par eller tretal i handen: samma typ (eller en tant med en Vild tant). careful = aldrig Desarmera, Nope! eller
+// skyddskort.
 function findCombo(hand: TantCard[], size: 2 | 3, careful: boolean): TantCard[] | null {
   for (const card of hand) {
     if (card.type === 'vild' || (careful && PRECIOUS.includes(card.type))) continue
@@ -107,8 +168,17 @@ function stealMove(table: TantTable, me: string, hand: TantCard[], random: Rando
   return pair ? { type: 'tPlay', cards: pair.map((c) => c.id), target } : null
 }
 
+// Risken att nästa kort överst är en tant: tanter kvar i högen delat med kort i högen (offentligt).
+export function drawRisk(table: TantTable): number {
+  return table.deckCount > 0 ? bombsInDeck(table) / table.deckCount : 1
+}
+
+// Gränserna för låg och hög risk per svårighet.
+const LOW_RISK = 0.15
+const HIGH_RISK: Record<Exclude<BotLevel, 'latt'>, number> = { normal: 0.25, svar: 0.18 }
+
 // Botens drag just nu, eller null om den inte ska göra något (inte dess tur, eller den väljer att vänta).
-export function decideBotMove(sight: BotSight, level: BotLevel, random: Random): TantMove | null {
+export function decideBotMove(sight: BotSight, level: BotLevel, random: Random, memory: BotMemory = newBotMemory(null)): TantMove | null {
   const { me, table, view } = sight
   if (table.winner || table.error || table.out.includes(me) || !table.order.includes(me)) return null
   const hand = view.hand
@@ -119,8 +189,7 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random):
     const pending = table.pending
     const nope = has('nadu')
     if (!nope || (pending.lastNopeBy ?? pending.by) === me) return null
-    const level0 = pending.nopes
-    const nope0: TantMove = { type: 'tNope', card: nope.id, level: level0 }
+    const nope0: TantMove = { type: 'tNope', card: nope.id, level: pending.nopes }
     // Mitt eget kort har stoppats: stoppa stoppet.
     if (pending.by === me && pending.nopes % 2 === 1) return level === 'latt' ? (random() < 0.3 ? nope0 : null) : nope0
     if (pending.nopes % 2 === 1) return null
@@ -152,11 +221,14 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random):
     return { type: 'tPlace', position: random() < 0.75 ? 0 : Math.min(table.deckCount, 1) }
   }
 
-  // Ändra framtiden: lägg tanterna längst ned bland korten, eftersom boten själv ska dra sedan.
+  // Ändra framtiden. Boten ska själv dra sedan, så tanterna läggs längst ned bland korten. Svår med Hoppa över eller
+  // Attack på handen lägger i stället tanten överst och tar sig undan, så att nästa spelare får den.
   if (table.step === 'arrange' && view.arrange) {
-    const order = view.arrange.map((_, i) => i)
+    const cards = view.arrange
+    const order = cards.map((_, i) => i)
     if (level === 'latt') return { type: 'tArrange', order }
-    order.sort((a, b) => Number(view.arrange![a] === 'tant') - Number(view.arrange![b] === 'tant'))
+    const passOn = level === 'svar' && (has('intemin') || has('dubbelpass') || has('dudar'))
+    order.sort((a, b) => (passOn ? -1 : 1) * (Number(cards[a] === 'tant') - Number(cards[b] === 'tant')))
     return { type: 'tArrange', order }
   }
 
@@ -179,31 +251,53 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random):
     return { type: 'tDraw' }
   }
 
-  const topIsBomb = view.peek?.[0] === 'tant'
-  const topIsSafe = view.peek !== null && view.peek !== undefined && view.peek.length > 0 && view.peek[0] !== 'tant'
-  const risk = table.deckCount > 0 ? bombsInDeck(table) / table.deckCount : 1
-  const escape = (['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda', 'mobblera'] as CardType[])
-    .map((type) => has(type))
-    .find((card) => card !== undefined)
+  // Vad boten vet om toppen: det den ser med Se framtiden, eller var den själv gömde eller lade tanten.
+  const seen = view.peek
+  const bombOnTop = seen?.[0] === 'tant' || memory.bombAt === 0
+  const safeOnTop = seen !== null && seen !== undefined && seen.length > 0 && seen[0] !== 'tant' && memory.bombAt !== 0
+  const risk = drawRisk(table)
+  const escapes = ESCAPES.map((type) => has(type)).filter((card) => card !== undefined)
+  const play = (card: TantCard | undefined) => (card ? playSingle(table, me, card, random, true) : null)
 
-  // Se framtiden visade en tant överst: kom undan.
-  if (topIsBomb && escape) {
-    const move = playSingle(table, me, escape, random, true)
+  // Tanten ligger överst: dra aldrig om det finns ett skyddskort. Svår lägger hellre tanten kvar och skickar den vidare.
+  if (bombOnTop) {
+    const order: CardType[] = level === 'svar' ? ['dubbelpass', 'dudar', 'intemin', 'underifran', 'blanda'] : ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda']
+    for (const type of order) {
+      const move = play(has(type))
+      if (move) return move
+    }
+    // Ändra framtiden kan lägga tanten längre ned (eller överst för nästa, för Svår).
+    const arrange = play(has('mobblera'))
+    if (arrange) return arrange
+  }
+
+  // Svår: ligger tanten bland de tre översta och boten kan ta sig undan, lägg den överst och skicka den vidare.
+  if (level === 'svar' && !bombOnTop && seen?.includes('tant') && has('mobblera') && (has('intemin') || has('dubbelpass') || has('dudar'))) {
+    const move = play(has('mobblera'))
     if (move) return move
   }
 
-  // Svår: hög risk och inget sett. Titta först, eller kom undan.
-  if (level === 'svar' && !topIsSafe && view.peek === null) {
-    const look = has('tjuvkika')
-    if (look && risk > 0.12) return { type: 'tPlay', cards: [look.id] }
-    if (risk > 0.3 && escape && !has('fika')) {
-      const move = playSingle(table, me, escape, random, true)
+  // Hög risk och inget sett: titta först, eller spela ett skyddskort i stället för att dra.
+  if (!safeOnTop && risk >= HIGH_RISK[level]) {
+    if (!seen) {
+      const look = play(has('tjuvkika'))
+      if (look) return look
+    }
+    const chance = level === 'svar' ? 0.85 : Math.min(0.8, risk * 2)
+    if (escapes.length > 0 && random() < chance) {
+      const move = play(escapes[0])
       if (move) return move
     }
   }
 
-  // Stjäl från den som har flest kort.
-  if (random() < (level === 'svar' ? 0.7 : 0.5)) {
+  // Svår, mellanrisk: titta med Se framtiden om den har fler än ett.
+  if (level === 'svar' && !seen && risk >= LOW_RISK && hand.filter((card) => card.type === 'tjuvkika').length > 1) {
+    const look = play(has('tjuvkika'))
+    if (look) return look
+  }
+
+  // Stjäl från den som har flest kort (bara med vanliga kort), och dra sedan.
+  if (random() < (level === 'svar' ? 0.6 : 0.4)) {
     const steal = stealMove(table, me, hand, random, level)
     if (steal) return steal
   }
