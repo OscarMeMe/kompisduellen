@@ -8,7 +8,7 @@ import type { ImposterCard, ImposterMove, ImposterTable, MyImposterCard } from '
 import { findThrowItem, type ThrowItemId } from '@/lib/kast'
 import type { CardMove, CardTable, MyHand, Pick } from '@/lib/kort'
 import { upgradeAvatars, initialState, type GameState, type RoundResult } from '@/lib/match'
-import { isCardType, isTantLevel, type MyTantView, type TantMove, type TantTable } from '@/lib/tantpanik'
+import { DECK_CHANGES, isCardType, isTantLevel, type MyTantView, type TantMove, type TantTable } from '@/lib/tantpanik'
 import type { CardType } from '@/lib/tantpanik-kort'
 
 type Unknown = Record<string, unknown>
@@ -107,7 +107,12 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     ),
   })(value)
 
-const isTantEvent = shape({ n: isNumber, text: isString })
+const isTantEvent = shape({
+  n: isNumber,
+  text: isString,
+  // Saknas när högen inte ändrades, och hos en värd med en äldre version.
+  deck: (deck: unknown) => deck === undefined || (isString(deck) && (DECK_CHANGES as readonly string[]).includes(deck)),
+})
 
 const isTantTable = (value: unknown): value is TantTable =>
   shape({

@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
-import { botDelay, botSight, decideBotMove, type BotLevel } from '@/lib/tantbot'
+import { botDelay, botSight, decideBotMove, newBotMemory, observe, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { REACTIONS } from '@/lib/reaktioner'
 import { AVATARS } from '@/lib/player'
 import { randomId } from '@/lib/slumpid'
@@ -993,6 +993,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // (botSight), tänker 1–3 sekunder och gör sitt drag genom samma kontroll som spelarnas drag. Ändras läget innan
   // dess tänker boten om. Ibland skickar en bot en reaktion.
   const botMovesRef = useRef(0)
+  // Det varje bot minns av det den själv sett och gjort (var den vet att tanten ligger). Nytt för varje match.
+  const botMemoryRef = useRef<Record<string, BotMemory>>({})
+  useEffect(() => {
+    if (state.phase !== 'playing') botMemoryRef.current = {}
+  }, [state.phase])
   useEffect(() => {
     if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing' || !state.tantpanik) return
     const host = current()
@@ -1002,7 +1007,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const sight = botSight(host as TantHost, id)
       const level = host.state.players[id]?.bot
       if (!sight || !level) continue
-      const move = decideBotMove(sight, level, Math.random)
+      const memory = observe(botMemoryRef.current[id] ?? newBotMemory(sight.table), sight.table)
+      botMemoryRef.current[id] = memory
+      const move = decideBotMove(sight, level, Math.random, memory)
       if (!move) continue
       timers.push(
         setTimeout(() => {
@@ -1018,6 +1025,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
             next = hostMove(before, id, { type: 'tDraw' }, activeIds(), Date.now(), Math.random, `${nr}-dra`)
           }
           if (unchanged(next)) return
+          if (next.state.tantpanik) botMemoryRef.current[id] = remember(memory, move, sight, next.state.tantpanik)
           commit(next)
           // Ibland en reaktion, så att det känns som en riktig spelare.
           if (Math.random() < 0.1) {

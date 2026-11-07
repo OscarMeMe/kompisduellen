@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
-import { botSight, decideBotMove, type BotLevel } from '@/lib/tantbot'
+import { botSight, decideBotMove, observe, type BotLevel, type BotMemory } from '@/lib/tantbot'
+import type { CardType } from '@/lib/tantpanik-kort'
+import type { DeckChange } from '@/lib/tantpanik'
 import { countAllCards, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
@@ -191,5 +193,110 @@ describe('kloka botar', () => {
         expect(decideBotMove(botSight(host, a)!, level, seeded(seed))).toEqual({ type: 'tDraw' })
       }
     }
+  })
+})
+
+describe('risk och kunskap', () => {
+  // En match med tre spelare där den första har handen hand och högen har deck kort (tanterna räknas ur bordet).
+  function setup(hand: CardType[], deck: number): { host: TantHost; me: string } {
+    let host = startTantMatch(lobby(3), seeded(4))
+    const me = host.state.tantpanik!.order[0]
+    const cards = (types: CardType[], prefix: string) => types.map((type, i) => ({ id: `${prefix}${i}`, type }))
+    host = sync({
+      ...host,
+      state: { ...host.state, tantpanik: { ...host.state.tantpanik!, current: me, step: 'turn', level: 'normal' } },
+      secrets: {
+        ...host.secrets,
+        deck: cards(Array.from({ length: deck }, () => 'kupong' as CardType), 'd'),
+        hands: { ...host.secrets.hands, [me]: cards(hand, 'h') },
+      },
+    })
+    return { host, me }
+  }
+  const protective = ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda', 'tjuvkika', 'mobblera']
+
+  it('en bot som vet att tanten ligger överst drar aldrig om den har ett skyddskort', () => {
+    for (const card of ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda', 'mobblera'] as CardType[]) {
+      const { host, me } = setup([card, 'kupong'], 20)
+      // Sett med Se framtiden.
+      const peeked = { ...host, secrets: { ...host.secrets, peek: { [me]: ['tant', 'kupong', 'kupong'] as CardType[] } } }
+      for (const level of ['normal', 'svar'] as BotLevel[]) {
+        for (let seed = 1; seed <= 30; seed++) {
+          expect(decideBotMove(botSight(peeked, me)!, level, seeded(seed))).not.toEqual({ type: 'tDraw' })
+          // Eller för att den själv gömde tanten överst.
+          expect(decideBotMove(botSight(host, me)!, level, seeded(seed), { n: 0, bombAt: 0 })).not.toEqual({ type: 'tDraw' })
+        }
+      }
+    }
+  })
+
+  it('spelar fler skyddskort när risken är hög än när den är låg', () => {
+    for (const level of ['normal', 'svar'] as BotLevel[]) {
+      const count = (deck: number) => {
+        const { host, me } = setup(['intemin', 'dubbelpass', 'kupong'], deck)
+        let played = 0
+        for (let seed = 1; seed <= 200; seed++) {
+          const move = decideBotMove(botSight(host, me)!, level, seeded(seed))
+          if (move?.type === 'tPlay' && move.cards.some((id) => protective.includes(host.secrets.hands[me].find((c) => c.id === id)!.type))) played++
+        }
+        return played
+      }
+      // Två tanter i högen: 4 kort ger hög risk, 40 kort låg.
+      expect(count(4)).toBeGreaterThan(count(40) + 50)
+      expect(count(40)).toBe(0)
+    }
+  })
+
+  it('tittar med Se framtiden före ett drag när risken är hög', () => {
+    const { host, me } = setup(['tjuvkika', 'kupong'], 4)
+    expect(decideBotMove(botSight(host, me)!, 'normal', seeded(1))).toEqual({ type: 'tPlay', cards: ['h0'] })
+  })
+
+  it('minns var den själv gömde tanten: ett steg närmare toppen för varje kort som dras uppifrån', () => {
+    const table = startTantMatch(lobby(3), seeded(2)).state.tantpanik!
+    // Texterna spelar ingen roll, bara den strukturerade händelsen (deck).
+    const at = (events: (DeckChange | undefined)[]) => ({ ...table, log: events.map((deck, i) => ({ n: 100 + i, text: 'vad som helst', deck })) })
+    let memory: BotMemory = { n: 99, bombAt: 2 }
+    memory = observe(memory, at(['top', 'bottom']))
+    expect(memory.bombAt).toBe(1)
+    memory = observe(memory, at(['top', 'bottom', undefined, 'top']))
+    expect(memory.bombAt).toBe(0)
+    expect(observe(memory, at(['top', 'bottom', undefined, 'top', 'shuffle'])).bombAt).toBeNull()
+    expect(observe({ n: 99, bombAt: 3 }, at(['arrange'])).bombAt).toBeNull()
+    expect(observe({ n: 99, bombAt: 3 }, at(['place'])).bombAt).toBeNull()
+  })
+
+  it('spelmotorn märker händelserna med vad som hände med högen', () => {
+    let host = startTantMatch(lobby(2), seeded(6))
+    const [a, b] = host.state.tantpanik!.order
+    host = sync({
+      ...host,
+      secrets: {
+        ...host.secrets,
+        deck: [{ id: 'x1', type: 'kupong' }, { id: 'x2', type: 'kupong' }, { id: 'x3', type: 'kupong' }, { id: 'x4', type: 'kupong' }],
+        hands: { ...host.secrets.hands, [a]: [{ id: 'u', type: 'underifran' }, { id: 'bl', type: 'blanda' }], [b]: [{ id: 'f', type: 'fika' }] },
+      },
+    })
+    const last = (h: TantHost) => h.state.tantpanik!.log.at(-1)!
+    host = tantMove(host, a, { type: 'tPlay', cards: ['bl'] }, null, 0, seeded(1))
+    host = tantDeadline(host, host.state.deadline!, host.state.deadline!, seeded(1))
+    expect(last(host).deck).toBe('shuffle')
+    const before = last(host).n
+    host = tantMove(host, a, { type: 'tPlay', cards: ['u'] }, null, 0, seeded(1))
+    host = tantDeadline(host, host.state.deadline!, host.state.deadline!, seeded(1))
+    expect(host.state.tantpanik!.log.filter((event) => event.n > before).map((event) => event.deck)).toContain('bottom')
+    host = tantMove(host, b, { type: 'tDraw' }, null, 0, seeded(1))
+    expect(host.state.tantpanik!.log.some((event) => event.deck === 'top')).toBe(true)
+  })
+
+  it('Svår lägger tanten överst med Ändra framtiden när den kan ta sig undan, Normal lägger den längst ned', () => {
+    const { host, me } = setup(['intemin'], 20)
+    const arranging = {
+      ...host,
+      state: { ...host.state, tantpanik: { ...host.state.tantpanik!, step: 'arrange' as const } },
+      secrets: { ...host.secrets, arranging: [{ id: 'a', type: 'kupong' as CardType }, { id: 'b', type: 'tant' as CardType }, { id: 'c', type: 'blanda' as CardType }] },
+    }
+    expect(decideBotMove(botSight(arranging, me)!, 'svar', seeded(1))).toEqual({ type: 'tArrange', order: [1, 0, 2] })
+    expect(decideBotMove(botSight(arranging, me)!, 'normal', seeded(1))).toEqual({ type: 'tArrange', order: [0, 2, 1] })
   })
 })
