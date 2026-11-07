@@ -188,6 +188,10 @@
     --animate-slut-fade: slut-fade 0.5s ease-out both;
     --animate-slut-boom: slut-boom 0.5s ease-out both;
     --animate-slut-cheer: slut-cheer 1.2s ease-in-out 3;
+    /* Slutskärmens konfetti (TantKonfetti): bitarna faller från ovanför skärmen hela vägen ner (--fall är skärmens höjd,
+       mätt i komponenten), och vickar och snurrar på vägen. Längd och fördröjning per bit sätts i komponenten. */
+    --animate-tant-konfetti-fall: tant-konfetti-fall linear both;
+    --animate-tant-konfetti-sway: tant-konfetti-sway ease-in-out infinite alternate;
     /* animate-arrow-draw: en pil ritas från den ena spelaren till den andra (Imposterjaktens bord). Linjen behöver
        pathLength="1" och stroke-dasharray 1. Med fördröjning (--d) ritas rösterna en i taget. */
     --animate-arrow-draw: arrow-draw 0.35s ease-out both;
@@ -680,6 +684,22 @@
     }
 
     /* Ljuset på den som har tur pulserar svagt så länge turen varar. */
+    @keyframes tant-konfetti-fall {
+      0% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(var(--fall, 100vh));
+      }
+    }
+    @keyframes tant-konfetti-sway {
+      0% {
+        transform: translateX(calc(var(--sway, 16px) * -1)) rotate(var(--r0, -20deg)) rotateY(0deg);
+      }
+      100% {
+        transform: translateX(var(--sway, 16px)) rotate(var(--r1, 200deg)) rotateY(var(--flip, 180deg));
+      }
+    }
     @keyframes slut-smoke {
       0% {
         opacity: 1;
@@ -898,6 +918,11 @@
     --klanning: #c9557f;
     --klanning-mork: #8e2d55;
     --klanning-blomma: #ffe7ef;
+    /* Slutskärmens konfetti: färger med kontrast mot den krämvita bakgrunden. */
+    --konfetti-vin: #8e1b30;
+    --konfetti-guld: #b8860b;
+    --konfetti-rosa: #c9557f;
+    --konfetti-turkos: #137a72;
     --wood-edge: oklch(0.56 0.08 55);
     --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);

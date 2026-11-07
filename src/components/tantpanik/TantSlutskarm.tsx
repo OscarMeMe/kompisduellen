@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
-import { Konfetti } from '@/components/Konfetti'
+import { TantKonfetti } from '@/components/tantpanik/TantKonfetti'
 import { useCountUp } from '@/hooks/useCountUp'
 import { findBlob } from '@/lib/figurer'
 import type { GameState } from '@/lib/match'
@@ -60,7 +60,6 @@ export function TantSlutskarm({
       onClick={() => setSkipped(true)}
     >
       <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))] pb-40">
-        {!still && <Konfetti delay={800} />}
 
         <img src={LOGO} alt="Exploderande Tanter" width={800} height={468} style={enter('motion-safe:animate-slut-fade', 0).style} className={cn('h-auto w-42 short:w-24', enter('motion-safe:animate-slut-fade', 0).className)} />
 
@@ -154,6 +153,9 @@ export function TantSlutskarm({
       >
         <div className="mx-auto flex max-w-md flex-col items-center gap-1.5">{actions}</div>
       </div>
+
+      {/* Konfettin faller över hela skärmen, även över knapparna. */}
+      {!still && <TantKonfetti delay={800} />}
 
       {/* Röken från sista explosionen lättar. */}
       {!still && (
