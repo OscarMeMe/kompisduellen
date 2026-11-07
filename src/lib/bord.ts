@@ -112,3 +112,11 @@ export function latestClue<C extends { player: string; kind: string; word: strin
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }
+
+// Var IMPOSTER-stämpeln börjar på en plats: från figurens vänstra kant (start) eller högra (end) nära rummets kanter, så
+// att den aldrig sticker ut ur rummet, och annars mitt på figuren.
+export function stampSide(x: number): 'start' | 'center' | 'end' {
+  if (x < 25) return 'start'
+  if (x > 75) return 'end'
+  return 'center'
+}

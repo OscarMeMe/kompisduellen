@@ -9,9 +9,10 @@ export function Narrow({ children }: { children: ReactNode }) {
   return <div className="mx-auto flex w-full max-w-md flex-col gap-6 pt-6">{children}</div>
 }
 
-export function Wide({ children, tight = false }: { children: ReactNode; tight?: boolean }) {
+// className: t.ex. en bredare vy för spel som lägger svarsdelen bredvid bordet på bred, låg skärm.
+export function Wide({ children, tight = false, className }: { children: ReactNode; tight?: boolean; className?: string }) {
   return (
-    <div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2', tight && 'max-sm:gap-1.5 max-sm:pt-0 sm:gap-3 sm:pt-2')}>
+    <div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-4 pt-4 sm:gap-6 sm:pt-6 sm:short:gap-4 sm:short:pt-2', tight && 'max-sm:gap-1.5 max-sm:pt-0 sm:gap-3 sm:pt-2', className)}>
       {children}
     </div>
   )

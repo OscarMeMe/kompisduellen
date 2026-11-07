@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clueLabels, clueLine, latestClue, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, curvedArrow, seatLayout, smallSeats } from '@/lib/bord'
+import { clueLabels, clueLine, latestClue, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, curvedArrow, seatLayout, smallSeats, stampSide } from '@/lib/bord'
 
 describe('handen i Peka ut', () => {
   const seat = (x: number, y: number) => ({ id: String(x), angle: 0, x, y })
@@ -79,5 +79,18 @@ describe('bordet i Imposterjakten', () => {
     const [, , cx, cy] = path.match(/M([\d.]+) [\d.]+ Q([\d.]+) ([\d.]+)/)!.map(Number)
     // Kontrollpunkten ligger längre från bordets mitt än rakt mellan platserna.
     expect(Math.hypot(cx - 50, cy - 50)).toBeGreaterThan(Math.hypot((50 + 93) / 2 - 50, (92 + 50) / 2 - 50))
+  })
+})
+
+describe('IMPOSTER-stämpeln', () => {
+  it('går inåt från figuren nära rummets kanter, så att den aldrig sticker ut', () => {
+    expect(stampSide(5)).toBe('start')
+    expect(stampSide(50)).toBe('center')
+    expect(stampSide(95)).toBe('end')
+    // Alla platser i ett fullt bord: de längst ut åt sidan går inåt.
+    for (const seat of seatLayout(Array.from({ length: 10 }, (_, i) => `p${i}`), 'p0')) {
+      if (seat.x < 25) expect(stampSide(seat.x)).toBe('start')
+      if (seat.x > 75) expect(stampSide(seat.x)).toBe('end')
+    }
   })
 })

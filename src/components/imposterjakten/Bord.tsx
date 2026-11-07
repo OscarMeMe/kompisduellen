@@ -8,7 +8,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { useThrowWait } from '@/hooks/useThrowWait'
-import { clueLabels, clueLine, curvedArrow, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
+import { clueLabels, clueLine, curvedArrow, listOnLowPhones, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, stampSide, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -109,6 +109,9 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           className={cn(
             'absolute flex flex-col items-center justify-center overflow-hidden rounded-[50%] border-[6px] border-wood-edge bg-felt px-2 text-center shadow-soft',
             small ? 'inset-[32%] border-4' : 'inset-x-[25%] inset-y-[31%] tiny:inset-x-[24%] tiny:inset-y-[33%] sm:inset-[27%]',
+            // 5 och 6 spelare på en låg telefon: de översta platserna har två ord under namnet, så bordet börjar lite längre
+            // ned för att orden inte ska nudda träkanten.
+            listWhenLow && 'low:top-[38%]!',
           )}
         >
           {center}
@@ -309,6 +312,8 @@ function AllClues({ state, table, className }: { state: GameState; table: Impost
   )
 }
 
+const STAMP_SIDE = { start: 'justify-start', center: 'justify-center', end: 'justify-end' } as const
+
 type SeatProps = {
   seat: Seat
   state: GameState
@@ -364,11 +369,12 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, votes
             {votes}
           </span>
         )}
-        {/* Stämpeln ligger på figuren, aldrig på namnet eller utanför bordet. */}
+        {/* Stämpeln ligger på figuren, aldrig på namnet eller utanför bordet. Den är bredare än figuren, så nära rummets
+            kanter börjar den vid figurens kant och går inåt (stampSide), i stället för att sticka ut. */}
         {stamp !== null && (
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+            className={cn('pointer-events-none absolute inset-0 z-10 flex items-center', STAMP_SIDE[stampSide(seat.x)])}
             style={{ '--d': `${stamp}ms` } as CSSProperties}
           >
             <Stamp className="border-2 bg-card/90 px-1 py-0 text-[9px] tracking-normal motion-safe:[animation-delay:var(--d)] sm:text-[11px]">Imposter</Stamp>
