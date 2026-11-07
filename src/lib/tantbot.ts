@@ -16,9 +16,12 @@
 
 import {
   bombsInDeck,
+  END_MS,
   isCombo,
   myTantView,
   playableAlone,
+  tantDeadline,
+  tantMove,
   validTargets,
   type MyTantView,
   type TantCard,
@@ -316,4 +319,62 @@ export function botSight(host: TantHost, botId: string): BotSight | null {
   const table = host.state.tantpanik
   if (!table) return null
   return { me: botId, table, view: myTantView(host.secrets, table, botId) }
+}
+
+// Bara botar kvar i matchen (alla riktiga spelare har exploderat): då kan värden spola fram.
+export function onlyBotsLeft(state: TantHost['state']): boolean {
+  const table = state.tantpanik
+  if (!table || table.winner) return false
+  const left = table.order.filter((id) => !table.out.includes(id))
+  return left.length > 0 && left.every((id) => !!state.players[id]?.bot)
+}
+
+// Spola fram: botarna spelar klart direkt, utan väntetider och animationer, med samma regler och samma botlogik (och
+// samma minne). Nope!-fönstren går direkt till sitt slut när ingen bot vill säga Nope!. Slutar när någon vunnit, med
+// vinnarens ögonblick kvar (END_MS från now), så att slutet och slutskärmen visas som vanligt.
+export function fastForwardBots(
+  host: TantHost,
+  now: number,
+  random: Random,
+  memories: Record<string, BotMemory> = {},
+  maxSteps = 5000,
+): TantHost {
+  if (!onlyBotsLeft(host.state)) return host
+  let current = host
+  for (let step = 0; step < maxSteps; step++) {
+    const table = current.state.tantpanik
+    if (!table || table.winner || table.error || current.state.phase !== 'playing') break
+    let moved = false
+    for (const id of table.order) {
+      const level = current.state.players[id]?.bot
+      const sight = level ? botSight(current, id) : null
+      if (!level || !sight) continue
+      const memory = observe(memories[id] ?? newBotMemory(sight.table), sight.table)
+      memories[id] = memory
+      const move = decideBotMove(sight, level, random, memory)
+      if (!move) continue
+      let next = tantMove(current, id, move, null, now, random)
+      // Ett drag som inte går: boten drar i stället om det är dess tur, som i lobbyn.
+      if (next.state.tantpanik === table && table.step === 'turn' && table.current === id) {
+        next = tantMove(current, id, { type: 'tDraw' }, null, now, random)
+      }
+      if (next.state.tantpanik === table) continue
+      if (next.state.tantpanik) memories[id] = remember(memory, move, sight, next.state.tantpanik)
+      current = next
+      moved = true
+      break
+    }
+    if (moved) continue
+    // Ingen bot vill göra något: ett Nope!-fönster går till sitt slut.
+    const deadline = current.state.deadline
+    if (table.step === 'window' && deadline !== null) {
+      current = tantDeadline(current, deadline, deadline, random)
+      continue
+    }
+    break
+  }
+  // Vinnarens ögonblick räknas från nu, inte från klockan i de spolade dragen.
+  const end = current.state.tantpanik
+  if (end?.winner && end.ending) current = { ...current, state: { ...current.state, deadline: now + END_MS } }
+  return current
 }

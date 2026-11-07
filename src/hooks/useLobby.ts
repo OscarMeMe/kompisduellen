@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
-import { botDelay, botSight, decideBotMove, newBotMemory, observe, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
+import { botDelay, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { REACTIONS } from '@/lib/reaktioner'
 import { AVATARS } from '@/lib/player'
 import { randomId } from '@/lib/slumpid'
@@ -1205,6 +1205,19 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         const successor = pickSuccessor(onlineRef.current, me.id)
         if (!successor) return
         await channelRef.current?.send({ type: 'broadcast', event: 'handover', payload: { to: successor.id, from: me.id } })
+      },
+      // Exploderande Tanter när bara botar är kvar: Spola fram (botarna spelar klart direkt, sedan slutet som vanligt)
+      // eller Revansch direkt (matchen avbryts utan att räknas och en ny startar med samma spelare och inställningar).
+      tantBotsOnly: (choice: 'spola' | 'revansch') => {
+        const host = current()
+        if (!isHost || !isTantSecrets(host.secrets) || !onlyBotsLeft(host.state)) return
+        if (choice === 'spola') {
+          const next = fastForwardBots(host as TantHost, Date.now(), Math.random, botMemoryRef.current)
+          commit({ ...host, ...next })
+          return
+        }
+        const ids = [...onlineRef.current.map((p) => p.id), ...botIds(host.state)]
+        commit(hostCountdownStart({ state: { ...abortMatch(host.state), notice: null }, secrets: null }, ids, Date.now()))
       },
       // Värden avbryter en pågående match: alla tillbaka till väntrummet, och matchen räknas inte.
       abortMatch: () => {

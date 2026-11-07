@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
-import { botSight, decideBotMove, observe, type BotLevel, type BotMemory } from '@/lib/tantbot'
+import { botSight, decideBotMove, fastForwardBots, observe, onlyBotsLeft, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import type { CardType } from '@/lib/tantpanik-kort'
 import type { DeckChange } from '@/lib/tantpanik'
-import { countAllCards, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
+import { countAllCards, END_MS, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
 function seeded(seed = 1): () => number {
@@ -326,5 +326,47 @@ describe('stöld medan jag väljer ett kort', () => {
     expect(after.state.tantpanik!.discardCount).toBe(before.state.tantpanik!.discardCount)
     expect(myTantView(after.secrets, after.state.tantpanik!, a).notice?.text).toBe('Det gick inte just nu.')
     expect(after.secrets.hands[b].map((card) => card.id)).toContain('blanda')
+  })
+})
+
+describe('Spola fram när bara botar är kvar', () => {
+  it('spelar klart till ett giltigt slut med rätt placeringar', () => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const random = seeded(seed)
+      // p1 är en riktig spelare som redan exploderat, de andra är botar.
+      const base = lobby(3 + (seed % 3))
+      const levels: BotLevel[] = ['latt', 'normal', 'svar']
+      const players = Object.fromEntries(
+        Object.entries(base.players).map(([id, p], i) => [id, id === 'p1' ? p : { ...p, bot: levels[i % 3] }]),
+      ) as GameState['players']
+      let host = startTantMatch({ ...base, players }, random)
+      const total = countAllCards(host.secrets)
+      host = sync({
+        ...host,
+        state: { ...host.state, tantpanik: { ...host.state.tantpanik!, out: ['p1'], current: host.state.tantpanik!.order.find((id) => id !== 'p1')! } },
+      })
+      expect(onlyBotsLeft(host.state)).toBe(true)
+      const end = fastForwardBots(host, 1_000_000, random)
+      const table = end.state.tantpanik!
+      expect(table.error).toBeNull()
+      expect(table.winner).not.toBeNull()
+      expect(players[table.winner!].bot).toBeDefined()
+      expect(table.out).toHaveLength(table.order.length - 1)
+      expect(table.out[0]).toBe('p1')
+      expect(table.ending).toBe(true)
+      expect(end.state.deadline).toBe(1_000_000 + END_MS)
+      expect(countAllCards(end.secrets)).toBe(total)
+      // Slutet: placeringen ger poäng, den som åkte ut först (p1) får 1 och vinnaren lika många som spelarna.
+      const finished = tantDeadline(end, end.state.deadline!, end.state.deadline!, random)
+      expect(finished.state.phase).toBe('finished')
+      expect(finished.state.scores.p1).toBe(1)
+      expect(finished.state.scores[table.winner!]).toBe(table.order.length)
+    }
+  })
+
+  it('gör ingenting så länge en riktig spelare är kvar', () => {
+    const host = startTantMatch(lobby(3), seeded(2))
+    expect(onlyBotsLeft(host.state)).toBe(false)
+    expect(fastForwardBots(host, 0, seeded(2))).toBe(host)
   })
 })
