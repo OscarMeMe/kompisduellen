@@ -12,8 +12,9 @@ import { GivePopup } from '@/components/tantpanik/TantVal'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { Konfetti } from '@/components/Konfetti'
-import { loadMusicVolume, tantMusic } from '@/lib/tantmusik'
-import { SoundControl } from '@/components/tantpanik/TantLjud'
+import { tantMusic } from '@/lib/tantmusik'
+import { SoundControl } from '@/components/lobby/LjudKnapp'
+import { useMusicVolume } from '@/hooks/useMusicVolume'
 import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
@@ -88,7 +89,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
     ((table.step === 'window' && table.pending !== null) || bombShowing || table.step === 'pick' || table.step === 'give' || table.step === 'place' || table.step === 'arrange')
   const bubble = useEventBubbles(table?.log ?? [], quiet)
   // Bakgrundsmusiken: volymen sparas för sig, och "Stäng av allt" (ljudet av) stänger av den också.
-  const [musicVolume, setMusicVolume] = useState(loadMusicVolume)
+  const musicVolume = useMusicVolume()
   const soundReactions = useReactions()
   const soundOn = soundReactions ? soundReactions.soundOn : loadSoundOn()
   const playing = !!table && state.phase === 'playing' && table.order.includes(me.id)
@@ -223,8 +224,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
           <SoundControl
             soundOn={soundOn}
             onSoundOn={(on) => (soundReactions ? soundReactions.setSoundOn(on) : saveSoundOn(on))}
-            musicVolume={musicVolume}
-            onMusicVolume={setMusicVolume}
+            music
           />
         }
         onRules={() => setRules(true)} onMenu={() => setMenu(true)} />
