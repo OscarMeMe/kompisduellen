@@ -5,7 +5,7 @@ import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useReactions } from '@/hooks/useReactions'
-import { loadSoundOn, playCountdownTick } from '@/lib/ljud'
+import { loadSoundOn, playCountdownTick, playPop } from '@/lib/ljud'
 import { tantMusic } from '@/lib/tantmusik'
 import type { GameState } from '@/lib/match'
 import type { TantMove, TantTable } from '@/lib/tantpanik'
@@ -53,12 +53,15 @@ export function NopeWindow({
   meId,
   clockOffset,
   canNope,
+  onNope,
 }: {
   state: GameState
   table: TantTable
   meId: string
   clockOffset: number
   canNope: boolean
+  // Säg Nope! med mitt Nope!-kort. Knappen står där tidsstapeln annars står, och dess ring är tiden.
+  onNope?: () => void
 }) {
   const pending = table.pending!
   const { secondsLeft, progress } = useCountdown(state.deadline, clockOffset, NOPE_SECONDS)
@@ -104,17 +107,18 @@ export function NopeWindow({
     // Den som kan säga Nope! har en stor knapp till höger, så innehållet flyttar sig åt vänster.
     <section
       aria-label="Spelat kort"
-      className={cn('flex size-full min-h-0 flex-col items-center justify-center gap-1.5 py-1', canNope && 'pr-28 sm:pr-0')}
+      className="flex size-full min-h-0 flex-col items-center justify-center gap-1.5 py-1"
     >
       {/* Vem som spelar, stort, och vem kortet är riktat mot. */}
       {/* Kompakt på en telefon, så att kortet får plats. */}
-      <div className="flex max-w-full shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-0 rounded-2xl bg-card/95 px-3 py-1 shadow-lift sm:rounded-3xl sm:px-4 sm:py-2">
-        <LobbyFigur playerId={pending.by} avatar={state.players[pending.by]?.avatar ?? ''} className="shrink-0 text-3xl sm:text-5xl" />
-        <span className="font-heading text-lg leading-tight font-bold whitespace-nowrap sm:text-3xl">
+      {/* En kompakt pratbubbla på en rad, så att korten får mest plats. */}
+      <div className="flex max-w-full min-w-0 shrink-0 items-center justify-center gap-x-1.5 rounded-full bg-card/95 py-1 pr-3 pl-1.5 shadow-lift sm:gap-x-2 sm:py-1.5 sm:pr-5 sm:pl-2">
+        <LobbyFigur playerId={pending.by} avatar={state.players[pending.by]?.avatar ?? ''} lively={false} className="shrink-0 text-2xl sm:text-4xl" />
+        <span className="min-w-0 truncate font-heading text-base leading-tight font-bold sm:text-2xl">
           {mine ? 'Du spelar:' : `${name(pending.by)} spelar:`}
         </span>
         {pending.target && (
-          <span className={cn('font-heading text-base leading-tight font-bold sm:text-2xl', againstMe ? 'text-destructive' : 'text-primary-button')}>
+          <span className={cn('shrink-0 font-heading text-base leading-tight font-bold whitespace-nowrap sm:text-2xl', againstMe ? 'text-destructive' : 'text-primary-button')}>
             {againstMe ? '→ mot dig!' : `→ mot ${name(pending.target)}`}
             {pending.kind === 'triple' && pending.request && (
               <span className="ml-1.5 text-sm font-semibold text-muted-foreground sm:text-lg">(ber om {cardName(pending.request)})</span>
@@ -194,11 +198,17 @@ export function NopeWindow({
         </p>
       )}
       {/* Tiden: en tjock stapel mellan NOPE-CHANS! och siffran, som töms medan tiden går. */}
-      <div className="flex w-full max-w-lg shrink-0 items-center gap-2 pr-12 pl-2 sm:gap-3 sm:px-2">
+      <div className="flex w-full max-w-lg shrink-0 items-center gap-2 px-2 sm:gap-3">
         <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary-button px-2.5 py-0.5 font-heading text-sm font-bold tracking-wide whitespace-nowrap text-primary-foreground shadow-primary sm:px-3 sm:py-1 sm:text-base md:text-xl">
           <Hand aria-hidden className="size-4 sm:size-5 md:size-6" />
           NOPE-CHANS!
         </span>
+        {canNope && onNope ? (
+          // Bara en sak att trycka på: knappen står där stapeln annars står, och ringen runt den är tiden.
+          <span className="flex flex-1 justify-center">
+            <NopeButton progress={progress} onNope={onNope} />
+          </span>
+        ) : (
         <span
           aria-hidden
           className={cn('relative h-3.5 min-w-12 flex-1 overflow-hidden rounded-full bg-foreground/25 shadow-inner sm:h-5', hurry && 'motion-safe:animate-light-pulse')}
@@ -211,24 +221,73 @@ export function NopeWindow({
             style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }}
           />
         </span>
+        )}
         <span
           role="timer"
           aria-label={`${secondsLeft} sekunder kvar`}
           key={secondsLeft}
           className={cn(
             'w-[1.2em] shrink-0 text-center font-heading text-4xl leading-none font-bold tabular-nums drop-shadow sm:text-5xl md:text-6xl',
-            hurry ? 'text-destructive motion-safe:animate-pop' : 'text-background',
+            // Hög kontrast mot det dämpade bordet: vit med en mörk skugga.
+            hurry ? 'text-destructive [text-shadow:0_2px_6px_rgb(255_255_255/0.7)] motion-safe:animate-pop' : 'text-white [text-shadow:0_2px_8px_rgb(0_0_0/0.75)]',
           )}
         >
           {secondsLeft}
         </span>
       </div>
       {roleText && (
-        <p className="rounded-full bg-foreground/90 px-4 py-1.5 text-center text-sm font-semibold text-background shadow-soft-sm md:text-base">
+        <p className="shrink-0 rounded-full bg-foreground/90 px-3 py-0.5 text-center text-xs font-semibold text-background shadow-soft-sm sm:px-4 sm:py-1.5 sm:text-sm md:text-base">
           {roleText}
         </p>
       )}
     </section>
+  )
+}
+
+// Nope!-knappen i Nope!-fönstret, med en ring som visar tiden kvar. Telefonen vibrerar kort och ett ljud spelas när
+// den dyker upp. Ett tryck spelar mitt Nope!-kort direkt.
+function NopeButton({ progress, onNope }: { progress: number; onNope: () => void }) {
+  const [sent, setSent] = useState(false)
+  const reactions = useReactions()
+  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
+  useEffect(() => {
+    navigator.vibrate?.([60, 40, 60])
+    if (soundOn) {
+      tantMusic.duck()
+      playPop()
+    }
+    // Bara när knappen dyker upp.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const radius = 52
+  const circumference = 2 * Math.PI * radius
+  return (
+    <button
+      type="button"
+      {...SPLAT_SHIELD}
+      disabled={sent}
+      onClick={() => {
+        setSent(true)
+        onNope()
+      }}
+      className="pointer-events-auto relative flex size-20 shrink-0 items-center justify-center rounded-full bg-primary-button font-heading text-lg font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:opacity-60 motion-safe:animate-pop motion-safe:active:scale-95 sm:size-24 sm:text-xl"
+    >
+      <svg aria-hidden viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
+        <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="9" className="stroke-primary-foreground/25" />
+        <circle
+          cx="60"
+          cy="60"
+          r={radius}
+          fill="none"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+          className="stroke-sun motion-safe:transition-[stroke-dashoffset] motion-safe:duration-200 motion-safe:ease-linear"
+        />
+      </svg>
+      <span className="relative">Nope!</span>
+    </button>
   )
 }
 

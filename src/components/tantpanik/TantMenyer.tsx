@@ -1,26 +1,36 @@
-import { LogOut, Undo2 } from 'lucide-react'
+import { useState } from 'react'
+import { LogOut, ScrollText, Undo2 } from 'lucide-react'
+import { TantKort } from '@/components/tantpanik/TantKort'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { TANT_HOW_TO, type TantTable } from '@/lib/tantpanik'
-import { CARDS, CARD_TYPES } from '@/lib/tantpanik-kort'
+import { CARDS, CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 
 // Rutorna bakom bordets knappar: reglerna (?), menyn (≡) och historiken (loggraden).
 
 export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [zoomed, setZoomed] = useState<CardType | null>(null)
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Så spelas det</DialogTitle>
           <DialogDescription>{TANT_HOW_TO}</DialogDescription>
         </DialogHeader>
-        <ul className="space-y-2 text-sm">
+        {/* Varje kort med en liten bild av kortet. Ett tryck på bilden visar kortet stort. */}
+        <ul className="space-y-2.5 text-sm">
           {CARD_TYPES.map((type) => (
-            <li key={type} className="flex gap-2">
-              <span aria-hidden className="w-6 shrink-0 text-center">
-                {CARDS[type].symbol}
-              </span>
+            <li key={type} className="flex items-center gap-3">
+              <button
+                type="button"
+                aria-label={`Visa ${CARDS[type].name} större`}
+                onClick={() => setZoomed(type)}
+                className="w-15 shrink-0 cursor-zoom-in rounded-md outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
+              >
+                <TantKort type={type} size="small" sizes="64px" className="w-full drop-shadow-md" />
+              </button>
               <span>
                 <span className="font-bold">{CARDS[type].name}:</span> {CARDS[type].rule ?? CARDS[type].text}
               </span>
@@ -40,6 +50,14 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         </p>
       </DialogContent>
     </Dialog>
+    {/* Det förstorade kortet ovanpå reglerna. */}
+    <Dialog open={zoomed !== null} onOpenChange={(next) => !next && setZoomed(null)}>
+      <DialogContent className="justify-items-center border-0 bg-transparent p-0 shadow-none" onClick={() => setZoomed(null)}>
+        <DialogTitle className="sr-only">{zoomed ? CARDS[zoomed].name : 'Kortet'}</DialogTitle>
+        {zoomed && <TantKort type={zoomed} size="zoom" className="drop-shadow-[0_18px_28px_rgb(0_0_0/0.45)]" />}
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
 
@@ -50,12 +68,15 @@ export function MenuDialog({
   isHost,
   onAbort,
   onLeave,
+  onHistory,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   isHost: boolean
   onAbort: () => void
   onLeave: () => void
+  // Historiken, som ligger här på smala skärmar (annars en egen knapp överst).
+  onHistory: () => void
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -66,6 +87,10 @@ export function MenuDialog({
         </DialogHeader>
         <ReactionBar />
         <div className="space-y-2">
+          <Button variant="outline" size="lg" className="w-full min-[421px]:hidden" onClick={onHistory}>
+            <ScrollText aria-hidden />
+            Det som hänt
+          </Button>
           {isHost && (
             <Button
               variant="outline"

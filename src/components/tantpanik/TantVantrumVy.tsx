@@ -96,7 +96,9 @@ export type KafferepGuest = { id: string; name: string; avatar: string; host: bo
 
 // Kafferepsbordet sett ovanifrån: en stol och en kaffekopp per plats runt en rund duk. Den som går med hoppar in med
 // ett litet ljud. Lediga stolar bjuder in. Botar har sin robot.
-export function TantKafferep({ guests, meId, maxPlayers }: { guests: KafferepGuest[]; meId: string; maxPlayers: number }) {
+export function TantKafferep({ guests: all, meId, maxPlayers }: { guests: KafferepGuest[]; meId: string; maxPlayers: number }) {
+  // Jag sitter alltid längst ned, de andra medurs.
+  const guests = [...all.filter((guest) => guest.id === meId), ...all.filter((guest) => guest.id !== meId)]
   const count = chairCount(guests.length, maxPlayers)
   const places = chairPlaces(count)
   const reactions = useReactions()

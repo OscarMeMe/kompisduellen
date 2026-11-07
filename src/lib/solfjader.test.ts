@@ -36,8 +36,10 @@ describe('solfjädern', () => {
           expect(slot.x - lean).toBeGreaterThanOrEqual(-0.5)
           expect(slot.x + w + lean).toBeLessThanOrEqual(width + 0.5)
         }
-        // Symbolen och färgen syns på varje kort utan förstoring.
-        if (count > 1) expect(layout.step).toBeGreaterThanOrEqual(w * MIN_VISIBLE - 0.01)
+        // Alltid en rad. Symbolen och färgen syns på varje kort utan förstoring, och med väldigt många kort på en telefon
+        // syns ändå en femtedel av varje.
+        expect(layout.rows).toBe(1)
+        if (count > 1) expect(layout.step).toBeGreaterThanOrEqual(w * (count <= 12 ? MIN_VISIBLE : 0.2) - 0.01)
       })
     }
   }
@@ -49,13 +51,12 @@ describe('solfjädern', () => {
     expect(handCardWidth(200, 400)).toBe(MIN_CARD_WIDTH)
   })
 
-  it('överlappar mer ju fler kort det är, och delas i två rader när det blir för trångt', () => {
+  it('överlappar mer ju fler kort det är, och ligger alltid i en rad', () => {
     expect(fanLayout(10, 600, 120).step).toBeLessThan(fanLayout(5, 600, 120).step)
     expect(fanLayout(4, 360, 122).rows).toBe(1)
-    const many = fanLayout(12, 360, 122)
-    expect(many.rows).toBe(2)
-    // Den bakre raden ligger högre upp, så att den främre inte täcker symbolen.
-    expect(many.slots[0].y).toBeLessThan(many.slots[11].y)
+    const many = fanLayout(16, 360, 122)
+    expect(many.rows).toBe(1)
+    expect(many.cardWidth).toBeLessThan(122)
     expect(fanLayout(12, 1280, 160).rows).toBe(1)
   })
 })
@@ -175,8 +176,8 @@ describe('Nope!-fönstrets kort (fitSpread)', () => {
     for (const [angles, shift] of spreads) {
       it(`${angles.length} kort ryms med marginal i ${width}×${height}`, () => {
         const fit = fitSpread(width, height, angles, shift)
-        expect(fit.width).toBeLessThanOrEqual(width * 0.9 + 0.01)
-        expect(fit.height).toBeLessThanOrEqual(height * 0.9 + 0.01)
+        expect(fit.width).toBeLessThanOrEqual(width * 0.94 + 0.01)
+        expect(fit.height).toBeLessThanOrEqual(height * 0.94 + 0.01)
         expect(fit.card).toBeGreaterThan(0)
         // Kortet ligger inne i solfjäderns mått.
         expect(fit.left).toBeGreaterThanOrEqual(0)

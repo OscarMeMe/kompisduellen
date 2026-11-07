@@ -8,7 +8,9 @@ import { TantHand } from '@/components/tantpanik/TantHand'
 import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { HistoryDialog, MenuDialog, RulesDialog } from '@/components/tantpanik/TantMenyer'
 import { FutureView, NopeVerdict, NopeWindow, PickCard, Place } from '@/components/tantpanik/TantSteg'
-import { GivePopup } from '@/components/tantpanik/TantVal'
+import { GivePopup, ValPopup } from '@/components/tantpanik/TantVal'
+import { Button } from '@/components/ui/button'
+import { onlyBotsLeft as botsOnlyLeft } from '@/lib/tantbot'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { Konfetti } from '@/components/Konfetti'
@@ -29,11 +31,23 @@ const NOTICE_MS = 2500
 // Exploderande Tanter: hela matchen som ett kortbord som tar hela skärmen. Överst vad jag ska göra, sedan motspelarna,
 // högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
 // Prispallen efteråt är gemensam för alla spel.
-export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove, onAbort, onLeave }: TantViewProps) {
+// onBotsOnly: värden spolar fram eller tar revansch direkt när bara botar är kvar (se fastForwardBots).
+export function TantpanikView({
+  state,
+  me,
+  isHost,
+  clockOffset,
+  tantView,
+  onMove,
+  onAbort,
+  onLeave,
+  onBotsOnly,
+}: TantViewProps) {
   const table = state.tantpanik
   const [rules, setRules] = useState(false)
   const [menu, setMenu] = useState(false)
   const [history, setHistory] = useState(false)
+  const [botsOnlyClosed, setBotsOnlyClosed] = useState<string | null>(null)
   // Se framtiden ligger kvar tills jag trycker Klar: vilken titt jag redan stängt.
   const [dismissedPeek, setDismissedPeek] = useState<string | null>(null)
   const peekKey = tantView?.peek && table ? `${tantView.peek.join()}|${table.discardCount}|${table.current}` : null
@@ -52,7 +66,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
     void root.offsetWidth
     root.classList.add('motion-safe:animate-table-shake')
   }, [shake])
-  const [pileRef, pileSize] = usePileSize()
+  const [pileRef, pileSize, pilesTight] = usePileSize()
   // Hur mycket handen ligger över bordets nederkant (px). Högarna lämnar plats för den.
   const [handOverlap, setHandOverlap] = useState(0)
   // Kortet jag just drog, medan det visas stort (show) och medan det glider ner till sin plats i handen (land).
@@ -132,6 +146,9 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   if (!table) return null
   const inMatch = table.order.includes(me.id)
   const out = table.out.includes(me.id)
+  // Jag har exploderat och bara botar är kvar: värden får välja Spola fram, Revansch direkt eller Följ resten.
+  const onlyBotsLeft = botsOnlyLeft(state)
+  const botsOnlyKey = out && onlyBotsLeft && isHost && !!onBotsOnly ? table.order.join() : null
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
   // Varje val jag ska göra är en stor popup i mitten av skärmen (TantVal.tsx): valet vid ett par, Göm tanten, Ändra
   // framtiden, Se framtiden och Tjänst. Valen när jag spelar ett kort öppnas från handen (TantHand).
@@ -219,7 +236,8 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
       ref={rootRef}
       data-spel="tantpanik"
       // Mönstret från väntrummet bakom hela matchen. Högarna och handen ligger direkt på det.
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      // Lite luft under handen även utan säker marginal, så att webbläsarens list aldrig skär av korten.
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       style={{ backgroundImage: `url(${TANT_PATTERN})`, backgroundSize: '512px 512px' }}
     >
       <StatusBar
@@ -256,6 +274,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
             <Piles
               table={table}
               size={pileSize}
+              tight={pilesTight}
               canDraw={canDraw}
               onDraw={() => onMove({ type: 'tDraw' })}
               activity={atPile}
@@ -313,9 +332,15 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
             orderKey={`${me.id}:${table.order.join(',')}`}
           />
         ) : (
-          <p className="mx-2 mb-3 rounded-md bg-card px-3 py-3 text-center text-sm font-semibold shadow-soft-sm">
-            {!inMatch ? 'Du är med från nästa match.' : out ? 'Du är ute. Följ resten av matchen.' : 'Din hand kommer strax…'}
-          </p>
+          <div className="mx-2 mb-3 flex items-center justify-center gap-3 rounded-md bg-card px-3 py-2 text-center text-sm font-semibold shadow-soft-sm">
+            <p className="py-1">{!inMatch ? 'Du är med från nästa match.' : out ? 'Du är ute. Följ resten av matchen.' : 'Din hand kommer strax…'}</p>
+            {/* Bara botar kvar: värden kan avsluta (Spola fram, Revansch direkt eller Följ resten). */}
+            {botsOnlyKey && !table.winner && (
+              <Button size="sm" variant="outline" className="h-9 shrink-0" onClick={() => setBotsOnlyClosed(null)}>
+                Avsluta
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -327,6 +352,29 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         />
       )}
       <TurnBanner state={state} table={table} meId={me.id} />
+      {botsOnlyKey && botsOnlyClosed !== botsOnlyKey && !bombShowing && (
+        <ValPopup
+          panel
+          title="Du exploderade! Botarna spelar vidare."
+          actions={
+            <div className="flex w-full flex-col gap-2">
+              <Button size="lg" className="w-full" onClick={() => onBotsOnly?.('spola')}>
+                Spola fram
+              </Button>
+              <Button size="lg" variant="outline" className="w-full" onClick={() => onBotsOnly?.('revansch')}>
+                Revansch direkt
+              </Button>
+              <Button size="lg" variant="ghost" className="w-full" onClick={() => setBotsOnlyClosed(botsOnlyKey)}>
+                Följ resten
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-center text-sm text-muted-foreground">
+            Spola fram visar slutet direkt. Revansch direkt startar en ny match med samma spelare och inställningar.
+          </p>
+        </ValPopup>
+      )}
       <DealIntro state={state} table={table} meId={me.id} />
       {nopeOpen && (
         // Det spelade kortet stort mellan statusraden och handen, så att det syns även när handen tar mycket plats på en
@@ -334,9 +382,19 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         <div
           className="pointer-events-none fixed inset-x-0 z-[44] bg-foreground/35 px-2 pt-1 motion-safe:animate-fade"
           // Under motspelarraden, och plats ovanför handen för kort som lyfts (t.ex. Nope!-kortet som hoppar upp).
-          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 + (canNope ? 44 : 0) }}
+          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 + (canNope ? 40 : 0) }}
         >
-          <NopeWindow state={state} table={table} meId={me.id} clockOffset={clockOffset} canNope={canNope} />
+          <NopeWindow
+            state={state}
+            table={table}
+            meId={me.id}
+            clockOffset={clockOffset}
+            canNope={canNope}
+            onNope={() => {
+              const card = tantView?.hand.find((c) => c.type === 'nadu')
+              if (card && table.pending) onMove({ type: 'tNope', card: card.id, level: table.pending.nopes })
+            }}
+          />
         </div>
       )}
       {verdict && <NopeVerdict key={verdict.n} stopped={verdict.stopped} />}
@@ -355,7 +413,17 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         />
       )}
       <RulesDialog open={rules} onOpenChange={setRules} />
-      <MenuDialog open={menu} onOpenChange={setMenu} isHost={isHost} onAbort={onAbort} onLeave={onLeave} />
+      <MenuDialog
+        open={menu}
+        onOpenChange={setMenu}
+        isHost={isHost}
+        onAbort={onAbort}
+        onLeave={onLeave}
+        onHistory={() => {
+          setMenu(false)
+          setHistory(true)
+        }}
+      />
       <HistoryDialog open={history} onOpenChange={setHistory} table={table} mine={myNotes} />
     </div>
   )
@@ -554,8 +622,10 @@ function TargetArrow({ from, to, meId }: { from: string; to: string; meId: strin
       const a = place(from)
       const b = place(to)
       if (!a || !b) return
-      // Till handens överkant, eller mitt på en motspelares plats.
-      setLine({ x1: a.left + a.width / 2, y1: a.top + a.height / 2, x2: b.left + b.width / 2, y2: to === meId ? b.top + 12 : b.top + b.height / 2 })
+      // Mot mig på en smal skärm räcker "→ mot dig!" i rött: ingen pil. Annars till handens överkant (aldrig in bland
+      // korten), eller mitt på en motspelares plats.
+      if (to === meId && window.innerWidth <= 420) return setLine(null)
+      setLine({ x1: a.left + a.width / 2, y1: a.top + a.height / 2, x2: b.left + b.width / 2, y2: to === meId ? b.top - 10 : b.top + b.height / 2 })
     }
     // Raden med motspelare går att svepa: målet (eller den som spelar) rullas fram, så att pilen syns hela vägen.
     const seat = (id: string) => (id === meId ? null : document.querySelector(`[data-seat="${CSS.escape(id)}"]`))
@@ -567,7 +637,7 @@ function TargetArrow({ from, to, meId }: { from: string; to: string; meId: strin
   }, [from, to, meId])
   useEffect(() => {
     if (!flash) return
-    const timer = setTimeout(() => setFlash(false), 1600)
+    const timer = setTimeout(() => setFlash(false), 1000)
     return () => clearTimeout(timer)
   }, [flash])
   const hand = to === meId ? document.querySelector('[data-tant-hand]')?.getBoundingClientRect() : null
@@ -593,11 +663,11 @@ function TargetArrow({ from, to, meId }: { from: string; to: string; meId: strin
         </svg>
       )}
       {flash && hand && (
-        // Mot mig: min hand lyser rött en stund.
+        // Mot mig: en tunn röd glöd längs handens överkant i en sekund.
         <span
           aria-hidden
-          className="pointer-events-none fixed z-[45] rounded-3xl bg-destructive/15 shadow-[0_0_32px_10px] shadow-destructive/60 ring-4 ring-destructive motion-safe:animate-fade"
-          style={{ left: hand.left + 4, top: hand.top - 8, width: hand.width - 8, height: hand.height + 8 }}
+          className="pointer-events-none fixed z-[45] h-1 rounded-full bg-destructive shadow-[0_0_16px_5px] shadow-destructive/70 motion-safe:animate-fade"
+          style={{ left: hand.left + 16, top: hand.top - 2, width: hand.width - 32 }}
         />
       )}
     </>
@@ -633,7 +703,7 @@ function useNopeVerdict(table: TantTable | null): { n: number; stopped: boolean 
 }
 
 // Hur länge banderollen syns när turen byts (ms).
-const BANNER_MS = 1100
+const BANNER_MS = 800
 
 // När turen byts glider en stor banderoll över skärmen med figuren och "[namn]s tur!" eller "Din tur!". När det blir min
 // tur vibrerar telefonen kort och ett ljud spelas. Med "minska rörelse" står banderollen still och tonas bara in.
@@ -642,6 +712,7 @@ function TurnBanner({ state, table, meId }: { state: GameState; table: TantTable
   const [slide, setSlide] = useState<'in' | 'mid' | 'out'>('in')
   const previous = useRef(table.current)
   const count = useRef(0)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const reactions = useReactions()
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   const current = table.winner ? null : table.current
@@ -660,30 +731,31 @@ function TurnBanner({ state, table, meId }: { state: GameState; table: TantTable
         playTurn()
       }
     }
-    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setSlide('mid')))
-    const leave = setTimeout(() => setSlide('out'), BANNER_MS - 300)
-    const hide = setTimeout(() => setBanner((b) => (b?.n === n ? null : b)), BANNER_MS)
-    return () => {
-      cancelAnimationFrame(frame)
-      clearTimeout(leave)
-      clearTimeout(hide)
-    }
+    // Timrarna rensas inte när turen byts igen, bara när bordet försvinner: annars blev banderollen kvar om matchen tog
+    // slut (eller turen bytte) inom BANNER_MS.
+    requestAnimationFrame(() => requestAnimationFrame(() => setSlide('mid')))
+    timers.current.push(
+      setTimeout(() => setSlide('out'), BANNER_MS - 250),
+      setTimeout(() => setBanner((b) => (b?.n === n ? null : b)), BANNER_MS),
+    )
     // Bara när turen byts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current])
+  useEffect(() => () => timers.current.forEach(clearTimeout), [])
   if (!banner) return null
   const mine = banner.id === meId
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-[18%] z-[58] flex justify-center overflow-hidden px-2">
+    // Mitt över bordet, inte över motspelarna. Mindre på en telefon.
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-[40%] z-[58] flex -translate-y-1/2 justify-center overflow-hidden px-2 md:top-[38%]">
       <div
         className={cn(
-          'flex items-center gap-3 rounded-full px-6 py-3 shadow-lift motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-reduce:animate-fade md:px-10 md:py-5',
+          'flex items-center gap-2 rounded-full px-4 py-2 shadow-lift motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:animate-fade sm:gap-3 sm:px-6 sm:py-3 md:px-10 md:py-5',
           mine ? 'bg-primary-button text-primary-foreground' : 'bg-card',
           slide === 'in' ? 'motion-safe:-translate-x-[120vw]' : slide === 'out' ? 'motion-safe:translate-x-[120vw]' : 'translate-x-0',
         )}
       >
-        <LobbyFigur playerId={banner.id} avatar={state.players[banner.id]?.avatar ?? ''} className="text-5xl md:text-7xl" />
-        <span className="font-heading text-3xl font-bold whitespace-nowrap md:text-5xl">
+        <LobbyFigur playerId={banner.id} avatar={state.players[banner.id]?.avatar ?? ''} className="text-3xl sm:text-5xl md:text-7xl" />
+        <span className="font-heading text-xl font-bold whitespace-nowrap sm:text-3xl md:text-5xl">
           {mine ? 'DIN TUR!' : `${state.players[banner.id]?.name ?? 'Någon'}s tur!`}
         </span>
       </div>
@@ -705,6 +777,7 @@ function hasPopup(table: TantTable, tantView: TantViewProps['tantView'], meId: s
 function usePileSize() {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState(112)
+  const [tight, setTight] = useState(false)
   useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
@@ -713,7 +786,11 @@ function usePileSize() {
       const style = getComputedStyle(element)
       const height = element.clientHeight - parseFloat(style.paddingBottom) - 40
       const byHeight = height * (107 / 147)
-      const byWidth = (element.clientWidth - 24) / PILES_WIDE
+      const wide = (element.clientWidth - 24) / PILES_WIDE
+      // Räcker inte bredden till höjden: slänghögen läggs en bit bakom draghögen (tight).
+      const tuck = byHeight > wide * 1.15
+      const byWidth = (element.clientWidth - 24) / (tuck ? PILES_WIDE_TIGHT : PILES_WIDE)
+      setTight(tuck)
       setSize(Math.round(Math.max(72, Math.min(byHeight, byWidth, 520))))
     }
     measure()
@@ -727,7 +804,7 @@ function usePileSize() {
       mutations.disconnect()
     }
   }, [])
-  return [ref, size] as const
+  return [ref, size, tight] as const
 }
 
 // Ett besked visas en gång, en kort stund, och aldrig igen (samma nummer visas inte två gånger).
@@ -785,35 +862,36 @@ function StatusBar({
         type="button"
         aria-label="Så spelas det"
         onClick={onRules}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm max-[420px]:size-9"
       >
-        <CircleHelp aria-hidden className="size-5" />
+        <CircleHelp aria-hidden className="size-5 max-[420px]:size-4" />
       </button>
       {/* Vad jag ska göra just nu. Korallröd när det är något jag ska göra. */}
       <p
         role="status"
         className={cn(
-          'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-3xl px-3 py-1 text-center font-heading text-base leading-tight font-bold text-balance backdrop-blur-sm sm:text-lg lg:text-2xl',
+          'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-3xl px-3 py-1 text-center font-heading text-base leading-tight font-bold whitespace-nowrap backdrop-blur-sm max-[420px]:min-h-9 max-[420px]:gap-1.5 max-[420px]:px-2 sm:text-lg lg:text-2xl',
           status.mine ? 'bg-primary-button text-primary-foreground shadow-primary' : 'bg-card/90 shadow-soft-sm',
         )}
       >
         {status.waitingFor && (
-          <LobbyFigur playerId={status.waitingFor} avatar={state.players[status.waitingFor]?.avatar ?? ''} className="shrink-0 text-2xl lg:text-3xl" />
+          <LobbyFigur playerId={status.waitingFor} avatar={state.players[status.waitingFor]?.avatar ?? ''} lively={false} className="shrink-0 text-2xl lg:text-3xl" />
         )}
-        <span className="min-w-0">
-          {status.text}
-          {status.waitingFor && <Dots />}
-        </span>
+        {/* Alltid en rad. På smala skärmar en kortare text (figuren visar vem). */}
+        <span className="min-w-0 truncate max-[420px]:hidden">{status.text}</span>
+        <span className="min-w-0 truncate min-[421px]:hidden">{status.short}</span>
+        {status.waitingFor && <Dots />}
       </p>
-      {history}
-      {sound}
+      {/* Historiken ligger i menyn på smala skärmar. */}
+      <div className="contents max-[420px]:hidden">{history}</div>
+      <div className="shrink-0 max-[420px]:[&_button]:size-9">{sound}</div>
       <button
         type="button"
         aria-label="Meny"
         onClick={onMenu}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm max-[420px]:size-9"
       >
-        <Menu aria-hidden className="size-5" />
+        <Menu aria-hidden className="size-5 max-[420px]:size-4" />
       </button>
     </div>
   )
@@ -826,29 +904,34 @@ function statusText(
   name: (id: string) => string,
   bombShowing: boolean,
   canNope: boolean,
-): { text: string; mine: boolean; waitingFor: string | null } {
+): { text: string; short: string; mine: boolean; waitingFor: string | null } {
   const turns = table.turnsLeft > 1 ? ` (${table.turnsLeft} turer kvar)` : ''
-  if (table.winner) return { text: bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`, mine: false, waitingFor: null }
-  if (table.out.includes(meId)) return { text: 'Du är ute. Följ resten av matchen', mine: false, waitingFor: null }
+  const say = (text: string, short: string, mine: boolean, waitingFor: string | null = null) => ({ text, short, mine, waitingFor })
+  if (table.winner) {
+    const text = bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`
+    return say(text, text, false)
+  }
+  // Den som är ute ser vems tur det är, som alla andra. Att man är ute står längst ner.
+  const playing = !table.out.includes(meId)
   if (table.step === 'window') {
-    if (canNope) return { text: 'Säg Nope! om du vill stoppa kortet', mine: true, waitingFor: null }
+    if (canNope) return say('Säg Nope! om du vill stoppa kortet', 'Säg Nope?', true)
     // Nope!-chansen står bara vid nedräkningen. Här står bara vems tur det är.
-    return { text: table.current === meId ? 'Din tur' : `${name(table.current)}s tur`, mine: false, waitingFor: null }
+    return table.current === meId && playing ? say('Din tur', 'Din tur', false) : say(`${name(table.current)}s tur`, 'har turen', false, table.current)
   }
   if (table.step === 'pick' && table.pick) {
-    if (table.pick.by === meId) return { text: `Välj ett kort ur ${name(table.pick.from)}s hand`, mine: true, waitingFor: null }
-    return { text: `${name(table.pick.by)} väljer ett kort`, mine: false, waitingFor: table.pick.by }
+    if (table.pick.by === meId) return say(`Välj ett kort ur ${name(table.pick.from)}s hand`, 'Välj ett kort', true)
+    return say(`${name(table.pick.by)} väljer ett kort`, 'väljer ett kort', false, table.pick.by)
   }
   if (table.step === 'give' && table.favor) {
-    if (table.favor.from === meId) return { text: `Välj ett kort att ge ${name(table.favor.to)}`, mine: true, waitingFor: null }
-    return { text: `${name(table.favor.from)} väljer ett kort`, mine: false, waitingFor: table.favor.from }
+    if (table.favor.from === meId) return say(`Välj ett kort att ge ${name(table.favor.to)}`, `Ge ${name(table.favor.to)} ett kort`, true)
+    return say(`${name(table.favor.from)} väljer ett kort`, 'väljer ett kort', false, table.favor.from)
   }
-  if (table.current === meId) {
-    if (table.step === 'place') return { text: 'Göm tanten i högen', mine: true, waitingFor: null }
-    if (table.step === 'arrange') return { text: 'Ordna de översta korten', mine: true, waitingFor: null }
-    return { text: `Din tur! Spela kort eller dra från högen${turns}`, mine: true, waitingFor: null }
+  if (table.current === meId && playing) {
+    if (table.step === 'place') return say('Göm tanten i högen', 'Göm tanten', true)
+    if (table.step === 'arrange') return say('Ordna de översta korten', 'Ordna korten', true)
+    return say(`Din tur! Spela kort eller dra från högen${turns}`, table.turnsLeft > 1 ? `Din tur! (${table.turnsLeft} turer)` : 'Din tur!', true)
   }
-  return { text: `${name(table.current)} funderar`, mine: false, waitingFor: table.current }
+  return say(`${name(table.current)} funderar`, 'funderar', false, table.current)
 }
 
 // Tre punkter som hoppar efter texten (står still med "minska rörelse").
@@ -893,17 +976,24 @@ function HistoryButton({ table, onOpen }: { table: TantTable; onOpen: () => void
 function Opponents({ state, table, meId, playingId }: { state: GameState; table: TantTable; meId: string; playingId: string | null }) {
   const start = Math.max(0, table.order.indexOf(meId))
   const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
-  const current = useRef<HTMLLIElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  // Den som har tur, eller är mål för ett kort, rullas alltid fram (så att pilen pekar på en synlig plats).
+  const focus = table.step === 'window' && table.pending?.target && table.pending.target !== meId ? table.pending.target : table.current
   useEffect(() => {
-    current.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
-  }, [table.current])
+    const seat = listRef.current?.querySelector(`[data-seat="${CSS.escape(focus)}"]`)
+    seat?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  }, [focus])
   return (
-    <ul aria-label="Motspelarna" className="flex shrink-0 justify-center-safe gap-1.5 overflow-x-auto px-3 pt-1.5 pb-2 [scrollbar-width:none]">
+    <ul
+      ref={listRef}
+      aria-label="Motspelarna"
+      className="flex shrink-0 justify-center-safe gap-1.5 overflow-x-auto px-3 pt-1.5 pb-2 [scrollbar-width:none] max-[420px]:gap-1 max-[420px]:px-1.5"
+    >
       {ids.map((id) => {
         const out = table.out.includes(id)
         const turn = table.current === id && !out && !table.winner
         return (
-          <li key={id} ref={turn ? current : undefined} data-seat={id} className="shrink-0">
+          <li key={id} data-seat={id} className="shrink-0">
             <Opponent state={state} id={id} out={out} turn={turn} playing={playingId === id} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
@@ -934,25 +1024,34 @@ function Opponent({
   const throws = useThrows()
   const wait = useThrowWait(throws?.lastThrowAt ?? null)
   const name = state.players[id]?.name ?? 'Någon'
+  // Kort namn på smala skärmar: botarna har redan roboten, så "Bot-" behövs inte.
+  const shortName = state.players[id]?.bot ? name.replace(/^Bot-/, '') : name
   const canThrow = !!throws?.allowed && throws.targets.some((target) => target.id === id)
   const seat = (
     <span
       className={cn(
-        'relative flex items-center gap-1.5 rounded-full bg-card/85 py-0.5 pr-2.5 pl-0.5 shadow-soft-sm backdrop-blur-sm motion-safe:transition-[transform,background-color] motion-safe:duration-300',
+        'relative flex items-center gap-1.5 rounded-full bg-card/85 py-0.5 pr-2.5 pl-0.5 shadow-soft-sm backdrop-blur-sm motion-safe:transition-[transform,background-color] motion-safe:duration-300 max-[420px]:max-w-[5.25rem] max-[420px]:gap-1 max-[420px]:pr-2',
         narrow ? 'max-w-32 md:max-w-40' : 'max-w-40 md:max-w-52',
-        // Den som har tur är större och lyser.
-        turn && 'z-10 mx-1.5 scale-110 bg-coral-soft shadow-[0_0_18px_5px] shadow-primary/60 ring-3 ring-primary',
+        // Den som har tur är större och lyser (på en telefon utan att ta mer plats i sidled).
+        turn && 'z-10 mx-1.5 scale-110 bg-coral-soft shadow-[0_0_18px_5px] shadow-primary/60 ring-3 ring-primary max-[420px]:mx-0 max-[420px]:scale-100',
         // Spelar just ett kort: platsen lyser gult medan kortet ligger i mitten.
         playing && 'z-10 bg-sun-soft shadow-[0_0_22px_8px] shadow-sun ring-4 ring-sun',
         out && 'opacity-45 grayscale',
       )}
     >
-      <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="shrink-0 text-3xl md:text-4xl" />
+      <span className="relative shrink-0">
+        <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} lively={false} className="text-3xl max-[420px]:text-2xl md:text-4xl" />
+        {/* På smala skärmar sitter roboten som ett litet märke på figuren, så att namnet får plats. */}
+        {state.players[id]?.bot && (
+          <Bot aria-hidden className="absolute -top-0.5 -left-0.5 size-3.5 rounded-full bg-card p-px min-[421px]:hidden" />
+        )}
+      </span>
       <span className="flex min-w-0 flex-col items-start leading-tight">
         <span className="flex max-w-full items-center gap-0.5 text-xs font-bold md:text-sm">
           {/* En bot har en liten robot vid namnet. */}
-          {state.players[id]?.bot && <Bot aria-label="Bot" className="size-3.5 shrink-0" />}
-          <span className="truncate">{name}</span>
+          {state.players[id]?.bot && <Bot aria-label="Bot" className="size-3.5 shrink-0 max-[420px]:hidden" />}
+          <span className="truncate max-[420px]:hidden">{name}</span>
+          <span className="truncate text-[11px] min-[421px]:hidden">{shortName}</span>
         </span>
         {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
       </span>
@@ -1035,7 +1134,9 @@ function MiniFan({ count }: { count: number }) {
   }, [count])
   return (
     <span aria-hidden className="flex h-5 items-end gap-1">
-      <span className="relative h-5 w-9">
+      {/* Smala skärmar: ett enda kort och siffran, så att namnet får plats. */}
+      {count > 0 && <TantBaksida sizes="16px" className="w-3 drop-shadow-sm min-[421px]:hidden" />}
+      <span className="relative h-5 w-9 max-[420px]:hidden">
         {Array.from({ length: shown }, (_, i) => (
           <TantBaksida
             key={i}
@@ -1067,6 +1168,10 @@ function MiniFan({ count }: { count: number }) {
 const DISCARD_SCALE = 0.9
 const PILE_GAP = 0.12
 const PILES_WIDE = 1 + PILE_GAP + DISCARD_SCALE + 0.1
+// På höga, smala skärmar ligger slänghögen en bit in bakom draghögen (andel av draghögens bredd), så att högarna kan
+// växa och fylla höjden i stället för att begränsas av bredden.
+const PILE_TUCK = 0.38
+const PILES_WIDE_TIGHT = 1 + DISCARD_SCALE - PILE_TUCK + 0.1
 // De översta korten i slänghögen ligger åt lite olika håll, som om de slängts dit (grader, översta sist).
 const DISCARD_TILT = [-7, 4, 11]
 
@@ -1079,9 +1184,12 @@ function Piles({
   onDraw,
   activity,
   avatar,
+  tight = false,
 }: {
   table: TantTable
   size: number
+  // Slänghögen en bit bakom draghögen (höga, smala skärmar).
+  tight?: boolean
   canDraw: boolean
   onDraw: () => void
   // Någon gömmer tanten, möblerar om eller tittar i högen: etiketten och en liten animation vid draghögen.
@@ -1095,9 +1203,9 @@ function Piles({
   const shown = table.discardTop.slice(-3)
   const thickness = layers * Math.max(2, Math.round(size / 80))
   return (
-    <div className="flex items-end justify-center" style={{ gap: Math.round(size * PILE_GAP) }}>
-      {/* Draghögen studsar till när det blir min tur. */}
-      <div className={cn('flex flex-col items-center gap-1.5', canDraw && 'motion-safe:animate-hop')} style={{ width: size }}>
+    <div className="flex items-end justify-center" style={{ gap: tight ? 0 : Math.round(size * PILE_GAP) }}>
+      {/* Draghögen studsar till när det blir min tur. Den ligger överst när slänghögen ligger en bit bakom. */}
+      <div className={cn('relative z-10 flex flex-col items-center gap-1.5', canDraw && 'motion-safe:animate-hop')} style={{ width: size }}>
         <button
           type="button"
           disabled={!canDraw}
@@ -1158,7 +1266,11 @@ function Piles({
       </div>
 
       {/* Slänghögen tar inga tryck. */}
-      <div aria-label={`Slänghögen, ${table.discardCount} kort`} className="pointer-events-none flex flex-col items-center gap-1.5" style={{ width: discard }}>
+      <div
+        aria-label={`Slänghögen, ${table.discardCount} kort`}
+        className="pointer-events-none flex flex-col items-center gap-1.5"
+        style={{ width: discard, marginLeft: tight ? -Math.round(size * PILE_TUCK) : 0 }}
+      >
         <div className="relative aspect-[107/147] w-full" style={{ marginBottom: thickness }}>
           {/* Platsen på filten, så att slänghögen syns även när den är tom. */}
           <span className="absolute inset-0 rounded-lg bg-card/40 ring-2 ring-foreground/20 ring-inset" />
