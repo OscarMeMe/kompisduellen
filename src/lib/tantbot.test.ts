@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
+import { abortMatch, addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
 import { botFallbackMove, botMustAct, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 import type { DeckChange } from '@/lib/tantpanik'
+import { takeOverState } from '@/lib/vardbyte'
 import { countAllCards, END_MS, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
@@ -204,14 +205,54 @@ describe('botar i lobbyn', () => {
     expect(removeBot(state, 'me')).toBe(state)
   })
 
-  it('finns bara i Exploderande Tanter', () => {
-    const other = { ...withHuman(), game: 'narmast' }
-    expect(addBot(other, 'bot0', avatars, 1)).toBe(other)
-    const state = addBot(withHuman(), 'bot0', avatars, 1)
-    expect(botIds(setGame(state, 'narmast'))).toEqual([])
+  it('finns i spelen med botar och ligger kvar när värden byter spel', () => {
+    for (const game of ['narmast', 'gissa-priset', 'tantpanik']) {
+      const state = { ...withHuman(), game }
+      expect(botIds(addBot(state, 'bot0', avatars, 1))).toEqual(['bot0'])
+    }
+    // Imposterjakten och Kortkaos har inga botar: det går inte att lägga till någon där.
+    for (const game of ['imposterjakten', 'kortkaos']) {
+      const state = { ...withHuman(), game }
+      expect(addBot(state, 'bot0', avatars, 1)).toBe(state)
+    }
+    let state = addBot(withHuman(), 'bot0', avatars, 1)
+    for (const game of ['narmast', 'imposterjakten', 'kortkaos', 'gissa-priset']) {
+      state = setGame(state, game)
+      expect(botIds(state)).toEqual(['bot0'])
+    }
+    // Värden kan fortfarande ta bort dem, även i ett spel utan botar.
+    expect(botIds(removeBot(setGame(state, 'kortkaos'), 'bot0'))).toEqual([])
   })
 
-  it('man kan spela ensam med botar, och botarna räknas inte i kvällens ställning', () => {
+  it('i ett spel utan botar står botarna över matchen och kommer tillbaka efteråt', () => {
+    for (const game of ['imposterjakten', 'kortkaos']) {
+      const humans: GameState['players'] = {
+        a: { name: 'A', avatar: '🤪' },
+        b: { name: 'B', avatar: '🎩' },
+        c: { name: 'C', avatar: '😴' },
+      }
+      let state: GameState = { ...initialState('tantpanik'), players: humans, scores: { a: 0, b: 0, c: 0 } }
+      state = setGame(addBot(state, 'bot0', avatars, 3, seeded(1)), game)
+      // Två riktiga spelare och en bot räcker inte: botar räknas inte som spelare här.
+      const twoAndBot: GameState = { ...state, players: { a: humans.a, b: humans.b, bot0: state.players.bot0 } }
+      expect(hostStart({ state: twoAndBot, secrets: null }, ['a', 'b', 'bot0'], 0, seeded(2)).state).toBe(twoAndBot)
+      const host = hostStart({ state, secrets: null }, ['a', 'b', 'c', 'bot0'], 0, seeded(2))
+      expect(host.state.phase).toBe('playing')
+      expect(host.state.players.bot0).toBeUndefined()
+      expect(host.state.matchPlayerIds).not.toContain('bot0')
+      expect(host.state.benchBots.bot0?.bot).toBe('normal')
+      const back = abortMatch(host.state)
+      expect(back.players.bot0?.bot).toBe('normal')
+      expect(back.benchBots).toEqual({})
+      expect(botIds(back)).toEqual(['bot0'])
+      // Även när en annan tar över som värd mitt i matchen.
+      const takenOver = takeOverState(host.state, 0)
+      expect(botIds(takenOver)).toEqual(['bot0'])
+      expect(takenOver.benchBots).toEqual({})
+    }
+  })
+
+  it('i Exploderande Tanter räknas botarna som vanliga spelare i kvällens ställning', () => {
     let state: GameState = addBot(withHuman(), 'bot0', avatars, 1, seeded(1))
     let host: HostState = hostStart({ state, secrets: null }, ['me', 'bot0'], 0, seeded(2))
     expect(host.state.phase).toBe('playing')
@@ -231,7 +272,8 @@ describe('botar i lobbyn', () => {
     }
     state = host.state
     expect(state.phase).toBe('finished')
-    expect(Object.keys(state.leaderboard)).toEqual(['me'])
+    expect(Object.keys(state.leaderboard).sort()).toEqual(['bot0', 'me'])
+    expect(state.leaderboard.bot0.bot).toBe('normal')
   })
 })
 

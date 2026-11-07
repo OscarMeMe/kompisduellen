@@ -15,6 +15,8 @@ export type GameInfo = {
   // Hur det känns att spela, i några ord.
   feel?: string
   playable: boolean
+  // Kan botar spela? I andra spel står botarna över matchen och tittar på (se gameHasBots i match.ts).
+  bots?: boolean
   // Förklaringen som visas när man klickar på spelet: en bild (emoji), en rolig mening och kort hur det går till.
   // Saknas den visas tagline och spelets howTo i stället.
   intro?: { emoji: string; pitch: string; steps: string[] }
@@ -32,6 +34,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 12,
     feel: 'Klurigt',
     playable: true,
+    bots: true,
     intro: {
       emoji: '💸',
       pitch:
@@ -54,6 +57,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 12,
     feel: 'Slumpigt',
     playable: true,
+    bots: true,
     intro: {
       emoji: '🍀',
       pitch: 'Välj ditt lyckotal och hoppas att det räcker. Närmast det slumpade talet vinner rundan.',
@@ -114,6 +118,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 10,
     feel: 'Nervigt',
     playable: true,
+    bots: true,
     intro: {
       emoji: '💥',
       pitch: 'Någonstans i högen väntar tanterna. Skicka turen vidare, kika i högen och stjäl av kompisarna. Sist kvar vinner.',

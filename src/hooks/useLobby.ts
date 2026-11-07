@@ -3,6 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
+import { botGuess, botGuessDelay } from '@/lib/botgissning'
 import { BOT_STUCK_MS, botDelay, botFallbackMove, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { REACTIONS } from '@/lib/reaktioner'
 import { AVATARS } from '@/lib/player'
@@ -79,6 +80,9 @@ import {
   addBot,
   addGuess,
   botIds,
+  gameHasBots,
+  guessSecondsFor,
+  matchParticipants,
   addPlayers,
   backToWaiting,
   changeGame,
@@ -399,7 +403,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   // Värden: avsluta rundan direkt om alla som är online har gissat.
   const resolveIfEveryoneGuessed = useCallback(
     (current: GameState) => {
-      const ids = onlineRef.current.map((p) => p.id)
+      // Botarna räknas med, så att rundan inte slutar innan de har gissat.
+      const ids = [...onlineRef.current.map((p) => p.id), ...botIds(current)]
       if (current.phase === 'guessing' && everyoneHasGuessed(current, ids)) {
         return resolveRound(current, Date.now())
       }
@@ -1063,6 +1068,34 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     }, BOT_STUCK_MS)
     return () => clearTimeout(timer)
   }, [isHost, state, current, activeIds, commit])
+
+  // Värden gissar åt botarna i gissningsspelen (botgissning.ts): en gång per runda, en stund efter att rundan startat,
+  // genom samma kontroll som spelarnas gissningar. Tiden för varje bots gissning bestäms en gång, så att andras
+  // gissningar inte skjuter upp den.
+  const botGuessAtRef = useRef<Record<string, number>>({})
+  useEffect(() => {
+    if (!isHost || state.phase !== 'guessing' || !gameHasBots(state.game) || state.deadline === null) return
+    const seconds = guessSecondsFor(state)
+    const start = state.deadline - seconds * 1000
+    const round = state.round
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (const id of botIds(state)) {
+      if (state.guesses[id] !== undefined || !matchParticipants(state).includes(id)) continue
+      const key = `${round}-${state.itemId ?? ''}-${start}-${id}`
+      botGuessAtRef.current[key] ??= start + botGuessDelay(seconds, Math.random)
+      timers.push(
+        setTimeout(() => {
+          const now = stateRef.current
+          const level = now.players[id]?.bot
+          if (now.phase !== 'guessing' || now.round !== round || now.guesses[id] !== undefined || !level) return
+          const value = botGuess(now, level, Math.random)
+          if (value === null) return
+          publish(resolveIfEveryoneGuessed(addGuess(now, id, value, Date.now())))
+        }, Math.max(0, botGuessAtRef.current[key] - Date.now())),
+      )
+    }
+    return () => timers.forEach(clearTimeout)
+  }, [isHost, state, publish, resolveIfEveryoneGuessed])
 
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
