@@ -14,6 +14,8 @@ type Rgb = [number, number, number]
 
 // Det ljusa temat: första förekomsten av varje variabel (det mörka ligger senare i filen).
 function oklchVar(name: string): Rgb {
+  const hex = css.match(new RegExp(`--${name}:\\s*#([0-9a-f]{6})`, 'i'))
+  if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16) / 255) as Rgb
   const match = css.match(new RegExp(`--${name}:\\s*oklch\\(([\\d.]+) ([\\d.]+) ([\\d.]+)\\)`))
   if (!match) throw new Error(`--${name} saknas`)
   return oklchToSrgb(Number(match[1]), Number(match[2]), Number(match[3]))
@@ -56,7 +58,8 @@ const CARDS: Record<string, string> = {
   'gissa-priset': 'sun',
   narmast: 'peach',
   kortkaos: 'lilac',
-  tantpanik: 'sky',
+  // Exploderande Tanters spelkort har egen stil (data-spelkort): krämvitt.
+  tantpanik: 'tant-kram-2',
   imposterjakten: 'mint',
 }
 
@@ -82,5 +85,11 @@ describe('spelkortens kontrast (WCAG AA)', () => {
     expect(contrast(oklchVar('primary-foreground'), oklchVar('primary-button'))).toBeGreaterThanOrEqual(4.5)
     // Etiketten (t.ex. "Bluffigt"): mörk text på krämvitt.
     expect(contrast(foreground, card)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('Exploderande Tanters vinröda knapp och etikett', () => {
+    const cream = oklchVar('tant-kram-2')
+    expect(contrast(cream, oklchVar('tant-vinrod'))).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(cream, oklchVar('tant-vinrod-mork'))).toBeGreaterThanOrEqual(4.5)
   })
 })
