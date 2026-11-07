@@ -6,11 +6,14 @@ import { cn } from '@/lib/utils'
 
 export type BotRow = { id: string; name: string; avatar: string; level: BotLevel }
 
-// Botarna i Exploderande Tanters väntrum (bara värden ser valen): Lägg till bot, svårighet per bot och ta bort.
-// Med en eller flera botar går det att spela ensam.
+// Botarna i väntrummet (bara värden ser valen): Lägg till bot, svårighet per bot och ta bort. Med en eller flera botar
+// går det att spela ensam. Används i alla spel med botar. canPlay = false: spelet saknar botar, så värden kan bara ta
+// bort dem (de tittar på).
 export function TantBotar({
   bots,
   canAdd,
+  canPlay = true,
+  gameName,
   onAdd,
   onRemove,
   onLevel,
@@ -18,6 +21,8 @@ export function TantBotar({
   bots: BotRow[]
   // Plats för en bot till (högst MAX_BOTS, och inte fler spelare än spelet klarar).
   canAdd: boolean
+  canPlay?: boolean
+  gameName?: string
   onAdd: () => void
   onRemove: (id: string) => void
   onLevel: (id: string, level: BotLevel) => void
@@ -27,12 +32,16 @@ export function TantBotar({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-bold">Botar</p>
-          <p className="text-sm text-muted-foreground">Spela mot datorn, även ensam. Högst {MAX_BOTS} botar.</p>
+          <p className="text-sm text-muted-foreground">
+            {canPlay ? `Spela mot datorn, även ensam. Högst ${MAX_BOTS} botar.` : `Botarna kan inte spela ${gameName ?? 'det här spelet'} än. De tittar på.`}
+          </p>
         </div>
-        <Button variant="outline" className="h-11" disabled={!canAdd} onClick={onAdd}>
-          <Plus aria-hidden />
-          Lägg till bot
-        </Button>
+        {canPlay && (
+          <Button variant="outline" className="h-11" disabled={!canAdd} onClick={onAdd}>
+            <Plus aria-hidden />
+            Lägg till bot
+          </Button>
+        )}
       </div>
       {bots.length > 0 && (
         <ul className="space-y-1.5">
@@ -43,20 +52,22 @@ export function TantBotar({
                 <Bot aria-hidden className="absolute -right-1 -bottom-1 size-4 rounded-full bg-card p-0.5 shadow-soft-sm" />
               </span>
               <span className="min-w-0 flex-1 truncate font-semibold">{bot.name}</span>
-              <span role="group" aria-label={`Svårighet för ${bot.name}`} className="flex gap-1">
-                {BOT_LEVELS.map((level) => (
-                  <Button
-                    key={level}
-                    size="sm"
-                    variant={bot.level === level ? 'default' : 'outline'}
-                    aria-pressed={bot.level === level}
-                    className={cn('h-9 px-2.5')}
-                    onClick={() => onLevel(bot.id, level)}
-                  >
-                    {BOT_LEVEL_NAMES[level]}
-                  </Button>
-                ))}
-              </span>
+              {canPlay && (
+                <span role="group" aria-label={`Svårighet för ${bot.name}`} className="flex gap-1">
+                  {BOT_LEVELS.map((level) => (
+                    <Button
+                      key={level}
+                      size="sm"
+                      variant={bot.level === level ? 'default' : 'outline'}
+                      aria-pressed={bot.level === level}
+                      className={cn('h-9 px-2.5')}
+                      onClick={() => onLevel(bot.id, level)}
+                    >
+                      {BOT_LEVEL_NAMES[level]}
+                    </Button>
+                  ))}
+                </span>
+              )}
               <Button size="icon" variant="ghost" aria-label={`Ta bort ${bot.name}`} className="size-9" onClick={() => onRemove(bot.id)}>
                 <X aria-hidden />
               </Button>

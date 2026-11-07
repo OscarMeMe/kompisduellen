@@ -9,8 +9,8 @@
 // - Normal: riskregeln och enkel kunskap. Risken är tanter kvar i högen delat med kort i högen (offentligt). Låg risk:
 //   drar och sparar skyddskorten. Hög risk: spelar skyddskort oftare och tittar med Se framtiden före ett drag. Vet den
 //   att tanten ligger överst (Se framtiden, eller för att den själv gömde den där) drar den aldrig om den har ett
-//   skyddskort. Nope! mot attacker och stölder mot sig, gömmer tanten överst när nästa ska dra, och stjäl från den som
-//   har flest kort utan att slösa Nope! eller Desarmera.
+//   skyddskort. Nope! mot attacker och stölder mot sig, gömmer tanten på en slumpad plats (oftast överst, se
+//   placeTantPosition), och stjäl från den som har flest kort utan att slösa Nope! eller Desarmera.
 // - Svår: som Normal, men tar risken på större allvar, och försöker skicka tanten vidare: lägger den överst med Ändra
 //   framtiden innan den spelar Hoppa över eller Attack. Ber om Desarmera med tretal.
 
@@ -136,7 +136,8 @@ const PRECIOUS: CardType[] = ['fika', 'nadu', ...PROTECTIVE]
 // skyddskort.
 function findCombo(hand: TantCard[], size: 2 | 3, careful: boolean): TantCard[] | null {
   for (const card of hand) {
-    if (card.type === 'vild' || (careful && PRECIOUS.includes(card.type))) continue
+    // Tantsnaran spelas aldrig: den ska ligga kvar på handen som fälla.
+    if (card.type === 'vild' || card.type === 'snara' || (careful && PRECIOUS.includes(card.type))) continue
     const same = hand.filter((other) => other.type === card.type)
     const wild = CARDS[card.type].kind === 'collect' ? hand.filter((other) => other.type === 'vild') : []
     const chosen = [...same, ...wild].slice(0, size)
@@ -180,6 +181,35 @@ export function drawRisk(table: TantTable): number {
 const LOW_RISK = 0.15
 const HIGH_RISK: Record<Exclude<BotLevel, 'latt'>, number> = { normal: 0.25, svar: 0.18 }
 
+// Var boten gömmer tanten efter Desarmera (0 = överst, deckCount = underst). Slumpat, så att det inte går att räkna ut:
+// - Lätt: helt slumpad plats.
+// - Normal: ungefär 35 % överst, 25 % på plats 2 eller 3, annars någonstans längre ned.
+// - Svår: ungefär 40 % överst (55 % när bara två är kvar), 20 % näst överst för att lura den som tror att den ligger
+//   överst, annars någonstans längre ned.
+// Boten minns platsen själv (remember).
+export const PLACE_ODDS = {
+  normal: { top: 0.35, near: 0.25 },
+  svar: { top: 0.4, topTwoLeft: 0.55, second: 0.2 },
+} as const
+
+export function placeTantPosition(table: TantTable, level: BotLevel, random: Random): number {
+  const max = table.deckCount
+  // Ett slumpat heltal från och med from till och med max (eller 0..max om högen är för liten).
+  const anywhere = (from: number) => (from > max ? Math.floor(random() * (max + 1)) : from + Math.floor(random() * (max - from + 1)))
+  if (level === 'latt') return anywhere(0)
+  const r = random()
+  if (level === 'normal') {
+    if (r < PLACE_ODDS.normal.top) return 0
+    if (r < PLACE_ODDS.normal.top + PLACE_ODDS.normal.near) return Math.min(max, 1 + Math.floor(random() * 2))
+    return anywhere(3)
+  }
+  const alive = table.order.length - table.out.length
+  const top = alive === 2 ? PLACE_ODDS.svar.topTwoLeft : PLACE_ODDS.svar.top
+  if (r < top) return 0
+  if (r < top + PLACE_ODDS.svar.second) return Math.min(max, 1)
+  return anywhere(2)
+}
+
 // Botens drag just nu, eller null om den inte ska göra något (inte dess tur, eller den väljer att vänta).
 export function decideBotMove(sight: BotSight, level: BotLevel, random: Random, memory: BotMemory = newBotMemory(null)): TantMove | null {
   const { me, table, view } = sight
@@ -218,11 +248,8 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random, 
 
   if (table.current !== me) return null
 
-  // Göm tanten: överst när nästa ska dra (Normal och Svår), annars någonstans i högen.
-  if (table.step === 'place') {
-    if (level === 'latt') return { type: 'tPlace', position: Math.floor(random() * (table.deckCount + 1)) }
-    return { type: 'tPlace', position: random() < 0.75 ? 0 : Math.min(table.deckCount, 1) }
-  }
+  // Göm tanten: en slumpad plats med olika fördelning per svårighet (placeTantPosition).
+  if (table.step === 'place') return { type: 'tPlace', position: placeTantPosition(table, level, random) }
 
   // Ändra framtiden. Boten ska själv dra sedan, så tanterna läggs längst ned bland korten. Svår med Hoppa över eller
   // Attack på handen lägger i stället tanten överst och tar sig undan, så att nästa spelare får den.

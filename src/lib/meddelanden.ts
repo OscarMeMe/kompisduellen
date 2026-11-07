@@ -199,6 +199,7 @@ const isGameState = shape({
   tantpanik: orNull(isTantTable),
   tantSettings: shape({ trap: isBoolean, level: (level: unknown) => level === undefined || isTantLevel(level) }),
   matchPlayerIds: listOf(isString),
+  benchBots: recordOf(isPlayerInfo),
 })
 
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.

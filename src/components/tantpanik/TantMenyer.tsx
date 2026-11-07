@@ -38,7 +38,7 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
           ))}
           <li className="pt-1 text-muted-foreground">
             Två kort med samma namn låter dig välja ett av någons kort, med baksidan upp. Tre lika låter dig be om ett visst kort. En Vild tant kan ersätta en
-            tant i paret eller tretalet. Sist kvar vinner.
+            tant i paret eller tretalet. Tantsnaran kan aldrig ingå i ett par eller tretal. Sist kvar vinner.
           </li>
         </ul>
         {/* Krediten för musiken (se docs/ljud-licenser.md). */}

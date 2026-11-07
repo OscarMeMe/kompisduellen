@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { Crown, Trophy } from 'lucide-react'
+import { Bot, Crown, Trophy } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { findGame } from '@/lib/games'
 import type { RankedEntry } from '@/lib/match'
@@ -90,6 +90,7 @@ export function Leaderboard({ entries, matchesPlayed, gamesPlayed, lastWinners, 
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 font-bold">
                   <span className="truncate">{entry.name}</span>
+                  {entry.bot && <Bot className="size-4 shrink-0 text-muted-foreground" aria-label="Bot" />}
                   {leader && <Crown className="size-4 shrink-0 text-crown" aria-label="Leder" />}
                 </span>
                 {justWon && (

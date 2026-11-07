@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ArrowDownUp } from 'lucide-react'
+import { MySeat } from '@/components/tantpanik/TurKopp'
 import { Solfjader } from '@/components/tantpanik/Solfjader'
 import type { Incoming } from '@/components/tantpanik/TantAnimationer'
 import { TantKort } from '@/components/tantpanik/TantKort'
@@ -27,6 +28,7 @@ export function TantHand({
   incoming = null,
   orderKey,
   dimmed = false,
+  raised = false,
   freshId = null,
   onFreshSeen,
 }: {
@@ -44,6 +46,8 @@ export function TantHand({
   orderKey: string
   // Inte min tur: handen är lätt dämpad och ligger lite lägre.
   dimmed?: boolean
+  // Min tur (koppen är hos mig): handen glider upp lite och lyser mjukt.
+  raised?: boolean
   // Kortet jag nyss fick (markerat "NY"), och att jag tryckt på det.
   freshId?: string | null
   onFreshSeen?: () => void
@@ -193,13 +197,22 @@ export function TantHand({
         {...SPLAT_SHIELD}
         className="relative z-40 px-2"
       >
+        {/* Min plats, där turkoppen landar. På mobil precis ovanför handens vänstra hörn, på dator till vänster om handen i
+            höjd med korten, med en egen plats så att den aldrig ligger över dem. */}
+        <MySeat
+          state={state}
+          meId={meId}
+          turn={table.current === meId && !table.winner}
+          raised={raised}
+          className="absolute bottom-full left-2 z-50 mb-1 sm:top-1/2 sm:bottom-auto sm:mb-0 sm:-translate-y-1/2"
+        />
         {cards.length === 0 ? (
           <p className="mx-auto mb-4 max-w-sm rounded-md bg-muted px-3 py-3 text-center text-sm text-muted-foreground">
             Du har inga kort. Du drar ändå på din tur.
           </p>
         ) : (
           <>
-            {/* Ordnar handen som förut: likadana kort bredvid varandra. På dator till höger om handen i höjd med korten,
+            {/* Ordnar handen: likadana kort bredvid varandra, med grupperna i en ny slumpad ordning varje gång. På dator till höger om handen i höjd med korten,
                 med en egen plats så att den aldrig ligger över dem. På mobil precis ovanför handens högra hörn. */}
             {/* Dold medan Nope!-fönstret är öppet, så att den aldrig ligger vid nedräkningen. */}
             {cards.length > 1 && !pending && (
@@ -207,7 +220,7 @@ export function TantHand({
                 type="button"
                 aria-label="Sortera handen"
                 title="Sortera handen"
-                onClick={() => setOrder(sortHand(hand).map((card) => card.id))}
+                onClick={() => setOrder(sortHand(hand, Math.random).map((card) => card.id))}
                 className="absolute right-1 bottom-full z-50 mb-1 flex flex-col items-center gap-0.5 sm:top-1/2 sm:right-2 sm:bottom-auto sm:mb-0 sm:-translate-y-1/2"
               >
                 <span className="flex size-10 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm hover:bg-card sm:size-11">
@@ -216,8 +229,8 @@ export function TantHand({
                 <span className="hidden rounded-full bg-card/85 px-1.5 text-[11px] font-semibold sm:block">Sortera</span>
               </button>
             )}
-            {/* Platsen till höger om handen är knappens, så solfjädern blir lika mycket smalare på dator. */}
-            <div className="sm:mr-16">
+            {/* Platsen till höger om handen är knappens och till vänster min plats, så solfjädern blir smalare på dator. */}
+            <div className="sm:mr-16 sm:ml-28 md:ml-32">
               <Solfjader
                 cards={cards}
                 selected={myTurn ? chosen.map((card) => card.id) : []}
@@ -228,6 +241,7 @@ export function TantHand({
                 onReorder={setOrder}
                 onOverlap={onOverlap}
                 dimmed={dimmed}
+                raised={raised}
                 grayAll={noNope}
               />
               {noNope && (
@@ -324,7 +338,7 @@ function useHandOrder(key: string, hand: TantCard[]): [string[], (ids: string[])
     } catch {
       // Ingen sparad ordning.
     }
-    const sorted = sortHand(hand).map((card) => card.id)
+    const sorted = sortHand(hand, Math.random).map((card) => card.id)
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(sorted))
     } catch {

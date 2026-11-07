@@ -129,15 +129,26 @@ export function fanIndexAtPoint(x: number, y: number, layout: FanLayout): number
   return best
 }
 
-// Likadana kort bredvid varandra, i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).
-export function sortHand(hand: readonly TantCard[]): TantCard[] {
-  const order = (type: CardType) => CARD_TYPES.indexOf(type)
+// Likadana kort bredvid varandra. Utan random i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).
+// Med random hamnar grupperna i en slumpad ordning (knappen Sortera och första sorteringen), så att ingen kan lista ut
+// var t.ex. Desarmera ligger av hur jag håller korten. Likadana kort ligger alltid bredvid varandra.
+export function sortHand(hand: readonly TantCard[], random?: () => number): TantCard[] {
+  let types: CardType[] = [...CARD_TYPES]
+  if (random) {
+    types = [...types]
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      ;[types[i], types[j]] = [types[j], types[i]]
+    }
+  }
+  const order = (type: CardType) => types.indexOf(type)
   return [...hand].sort((a, b) => order(a.type) - order(b.type) || a.id.localeCompare(b.id))
 }
 
 // Kan de här korten bli ett par eller tretal om fler läggs till? Vilda tanter ensamma kan det, de väntar på en tant.
 export function canJoin(types: readonly CardType[]): boolean {
-  if (types.length > 3 || types.includes('tant')) return false
+  // Tantsnaran är en fälla och spelas aldrig, så den går inte att lägga ihop med något.
+  if (types.length > 3 || types.includes('tant') || types.includes('snara')) return false
   const real = types.filter((type) => type !== 'vild')
   if (real.length === 0) return true
   if (!real.every((type) => type === real[0])) return false
@@ -178,7 +189,7 @@ export function cardHint(types: readonly CardType[]): string | null {
     case 'joker':
       return 'Vild tant gör inget ensam. Tryck på en tant för att göra ett par eller tretal.'
     case 'trap':
-      return 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
+      return 'Tantsnaran är en fälla och kan inte spelas.'
     default:
       return 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'
   }

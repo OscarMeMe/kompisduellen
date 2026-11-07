@@ -82,7 +82,8 @@ export type Phase = 'waiting' | 'guessing' | 'reveal' | 'playing' | 'finished'
 export type PlayerInfo = {
   name: string
   avatar: string
-  // En bot i Exploderande Tanter och dess svårighet (tantbot.ts). Värdens webbläsare spelar för den.
+  // En bot och dess svårighet. Värdens webbläsare spelar för den (tantbot.ts, botgissning.ts). Finns i spel med botar
+  // (gameHasBots), och står över matchen i andra spel.
   bot?: BotLevel
 }
 
@@ -167,6 +168,9 @@ export type GameState = {
   // De som var med när matchen startade. Den som går med under matchen kan spela resten av den, men står inte på
   // slutskärmen, i topplistan eller i utmärkelserna (matchPlayerIds, se matchParticipants). Tom utanför en match.
   matchPlayerIds: string[]
+  // Botar som står över en match i ett spel utan botar. De kommer tillbaka till lobbyn när matchen är slut (resetMatch).
+  // Saknas hos en värd med en äldre version.
+  benchBots: Record<string, PlayerInfo>
 }
 
 // Värdens tillstånd: det som skickas ut till alla, och kortspelens, Imposterjaktens eller Exploderande Tanters hemliga data.
@@ -224,6 +228,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     tantpanik: null,
     tantSettings: DEFAULT_TANT_SETTINGS,
     matchPlayerIds: [],
+    benchBots: {},
   }
 }
 
@@ -285,12 +290,22 @@ export function setGame(state: GameState, game: string): GameState {
   if (state.phase !== 'waiting') return state
   if (state.game === game) return state.choosingGame ? { ...state, choosingGame: false } : state
   const sameOptions = roundOptionsFor(game).join() === roundOptionsFor(state.game).join()
-  // Botar finns bara i Exploderande Tanter. Byter värden spel försvinner de.
-  const kept = game === TANT_GAME ? state : withoutBots(state)
-  return { ...kept, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
+  // Botarna ligger kvar när värden byter spel. I ett spel utan botar står de över matchen (matchPlayers).
+  return { ...state, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
 }
 
-// Botarna i lobbyn (bara Exploderande Tanter).
+// Kan botar spela spelet? (bots i games.ts: Exploderande Tanter, Närmast vinner och Gissa priset.)
+export function gameHasBots(game: string): boolean {
+  return findGame(game)?.bots === true
+}
+
+// De som spelar en match i spelet: alla som är med, utom botarna i ett spel utan botar (de tittar på).
+export function playingIds(state: Pick<GameState, 'game' | 'players'>, ids: readonly string[]): string[] {
+  if (gameHasBots(state.game)) return [...ids]
+  return ids.filter((id) => !state.players[id]?.bot)
+}
+
+// Botarna i lobbyn (i alla spel, även de som står över en match).
 export function botIds(state: Pick<GameState, 'players'>): string[] {
   return Object.entries(state.players)
     .filter(([, player]) => player.bot !== undefined)
@@ -300,7 +315,7 @@ export function botIds(state: Pick<GameState, 'players'>): string[] {
 // Värden lägger till en bot i väntrummet: ett tantnamn, en blobb som ingen annan har, och svårigheten Normal. Högst
 // MAX_BOTS botar, och aldrig fler spelare än spelet klarar (humans = de riktiga spelarna som är med).
 export function addBot(state: GameState, id: string, avatars: readonly string[], humans: number, random = Math.random): GameState {
-  if (state.phase !== 'waiting' || state.game !== TANT_GAME || state.players[id]) return state
+  if (state.phase !== 'waiting' || !gameHasBots(state.game) || state.players[id]) return state
   const bots = botIds(state)
   if (bots.length >= MAX_BOTS || tooManyPlayers(state.game, humans + bots.length + 1)) return state
   const names = Object.values(state.players).map((player) => player.name)
@@ -329,18 +344,6 @@ export function setBotLevel(state: GameState, id: string, level: BotLevel): Game
   const player = state.players[id]
   if (state.phase !== 'waiting' || !player?.bot || player.bot === level || !isBotLevel(level)) return state
   return { ...state, players: { ...state.players, [id]: { ...player, bot: level } } }
-}
-
-function withoutBots(state: GameState): GameState {
-  const bots = botIds(state)
-  if (bots.length === 0) return state
-  const players = { ...state.players }
-  const scores = { ...state.scores }
-  for (const id of bots) {
-    delete players[id]
-    delete scores[id]
-  }
-  return { ...state, players, scores }
 }
 
 // Värdens val för Imposterjakten i väntrummet. Gäller bara i väntrummet, så inställningarna är låsta under matchen.
@@ -463,11 +466,14 @@ export function startGame(state: GameState, onlineIds: string[], now: number): G
 }
 
 // Ny match: bara de som är med just nu, alla börjar på noll. null om matchen inte kan starta.
+// I ett spel utan botar står botarna över: de läggs åt sidan (benchBots) och kommer tillbaka efter matchen.
 function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
   if (state.phase !== 'waiting') return null
   const players: Record<string, PlayerInfo> = {}
   const scores: Record<string, number> = {}
-  for (const id of onlineIds) {
+  const benchBots: Record<string, PlayerInfo> = {}
+  if (!gameHasBots(state.game)) for (const id of botIds(state)) benchBots[id] = state.players[id]
+  for (const id of playingIds(state, onlineIds)) {
     if (state.players[id]) {
       players[id] = state.players[id]
       scores[id] = 0
@@ -493,6 +499,7 @@ function matchPlayers(state: GameState, onlineIds: string[]): GameState | null {
     rematchWishes: [],
     choosingGame: false,
     notice: null,
+    benchBots,
   }
 }
 
@@ -604,8 +611,6 @@ function finishMatch(state: GameState): GameState {
   const leaderboard = { ...state.leaderboard }
   for (const id of matchParticipants(state)) {
     const info = state.players[id]
-    // Botar räknas inte i kvällens ställning.
-    if (info?.bot) continue
     const previous = leaderboard[id]
     leaderboard[id] = {
       ...info,
@@ -642,10 +647,14 @@ export function abortMatch(state: GameState): GameState {
 
 // Väntrummet efter en match: samma grupp, inställningar och topplista, men matchens poäng och rundor nollställs.
 function resetMatch(state: GameState): GameState {
+  // Botarna som stod över matchen kommer tillbaka.
+  const players = { ...state.players, ...(state.benchBots ?? {}) }
   const scores: Record<string, number> = {}
-  for (const id of Object.keys(state.players)) scores[id] = 0
+  for (const id of Object.keys(players)) scores[id] = 0
   return {
     ...state,
+    players,
+    benchBots: {},
     phase: 'waiting',
     rounds: state.savedRounds ?? state.rounds,
     savedRounds: null,
@@ -883,7 +892,7 @@ export function hostRematch(host: HostState, now: number, settings: RematchSetti
 export function hostCountdownStart(host: HostState, onlineIds: string[], now: number): HostState {
   const { state } = host
   if (state.phase !== 'waiting' || state.rematchAt !== null) return host
-  if (!canStart(state.game, onlineIds.filter((id) => state.players[id]).length)) return host
+  if (!canStart(state.game, playingIds(state, onlineIds).filter((id) => state.players[id]).length)) return host
   return {
     ...host,
     state: { ...state, rematchAt: now + REMATCH_SECONDS * 1000, countdownKind: 'first', choosingGame: false },

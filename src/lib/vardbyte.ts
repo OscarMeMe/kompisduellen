@@ -34,10 +34,14 @@ export function shouldYieldHost(me: Present, others: readonly Present[]): boolea
 export function takeOverState(state: GameState, offset: number): GameState {
   const moved = (time: number | null) => (time === null ? null : time + offset)
   if (state.phase === 'playing') {
+    // Botar som stod över matchen (spel utan botar) kommer tillbaka.
+    const players = { ...state.players, ...(state.benchBots ?? {}) }
     const scores: Record<string, number> = {}
-    for (const id of Object.keys(state.players)) scores[id] = 0
+    for (const id of Object.keys(players)) scores[id] = 0
     return {
       ...state,
+      players,
+      benchBots: {},
       phase: 'waiting',
       round: 0,
       deadline: null,

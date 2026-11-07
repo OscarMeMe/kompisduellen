@@ -16,6 +16,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { GAMES, playersLabel, roundWords, type GameInfo } from '@/lib/games'
 import {
   canStart,
+  gameHasBots,
   tooManyPlayers,
   guessSecondsFor,
   hasTempoSettings,
@@ -106,27 +107,31 @@ export function WaitingRoom({
   const cardRules = cardRulesFor(state.game)
   const imposter = state.game === IMPOSTER_GAME
   const tant = state.game === TANT_GAME
+  // Botar spelar bara i spel med stöd för botar. Annars tittar de på och räknas inte som spelare.
+  const hasBots = gameHasBots(state.game)
+  const playing = hasBots ? online : online.filter((p) => !p.bot)
+  const watchingBots = online.length - playing.length
   const theme = lobbyThemeFor(game)
   const howTo = tant ? TANT_HOW_TO : imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
   const scoringDetails = tant ? TANT_SCORING : imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
   const roundsLabel = `Antal ${roundWords(state.game).many}`
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
-  const enoughPlayers = online.length >= game.minPlayers
-  const canPractice = canStart(state.game, 1) && online.length === 1
+  const enoughPlayers = playing.length >= game.minPlayers
+  const canPractice = canStart(state.game, 1) && playing.length === 1
   // För många för spelet som är valt. Sajten säger t.ex. 3–9 spelare i Kortkaos.
-  const tooMany = tooManyPlayers(state.game, online.length)
+  const tooMany = tooManyPlayers(state.game, playing.length)
   // En revansch är på väg: matchen startar av sig själv när nedräkningen är slut.
   const rematching = state.rematchAt !== null
   // Namnen från läget, där den som heter likadant som någon annan har fått en siffra.
   const lobbyName = (player: OnlinePlayer) => state.players[player.id]?.name ?? player.name
   const hostPlayer = online.find((p) => p.host)
   // Exploderande Tanter: raden när man är för få, om en bot får plats, och om spellistan är utfälld (Byt spel).
-  const tantWaiting = tant ? waitingText(online.length, game.minPlayers) : null
-  const canAddBot = online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, online.length + 1)
+  const tantWaiting = tant ? waitingText(playing.length, game.minPlayers) : null
+  const canAddBot = hasBots && online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, playing.length + 1)
   const [showGames, setShowGames] = useState(false)
   const gamesOpen = showGames || state.choosingGame || scrollToGames === true
   const status = lobbyStatus({
-    count: online.length,
+    count: playing.length,
     game,
     tooMany,
     isHost,
@@ -215,7 +220,8 @@ export function WaitingRoom({
         aria-label={theme.playersTitle}
       >
         <h2 className={cn('text-xl', tant && 'text-tant-vin')}>
-          {tant ? 'Vid kafferepsbordet' : theme.playersTitle} ({online.length})
+          {/* Botar som tittar på räknas inte. */}
+          {tant ? 'Vid kafferepsbordet' : theme.playersTitle} ({playing.length})
         </h2>
         {tant ? (
           // Spelarna sitter runt ett kafferepsbord, med stol och kaffekopp.
@@ -226,10 +232,22 @@ export function WaitingRoom({
           />
         ) : (
           <LobbyPlayers
-            players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
+            players={online.map((p) => ({
+              id: p.id,
+              name: lobbyName(p),
+              avatar: p.avatar,
+              host: p.host === true,
+              bot: p.bot !== undefined,
+              watching: p.bot !== undefined && !hasBots,
+            }))}
             meId={meId}
-            emptySeats={emptySeats(online.length, game)}
+            emptySeats={emptySeats(playing.length, game)}
           />
+        )}
+        {watchingBots > 0 && (
+          <p className="rounded-md bg-muted px-3 py-2 text-center text-sm font-semibold text-muted-foreground">
+            Botarna kan inte spela {game.name} än. De tittar på.
+          </p>
         )}
         <ReactionBar className="pt-1" />
         {state.throwsAllowed && online.length > 1 && <ThrowBar />}
@@ -327,6 +345,20 @@ export function WaitingRoom({
                 />
                 <NextQuestionChoice autoAdvance={state.autoAdvance} onSelect={(autoAdvance) => onSetTempo({ autoAdvance })} />
               </>
+            )}
+
+            {/* Botar i andra spel än Exploderande Tanter (som har dem i sin egen ruta). I ett spel utan botar kan värden
+                bara ta bort dem. */}
+            {!tant && botActions && (hasBots || watchingBots > 0) && (
+              <TantBotar
+                bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
+                canAdd={canAddBot}
+                canPlay={hasBots}
+                gameName={game.name}
+                onAdd={botActions.addBot}
+                onRemove={botActions.removeBot}
+                onLevel={botActions.setBotLevel}
+              />
             )}
 
             {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}

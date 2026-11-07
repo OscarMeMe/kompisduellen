@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
+import { abortMatch, addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
 import { botFallbackMove, botMustAct, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 import type { DeckChange } from '@/lib/tantpanik'
+import { takeOverState } from '@/lib/vardbyte'
 import { countAllCards, END_MS, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
@@ -115,16 +116,74 @@ describe('botarna i Exploderande Tanter', () => {
     expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0 })
   })
 
-  it('gömmer tanten överst när nästa ska dra (Normal)', () => {
-    let host = startTantMatch(lobby(2), seeded(11))
+  it('gömmer tanten på en slumpad plats, med olika fördelning per svårighet', () => {
+    let host = startTantMatch(lobby(3), seeded(11))
     const [a] = host.state.tantpanik!.order
     host = sync({
       ...host,
       secrets: { ...host.secrets, deck: [{ id: 'bomb', type: 'tant' }, ...host.secrets.deck], hands: { ...host.secrets.hands, [a]: [{ id: 'f', type: 'fika' }] } },
     })
     host = tantMove(host, a, { type: 'tDraw' }, null, 0, seeded(1))
-    expect(host.state.tantpanik!.step).toBe('place')
-    expect(decideBotMove(botSight(host, a)!, 'normal', () => 0.1)).toEqual({ type: 'tPlace', position: 0 })
+    const table = host.state.tantpanik!
+    expect(table.step).toBe('place')
+    const max = table.deckCount
+    expect(max).toBeGreaterThan(20)
+    const TRIES = 1000
+    // Andelen försök per plats, med botens riktiga beslut.
+    function spread(level: BotLevel, t = table): number[] {
+      const random = seeded(level.length + t.out.length)
+      const counts = Array.from({ length: max + 1 }, () => 0)
+      for (let i = 0; i < TRIES; i++) {
+        const move = decideBotMove({ ...botSight(host, a)!, table: t }, level, random)
+        if (move?.type !== 'tPlace') throw new Error('Ingen placering')
+        expect(move.position).toBeGreaterThanOrEqual(0)
+        expect(move.position).toBeLessThanOrEqual(max)
+        counts[move.position]++
+      }
+      return counts.map((count) => count / TRIES)
+    }
+    const near = (share: number, expected: number) => expect(Math.abs(share - expected)).toBeLessThan(0.05)
+    const sum = (shares: number[]) => shares.reduce((total, share) => total + share, 0)
+
+    // Lätt: helt slumpat, ingen plats sticker ut och toppen är sällsynt.
+    const easy = spread('latt')
+    expect(easy[0]).toBeLessThan(0.08)
+    expect(easy.filter((share) => share > 0).length).toBeGreaterThan(max * 0.8)
+
+    // Normal: ungefär 35 % överst, 25 % på plats 2–3, resten längre ned.
+    const normal = spread('normal')
+    near(normal[0], 0.35)
+    near(normal[1] + normal[2], 0.25)
+    near(sum(normal.slice(3)), 0.4)
+
+    // Svår: ungefär 40 % överst och 20 % näst överst.
+    const hard = spread('svar')
+    near(hard[0], 0.4)
+    near(hard[1], 0.2)
+    near(sum(hard.slice(2)), 0.4)
+    // Bara två kvar: oftare överst.
+    const two = spread('svar', { ...table, out: [table.order[2]] })
+    near(two[0], 0.55)
+    near(two[1], 0.2)
+  })
+
+  it('minns var den själv gömde tanten, även när platsen är slumpad', () => {
+    let host = startTantMatch(lobby(3), seeded(12))
+    const [a] = host.state.tantpanik!.order
+    host = sync({
+      ...host,
+      secrets: { ...host.secrets, deck: [{ id: 'bomb', type: 'tant' }, ...host.secrets.deck], hands: { ...host.secrets.hands, [a]: [{ id: 'f', type: 'fika' }] } },
+    })
+    host = tantMove(host, a, { type: 'tDraw' }, null, 0, seeded(1))
+    const sight = botSight(host, a)!
+    const move = decideBotMove(sight, 'normal', () => 0.9)!
+    expect(move.type).toBe('tPlace')
+    const after = tantMove(host, a, move, null, 0, seeded(1))
+    const memory = remember(newBotMemory(sight.table), move, sight, after.state.tantpanik!)
+    const position = (move as { position: number }).position
+    expect(position).toBeGreaterThanOrEqual(3)
+    expect(memory.bombAt).toBe(position)
+    expect(after.secrets.deck[position].type).toBe('tant')
   })
 })
 
@@ -146,14 +205,54 @@ describe('botar i lobbyn', () => {
     expect(removeBot(state, 'me')).toBe(state)
   })
 
-  it('finns bara i Exploderande Tanter', () => {
-    const other = { ...withHuman(), game: 'narmast' }
-    expect(addBot(other, 'bot0', avatars, 1)).toBe(other)
-    const state = addBot(withHuman(), 'bot0', avatars, 1)
-    expect(botIds(setGame(state, 'narmast'))).toEqual([])
+  it('finns i spelen med botar och ligger kvar när värden byter spel', () => {
+    for (const game of ['narmast', 'gissa-priset', 'tantpanik']) {
+      const state = { ...withHuman(), game }
+      expect(botIds(addBot(state, 'bot0', avatars, 1))).toEqual(['bot0'])
+    }
+    // Imposterjakten och Kortkaos har inga botar: det går inte att lägga till någon där.
+    for (const game of ['imposterjakten', 'kortkaos']) {
+      const state = { ...withHuman(), game }
+      expect(addBot(state, 'bot0', avatars, 1)).toBe(state)
+    }
+    let state = addBot(withHuman(), 'bot0', avatars, 1)
+    for (const game of ['narmast', 'imposterjakten', 'kortkaos', 'gissa-priset']) {
+      state = setGame(state, game)
+      expect(botIds(state)).toEqual(['bot0'])
+    }
+    // Värden kan fortfarande ta bort dem, även i ett spel utan botar.
+    expect(botIds(removeBot(setGame(state, 'kortkaos'), 'bot0'))).toEqual([])
   })
 
-  it('man kan spela ensam med botar, och botarna räknas inte i kvällens ställning', () => {
+  it('i ett spel utan botar står botarna över matchen och kommer tillbaka efteråt', () => {
+    for (const game of ['imposterjakten', 'kortkaos']) {
+      const humans: GameState['players'] = {
+        a: { name: 'A', avatar: '🤪' },
+        b: { name: 'B', avatar: '🎩' },
+        c: { name: 'C', avatar: '😴' },
+      }
+      let state: GameState = { ...initialState('tantpanik'), players: humans, scores: { a: 0, b: 0, c: 0 } }
+      state = setGame(addBot(state, 'bot0', avatars, 3, seeded(1)), game)
+      // Två riktiga spelare och en bot räcker inte: botar räknas inte som spelare här.
+      const twoAndBot: GameState = { ...state, players: { a: humans.a, b: humans.b, bot0: state.players.bot0 } }
+      expect(hostStart({ state: twoAndBot, secrets: null }, ['a', 'b', 'bot0'], 0, seeded(2)).state).toBe(twoAndBot)
+      const host = hostStart({ state, secrets: null }, ['a', 'b', 'c', 'bot0'], 0, seeded(2))
+      expect(host.state.phase).toBe('playing')
+      expect(host.state.players.bot0).toBeUndefined()
+      expect(host.state.matchPlayerIds).not.toContain('bot0')
+      expect(host.state.benchBots.bot0?.bot).toBe('normal')
+      const back = abortMatch(host.state)
+      expect(back.players.bot0?.bot).toBe('normal')
+      expect(back.benchBots).toEqual({})
+      expect(botIds(back)).toEqual(['bot0'])
+      // Även när en annan tar över som värd mitt i matchen.
+      const takenOver = takeOverState(host.state, 0)
+      expect(botIds(takenOver)).toEqual(['bot0'])
+      expect(takenOver.benchBots).toEqual({})
+    }
+  })
+
+  it('i Exploderande Tanter räknas botarna som vanliga spelare i kvällens ställning', () => {
     let state: GameState = addBot(withHuman(), 'bot0', avatars, 1, seeded(1))
     let host: HostState = hostStart({ state, secrets: null }, ['me', 'bot0'], 0, seeded(2))
     expect(host.state.phase).toBe('playing')
@@ -173,7 +272,8 @@ describe('botar i lobbyn', () => {
     }
     state = host.state
     expect(state.phase).toBe('finished')
-    expect(Object.keys(state.leaderboard)).toEqual(['me'])
+    expect(Object.keys(state.leaderboard).sort()).toEqual(['bot0', 'me'])
+    expect(state.leaderboard.bot0.bot).toBe('normal')
   })
 })
 
@@ -441,6 +541,25 @@ describe('botarna fastnar aldrig', () => {
     expect([...CARD_TYPES].filter((type) => !used.has(type))).toEqual([])
     // Botarnas egna beslut går alltid igenom, så reservdraget behövs aldrig.
     expect(fallbacks).toBe(0)
+  })
+
+  it('botarna försöker aldrig spela Tantsnaran i ett par eller tretal', () => {
+    for (const level of ['latt', 'normal', 'svar'] as BotLevel[]) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const host = startTantMatch(lobby(3), seeded(seed))
+        const t = host.state.tantpanik!
+        const me = t.current
+        const hand = [
+          { id: 's1', type: 'snara' as const },
+          { id: 's2', type: 'snara' as const },
+          { id: 's3', type: 'snara' as const },
+          { id: 'v', type: 'vild' as const },
+        ]
+        const sight = { me, table: t, view: { ...myTantView(host.secrets, t, me), hand } }
+        const move = decideBotMove(sight, level, seeded(seed * 7))
+        if (move?.type === 'tPlay') expect(move.cards.some((id) => id.startsWith('s'))).toBe(false)
+      }
+    }
   })
 
   it('reservdraget finns i varje steg där en bot ska göra något', () => {

@@ -5,8 +5,10 @@ import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { useReactions } from '@/hooks/useReactions'
 import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
+import { cn } from '@/lib/utils'
 
-export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean; bot?: boolean }
+// watching: en bot i ett spel som botar inte kan spela än. Den står över matchen och tittar på.
+export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean; bot?: boolean; watching?: boolean }
 
 // Spelarna i väntrummet: stora figurer med sin egen rörelse och personlighet (figurer.ts), med namnet under. emptySeats = streckade ringar
 // för lediga platser. Figurerna gungar i otakt, så att de inte rör sig som en enda.
@@ -34,7 +36,7 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
     <ul ref={listRef} className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-x-2 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(6rem,1fr))]">
       {players.map((player, i) => (
         <li key={player.id} className="flex min-w-0 flex-col items-center gap-1.5 text-center motion-safe:animate-pop">
-          <div className="relative">
+          <div className={cn('relative', player.watching && 'opacity-55 grayscale-[0.4]')}>
             {findBlob(player.avatar) ? (
               <span data-gaze className="block text-5xl leading-none sm:text-6xl">
                 <LobbyFigur
@@ -71,6 +73,7 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
             )}
           </div>
           <span title={player.name} className="line-clamp-2 w-full leading-tight font-semibold [overflow-wrap:anywhere]">{player.name}</span>
+          {player.watching && <span className="-mt-1 text-xs font-semibold text-muted-foreground">tittar på</span>}
         </li>
       ))}
       {Array.from({ length: emptySeats }, (_, i) => (
