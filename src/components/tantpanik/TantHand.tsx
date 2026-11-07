@@ -209,30 +209,36 @@ export function TantHand({
           </p>
         ) : (
           <>
-            {/* Ordnar handen som förut: likadana kort bredvid varandra. */}
+            {/* Ordnar handen som förut: likadana kort bredvid varandra. På dator till höger om handen i höjd med korten,
+                med en egen plats så att den aldrig ligger över dem. På mobil precis ovanför handens högra hörn. */}
             {cards.length > 1 && (
-              // En liten ikon i vänstra kanten, ovanför handen, så att den aldrig ligger över korten.
               <button
                 type="button"
                 aria-label="Sortera handen"
                 title="Sortera handen"
                 onClick={() => setOrder(sortHand(hand).map((card) => card.id))}
-                className="absolute bottom-full left-1 z-50 mb-1 flex size-9 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm hover:bg-card"
+                className="absolute right-1 bottom-full z-50 mb-1 flex flex-col items-center gap-0.5 sm:top-1/2 sm:right-2 sm:bottom-auto sm:mb-0 sm:-translate-y-1/2"
               >
-                <ArrowDownUp aria-hidden className="size-4" />
+                <span className="flex size-10 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm hover:bg-card sm:size-11">
+                  <ArrowDownUp aria-hidden className="size-4 sm:size-5" />
+                </span>
+                <span className="hidden rounded-full bg-card/85 px-1.5 text-[11px] font-semibold sm:block">Sortera</span>
               </button>
             )}
-            <Solfjader
-              cards={cards}
-              selected={chosen.map((card) => card.id)}
-              glow={nopeIds}
-              hiddenId={hiddenId}
-              freshId={freshId}
-              onTap={tap}
-              onReorder={setOrder}
-              onOverlap={onOverlap}
-              dimmed={dimmed}
-            />
+            {/* Platsen till höger om handen är knappens, så solfjädern blir lika mycket smalare på dator. */}
+            <div className="sm:mr-16">
+              <Solfjader
+                cards={cards}
+                selected={chosen.map((card) => card.id)}
+                glow={nopeIds}
+                hiddenId={hiddenId}
+                freshId={freshId}
+                onTap={tap}
+                onReorder={setOrder}
+                onOverlap={onOverlap}
+                dimmed={dimmed}
+              />
+            </div>
           </>
         )}
       </section>
