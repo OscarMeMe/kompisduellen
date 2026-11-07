@@ -54,7 +54,7 @@ export function Layout() {
           )}
           <div className={cn('flex min-w-0 items-center gap-2', inMatch && 'absolute top-1/2 right-4 -translate-y-1/2 sm:right-6')}>
           <div ref={setHeaderSlot} className="contents" />
-          <nav className={cn('min-w-0', inMatch && 'hidden')}>
+          <nav className={cn('shrink-0', inMatch && 'hidden')}>
             {player ? (
               <Link
                 to="/profil"
@@ -66,7 +66,7 @@ export function Layout() {
               >
                 {/* Figuren hoppar till vid klick. Ny key startar om hoppet. */}
                 <Emoji key={hops} emoji={player.avatar} className={cn('text-xl', hops > 0 && 'motion-safe:animate-hop')} />
-                <span className="max-w-24 truncate sm:max-w-32">{player.name}</span>
+                <span className="max-w-20 truncate sm:max-w-32">{player.name}</span>
               </Link>
             ) : pathname !== '/' ? (
               // Startsidan har kodfältet i hjälteavsnittet, så där behövs inte knappen.
