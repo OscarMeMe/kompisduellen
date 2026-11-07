@@ -21,7 +21,7 @@ import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import { bombsInDeck, waitingFor, type MyTantView, type TantEvent, type TantTable } from '@/lib/tantpanik'
+import { bombsInDeck, moveAllowed, waitingFor, type MyTantView, type TantEvent, type TantMove, type TantTable } from '@/lib/tantpanik'
 import { cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
@@ -38,12 +38,17 @@ export function TantpanikView({
   isHost,
   clockOffset,
   tantView,
-  onMove,
+  onMove: sendMove,
   onAbort,
   onLeave,
   onBotsOnly,
 }: TantViewProps) {
   const table = state.tantpanik
+  // Bara drag som är tillåtna just nu skickas (moveAllowed, samma regel som spelmotorn), så att ett tryck på något som
+  // inte är mitt aldrig blir ett drag. Spelmotorn avvisar dem ändå.
+  const onMove = (move: TantMove) => {
+    if (table && moveAllowed(table, me.id, move)) sendMove(move)
+  }
   const [rules, setRules] = useState(false)
   const [menu, setMenu] = useState(false)
   const [history, setHistory] = useState(false)
@@ -583,28 +588,34 @@ function reducedMotionNow(): boolean {
 // Hur länge de andra ser att någon tittar i högen efter Se framtiden (ms). Själva titten syns bara för den som spelade.
 const PEEK_TAG_MS = 3500
 
-// Den som just spelade Se framtiden (och inte blev stoppad), en stund efter att Nope!-fönstret stängts.
+// Den som just spelade Se framtiden (och inte blev stoppad), en stund efter att Nope!-fönstret stängts. Etiketten gäller
+// bara medan det fortfarande är den spelarens tur, så den står aldrig kvar när turen gått vidare. Klockan som tar bort den
+// hör till själva titten (shown), så ett nytt kort som spelas strax efter kan inte stoppa den.
 function usePeeker(table: TantTable | null): string | null {
   const pending = table?.step === 'window' ? table.pending : null
   const last = useRef<{ by: string; peek: boolean; stopped: boolean } | null>(null)
-  const [peeker, setPeeker] = useState<string | null>(null)
+  const [shown, setShown] = useState<{ by: string } | null>(null)
   const open = pending !== null
   const nopes = pending?.nopes ?? 0
   useEffect(() => {
     if (open && pending) {
       last.current = { by: pending.by, peek: pending.kind === 'single' && pending.cards[0] === 'tjuvkika', stopped: nopes % 2 === 1 }
+      setShown(null)
       return
     }
-    const shown = last.current
+    const done = last.current
     last.current = null
-    if (!shown?.peek || shown.stopped) return
-    setPeeker(shown.by)
-    const timer = setTimeout(() => setPeeker(null), PEEK_TAG_MS)
-    return () => clearTimeout(timer)
+    if (done?.peek && !done.stopped) setShown({ by: done.by })
     // pending ändras med open och nopes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, nopes])
-  return peeker
+  useEffect(() => {
+    if (!shown) return
+    const timer = setTimeout(() => setShown(null), PEEK_TAG_MS)
+    return () => clearTimeout(timer)
+  }, [shown])
+  if (!shown || !table || table.step !== 'turn' || table.current !== shown.by) return null
+  return shown.by
 }
 
 // Hur länge ett nytt kort är markerat i handen (ms).
@@ -857,7 +868,8 @@ function StatusBar({
   const name = (id: string) => state.players[id]?.name ?? 'Någon'
   const status = statusText(table, meId, name, bombShowing, canNope)
   return (
-    <div className="flex shrink-0 items-center gap-1.5 px-2 py-1.5 lg:gap-2 lg:py-2">
+    // Ovanpå bordet (högarna och det som svävar ovanför dem), så att raden alltid syns. Popuperna ligger ändå över den.
+    <div className="relative z-[46] flex shrink-0 items-center gap-1.5 px-2 py-1.5 lg:gap-2 lg:py-2">
       <button
         type="button"
         aria-label="Så spelas det"

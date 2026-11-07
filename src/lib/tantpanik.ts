@@ -795,9 +795,33 @@ function resolve(d: Draft, random: Random) {
   }
 }
 
+// Får spelaren göra det här draget just nu, enligt det alla ser (fas, tur och steg)? Gäller alla, även värden och botarna.
+// Spelmotorn kollar det först för varje drag, och gränssnittet skickar aldrig ett drag som inte går. Själva korten (att de
+// finns i handen och passar ihop) kollas sedan av spelmotorn.
+export function moveAllowed(table: TantTable, playerId: string, move: TantMove): boolean {
+  if (!table.order.includes(playerId)) return false
+  if (move.type === 'tFinish') return !!table.winner
+  if (table.winner || table.error || table.out.includes(playerId)) return false
+  switch (move.type) {
+    case 'tDraw':
+    case 'tPlay':
+      return table.step === 'turn' && table.current === playerId
+    case 'tNope':
+      return table.step === 'window' && table.pending !== null
+    case 'tGive':
+      return table.step === 'give' && table.favor?.from === playerId
+    case 'tPick':
+      return table.step === 'pick' && table.pick?.by === playerId
+    case 'tPlace':
+      return table.step === 'place' && table.current === playerId
+    case 'tArrange':
+      return table.step === 'arrange' && table.current === playerId
+  }
+}
+
 function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Result {
   const { table } = d
-  if (table.winner || table.error) return 'invalid'
+  if (!moveAllowed(table, playerId, move)) return 'invalid'
   switch (move.type) {
     case 'tDraw':
       if (table.step !== 'turn' || table.current !== playerId) return 'invalid'

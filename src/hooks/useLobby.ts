@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
-import { botDelay, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
+import { BOT_STUCK_MS, botDelay, botFallbackMove, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { REACTIONS } from '@/lib/reaktioner'
 import { AVATARS } from '@/lib/player'
 import { randomId } from '@/lib/slumpid'
@@ -1036,6 +1036,32 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       )
     }
     return () => timers.forEach(clearTimeout)
+  }, [isHost, state, current, activeIds, commit])
+
+  // Skydd mot en bot som fastnat: har läget stått still i BOT_STUCK_MS medan en bot ska göra något (dess tur eller ett
+  // val), gör värden ett enkelt giltigt drag åt den (botFallbackMove) och skriver det i konsolen, så att felet märks.
+  useEffect(() => {
+    if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing' || !state.tantpanik) return
+    const watched = state
+    const timer = setTimeout(() => {
+      const before = current()
+      if (before.state !== watched || !isTantSecrets(before.secrets)) return
+      for (const id of botIds(before.state)) {
+        const sight = botSight(before as TantHost, id)
+        const move = sight ? botFallbackMove(sight) : null
+        if (!move) continue
+        console.warn(`[Exploderande Tanter] ${before.state.players[id]?.name ?? id} har inte gjort något på ${BOT_STUCK_MS / 1000} s. Reservdrag:`, move, 'steg:', before.state.tantpanik?.step)
+        botMovesRef.current += 1
+        const next = hostMove(before, id, move, activeIds(), Date.now(), Math.random, `${id}-reserv-${botMovesRef.current}`)
+        if (JSON.stringify(next.state.tantpanik) === JSON.stringify(before.state.tantpanik)) {
+          console.warn('[Exploderande Tanter] Reservdraget gick inte heller.', move)
+          continue
+        }
+        commit(next)
+        return
+      }
+    }, BOT_STUCK_MS)
+    return () => clearTimeout(timer)
   }, [isHost, state, current, activeIds, commit])
 
   const hostOnline = online.some((p) => p.host)
