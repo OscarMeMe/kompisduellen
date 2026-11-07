@@ -47,6 +47,7 @@ export function Solfjader({
   onReorder,
   onOverlap,
   dimmed: handDimmed = false,
+  raised = false,
   grayAll = false,
 }: {
   cards: TantCard[]
@@ -62,6 +63,8 @@ export function Solfjader({
   onOverlap?: (px: number) => void
   // Inte min tur: handen är svagt dämpad och tänds upp mjukt när det blir min tur.
   dimmed?: boolean
+  // Min tur: handen glider upp cirka 20 px och får en mjuk glöd.
+  raised?: boolean
   // Ett kort väntar på Nope! och jag har inget: alla kort blir gråa, som de som inte går att spela när man har Nope!.
   grayAll?: boolean
 }) {
@@ -212,6 +215,7 @@ export function Solfjader({
         'relative mx-auto w-full max-w-6xl touch-none select-none transition-[filter] duration-400 motion-safe:transition-[filter,translate]',
         // Bara en svag dämpning, så att korten ser normala ut.
         handDimmed && 'brightness-[0.88] saturate-[0.85]',
+        raised && '-translate-y-5 drop-shadow-[0_0_14px_color-mix(in_oklch,var(--color-primary)_60%,transparent)]',
       )}
       style={{ height: layout.height, marginTop: -overlap }}
       onPointerDown={down}

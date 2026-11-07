@@ -60,6 +60,35 @@ function effectsOut(ctx: AudioContext): GainNode {
   return effectsGain
 }
 
+// Turkoppen landar hos mig i Exploderande Tanter: ett litet klirr, som en kopp mot ett fat. Två korta höga toner med
+// en svag överton, så att det låter som porslin.
+export function playCupClink() {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const now = context.currentTime
+    for (const [at, frequency, volume] of [
+      [0, 2350, 0.07],
+      [0, 5170, 0.025],
+      [0.075, 2930, 0.05],
+      [0.075, 6440, 0.018],
+    ]) {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(frequency, now + at)
+      gain.gain.setValueAtTime(0.0001, now + at)
+      gain.gain.exponentialRampToValueAtTime(volume, now + at + 0.004)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.28)
+      oscillator.connect(gain).connect(effectsOut(context))
+      oscillator.start(now + at)
+      oscillator.stop(now + at + 0.3)
+    }
+  } catch {
+    // Inget ljud är inget fel.
+  }
+}
+
 export function playPop() {
   try {
     context ??= new AudioContext()

@@ -9,6 +9,7 @@ import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { HistoryDialog, MenuDialog, RulesDialog } from '@/components/tantpanik/TantMenyer'
 import { FutureView, NopeVerdict, NopeWindow, PickCard, Place } from '@/components/tantpanik/TantSteg'
 import { GivePopup, ValPopup } from '@/components/tantpanik/TantVal'
+import { TurnCup } from '@/components/tantpanik/TurKopp'
 import { Button } from '@/components/ui/button'
 import { onlyBotsLeft as botsOnlyLeft } from '@/lib/tantbot'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -17,7 +18,7 @@ import { Konfetti } from '@/components/Konfetti'
 import { tantMusic } from '@/lib/tantmusik'
 import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
-import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
+import { loadSoundOn, playBullseye, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -229,7 +230,6 @@ export function TantpanikView({
     inMatch &&
     (pendingNow?.lastNopeBy ?? pendingNow?.by) !== me.id &&
     !!tantView?.hand.some((card) => card.type === 'nadu')
-  const myTurn = inMatch && !out && !table.winner && table.current === me.id
   // Är det något jag ska göra just nu (min tur, ett val, eller Nope!)? Annars är bordet och handen lätt dämpade. Popuper
   // och Nope!-fönstret ligger utanför det som dämpas, så de syns alltid fullt.
   const myAction = waitingFor(table) === me.id || canNope || !!tantView?.arrange
@@ -331,6 +331,7 @@ export function TantpanikView({
             onMove={onMove}
             onOverlap={setHandOverlap}
             dimmed={dimmed}
+            raised={canDraw}
             incoming={incoming}
             freshId={fresh}
             onFreshSeen={() => setFresh(null)}
@@ -349,14 +350,8 @@ export function TantpanikView({
         )}
       </div>
 
-      {myTurn && (
-        // Min tur: en ram som lyser runt hela skärmen. Den tar inga tryck.
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 z-[35] rounded-[inherit] shadow-[inset_0_0_0_6px_var(--color-primary),inset_0_0_48px_8px_color-mix(in_oklch,var(--color-primary)_55%,transparent)] motion-safe:animate-light-pulse"
-        />
-      )}
-      <TurnBanner state={state} table={table} meId={me.id} />
+      {/* Turkoppen: står hos den som har tur och glider vidare när turen byts. */}
+      <TurnCup table={table} meId={me.id} soundOn={soundOn} />
       {botsOnlyKey && botsOnlyClosed !== botsOnlyKey && !bombShowing && (
         <ValPopup
           panel
@@ -713,67 +708,6 @@ function useNopeVerdict(table: TantTable | null): { n: number; stopped: boolean 
   return verdict
 }
 
-// Hur länge banderollen syns när turen byts (ms).
-const BANNER_MS = 800
-
-// När turen byts glider en stor banderoll över skärmen med figuren och "[namn]s tur!" eller "Din tur!". När det blir min
-// tur vibrerar telefonen kort och ett ljud spelas. Med "minska rörelse" står banderollen still och tonas bara in.
-function TurnBanner({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
-  const [banner, setBanner] = useState<{ n: number; id: string } | null>(null)
-  const [slide, setSlide] = useState<'in' | 'mid' | 'out'>('in')
-  const previous = useRef(table.current)
-  const count = useRef(0)
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
-  const reactions = useReactions()
-  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
-  const current = table.winner ? null : table.current
-  useEffect(() => {
-    if (!current || current === previous.current) return
-    previous.current = current
-    if (table.out.includes(current)) return
-    count.current += 1
-    const n = count.current
-    setBanner({ n, id: current })
-    setSlide('in')
-    if (current === meId) {
-      navigator.vibrate?.(120)
-      if (soundOn) {
-        tantMusic.duck()
-        playTurn()
-      }
-    }
-    // Timrarna rensas inte när turen byts igen, bara när bordet försvinner: annars blev banderollen kvar om matchen tog
-    // slut (eller turen bytte) inom BANNER_MS.
-    requestAnimationFrame(() => requestAnimationFrame(() => setSlide('mid')))
-    timers.current.push(
-      setTimeout(() => setSlide('out'), BANNER_MS - 250),
-      setTimeout(() => setBanner((b) => (b?.n === n ? null : b)), BANNER_MS),
-    )
-    // Bara när turen byts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current])
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
-  if (!banner) return null
-  const mine = banner.id === meId
-  return (
-    // Mitt över bordet, inte över motspelarna. Mindre på en telefon.
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 top-[40%] z-[58] flex -translate-y-1/2 justify-center overflow-hidden px-2 md:top-[38%]">
-      <div
-        className={cn(
-          'flex items-center gap-2 rounded-full px-4 py-2 shadow-lift motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:animate-fade sm:gap-3 sm:px-6 sm:py-3 md:px-10 md:py-5',
-          mine ? 'bg-primary-button text-primary-foreground' : 'bg-card',
-          slide === 'in' ? 'motion-safe:-translate-x-[120vw]' : slide === 'out' ? 'motion-safe:translate-x-[120vw]' : 'translate-x-0',
-        )}
-      >
-        <LobbyFigur playerId={banner.id} avatar={state.players[banner.id]?.avatar ?? ''} className="text-3xl sm:text-5xl md:text-7xl" />
-        <span className="font-heading text-xl font-bold whitespace-nowrap sm:text-3xl md:text-5xl">
-          {mine ? 'DIN TUR!' : `${state.players[banner.id]?.name ?? 'Någon'}s tur!`}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // Ska jag välja något i en popup just nu? (Samma villkor som popupen i TantpanikView, utan valen från handen.)
 function hasPopup(table: TantTable, tantView: TantViewProps['tantView'], meId: string, unseenPeek: boolean): boolean {
   if (table.step === 'pick') return table.pick?.by === meId
@@ -883,7 +817,8 @@ function StatusBar({
         role="status"
         className={cn(
           'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-3xl px-3 py-1 text-center font-heading text-base leading-tight font-bold whitespace-nowrap backdrop-blur-sm max-[420px]:min-h-9 max-[420px]:gap-1.5 max-[420px]:px-2 sm:text-lg lg:text-2xl',
-          status.mine ? 'bg-primary-button text-primary-foreground shadow-primary' : 'bg-card/90 shadow-soft-sm',
+          // Alltid ljus och lugn. Vems tur det är visar turkoppen.
+          'bg-card/90 shadow-soft-sm',
         )}
       >
         {status.waitingFor && (
@@ -917,7 +852,6 @@ function statusText(
   bombShowing: boolean,
   canNope: boolean,
 ): { text: string; short: string; mine: boolean; waitingFor: string | null } {
-  const turns = table.turnsLeft > 1 ? ` (${table.turnsLeft} turer kvar)` : ''
   const say = (text: string, short: string, mine: boolean, waitingFor: string | null = null) => ({ text, short, mine, waitingFor })
   if (table.winner) {
     const text = bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`
@@ -941,7 +875,8 @@ function statusText(
   if (table.current === meId && playing) {
     if (table.step === 'place') return say('Göm tanten i högen', 'Göm tanten', true)
     if (table.step === 'arrange') return say('Ordna de översta korten', 'Ordna korten', true)
-    return say(`Din tur! Spela kort eller dra från högen${turns}`, table.turnsLeft > 1 ? `Din tur! (${table.turnsLeft} turer)` : 'Din tur!', true)
+    // Turerna kvar vid attack står på koppen.
+    return say('Spela kort eller dra', 'Spela eller dra', true)
   }
   return say(`${name(table.current)} funderar`, 'funderar', false, table.current)
 }
@@ -1262,7 +1197,7 @@ function Piles({
           {/* Min tur: Dra! på själva högen. */}
           {canDraw && (
             <span className="absolute inset-x-0 bottom-[12%] z-10 flex justify-center">
-              <span className="rounded-full bg-primary-button px-5 py-1 font-heading text-xl font-bold text-primary-foreground shadow-primary md:text-3xl">
+              <span className="rounded-full bg-primary-button px-5 py-1 font-heading text-xl font-bold text-primary-foreground shadow-primary motion-safe:animate-dra-pulse md:text-3xl">
                 Dra!
               </span>
             </span>
@@ -1274,7 +1209,10 @@ function Piles({
             </span>
           )}
         </button>
-        <span className="rounded-full bg-card/85 px-2.5 py-0.5 text-xs font-semibold shadow-soft-sm backdrop-blur-sm md:text-sm">Draghögen</span>
+        {/* På smala skärmar står min plats (där turkoppen landar) här, och högen har redan antalet och Dra!. */}
+        <span className="rounded-full bg-card/85 px-2.5 py-0.5 text-xs font-semibold shadow-soft-sm backdrop-blur-sm max-[420px]:invisible md:text-sm">
+          Draghögen
+        </span>
       </div>
 
       {/* Slänghögen tar inga tryck. */}
