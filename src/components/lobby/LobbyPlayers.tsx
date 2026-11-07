@@ -6,9 +6,11 @@ import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { useReactions } from '@/hooks/useReactions'
 import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
+import { VannSenast } from '@/components/lobby/VannSenast'
 
 // watching: en bot i ett spel som botar inte kan spela än. Den står över matchen och tittar på.
-export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean; bot?: boolean; watching?: boolean }
+// dress: vann senast i lobbyn och bär tantklänningen.
+export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean; bot?: boolean; watching?: boolean; dress?: boolean }
 
 // Spelarna i väntrummet: stora figurer med sin egen rörelse och personlighet (figurer.ts), med namnet under. emptySeats = streckade ringar
 // för lediga platser. Figurerna gungar i otakt, så att de inte rör sig som en enda.
@@ -46,6 +48,7 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
                   asleep={asleep}
                   look={lookDirection(i, lookAt)}
                   gaze={gaze}
+                  dress={player.dress}
                   className="block"
                 />
               </span>
@@ -74,6 +77,7 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
           </div>
           <span title={player.name} className="line-clamp-2 w-full leading-tight font-semibold [overflow-wrap:anywhere]">{player.name}</span>
           {player.watching && <span className="-mt-1 text-xs font-semibold text-muted-foreground">tittar på</span>}
+          {player.dress && <VannSenast />}
         </li>
       ))}
       {Array.from({ length: emptySeats }, (_, i) => (

@@ -96,6 +96,9 @@ describe('botar i gissningsspelen', () => {
       expect(Object.keys(state.leaderboard).sort()).toEqual(['bot0', 'me'])
       expect(state.leaderboard.bot0.bot).toBe('normal')
       expect(state.leaderboard.bot0.played).toBe(1)
+      // Vann någon ensam bär den tantklänningen.
+      const winners = Object.entries(state.scores).filter(([, score]) => score === Math.max(...Object.values(state.scores)))
+      expect(state.dressId).toBe(winners.length === 1 ? winners[0][0] : null)
     })
   }
 })

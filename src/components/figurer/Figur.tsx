@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { DrawnBack, DrawnFront } from '@/components/figurer/Kroppar'
 import { Face } from '@/components/figurer/Miner'
+import { Tantklanning, Vinnarkrona } from '@/components/figurer/Tantklanning'
 import { MOOD_MOTION, type BlobFigure, type Mood } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,8 @@ export function Figur({
   gaze = false,
   restartKey,
   delay,
+  dress = false,
+  crown = false,
   className,
 }: {
   figure: BlobFigure
@@ -37,6 +40,9 @@ export function Figur({
   restartKey?: number
   // Hur långt in i rörelsen figuren börjar (s), så att flera figurer inte rör sig som en enda.
   delay?: number
+  // Vinnarklänningen (den som vann senast i lobbyn) och vinnarkronan (slutskärmen i Exploderande Tanter).
+  dress?: boolean
+  crown?: boolean
   className?: string
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
@@ -70,6 +76,8 @@ export function Figur({
         <g data-lager="fram" transform={tilt && `translate(${tilt.x} ${tilt.y}) rotate(${tilt.rotate} 100 108)`}>
           {front}
         </g>
+        {dress && <Tantklanning />}
+        {crown && <Vinnarkrona />}
         {/* Sjusovaren sover: ett z som stiger och tonas bort, om och om igen. */}
         {lifelike && asleep && (
           <text x="150" y="58" className="fill-foreground font-heading text-[34px] font-bold motion-safe:animate-blob-zzz" aria-hidden>

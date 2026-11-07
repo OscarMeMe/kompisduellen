@@ -17,6 +17,7 @@ export function LobbyFigur({
   look = 0,
   gaze = false,
   lively = true,
+  dress = false,
 }: {
   playerId: string
   avatar: string
@@ -28,6 +29,8 @@ export function LobbyFigur({
   gaze?: boolean
   // Figurens egen rörelse (t.ex. Blygis som duckar). Av där figuren är liten och ska stå still, som vid ett bord.
   lively?: boolean
+  // Vinnarklänningen: den här spelaren vann senast i lobbyn.
+  dress?: boolean
 }) {
   const hit = useThrows()?.hits[playerId]
   const blob = findBlob(avatar)
@@ -43,6 +46,7 @@ export function LobbyFigur({
       gaze={gaze}
       restartKey={hit}
       delay={hit === undefined ? delay : undefined}
+      dress={dress}
       className={className}
     />
   )

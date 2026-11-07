@@ -78,6 +78,11 @@
     /* Exploderande Tanters väntrum: vinrött och krämvitt som på kortbaksidan. */
     --color-tant-vin: var(--tant-vin);
     --color-tant-kram: var(--tant-kram);
+    --color-tant-guld: var(--tant-guld);
+    --color-tant-guld-mork: var(--tant-guld-mork);
+    --color-tant-ink: var(--tant-ink);
+    --color-tant-kram-2: var(--tant-kram-2);
+    --color-klanning: var(--klanning);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
     --color-spel-yta: var(--spel-yta);
@@ -174,6 +179,15 @@
     --animate-light-pulse: light-pulse 2.8s ease-in-out infinite;
     /* "Dra!" på draghögen pulserar så länge det är min tur i Exploderande Tanter (ett undantag från de korta rörelserna). */
     --animate-dra-pulse: dra-pulse 1.1s ease-in-out infinite;
+    /* Exploderande Tanters slutskärm (TantSlutskarm): röken lättar, vinnaren hoppar upp, de utslagna glider in, utmärkelserna
+       vänds fram och knapparna tonas in. Fördröjningarna sätts i komponenten. Vinnaren jublar tre gånger och står sedan still. */
+    --animate-slut-smoke: slut-smoke 1.3s ease-out both;
+    --animate-slut-pop: slut-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    --animate-slut-up: slut-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    --animate-slut-flip: slut-flip 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    --animate-slut-fade: slut-fade 0.5s ease-out both;
+    --animate-slut-boom: slut-boom 0.5s ease-out both;
+    --animate-slut-cheer: slut-cheer 1.2s ease-in-out 3;
     /* animate-arrow-draw: en pil ritas från den ena spelaren till den andra (Imposterjaktens bord). Linjen behöver
        pathLength="1" och stroke-dasharray 1. Med fördröjning (--d) ritas rösterna en i taget. */
     --animate-arrow-draw: arrow-draw 0.35s ease-out both;
@@ -666,6 +680,82 @@
     }
 
     /* Ljuset på den som har tur pulserar svagt så länge turen varar. */
+    @keyframes slut-smoke {
+      0% {
+        opacity: 1;
+      }
+      60% {
+        opacity: 0.55;
+      }
+      100% {
+        opacity: 0;
+        visibility: hidden;
+      }
+    }
+    @keyframes slut-pop {
+      0% {
+        opacity: 0;
+        transform: scale(0.3) translateY(30px);
+      }
+      70% {
+        opacity: 1;
+        transform: scale(1.08);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    @keyframes slut-up {
+      0% {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes slut-flip {
+      0% {
+        opacity: 0;
+        transform: perspective(500px) rotateY(90deg);
+      }
+      100% {
+        opacity: 1;
+        transform: perspective(500px) rotateY(0);
+      }
+    }
+    @keyframes slut-fade {
+      0% {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      100% {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @keyframes slut-boom {
+      0% {
+        transform: scale(0) rotate(-20deg);
+      }
+      60% {
+        transform: scale(1.25) rotate(8deg);
+      }
+      100% {
+        transform: scale(1) rotate(0);
+      }
+    }
+    @keyframes slut-cheer {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-6px);
+      }
+    }
     @keyframes dra-pulse {
       0%,
       100% {
@@ -799,6 +889,15 @@
     --felt: oklch(0.9 0.06 165);
     --tant-vin: oklch(0.34 0.1 12);
     --tant-kram: oklch(0.95 0.035 85);
+    /* Slutskärmen: guld för utmärkelserna, mörk text och linjer, och en ljusare kräm för rutorna. */
+    --tant-guld: #f2b705;
+    --tant-guld-mork: #b8860b;
+    --tant-ink: #2a1a12;
+    --tant-kram-2: #fff8ec;
+    /* Vinnarklänningen: en blommig rosa tantklänning med vit spetskrage och pärlhalsband (Tantklanning). */
+    --klanning: #c9557f;
+    --klanning-mork: #8e2d55;
+    --klanning-blomma: #ffe7ef;
     --wood-edge: oklch(0.56 0.08 55);
     --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);
