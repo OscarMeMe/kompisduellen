@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { addBot, botIds, hostDeadline, hostMove, hostStart, initialState, removeBot, setBotLevel, setGame, type GameState, type HostState } from '@/lib/match'
-import { botSight, decideBotMove, fastForwardBots, observe, onlyBotsLeft, type BotLevel, type BotMemory } from '@/lib/tantbot'
-import type { CardType } from '@/lib/tantpanik-kort'
+import { botFallbackMove, botMustAct, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
+import { CARD_TYPES, type CardType } from '@/lib/tantpanik-kort'
 import type { DeckChange } from '@/lib/tantpanik'
 import { countAllCards, END_MS, myTantView, startTantMatch, sync, tantDeadline, tantMove, type TantHost } from '@/lib/tantpanik'
 
@@ -368,5 +368,94 @@ describe('Spola fram när bara botar är kvar', () => {
     const host = startTantMatch(lobby(3), seeded(2))
     expect(onlyBotsLeft(host.state)).toBe(false)
     expect(fastForwardBots(host, 0, seeded(2))).toBe(host)
+  })
+})
+
+describe('botarna fastnar aldrig', () => {
+  // Spelar en hel match som runnern i useLobby: den bot som ska göra något (botMustAct) måste alltid ha ett drag som går
+  // igenom, i varje steg. Nope! är frivilligt och klockan tar fönstret vidare. Räknar vilka kort som använts.
+  function playToEnd(count: number, levels: BotLevel[], seed: number, used: Set<CardType>): { host: TantHost; fallbacks: number } {
+    const random = seeded(seed)
+    const players: GameState['players'] = {}
+    for (let i = 1; i <= count; i++) players[`b${i}`] = { name: `Bot ${i}`, avatar: '🙂', bot: levels[i % levels.length] }
+    let host = startTantMatch({ ...initialState('tantpanik'), players, tantSettings: { trap: true, level: 'normal' } }, random)
+    const memories: Record<string, BotMemory> = {}
+    let fallbacks = 0
+    let seenAction = 0
+    for (let step = 0; step < 4000 && host.state.phase === 'playing'; step++) {
+      const now = step * 10_000
+      const table = host.state.tantpanik!
+      expect(table.error).toBeNull()
+      // Det som hänt: vilka kort som spelats, desarmerats, slagit igen eller exploderat.
+      const action = table.lastAction
+      if (action && action.n !== seenAction) {
+        seenAction = action.n
+        if (action.kind === 'bomb') used.add('tant')
+        if (action.kind === 'bomb' && action.saved) used.add('fika')
+        if (action.kind === 'trap') used.add('snara')
+      }
+      if (table.step === 'window' && table.pending) for (const type of table.pending.cards) used.add(type)
+      if (table.winner) {
+        host = tantDeadline(host, host.state.deadline!, host.state.deadline!, random)
+        continue
+      }
+      const actor = table.order.find((id) => botMustAct(table, id))
+      // Nope!: den första boten som vill säga det.
+      const noper = table.step === 'window' ? table.order.find((id) => decideBotMove(botSight(host, id)!, players[id].bot!, seeded(seed + step))) : undefined
+      const id = actor ?? noper
+      if (!id) {
+        expect(table.step).toBe('window')
+        host = tantDeadline(host, host.state.deadline!, host.state.deadline!, random)
+        continue
+      }
+      const sight = botSight(host, id)!
+      const memory = observe(memories[id] ?? newBotMemory(sight.table), sight.table)
+      const move = decideBotMove(sight, players[id].bot!, random, memory)
+      // En bot som ska göra något har alltid ett beslut (annars skulle den stå still i lobbyn).
+      if (actor) expect(move, `${id} i steget ${table.step}`).not.toBeNull()
+      if (move?.type === 'tNope') used.add('nadu')
+      let next = move ? tantMove(host, id, move, null, now, random) : host
+      if (next.state.tantpanik === table && actor) {
+        // Draget gick inte: reservdraget (som skyddet i useLobby) ska alltid gå.
+        fallbacks++
+        const fallback = botFallbackMove(sight)
+        expect(fallback).not.toBeNull()
+        next = tantMove(host, id, fallback!, null, now, random)
+        expect(next.state.tantpanik).not.toBe(table)
+      }
+      if (move && next.state.tantpanik) memories[id] = remember(memory, move, sight, next.state.tantpanik)
+      host = next
+    }
+    return { host, fallbacks }
+  }
+
+  it('hela matcher med bara botar tar alltid slut, och alla kort används', () => {
+    const used = new Set<CardType>()
+    let fallbacks = 0
+    for (let seed = 1; seed <= 60; seed++) {
+      const levels: BotLevel[][] = [['latt'], ['normal'], ['svar'], ['latt', 'normal', 'svar']]
+      const result = playToEnd(2 + (seed % 9), levels[seed % levels.length], seed, used)
+      expect(result.host.state.phase).toBe('finished')
+      fallbacks += result.fallbacks
+    }
+    expect([...CARD_TYPES].filter((type) => !used.has(type))).toEqual([])
+    // Botarnas egna beslut går alltid igenom, så reservdraget behövs aldrig.
+    expect(fallbacks).toBe(0)
+  })
+
+  it('reservdraget finns i varje steg där en bot ska göra något', () => {
+    const host = startTantMatch(lobby(3), seeded(4))
+    const t = host.state.tantpanik!
+    const me = t.current
+    const sight = (table: typeof t) => ({ me, table, view: myTantView(host.secrets, table, me) })
+    expect(botFallbackMove(sight(t))).toEqual({ type: 'tDraw' })
+    expect(botFallbackMove(sight({ ...t, step: 'place' }))).toEqual({ type: 'tPlace', position: 0 })
+    expect(botFallbackMove(sight({ ...t, step: 'pick', pick: { by: me, from: 'x', count: 3 } }))).toEqual({ type: 'tPick', index: 0 })
+    expect(botFallbackMove(sight({ ...t, step: 'give', favor: { from: me, to: 'x' } }))?.type).toBe('tGive')
+    expect(botFallbackMove({ ...sight({ ...t, step: 'arrange' }), view: { ...myTantView(host.secrets, t, me), arrange: ['blanda', 'tant', 'fika'] } })).toEqual({ type: 'tArrange', order: [0, 1, 2] })
+    // Inte när det är någon annans tur, eller i Nope!-fönstret.
+    const other = t.order.find((id) => id !== me)!
+    expect(botFallbackMove({ me: other, table: t, view: myTantView(host.secrets, t, other) })).toBeNull()
+    expect(botFallbackMove(sight({ ...t, step: 'window' }))).toBeNull()
   })
 })

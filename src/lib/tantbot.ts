@@ -307,6 +307,49 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random, 
   return { type: 'tDraw' }
 }
 
+// Ska boten göra något just nu (dess tur, eller ett val som väntar på den)? Nope! räknas inte, eftersom det är frivilligt
+// och klockan tar fönstret vidare.
+export function botMustAct(table: TantTable, me: string): boolean {
+  if (table.winner || table.error || table.out.includes(me) || !table.order.includes(me)) return false
+  switch (table.step) {
+    case 'turn':
+    case 'place':
+    case 'arrange':
+      return table.current === me
+    case 'give':
+      return table.favor?.from === me
+    case 'pick':
+      return table.pick?.by === me
+    case 'window':
+      return false
+  }
+}
+
+// Reservdraget när en bot borde ha gjort något men inte gjort det (BOT_STUCK_MS): alltid ett giltigt och enkelt val i
+// varje steg. Drar på sin tur, ger bort det första kortet, väljer den första baksidan, gömmer tanten överst och lägger
+// tillbaka korten i samma ordning.
+export function botFallbackMove(sight: BotSight): TantMove | null {
+  const { me, table, view } = sight
+  if (!botMustAct(table, me)) return null
+  switch (table.step) {
+    case 'turn':
+      return { type: 'tDraw' }
+    case 'place':
+      return { type: 'tPlace', position: 0 }
+    case 'arrange':
+      return view.arrange ? { type: 'tArrange', order: view.arrange.map((_, i) => i) } : null
+    case 'give':
+      return view.hand[0] ? { type: 'tGive', card: view.hand[0].id } : null
+    case 'pick':
+      return { type: 'tPick', index: 0 }
+    default:
+      return null
+  }
+}
+
+// Har en bot inte gjort något på så här länge (ms) när den ska, gör värden reservdraget åt den.
+export const BOT_STUCK_MS = 10_000
+
 // Hur länge boten "tänker" innan draget (ms): 1–3 sekunder, men snabbare för Nope! så att den hinner.
 export function botDelay(sight: BotSight, random: Random): number {
   if (sight.table.step === 'window') return 900 + random() * 1800

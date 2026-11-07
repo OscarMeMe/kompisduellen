@@ -23,6 +23,7 @@ import {
   bombsInDeck,
   levelFor,
   levelLine,
+  moveAllowed,
   validTargets,
 } from '@/lib/tantpanik'
 import { CARDS, NOPE_SECONDS, trapCount, type CardType } from '@/lib/tantpanik-kort'
@@ -991,5 +992,72 @@ describe('statusraden medan tanten göms', () => {
     host = move(host, 'a', { type: 'tDraw' })
     expect(table(host).step).toBe('place')
     expect(levelLine(table(host))).toBe('Normal: 1 tant i högen')
+  })
+})
+
+describe('ingen genväg för värden', () => {
+  // Värden (vard) och en bot (bot). Boten har tur och spelar Se framtiden.
+  function botsTurn(): HostState {
+    const host = setup({ bot: ['tjuvkika', 'fika', 'intemin'], vard: ['fika', 'blanda'] }, ['regnbage', 'tant', 'kupong', 'stickning', 'blanda'])
+    return { ...host, state: { ...host.state, players: { ...host.state.players, bot: { ...host.state.players.bot, bot: 'normal' } } } }
+  }
+  const tryMove = (host: HostState, m: TantMove) => hostMove(host, 'vard', m, ['vard', 'bot'], 2000, seeded(9), `vard-${m.type}`)
+  // Inget i matchen ändras: bordet, högen, händerna och klockan. Bara beskedet och dragets nummer (att värden sett det).
+  function expectNothingChanged(before: HostState, after: HostState) {
+    const a = before.secrets as TantSecrets
+    const b = after.secrets as TantSecrets
+    expect(after.state.tantpanik).toEqual(before.state.tantpanik)
+    expect(after.state.deadline).toBe(before.state.deadline)
+    expect(after.state.phase).toBe(before.state.phase)
+    expect(b.deck).toEqual(a.deck)
+    expect(b.hands).toEqual(a.hands)
+    expect(b.discard).toEqual(a.discard)
+    expect(b.removed).toEqual(a.removed)
+    expect(b.notices.vard?.text).toBe('Det gick inte just nu.')
+  }
+
+  it('värden kan inte dra när det är en bots tur', () => {
+    const before = botsTurn()
+    expect(before.state.tantpanik!.current).toBe('bot')
+    expectNothingChanged(before, tryMove(before, { type: 'tDraw' }))
+    // Inte spela ett kort heller.
+    const blanda = (before.secrets as TantSecrets).hands.vard.find((card) => card.type === 'blanda')!.id
+    expectNothingChanged(before, tryMove(before, { type: 'tPlay', cards: [blanda] }))
+  })
+
+  it('värden kan inte dra medan en bot är mitt i Se framtiden', () => {
+    const played = play(botsTurn() as TantHost, 'bot', ['tjuvkika'])
+    // Nope!-fönstret för Se framtiden är öppet.
+    expect(table(played).step).toBe('window')
+    expectNothingChanged(played, tryMove(played, { type: 'tDraw' }))
+    // Fönstret har stängts och boten tittar i högen: fortfarande botens tur.
+    const peeking = settle(played)
+    expect(table(peeking).step).toBe('turn')
+    expect(table(peeking).current).toBe('bot')
+    expect(myTantView(peeking.secrets, table(peeking), 'bot').peek).toEqual(['regnbage', 'tant', 'kupong'])
+    expectNothingChanged(peeking, tryMove(peeking, { type: 'tDraw' }))
+    // Inga andra steg heller.
+    for (const m of [{ type: 'tPlace', position: 0 }, { type: 'tArrange', order: [0, 1, 2] }, { type: 'tPick', index: 0 }] as TantMove[]) {
+      expectNothingChanged(peeking, tryMove(peeking, m))
+    }
+    // Boten kan dra som vanligt.
+    const drawn = move(peeking, 'bot', { type: 'tDraw' })
+    expect(table(drawn).current).toBe('vard')
+  })
+
+  it('moveAllowed följer fas, tur och steg för alla drag', () => {
+    const host = botsTurn() as TantHost
+    const t = table(host)
+    expect(moveAllowed(t, 'bot', { type: 'tDraw' })).toBe(true)
+    expect(moveAllowed(t, 'vard', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed(t, 'vard', { type: 'tNope', card: 'x', level: 0 })).toBe(false)
+    expect(moveAllowed(t, 'okand', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed({ ...t, step: 'place' }, 'bot', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed({ ...t, step: 'place' }, 'bot', { type: 'tPlace', position: 0 })).toBe(true)
+    expect(moveAllowed({ ...t, step: 'give', favor: { from: 'vard', to: 'bot' } }, 'vard', { type: 'tGive', card: 'x' })).toBe(true)
+    expect(moveAllowed({ ...t, step: 'give', favor: { from: 'vard', to: 'bot' } }, 'bot', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed({ ...t, out: ['bot'] }, 'bot', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed({ ...t, winner: 'bot' }, 'bot', { type: 'tDraw' })).toBe(false)
+    expect(moveAllowed({ ...t, winner: 'bot' }, 'vard', { type: 'tFinish' })).toBe(true)
   })
 })
