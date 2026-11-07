@@ -1141,3 +1141,32 @@ describe('tjuven ser aldrig min handordning', () => {
   })
 
 })
+
+describe('matchens siffror', () => {
+  it('räknar drag, Nope!, stölder, Desarmera och gömda tanter', () => {
+    let host = setup({ a: ['regnbage', 'regnbage', 'dudar', 'fika'], b: ['nadu', 'kupong', 'tjanst'] }, ['tant', 'regnbage', 'kupong'])
+    // Riktad attack på b, som säger Nope!.
+    host = play(host, 'a', ['dudar'], { target: 'b' })
+    host = move(host, 'b', { type: 'tNope', card: cardId(host, 'b', 'nadu'), level: 0 })
+    host = settle(host)
+    // Ett par mot b: a tar ett kort.
+    host = settle(play(host, 'a', ['regnbage', 'regnbage'], { target: 'b' }))
+    host = pick(host)
+    // a drar tanten, desarmerar och gömmer den.
+    host = move(host, 'a', { type: 'tDraw' })
+    host = move(host, 'a', { type: 'tPlace', position: 1 })
+    // En tjänst räknas inte som stöld.
+    host = settle(play(host, 'b', ['tjanst'], { target: 'a' }))
+    host = move(host, 'a', { type: 'tGive', card: host.secrets.hands.a[0].id })
+    const stats = table(host).stats!
+    expect(stats.nopes).toEqual({ b: 1 })
+    expect(stats.steals).toEqual({ a: 1 })
+    expect(stats.stolen).toBe(1)
+    expect(stats.defuses).toEqual({ a: 1 })
+    expect(stats.hidden).toBe(1)
+    // Spela, Nope!, spela, välja, dra, gömma, spela och ge: åtta drag som gick igenom.
+    expect(stats.moves).toBe(8)
+    // Ett ogiltigt drag räknas inte.
+    expect(table(move(host, 'a', { type: 'tPlace', position: 0 })).stats!.moves).toBe(8)
+  })
+})

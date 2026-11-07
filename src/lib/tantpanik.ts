@@ -101,6 +101,20 @@ export type TantAction = {
   from?: string
 }
 
+// Siffror från matchen för slutskärmen: antal drag, stulna kort och gömda tanter, och per spelare hur många Nope! den
+// sagt, kort den stulit (par, tretal och Tantsnarans motstöld, inte tjänster) och gånger den desarmerat. Bara antal,
+// aldrig vilka kort, så de kan ligga i det alla ser.
+export type TantStats = {
+  moves: number
+  stolen: number
+  hidden: number
+  nopes: Record<string, number>
+  steals: Record<string, number>
+  defuses: Record<string, number>
+}
+
+export const EMPTY_TANT_STATS: TantStats = { moves: 0, stolen: 0, hidden: 0, nopes: {}, steals: {}, defuses: {} }
+
 // Det alla ser.
 export type TantTable = {
   // Spelarna i turordning, även de som är ute.
@@ -135,6 +149,8 @@ export type TantTable = {
   error: string | null
   // Det senaste som hänt vid bordet (se TantAction). null innan något hänt.
   lastAction: TantAction | null
+  // Matchens siffror (slutskärmen). Saknas hos en värd med en äldre version.
+  stats?: TantStats
 }
 
 // Bara värden har det här.
@@ -322,6 +338,7 @@ export function startTantMatch(ready: GameState, random: Random): TantHost {
     winner: null,
     error: null,
     lastAction: null,
+    stats: EMPTY_TANT_STATS,
   }
   return sync({
     state: {
@@ -451,6 +468,16 @@ function name(d: Draft, id: string): string {
   return nameOf(d.state, id)
 }
 
+// Räknar upp matchens siffror (TantStats). Ett nytt objekt varje gång, så att bordet aldrig ändras på plats.
+function count(d: Draft, key: 'moves' | 'stolen' | 'hidden', by = 1) {
+  const stats = d.table.stats ?? EMPTY_TANT_STATS
+  d.table.stats = { ...stats, [key]: stats[key] + by }
+}
+function countFor(d: Draft, key: 'nopes' | 'steals' | 'defuses', id: string) {
+  const stats = d.table.stats ?? EMPTY_TANT_STATS
+  d.table.stats = { ...stats, [key]: { ...stats[key], [id]: (stats[key][id] ?? 0) + 1 } }
+}
+
 // Turen är slut. Finns fler turer kvar fortsätter samma spelare, annars går turen vidare med en vanlig tur.
 function endTurn(d: Draft) {
   delete d.secrets.peek[d.table.current]
@@ -526,6 +553,7 @@ function draw(d: Draft, from: 'top' | 'bottom') {
   const fika = hand.findIndex((other) => other.type === 'fika')
   if (fika >= 0) {
     d.secrets.discard.push(...hand.splice(fika, 1))
+    countFor(d, 'defuses', id)
     d.secrets.bomb = card
     d.table.step = 'place'
     act(d, 'bomb', id, 'tant', true)
@@ -571,6 +599,10 @@ function transfer(
     return
   }
   d.secrets.hands[toId].push(card)
+  if (reason !== 'favor') {
+    count(d, 'stolen')
+    countFor(d, 'steals', toId)
+  }
   // Alla ser att ett kort byter hand. Bara de två ser vilket.
   const n = act(d, 'take', toId, null)
   d.table.lastAction = { ...d.table.lastAction!, from: fromId }
@@ -708,6 +740,7 @@ function nope(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tNope
   if (index < 0) return 'invalid'
   d.secrets.discard.push(...hand.splice(index, 1))
   const nopes = pending.nopes + 1
+  countFor(d, 'nopes', playerId)
   d.table.pending = { ...pending, nopes, lastNopeBy: playerId }
   d.state = { ...d.state, deadline: now + NOPE_SECONDS * 1000 }
   log(
@@ -848,6 +881,7 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
       if (!Number.isInteger(move.position) || move.position < 0 || move.position > d.secrets.deck.length) return 'invalid'
       d.secrets.deck.splice(move.position, 0, bomb)
       d.secrets.bomb = null
+      count(d, 'hidden')
       table.step = 'turn'
       log(d, `${name(d, playerId)} har gömt tanten i högen.`, 'place')
       endTurn(d)
@@ -902,6 +936,7 @@ export function tantMove(host: TantHost, playerId: string, move: TantMove, nr: s
   if (nr !== null && seen.includes(nr)) return host
   const d = draft(host, random)
   const result = applyMove(d, playerId, move, now)
+  if (result !== 'invalid') count(result, 'moves')
   const done = result === 'invalid' ? draft(host, random) : result
   if (result === 'invalid') notify(done, playerId, 'Det gick inte just nu.')
   if (nr !== null) done.secrets.handled[playerId] = [...seen, nr].slice(-HANDLED_KEPT)

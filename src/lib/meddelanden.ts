@@ -116,6 +116,9 @@ const isTantEvent = shape({
 
 const isTantTable = (value: unknown): value is TantTable =>
   shape({
+    stats: (stats: unknown) =>
+      stats === undefined ||
+      shape({ moves: isNumber, stolen: isNumber, hidden: isNumber, nopes: recordOf(isNumber), steals: recordOf(isNumber), defuses: recordOf(isNumber) })(stats),
     order: listOf(isString),
     out: listOf(isString),
     current: isString,
@@ -200,6 +203,7 @@ const isGameState = shape({
   tantSettings: shape({ trap: isBoolean, level: (level: unknown) => level === undefined || isTantLevel(level) }),
   matchPlayerIds: listOf(isString),
   benchBots: recordOf(isPlayerInfo),
+  dressId: orNull(isString),
 })
 
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.
