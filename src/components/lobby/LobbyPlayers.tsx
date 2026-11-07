@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Crown } from 'lucide-react'
+import { Bot, Crown } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { useGazeFollow } from '@/hooks/useGazeFollow'
 import { useReactions } from '@/hooks/useReactions'
 import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 
-export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean }
+export type LobbyPlayer = { id: string; name: string; avatar: string; host: boolean; bot?: boolean }
 
 // Spelarna i väntrummet: stora figurer med sin egen rörelse och personlighet (figurer.ts), med namnet under. emptySeats = streckade ringar
 // för lediga platser. Figurerna gungar i otakt, så att de inte rör sig som en enda.
@@ -58,6 +58,12 @@ export function LobbyPlayers({ players, meId, emptySeats }: { players: readonly 
             {player.host && (
               <span className="absolute -top-1 -right-2 flex size-7 items-center justify-center rounded-full border bg-card shadow-soft-sm">
                 <Crown className="size-4 text-crown" aria-label="Värd" />
+              </span>
+            )}
+            {/* En bot har en liten robot vid figuren. */}
+            {player.bot && (
+              <span className="absolute -top-1 -left-2 flex size-7 items-center justify-center rounded-full border bg-card shadow-soft-sm">
+                <Bot className="size-4" aria-label="Bot" />
               </span>
             )}
             {player.id === meId && (

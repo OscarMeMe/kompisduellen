@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 const DRAG_LIFT = 0.32
 // Hur högt kortet musen pekar på lyfts (px).
 const MOUSE_LIFT = 26
+// Hur högt ett nytt kort sticker upp ur handen (px).
+const FRESH_LIFT = 22
 // Hur högt ett kort som lyser (Nope!) åker upp ur handen (px).
 const GLOW_LIFT = 36
 
@@ -40,6 +42,7 @@ export function Solfjader({
   selected,
   glow,
   hiddenId = null,
+  freshId = null,
   onTap,
   onReorder,
   onOverlap,
@@ -49,6 +52,8 @@ export function Solfjader({
   selected: readonly string[]
   glow: readonly string[]
   hiddenId?: string | null
+  // Kortet jag nyss fick: det sticker upp lite, lyser och har etiketten NY.
+  freshId?: string | null
   onTap: (id: string) => void
   // Ett kort har flyttats: den nya ordningen.
   onReorder: (ids: string[]) => void
@@ -247,6 +252,7 @@ export function Solfjader({
         const lit = glow.includes(card.id)
         const dragged = moving?.id === card.id
         const dimmed = glow.length > 0 && !lit
+        const isFresh = card.id === freshId && hiddenId !== card.id
         const pointed = mouseOver === i && mode === null
         // Ett lyft kort sticker upp över bordet.
         const lift = dragged
@@ -254,6 +260,7 @@ export function Solfjader({
           : Math.max(
               Math.round(cardHeight * (hovered === i ? (previewing ? DRAG_LIFT : 0.1) : isSelected ? 0.26 : 0)),
               lit && !reduced ? GLOW_LIFT : 0,
+              isFresh ? FRESH_LIFT : 0,
               pointed ? MOUSE_LIFT : 0,
             )
         return (
@@ -278,6 +285,7 @@ export function Solfjader({
               // Ett kort som går att spela just nu (Nope!) hoppar upp och lyser orange. De andra blir gråa och tar inga tryck.
               lit && !isSelected && 'shadow-[0_0_24px_6px] shadow-primary/70 ring-4 ring-primary motion-safe:animate-light-pulse',
               dimmed && 'brightness-75 saturate-[0.25]',
+              isFresh && !isSelected && !lit && 'shadow-[0_0_22px_6px] shadow-sun ring-4 ring-sun',
               dragged && 'cursor-grabbing drop-shadow-[0_14px_20px_rgb(0_0_0/0.35)]',
               hiddenId === card.id && 'opacity-0',
             )}
@@ -291,6 +299,11 @@ export function Solfjader({
             }}
           >
             <FanCard type={card.type} width={cardWidth} />
+            {isFresh && (
+              <span className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-sun px-2 py-0.5 font-heading text-xs font-bold text-foreground shadow-soft-sm md:text-sm">
+                NY
+              </span>
+            )}
           </button>
         )
       })}

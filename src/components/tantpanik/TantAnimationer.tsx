@@ -12,7 +12,7 @@ import type { MyTantView, TantTable } from '@/lib/tantpanik'
 import { cardName, type CardType } from '@/lib/tantpanik-kort'
 
 // Hur länge det dragna kortet visas stort innan det åker ner till handen, och hur länge tanten visas (ms).
-const SHOW_MS = 1200
+const SHOW_MS = 2000
 // Explosionen: när det smäller (ms efter att kortet börjat vändas), när Desarmera landar och när allt är klart.
 const BOOM_AT = 450
 const DEFUSE_AT = 1350
@@ -234,11 +234,13 @@ export function TableAnimations({
             <div className="perspective-[1400px]">
               <div className="relative transform-3d motion-safe:animate-tant-reveal" style={fromStyle(show)}>
                 <div className="backface-hidden">
+                  {/* Lika stort som när man förstorar ett kort, men så att texten under får plats. */}
                   <TantKort
                     type={show.type}
                     size="zoom"
-                    sizes="min(82vw, 420px)"
-                    className="w-[min(82vw,calc((100dvh-10rem)*107/147),420px)] drop-shadow-[0_18px_28px_rgb(0_0_0/0.4)]"
+                    sizes={`${shownWidth()}px`}
+                    className="drop-shadow-[0_18px_28px_rgb(0_0_0/0.4)]"
+                    style={{ width: shownWidth() }}
                   />
                 </div>
                 <div aria-hidden className="absolute inset-0 rotate-y-180 backface-hidden">
@@ -249,7 +251,7 @@ export function TableAnimations({
           </div>
           <p
             className={
-              'rounded-full bg-card px-4 py-2 text-center font-heading text-lg font-bold shadow-soft ' +
+              'rounded-full bg-card px-5 py-2 text-center font-heading text-2xl font-bold shadow-soft md:text-3xl ' +
               (leaving ? 'opacity-0 transition-opacity duration-200' : 'motion-safe:animate-pop')
             }
           >
@@ -257,12 +259,20 @@ export function TableAnimations({
               ? show.gift
                 ? `Du fick ${cardName(show.type)} av ${name(show.from)}!`
                 : `Du tog ${cardName(show.type)} från ${name(show.from)}!`
-              : `Du drog ${cardName(show.type)}`}
+              : `Du drog: ${cardName(show.type)}`}
           </p>
         </div>
       )}
     </>
   )
+}
+
+// Hur brett det dragna kortet visas: som förstoringen (cirka 60 % av skärmhöjden på dator, minst 360 px brett, och
+// hela bredden på mobil), men så att texten under kortet får plats.
+function shownWidth(): number {
+  const wide = window.innerWidth >= 768 || window.matchMedia?.('(pointer: fine)').matches
+  const wanted = wide ? Math.max(360, window.innerHeight * 0.6 * (107 / 147)) : window.innerWidth - 24
+  return Math.round(Math.min(wanted, window.innerWidth - 24, (window.innerHeight - 170) * (107 / 147)))
 }
 
 function reducedMotion(): boolean {

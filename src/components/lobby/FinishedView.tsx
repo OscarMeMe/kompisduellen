@@ -69,9 +69,10 @@ export function FinishedView({
   const endedEarly = state.round < state.rounds
   const canRematch = canStart(state.game, online.length)
   // Önskemål om revansch från de som inte är värd: "3 av 5 vill ha revansch".
+  // Botar önskar inget.
   const wishes = rematchWishCount(
     state,
-    online.map((p) => p.id),
+    online.filter((p) => !p.bot).map((p) => p.id),
     online.filter((p) => p.host).map((p) => p.id),
   )
   const iWish = state.rematchWishes.includes(meId)
