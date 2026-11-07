@@ -1011,6 +1011,34 @@ export function waitingFor(table: TantTable): string | null {
   return table.current
 }
 
+// Ser det ut som att värden inte hänger med (för gästerna, "Väntar på värden")? Värdens webbläsare spelar för botarna och
+// räknar ned Nope!-fönstret, så om en bot borde ha gjort något för länge sedan (HOST_AWAY_MS utan att något hänt) eller
+// en nedräkning gått ut för mer än HOST_LATE_MS sedan, väntar alla på värden. hostNow = värdens klocka just nu (min klocka
+// minus skillnaden), sinceChange = hur länge sedan läget senast ändrades (ms).
+export const HOST_AWAY_MS = 8000
+export const HOST_LATE_MS = 3000
+
+export function hostSeemsAway(
+  table: TantTable,
+  players: GameState['players'],
+  deadline: number | null,
+  hostNow: number,
+  sinceChange: number,
+): boolean {
+  if (table.error) return false
+  // En nedräkning (Nope!-fönstret eller vinnarens ögonblick) som borde ha gått ut.
+  if ((table.step === 'window' || table.winner) && deadline !== null) return hostNow > deadline + HOST_LATE_MS
+  if (table.winner) return false
+  const waiting = waitingFor(table)
+  return waiting !== null && players[waiting]?.bot !== undefined && sinceChange > HOST_AWAY_MS
+}
+
+// Riktiga spelare i matchen som tappat anslutningen (inte med i närvarolistan). Botar och de som är ute räknas inte.
+// Matchen väntar på dem som vanligt. Platsen visar bara "Frånkopplad".
+export function disconnectedPlayers(table: TantTable, players: GameState['players'], onlineIds: readonly string[]): string[] {
+  return table.order.filter((id) => !table.out.includes(id) && players[id]?.bot === undefined && !onlineIds.includes(id))
+}
+
 // Texten under namnet på prispallen. Poängen är placeringen: den som åkte ut först har 1, vinnaren lika många som
 // antalet spelare. "Sist kvar!" för vinnaren och "Exploderade som 1:a" och så vidare för de andra.
 export function tantPlacementText(score: number, players: number): string {

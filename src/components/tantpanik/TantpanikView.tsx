@@ -22,7 +22,7 @@ import { loadSoundOn, playBullseye, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import { bombsInDeck, moveAllowed, waitingFor, type MyTantView, type TantEvent, type TantMove, type TantTable } from '@/lib/tantpanik'
+import { bombsInDeck, disconnectedPlayers, hostSeemsAway, moveAllowed, waitingFor, type MyTantView, type TantEvent, type TantMove, type TantTable } from '@/lib/tantpanik'
 import { cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +36,7 @@ const NOTICE_MS = 2500
 export function TantpanikView({
   state,
   me,
+  online,
   isHost,
   clockOffset,
   tantView,
@@ -45,6 +46,8 @@ export function TantpanikView({
   onBotsOnly,
 }: TantViewProps) {
   const table = state.tantpanik
+  // Gästerna: värden verkar inte hänga med (en bot borde ha spelat, eller en nedräkning borde ha gått ut).
+  const hostAway = useHostAway(table ?? null, state, isHost, clockOffset)
   // Bara drag som är tillåtna just nu skickas (moveAllowed, samma regel som spelmotorn), så att ett tryck på något som
   // inte är mitt aldrig blir ett drag. Spelmotorn avvisar dem ändå.
   const onMove = (move: TantMove) => {
@@ -262,7 +265,20 @@ export function TantpanikView({
         onRules={() => setRules(true)} onMenu={() => setMenu(true)} />
       {/* Ovanpå Nope!-fönstret, så att den som spelar syns lysa. */}
       <div ref={seatsRef} className="relative z-[46]">
-        <Opponents state={state} table={table} meId={me.id} playingId={nopeOpen ? (table.pending?.by ?? null) : null} />
+        <Opponents
+          state={state}
+          table={table}
+          meId={me.id}
+          playingId={nopeOpen ? (table.pending?.by ?? null) : null}
+          away={disconnectedPlayers(table, state.players, online.map((player) => player.id))}
+        />
+        {/* Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här. */}
+        {hostAway && (
+          <p role="status" className="pointer-events-none absolute inset-x-0 top-full z-10 mx-auto mt-1 w-fit rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm">
+            Väntar på värden
+            <Dots />
+          </p>
+        )}
       </div>
 
 
@@ -613,6 +629,27 @@ function usePeeker(table: TantTable | null): string | null {
   return shown.by
 }
 
+// Gästerna: ser det ut som att värden inte hänger med (hostSeemsAway)? Räknar från när läget senast ändrades, och tittar
+// igen varje sekund. Aldrig hos värden själv.
+function useHostAway(table: TantTable | null, state: GameState, isHost: boolean, clockOffset: number): boolean {
+  const [away, setAway] = useState(false)
+  const watching = !isHost && !!table && state.phase === 'playing'
+  const { players, deadline } = state
+  useEffect(() => {
+    if (!watching || !table) return
+    // Läget har just ändrats (effekten körs om för varje nytt bord), så tiden räknas härifrån.
+    const changedAt = Date.now()
+    const check = () => {
+      const now = Date.now()
+      setAway(hostSeemsAway(table, players, deadline, now - clockOffset, now - changedAt))
+    }
+    check()
+    const timer = setInterval(check, 1000)
+    return () => clearInterval(timer)
+  }, [watching, table, players, deadline, clockOffset])
+  return watching && away
+}
+
 // Hur länge ett nytt kort är markerat i handen (ms).
 const FRESH_MS = 5000
 
@@ -920,7 +957,8 @@ function HistoryButton({ table, onOpen }: { table: TantTable; onOpen: () => void
 // Motspelarna i turordning, från den som kommer efter mig: figur, namn och en liten solfjäder med baksidor. Den som har
 // tur lyser. Raden går att svepa när de inte får plats, och den som har tur scrollas fram.
 // playingId = den som just spelat ett kort (Nope!-fönstret): platsen lyser.
-function Opponents({ state, table, meId, playingId }: { state: GameState; table: TantTable; meId: string; playingId: string | null }) {
+// away = riktiga spelare som tappat anslutningen. Platsen visar "Frånkopplad", och matchen väntar på dem som vanligt.
+function Opponents({ state, table, meId, playingId, away }: { state: GameState; table: TantTable; meId: string; playingId: string | null; away: string[] }) {
   const start = Math.max(0, table.order.indexOf(meId))
   const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
   const listRef = useRef<HTMLUListElement>(null)
@@ -941,7 +979,7 @@ function Opponents({ state, table, meId, playingId }: { state: GameState; table:
         const turn = table.current === id && !out && !table.winner
         return (
           <li key={id} data-seat={id} className="shrink-0">
-            <Opponent state={state} id={id} out={out} turn={turn} playing={playingId === id} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
+            <Opponent state={state} id={id} out={out} away={away.includes(id)} turn={turn} playing={playingId === id} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
       })}
@@ -954,6 +992,7 @@ function Opponent({
   state,
   id,
   out,
+  away,
   turn,
   playing,
   count,
@@ -962,6 +1001,8 @@ function Opponent({
   state: GameState
   id: string
   out: boolean
+  // Har tappat anslutningen (riktig spelare). Matchen väntar på den som vanligt.
+  away: boolean
   turn: boolean
   playing: boolean
   count: number
@@ -984,6 +1025,8 @@ function Opponent({
         // Spelar just ett kort: platsen lyser gult medan kortet ligger i mitten.
         playing && 'z-10 bg-sun-soft shadow-[0_0_22px_8px] shadow-sun ring-4 ring-sun',
         out && 'opacity-45 grayscale',
+        // Frånkopplad: platsen får bli bredare på smal skärm, så att hela ordet syns.
+        away && !out && 'opacity-70 max-[420px]:max-w-none',
       )}
     >
       <span className="relative shrink-0">
@@ -1000,11 +1043,17 @@ function Opponent({
           <span className="truncate max-[420px]:hidden">{name}</span>
           <span className="truncate text-[11px] min-[421px]:hidden">{shortName}</span>
         </span>
-        {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
+        {out ? (
+          <span className="text-[11px] font-semibold text-muted-foreground">Ute</span>
+        ) : away ? (
+          <span className="text-[11px] font-semibold text-muted-foreground">Frånkopplad</span>
+        ) : (
+          <MiniFan count={count} />
+        )}
       </span>
     </span>
   )
-  const label = `${name}, ${out ? 'ute' : `${count} kort`}${turn ? ', har turen' : ''}`
+  const label = `${name}, ${out ? 'ute' : `${count} kort`}${away ? ', frånkopplad' : ''}${turn ? ', har turen' : ''}`
   if (!canThrow) return <div aria-label={label}>{seat}</div>
   return (
     <Popover open={open} onOpenChange={setOpen}>
