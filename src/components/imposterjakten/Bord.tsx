@@ -109,6 +109,9 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           className={cn(
             'absolute flex flex-col items-center justify-center overflow-hidden rounded-[50%] border-[6px] border-wood-edge bg-felt px-2 text-center shadow-soft',
             small ? 'inset-[32%] border-4' : 'inset-x-[25%] inset-y-[31%] tiny:inset-x-[24%] tiny:inset-y-[33%] sm:inset-[27%]',
+            // 5 och 6 spelare på en låg telefon: de översta platserna har två ord under namnet, så bordet börjar lite längre
+            // ned för att orden inte ska nudda träkanten.
+            listWhenLow && 'low:top-[38%]!',
           )}
         >
           {center}
