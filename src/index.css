@@ -75,6 +75,9 @@
     --color-room: var(--room);
     --color-wood: var(--wood);
     --color-felt: var(--felt);
+    /* Exploderande Tanters väntrum: vinrött och krämvitt som på kortbaksidan. */
+    --color-tant-vin: var(--tant-vin);
+    --color-tant-kram: var(--tant-kram);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
     --color-spel-yta: var(--spel-yta);
@@ -783,6 +786,8 @@
     --figur-svart: oklch(0.22 0.012 260);
     --wood: oklch(0.74 0.085 65);
     --felt: oklch(0.9 0.06 165);
+    --tant-vin: oklch(0.34 0.1 12);
+    --tant-kram: oklch(0.95 0.035 85);
     --wood-edge: oklch(0.56 0.08 55);
     --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);

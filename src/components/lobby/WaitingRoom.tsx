@@ -30,6 +30,8 @@ import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/t
 import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
 import { TantVantrum } from '@/components/tantpanik/TantVantrum'
 import { TantBotar } from '@/components/tantpanik/TantBotar'
+import { TantKafferep, TantKortFlakt, TantRubrik, TantVanta } from '@/components/tantpanik/TantVantrumVy'
+import { waitingText } from '@/lib/tantvantrum'
 import { MAX_BOTS, type BotLevel } from '@/lib/tantbot'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
@@ -118,6 +120,11 @@ export function WaitingRoom({
   // Namnen från läget, där den som heter likadant som någon annan har fått en siffra.
   const lobbyName = (player: OnlinePlayer) => state.players[player.id]?.name ?? player.name
   const hostPlayer = online.find((p) => p.host)
+  // Exploderande Tanter: raden när man är för få, om en bot får plats, och om spellistan är utfälld (Byt spel).
+  const tantWaiting = tant ? waitingText(online.length, game.minPlayers) : null
+  const canAddBot = online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, online.length + 1)
+  const [showGames, setShowGames] = useState(false)
+  const gamesOpen = showGames || state.choosingGame || scrollToGames === true
   const status = lobbyStatus({
     count: online.length,
     game,
@@ -143,8 +150,12 @@ export function WaitingRoom({
       )}
 
       {/* Spelet, antal spelare och startknappen först, så att värden inte behöver scrolla. */}
-      <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label="Spelet">
-        <LobbyHeader key={game.id} gameId={game.id} name={game.name} theme={theme} />
+      <section
+        className={cn('space-y-3 rounded-lg border p-4 shadow-soft sm:p-5', tant ? 'border-tant-vin/20 bg-tant-kram' : 'bg-card')}
+        aria-label="Spelet"
+      >
+        {/* Exploderande Tanter har sin logga och roliga rader i stället för rubrikraden. */}
+        {tant ? <TantRubrik /> : <LobbyHeader key={game.id} gameId={game.id} name={game.name} theme={theme} />}
 
         {state.notice && (
           <p className="rounded-md bg-sun-soft px-3 py-2 text-center text-sm font-semibold" role="status">
@@ -152,7 +163,16 @@ export function WaitingRoom({
           </p>
         )}
 
-        {isHost ? (
+        {tant && tantWaiting ? (
+          // Exploderande Tanter: en hjälpsam rad med Dela och Lägg till bot i stället för en knapp som väntar.
+          <TantVanta
+            text={tantWaiting}
+            code={code}
+            gameName={game.name}
+            canAddBot={canAddBot}
+            onAddBot={isHost && botActions ? botActions.addBot : null}
+          />
+        ) : isHost ? (
           <div className="space-y-2">
             {/* Knappen vickar en gång när tillräckligt många har gått med (ny key startar om vickningen). */}
             <Button
@@ -181,7 +201,7 @@ export function WaitingRoom({
             )}
           </div>
         ) : (
-          <p className="rounded-md bg-coral-soft px-3 py-3 text-center font-semibold" role="status">
+          <p className={cn('rounded-md px-3 py-3 text-center font-semibold', tant ? 'bg-tant-vin text-tant-kram' : 'bg-coral-soft')} role="status">
             {status}
           </p>
         )}
@@ -190,20 +210,39 @@ export function WaitingRoom({
       {/* Gästerna har reglerna direkt under statusen, värden längst ner. Hopfällda för alla. */}
       {!isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} />}
 
-      <section className="min-w-0 space-y-4 rounded-lg border bg-card p-4 shadow-soft sm:p-5" aria-label={theme.playersTitle}>
-        <h2 className="text-xl">
-          {theme.playersTitle} ({online.length})
+      <section
+        className={cn('min-w-0 space-y-4 rounded-lg border p-4 shadow-soft sm:p-5', tant ? 'border-tant-vin/20 bg-tant-kram' : 'bg-card')}
+        aria-label={theme.playersTitle}
+      >
+        <h2 className={cn('text-xl', tant && 'text-tant-vin')}>
+          {tant ? 'Vid kafferepsbordet' : theme.playersTitle} ({online.length})
         </h2>
-        <LobbyPlayers
-          players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
-          meId={meId}
-          emptySeats={emptySeats(online.length, game)}
-        />
+        {tant ? (
+          // Spelarna sitter runt ett kafferepsbord, med stol och kaffekopp.
+          <TantKafferep
+            guests={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
+            meId={meId}
+            maxPlayers={game.maxPlayers ?? 10}
+          />
+        ) : (
+          <LobbyPlayers
+            players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
+            meId={meId}
+            emptySeats={emptySeats(online.length, game)}
+          />
+        )}
         <ReactionBar className="pt-1" />
         {state.throwsAllowed && online.length > 1 && <ThrowBar />}
         {state.throwsAllowed && (online.length > 1 || totalThrows(state.throwStats) > 0) && <ThrowCounter stats={state.throwStats} />}
         {state.throwsAllowed && online.length > 1 && <AcceptThrowsChoice />}
       </section>
+
+      {/* Några av korten att titta på medan man väntar. */}
+      {tant && (
+        <section aria-label="Några av korten" className="rounded-lg border border-tant-vin/20 bg-tant-kram p-4 shadow-soft">
+          <TantKortFlakt />
+        </section>
+      )}
 
       <InviteCard code={code} game={game} />
 
@@ -217,10 +256,18 @@ export function WaitingRoom({
         {isHost ? (
           <>
             <div className="space-y-3">
-              <p className="font-bold">Spel</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-bold">Spel</p>
+                {/* Exploderande Tanter: bara det valda spelet, och de andra bakom Byt spel. */}
+                {tant && !gamesOpen && (
+                  <Button variant="outline" size="sm" className="h-9" onClick={() => setShowGames(true)}>
+                    Byt spel
+                  </Button>
+                )}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Det valda spelet först, de andra under i vanlig ordning. */}
-                {GAMES.filter((g) => g.playable)
+                {GAMES.filter((g) => g.playable && (!tant || gamesOpen || g.id === game.id))
                   .sort((a, b) => Number(b.id === game.id) - Number(a.id === game.id))
                   .map((option) => {
                   const selected = option.id === game.id
@@ -285,30 +332,30 @@ export function WaitingRoom({
             {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}
 
             {tant && (
-              <TantSvarighet settings={state.tantSettings} players={online.length} isHost onChange={onSetTantSettings} />
-            )}
-
-            {tant && botActions && (
-              <TantBotar
-                bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
-                canAdd={online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, online.length + 1)}
-                onAdd={botActions.addBot}
-                onRemove={botActions.removeBot}
-                onLevel={botActions.setBotLevel}
-              />
-            )}
-
-            {tant && (
-              <Choice
-                label="Tantsnara"
-                hint="En fälla i leken: stjäl någon den väljer ägaren två kort ur tjuvens hand"
-                options={[
-                  { value: 1, label: 'På' },
-                  { value: 0, label: 'Av' },
-                ]}
-                selected={state.tantSettings.trap ? 1 : 0}
-                onSelect={(value) => onSetTantSettings({ trap: value === 1 })}
-              />
+              // Spelets egna val i en egen ruta.
+              <div className="space-y-5 rounded-lg border-2 border-tant-vin/25 bg-tant-kram/70 p-4">
+                <h3 className="text-lg text-tant-vin">Inställningar för Exploderande Tanter</h3>
+                <TantSvarighet settings={state.tantSettings} players={online.length} isHost onChange={onSetTantSettings} />
+                {botActions && (
+                  <TantBotar
+                    bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
+                    canAdd={canAddBot}
+                    onAdd={botActions.addBot}
+                    onRemove={botActions.removeBot}
+                    onLevel={botActions.setBotLevel}
+                  />
+                )}
+                <Choice
+                  label="Tantsnara"
+                  hint="En fälla i leken: stjäl någon den väljer ägaren två kort ur tjuvens hand"
+                  options={[
+                    { value: 1, label: 'På' },
+                    { value: 0, label: 'Av' },
+                  ]}
+                  selected={state.tantSettings.trap ? 1 : 0}
+                  onSelect={(value) => onSetTantSettings({ trap: value === 1 })}
+                />
+              </div>
             )}
 
             <Choice

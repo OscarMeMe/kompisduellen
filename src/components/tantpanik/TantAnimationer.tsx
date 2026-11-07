@@ -20,7 +20,7 @@ const OUT_AT = 1150
 const BOMB_SAVED_MS = 3000
 const BOMB_OUT_MS = 2700
 const TO_HAND_MS = 450
-const FLY_MS = 600
+const FLY_MS = 480
 // Kommer mitt kort mer än så här långt efter att alla sett att jag drog, visas det inte (ms).
 const LATE_MS = 3000
 
@@ -31,7 +31,7 @@ export type Incoming = { id: string; phase: 'show' | 'land' } | null
 type Show = { n: number; kind: 'mine'; type: CardType; id: string | null; from: string | null; gift: boolean }
 type Bomb = { n: number; player: string; saved: boolean }
 // En baksida (face null) eller ett kort som flyger från en plats till en annan.
-type Flight = { n: number; style: CSSProperties; face: CardType | null }
+type Flight = { n: number; left: number; top: number; width: number; dx: number; dy: number; face: CardType | null }
 type Waiting = { n: number; at: number }
 
 // Det som händer vid bordet, som animationer ovanpå det.
@@ -65,6 +65,8 @@ export function TableAnimations({
   const [bomb, setBomb] = useState<Bomb | null>(null)
   // Tantsnaran slog igen: ägaren (player) och tjuven (from).
   const [trap, setTrap] = useState<{ n: number; player: string; from: string } | null>(null)
+  // Ett kort som någon tog från mig (inte ett jag gav med Tjänst): en stor ruta med kortet och vem som tog det.
+  const [stolen, setStolen] = useState<{ n: number; type: CardType; by: string } | null>(null)
   useEffect(() => {
     onBomb(bomb !== null || trap !== null)
     // onBomb ändras inte.
@@ -136,6 +138,7 @@ export function TableAnimations({
     waitingLost.current = null
     if (Date.now() - waiting.at > LATE_MS) return
     addFlight(fly(lost.n, document.querySelector('[data-tant-hand]'), seatOf(lost.to), lost.type))
+    if (!lost.gift) setStolen({ n: lost.n, type: lost.type, by: lost.to })
   }, [lost])
 
   // Klart: kortet ligger i handen (eller tanten är borta).
@@ -180,13 +183,7 @@ export function TableAnimations({
   return (
     <>
       {flights.map((flight) => (
-        <div key={flight.n} aria-hidden className="pointer-events-none fixed z-30 motion-safe:animate-tant-fly" style={flight.style}>
-          {flight.face ? (
-            <TantKort type={flight.face} size="small" sizes="144px" className="w-full drop-shadow-lg" />
-          ) : (
-            <TantBaksida sizes="144px" className="w-full drop-shadow-lg" />
-          )}
-        </div>
+        <FlyingCard key={flight.n} flight={flight} />
       ))}
       {bomb && (
         <BombShow
@@ -213,6 +210,16 @@ export function TableAnimations({
           soundOn={soundOn}
           onShake={() => onShake(trap.n)}
           onDone={() => setTrap((current) => (current?.n === trap.n ? null : current))}
+        />
+      )}
+      {stolen && !bomb && !trap && (
+        <StolenShow
+          key={stolen.n}
+          type={stolen.type}
+          name={name(stolen.by)}
+          playerId={stolen.by}
+          avatar={state.players[stolen.by]?.avatar ?? ''}
+          onDone={() => setStolen((current) => (current?.n === stolen.n ? null : current))}
         />
       )}
       {/* Ett kort som väntar på Nope! döljs aldrig. */}
@@ -314,26 +321,49 @@ function landingStyle(card: HTMLElement | null, id: string): CSSProperties | nul
   }
 }
 
-// Ett kort (eller en baksida) som glider från en plats till en annan och krymper.
+// Ett kort (eller en baksida) som lyfts från en plats och sveper i en båge till en annan, där det krymper och landar.
 function fly(n: number, fromElement: Element | null, toElement: Element | null, face: CardType | null): Flight | null {
   if (reducedMotion() || !fromElement) return null
   const from = fromElement.getBoundingClientRect()
   const to = center(toElement)
   if (!to) return null
-  const width = Math.min(144, Math.max(64, from.width * 0.6))
+  // Stort och tydligt: som ett kort i handen, men aldrig större än det det kommer från.
+  const width = Math.min(140, Math.max(84, from.width * 0.7))
+  const height = width * (147 / 107)
   const left = from.left + from.width / 2 - width / 2
-  const top = from.top + from.height / 2 - (width * (147 / 107)) / 2
-  return {
-    n,
-    face,
-    style: {
-      left,
-      top,
-      width,
-      '--tx': `${to.x - (left + width / 2)}px`,
-      '--ty': `${to.y - (top + (width * (147 / 107)) / 2)}px`,
-    } as CSSProperties,
-  }
+  const top = from.top + from.height / 2 - height / 2
+  return { n, face, left, top, width, dx: to.x - (left + width / 2), dy: to.y - (top + height / 2) }
+}
+
+// Kortet i luften. Bågen ritas med Web Animations: upp och över, och ned i spelarens lilla solfjäder.
+function FlyingCard({ flight }: { flight: Flight }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = ref.current
+    if (!element?.animate) return
+    const lift = Math.min(140, 60 + Math.abs(flight.dx) * 0.15)
+    // Mellan två platser överst (ungefär samma höjd) går bågen nedåt över bordet, annars uppåt.
+    const sideways = Math.abs(flight.dy) < 80 && flight.top < window.innerHeight * 0.35
+    const midY = sideways ? lift : Math.min(0, flight.dy) * 0.5 - lift
+    const animation = element.animate(
+      [
+        { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 },
+        { transform: `translate(${flight.dx * 0.5}px, ${midY}px) scale(0.85) rotate(-10deg)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(${flight.dx}px, ${flight.dy}px) scale(0.28) rotate(8deg)`, opacity: 0.9 },
+      ],
+      { duration: FLY_MS, easing: 'cubic-bezier(0.3, 0.6, 0.3, 1)', fill: 'forwards' },
+    )
+    return () => animation.cancel()
+  }, [flight])
+  return (
+    <div ref={ref} aria-hidden className="pointer-events-none fixed z-[48]" style={{ left: flight.left, top: flight.top, width: flight.width }}>
+      {flight.face ? (
+        <TantKort type={flight.face} size="small" sizes="144px" className="w-full drop-shadow-[0_10px_18px_rgb(0_0_0/0.35)]" />
+      ) : (
+        <TantBaksida sizes="144px" className="w-full drop-shadow-[0_10px_18px_rgb(0_0_0/0.35)]" />
+      )}
+    </div>
+  )
 }
 
 // En exploderande tant, för alla: kortet lyfts från högen och vänds stort i mitten, skärmen blinkar och skakar, det
@@ -490,6 +520,45 @@ function BombShow({
 
 // Hur länge smällen när Tantsnaran slår igen visas (ms).
 const TRAP_MS = 1800
+
+// Någon tog ett kort från mig: en stor ruta med kortet och "[namn] tog [kort] från dig!", medan kortet flyger från min hand
+// till den spelarens plats. Ett tryck stänger den.
+const STOLEN_MS = 2400
+function StolenShow({
+  type,
+  name,
+  playerId,
+  avatar,
+  onDone,
+}: {
+  type: CardType
+  name: string
+  playerId: string
+  avatar: string
+  onDone: () => void
+}) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, STOLEN_MS)
+    return () => clearTimeout(timer)
+    // En gång per stöld.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <div
+      role="status"
+      className="pointer-events-auto fixed inset-x-3 top-1/2 z-[55] mx-auto flex max-w-sm -translate-y-1/2 flex-col items-center gap-2 rounded-3xl border-4 border-destructive bg-card px-4 py-4 text-center shadow-lift motion-safe:animate-pop"
+      onClick={onDone}
+    >
+      <p className="flex items-center gap-2 font-heading text-xl leading-tight font-bold sm:text-2xl">
+        <LobbyFigur playerId={playerId} avatar={avatar} className="shrink-0 text-4xl" />
+        <span>
+          {name} tog <span className="text-destructive">{cardName(type)}</span> från dig!
+        </span>
+      </p>
+      <TantKort type={type} size="large" sizes="160px" className="w-32 drop-shadow-lg sm:w-40" />
+    </div>
+  )
+}
 
 // Tantsnaran slår igen, för alla: fällan visas stort mitt på skärmen, SNAP! slås ned, bordet skakar och det smäller. Ett
 // tryck hoppar över. Med "minska rörelse" skakar inget.

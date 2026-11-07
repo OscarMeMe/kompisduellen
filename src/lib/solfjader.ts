@@ -9,10 +9,8 @@ export const CARD_RATIO = 147 / 107
 // Hur breda korten i handen är (px). De växer med skärmen, men aldrig mindre än så här på en telefon.
 export const MIN_CARD_WIDTH = 104
 export const MAX_CARD_WIDTH = 200
-// Hellre så här smala kort i en rad än två rader (px).
-const ONE_ROW_MIN_WIDTH = 88
-// Med många kort på en smal skärm får korten krympa så här långt i två rader.
-const SMALLEST_CARD_WIDTH = 72
+// Med många kort på en smal skärm får korten krympa så här långt. Räcker inte det överlappar de mer (alltid en rad).
+const SMALLEST_CARD_WIDTH = 64
 // Så mycket av varje kort syns minst när de överlappar (andel av bredden): symbolen och färgen i övre vänstra hörnet,
 // så att det går att se vad kortet är utan att förstora det.
 export const MIN_VISIBLE = 0.27
@@ -23,18 +21,17 @@ const MAX_ANGLE_STEP = 4
 const MAX_ANGLE = 8
 // Hur mycket de yttersta korten sjunker (andel av kortets höjd), så att solfjädern blir en båge.
 const ARC = 0.05
-// Med två rader ligger den bakre så här mycket högre (andel av kortets höjd), så att symbolen och färgen syns ovanför
-// den främre.
-export const ROW_OFFSET = 0.34
 // Plats ovanför korten (ingen: ett lyft kort sticker upp över bordet), och under dem, så att inget skärs av.
 export const FAN_TOP = 0
 export const FAN_BOTTOM = 18
 // Så mycket av korten (andel av höjden) som ligger över bordets nederkant.
 export const TABLE_OVERLAP = 0.42
 
-// Hur breda korten är i en hand som är width bred, på en skärm som är screenHeight hög.
+// Hur breda korten är i en hand som är width bred, på en skärm som är screenHeight hög. På höga, smala telefoner
+// (t.ex. 390 × 844) får korten mer av bredden, så att höjden används i stället för att stå tom ovanför handen.
 export function handCardWidth(width: number, screenHeight: number): number {
-  return Math.round(Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, width * 0.34, screenHeight * 0.21)))
+  const share = screenHeight / width >= 1.9 ? 0.42 : 0.34
+  return Math.round(Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, width * share, screenHeight * 0.21)))
 }
 
 // y räknas från korten nederkant i den främre raden (negativt = högre upp).
@@ -45,7 +42,8 @@ export type FanLayout = {
   slots: FanSlot[]
   cardWidth: number
   cardHeight: number
-  rows: 1 | 2
+  // Alltid en rad (två rader blev för rörigt på en telefon).
+  rows: 1
   // Rutans höjd, med plats för lyft kort ovanför och lutade kort nedanför.
   height: number
   // Avståndet från rutans nederkant till den främre radens nederkant.
@@ -82,35 +80,23 @@ function row(count: number, width: number, cardWidth: number, cardHeight: number
   })
 }
 
-// Var varje kort ligger: x är kortets vänstra kant i en ruta som är width bred. Får inte alla plats i en rad med
-// tillräckligt mycket synligt av varje kort läggs de i två rader (den första halvan bakom och högre upp), och korten
-// krymper bara om inte ens det räcker.
+// Var varje kort ligger: x är kortets vänstra kant i en ruta som är width bred. Alltid en rad: får inte alla plats med
+// tillräckligt mycket synligt av varje kort krymper korten (ned till SMALLEST_CARD_WIDTH), och sedan överlappar de mer.
+// Två rader blev för rörigt på en telefon.
 export function fanLayout(count: number, width: number, cardWidth = MIN_CARD_WIDTH): FanLayout {
   let w = cardWidth
-  let rows: 1 | 2 = 1
-  // Hellre lite mindre kort i en rad (ned till ONE_ROW_MIN_WIDTH) än två rader, så att bordet får plats på en telefon.
-  while (!fits(count, width, w) && w > Math.min(cardWidth, ONE_ROW_MIN_WIDTH)) w -= 2
-  if (!fits(count, width, w)) {
-    rows = 2
-    w = cardWidth
-    const back = Math.ceil(count / 2)
-    while (!fits(back, width, w) && w > SMALLEST_CARD_WIDTH) w -= 2
-  }
+  while (!fits(count, width, w) && w > Math.min(cardWidth, SMALLEST_CARD_WIDTH)) w -= 2
   const h = Math.round(w * CARD_RATIO)
-  const backCount = rows === 2 ? Math.ceil(count / 2) : 0
-  const offset = Math.round(h * ROW_OFFSET)
-  const slots =
-    rows === 1 ? row(count, width, w, h, 0) : [...row(backCount, width, w, h, -offset), ...row(count - backCount, width, w, h, 0)]
-  const steps = rows === 1 ? [stepFor(count, width, w)] : [stepFor(backCount, width, w), stepFor(count - backCount, width, w)]
+  const step = stepFor(count, width, w)
   // Under korten: bågen och hörnet på ett lutat kort som sjunker.
   const bottom = FAN_BOTTOM + Math.ceil(ARC * h + (Math.sin(radians(MAX_ANGLE)) * w) / 2)
   return {
-    step: Math.min(...steps.filter((step) => step > 0), w),
-    slots,
+    step: step > 0 ? Math.min(step, w) : w,
+    slots: row(count, width, w, h, 0),
     cardWidth: w,
     cardHeight: h,
-    rows,
-    height: FAN_TOP + h + (rows === 2 ? offset : 0) + bottom,
+    rows: 1,
+    height: FAN_TOP + h + bottom,
     bottom,
   }
 }
@@ -217,4 +203,42 @@ export function moveCard(ids: readonly string[], id: string, to: number): string
   if (rest.length === ids.length) return [...ids]
   const index = Math.max(0, Math.min(rest.length, to))
   return [...rest.slice(0, index), id, ...rest.slice(index)]
+}
+
+const SPREAD_RATIO = 147 / 107
+// Marginal runt korten i ytan (andel).
+const FIT_MARGIN = 0.94
+
+// Nope!-fönstret: hur stort ett kort kan vara så att alla kort (förskjutna i sidled och lutade runt nederkantens mitt) ryms i ytan.
+// Ger kortets bredd, solfjäderns yttre mått och var kortet ligger i den.
+export function fitSpread(width: number, height: number, angles: number[], shiftPerCard: number) {
+  const mid = (angles.length - 1) / 2
+  // Hörnen för ett kort med bredden 1.
+  let minX = 0
+  let maxX = 1
+  let minY = 0
+  let maxY = SPREAD_RATIO
+  angles.forEach((deg, i) => {
+    const a = (deg * Math.PI) / 180
+    const shift = (i - mid) * shiftPerCard
+    for (const [x, y] of [
+      [0, 0],
+      [1, 0],
+      [0, SPREAD_RATIO],
+      [1, SPREAD_RATIO],
+    ]) {
+      const dx = x - 0.5
+      const dy = y - SPREAD_RATIO
+      const px = 0.5 + shift + dx * Math.cos(a) - dy * Math.sin(a)
+      const py = SPREAD_RATIO + dx * Math.sin(a) + dy * Math.cos(a)
+      minX = Math.min(minX, px)
+      maxX = Math.max(maxX, px)
+      minY = Math.min(minY, py)
+      maxY = Math.max(maxY, py)
+    }
+  })
+  const spanX = maxX - minX
+  const spanY = maxY - minY
+  const card = Math.max(0, Math.min((width * FIT_MARGIN) / spanX, (height * FIT_MARGIN) / spanY, 420))
+  return { card, width: spanX * card, height: spanY * card, left: -minX * card, top: -minY * card }
 }

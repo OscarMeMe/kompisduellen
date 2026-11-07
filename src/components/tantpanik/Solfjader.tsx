@@ -47,6 +47,7 @@ export function Solfjader({
   onReorder,
   onOverlap,
   dimmed: handDimmed = false,
+  grayAll = false,
 }: {
   cards: TantCard[]
   selected: readonly string[]
@@ -61,6 +62,8 @@ export function Solfjader({
   onOverlap?: (px: number) => void
   // Inte min tur: handen är svagt dämpad och tänds upp mjukt när det blir min tur.
   dimmed?: boolean
+  // Ett kort väntar på Nope! och jag har inget: alla kort blir gråa, som de som inte går att spela när man har Nope!.
+  grayAll?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 360, height: 640 })
@@ -251,7 +254,7 @@ export function Solfjader({
         const isSelected = selected.includes(card.id)
         const lit = glow.includes(card.id)
         const dragged = moving?.id === card.id
-        const dimmed = glow.length > 0 && !lit
+        const dimmed = (glow.length > 0 && !lit) || grayAll
         const isFresh = card.id === freshId && hiddenId !== card.id
         const pointed = mouseOver === i && mode === null
         // Ett lyft kort sticker upp över bordet.

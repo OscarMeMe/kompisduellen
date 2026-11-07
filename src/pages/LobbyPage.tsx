@@ -453,6 +453,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             onMove={actions.move}
             onAbort={() => setAborting(true)}
             onLeave={() => requestLeave('/')}
+            onBotsOnly={actions.tantBotsOnly}
           />
         )
       }

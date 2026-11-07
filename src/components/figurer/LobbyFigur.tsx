@@ -16,6 +16,7 @@ export function LobbyFigur({
   asleep = false,
   look = 0,
   gaze = false,
+  lively = true,
 }: {
   playerId: string
   avatar: string
@@ -25,6 +26,8 @@ export function LobbyFigur({
   asleep?: boolean
   look?: -1 | 0 | 1
   gaze?: boolean
+  // Figurens egen rörelse (t.ex. Blygis som duckar). Av där figuren är liten och ska stå still, som vid ett bord.
+  lively?: boolean
 }) {
   const hit = useThrows()?.hits[playerId]
   const blob = findBlob(avatar)
@@ -34,7 +37,7 @@ export function LobbyFigur({
       figure={blob}
       mood={hit === undefined ? 'vantar' : 'traffad'}
       animated
-      lively
+      lively={lively}
       asleep={asleep && hit === undefined}
       look={look}
       gaze={gaze}

@@ -5,28 +5,23 @@ import type { Incoming } from '@/components/tantpanik/TantAnimationer'
 import { TantKort } from '@/components/tantpanik/TantKort'
 import { RequestPopup, TargetPopup } from '@/components/tantpanik/TantVal'
 import { Button } from '@/components/ui/button'
-import { useCountdown } from '@/hooks/useCountdown'
-import { useReactions } from '@/hooks/useReactions'
-import { loadSoundOn, playPop } from '@/lib/ljud'
-import { tantMusic } from '@/lib/tantmusik'
 import type { GameState } from '@/lib/match'
 import { hasFinePointer } from '@/lib/device'
 import { arrangeHand, cardHint, nextSelection, selectionLabel, sortHand } from '@/lib/solfjader'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { isCombo, needsTarget, validTargets, type TantCard, type TantMove, type TantTable } from '@/lib/tantpanik'
-import { NOPE_SECONDS, cardName, type CardType } from '@/lib/tantpanik-kort'
+import { cardName, type CardType } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
 // Min hand: en solfjäder längst ner på skärmen. Tryck på ett kort så hoppar det fram med hela texten och en stor knapp.
 // Tantkort (och kort med samma namn) kan väljas flera, och hoppar då fram tillsammans som par eller tretal. Tryck utanför
-// för att lägga tillbaka. När någon spelat ett kort och jag har Nope! dyker en stor knapp upp nära tummen.
+// för att lägga tillbaka. Har jag Nope! när någon spelat ett kort lyfts mina Nope!-kort (knappen står i Nope!-fönstret).
 // Behöver kortet en spelare (eller ett kort, för tretal) öppnas en stor popup för valet.
 export function TantHand({
   state,
   table,
   meId,
   hand,
-  clockOffset,
   onMove,
   onOverlap,
   incoming = null,
@@ -81,6 +76,8 @@ export function TantHand({
 
   // Under Nope!-fönstret: alla mina Nope!-kort, som hoppar upp och lyser. De andra korten blir gråa.
   const nopeIds = nope ? cards.filter((card) => card.type === 'nadu').map((card) => card.id) : []
+  // Ett kort väntar och jag kan inte säga Nope! (inget kort): alla mina kort blir gråa, så att det syns direkt.
+  const noNope = pending !== null && !ownLatest && !table.out.includes(meId) && !nope && cards.length > 0
 
   function tap(id: string) {
     if (id === freshId) onFreshSeen?.()
@@ -89,7 +86,9 @@ export function TantHand({
       send({ type: 'tNope', card: id, level: pending.nopes })
       return
     }
-    setSelected((list) => nextSelection(cards, list, id))
+    // Inte min tur: ett tryck förstorar bara kortet. Inget lyfts eller läggs ihop till par, så att det aldrig ser ut som
+    // att kortet spelas.
+    setSelected((list) => (myTurn ? nextSelection(cards, list, id) : list.length === 1 && list[0] === id ? [] : [id]))
     setTarget(null)
     setAsking(null)
   }
@@ -186,15 +185,6 @@ export function TantHand({
         />
       )}
 
-      {nope && pending && (
-        <NopeButton
-          key={`${pending.by}-${pending.cards.join()}-${pending.nopes}`}
-          deadline={state.deadline}
-          clockOffset={clockOffset}
-          bottom={handHeight + 8}
-          onNope={() => send({ type: 'tNope', card: nope.id, level: pending.nopes })}
-        />
-      )}
 
       {/* Handen längst ner. Kast landar aldrig här (SPLAT_SHIELD). */}
       <section
@@ -211,7 +201,8 @@ export function TantHand({
           <>
             {/* Ordnar handen som förut: likadana kort bredvid varandra. På dator till höger om handen i höjd med korten,
                 med en egen plats så att den aldrig ligger över dem. På mobil precis ovanför handens högra hörn. */}
-            {cards.length > 1 && (
+            {/* Dold medan Nope!-fönstret är öppet, så att den aldrig ligger vid nedräkningen. */}
+            {cards.length > 1 && !pending && (
               <button
                 type="button"
                 aria-label="Sortera handen"
@@ -229,7 +220,7 @@ export function TantHand({
             <div className="sm:mr-16">
               <Solfjader
                 cards={cards}
-                selected={chosen.map((card) => card.id)}
+                selected={myTurn ? chosen.map((card) => card.id) : []}
                 glow={nopeIds}
                 hiddenId={hiddenId}
                 freshId={freshId}
@@ -237,7 +228,13 @@ export function TantHand({
                 onReorder={setOrder}
                 onOverlap={onOverlap}
                 dimmed={dimmed}
+                grayAll={noNope}
               />
+              {noNope && (
+                <p className="pointer-events-none absolute inset-x-0 bottom-3 z-50 mx-auto w-fit rounded-full bg-foreground/90 px-4 py-1.5 text-center font-heading text-sm font-bold text-background shadow-soft-sm motion-safe:animate-pop sm:text-base">
+                  Du har inget Nope!
+                </p>
+              )}
             </div>
           </>
         )}
@@ -361,65 +358,6 @@ function useHeight(ref: RefObject<HTMLElement | null>): number {
   return height
 }
 
-// Den stora Nope!-knappen nära tummen, med en ring som visar tiden kvar. Telefonen vibrerar kort när den dyker upp.
-// Ett tryck spelar kortet direkt.
-function NopeButton({
-  deadline,
-  clockOffset,
-  bottom,
-  onNope,
-}: {
-  deadline: number | null
-  clockOffset: number
-  bottom: number
-  onNope: () => void
-}) {
-  const { progress } = useCountdown(deadline, clockOffset, NOPE_SECONDS)
-  const [sent, setSent] = useState(false)
-  const reactions = useReactions()
-  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
-  useEffect(() => {
-    navigator.vibrate?.([60, 40, 60])
-    if (soundOn) {
-      tantMusic.duck()
-      playPop()
-    }
-    // Bara när knappen dyker upp.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  if (sent) return null
-  const radius = 52
-  const circumference = 2 * Math.PI * radius
-  return (
-    <button
-      type="button"
-      {...SPLAT_SHIELD}
-      onClick={() => {
-        setSent(true)
-        onNope()
-      }}
-      style={{ bottom: `calc(${bottom}px + env(safe-area-inset-bottom))` }}
-      className="fixed right-3 z-50 flex size-28 items-center justify-center rounded-full bg-primary-button font-heading text-xl font-bold text-primary-foreground shadow-primary outline-none focus-visible:ring-4 focus-visible:ring-ring/50 motion-safe:animate-pop motion-safe:active:scale-95"
-    >
-      <svg aria-hidden viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="8" className="stroke-primary-foreground/25" />
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          fill="none"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - progress)}
-          className="stroke-sun motion-safe:transition-[stroke-dashoffset] motion-safe:duration-200 motion-safe:ease-linear"
-        />
-      </svg>
-      <span className="relative">Nope!</span>
-    </button>
-  )
-}
-
 // Hjälptexter under det förstorade kortet: en liten mörk etikett, så att den syns mot bordet.
 const LABEL =
   'mx-auto w-fit max-w-full rounded-full bg-foreground/90 px-3 py-1.5 text-center text-sm font-semibold text-background shadow-soft-sm'
@@ -447,7 +385,7 @@ function Choice({
   }
   const label = selectionLabel(types)
   if (!label) return <p className={LABEL}>{cardHint(types)}</p>
-  if (!myTurn) return <p className={LABEL}>Du kan spela när det är din tur.</p>
+  if (!myTurn) return <p className={LABEL}>Bara förstorat. Du kan spela när det är din tur.</p>
   return (
     <Button size="lg" className="w-full" onClick={onPlay}>
       {label}

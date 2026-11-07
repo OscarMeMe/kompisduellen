@@ -81,4 +81,6 @@ export type TantViewProps = {
   // Bordet tar hela skärmen, så värdens Avbryt matchen och Lämna lobbyn ligger i bordets meny.
   onAbort: () => void
   onLeave: () => void
+  // Bara botar kvar: värden spolar fram eller tar revansch direkt.
+  onBotsOnly?: (choice: 'spola' | 'revansch') => void
 }
