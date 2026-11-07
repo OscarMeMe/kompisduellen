@@ -15,6 +15,8 @@ export function Layout() {
   const [versionNotice, setVersionNotice] = useState(false)
   const [lobbyPlayer, setLobbyPlayer] = useState<{ name: string; avatar: string } | null>(null)
   const [leaveGuard, setLeaveGuardState] = useState<((to: string) => void) | null>(null)
+  // Platsen uppe till höger där lobbyn visar ljudknappen (LobbySound), även under en match när menyn är dold.
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null)
   // Sparas som en funktion i en funktion, eftersom useState annars anropar den.
   const setLeaveGuard = useCallback((guard: ((to: string) => void) | null) => setLeaveGuardState(() => guard), [])
   function guarded(to: string) {
@@ -37,7 +39,7 @@ export function Layout() {
       <header className="pt-[env(safe-area-inset-top)]">
         <div
           className={cn(
-            'mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6',
+            'relative mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6',
             inMatch ? 'justify-center py-3 sm:py-5' : 'py-4',
           )}
         >
@@ -50,6 +52,8 @@ export function Layout() {
               <Logo />
             </Link>
           )}
+          <div className={cn('flex min-w-0 items-center gap-2', inMatch && 'absolute top-1/2 right-4 -translate-y-1/2 sm:right-6')}>
+          <div ref={setHeaderSlot} className="contents" />
           <nav className={cn('min-w-0', inMatch && 'hidden')}>
             {player ? (
               <Link
@@ -75,6 +79,7 @@ export function Layout() {
               </Link>
             ) : null}
           </nav>
+          </div>
         </div>
       </header>
       {showNotice && !versionNotice && (
@@ -83,7 +88,7 @@ export function Layout() {
         </p>
       )}
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
-        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer } satisfies LayoutContext} />
+        <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer, headerSlot } satisfies LayoutContext} />
       </main>
     </div>
   )

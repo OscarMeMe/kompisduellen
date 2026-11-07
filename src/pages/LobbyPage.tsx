@@ -14,6 +14,7 @@ import { SplatOverlay, ThrownConfirm } from '@/components/lobby/Kast'
 import { SendStatus } from '@/components/lobby/SendStatus'
 import { VersionNotice } from '@/components/lobby/VersionNotice'
 import { ReactionFloaters, ReactionsProvider } from '@/components/lobby/Reactions'
+import { LobbySound } from '@/components/lobby/LjudKnapp'
 import type { Throws } from '@/hooks/useReactions'
 import type { CardViewProps, GuessingViewProps, ImposterViewProps, RevealViewProps, TantViewProps } from '@/components/lobby/types'
 import { TantpanikView } from '@/components/tantpanik/TantpanikView'
@@ -383,6 +384,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
         }}
       />
       <ReactionFloaters />
+      {/* Ljudknappen uppe till höger, samma i väntrummet och alla spelvyer. */}
+      <LobbySound game={state.game} />
       {/* Spelets färg följer med in i lobbyn, som en rand högst upp. Den flyttar inget. */}
       <div aria-hidden data-spel={state.game} className="pointer-events-none fixed inset-x-0 top-0 z-20 h-1.5 bg-spel-yta" />
       <SendStatus delivery={delivery} onRetry={actions.retryMoves} />

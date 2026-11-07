@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Hand, Minus, Plus } from 'lucide-react'
+import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { Button } from '@/components/ui/button'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -20,8 +21,8 @@ import { cn } from '@/lib/utils'
 
 
 // Vinklar (grader) och förskjutning i sidled (andel av kortets bredd) när flera kort ligger omlott.
-const SPREAD_ANGLES: Record<number, number[]> = { 1: [0], 2: [-6, 6], 3: [-8, 0, 8] }
-const SPREAD_SHIFT = 0.2
+const SPREAD_ANGLES: Record<number, number[]> = { 1: [0], 2: [-10, 10], 3: [-14, 0, 14] }
+const SPREAD_SHIFT = 0.42
 // De sista sekunderna pulserar ramen och siffran, och det tickar.
 const NOPE_HURRY_SECONDS = 2
 
@@ -61,15 +62,22 @@ export function NopeWindow({
   const count = pending.cards.length
   const angles = SPREAD_ANGLES[count] ?? SPREAD_ANGLES[3]
   const mid = (count - 1) / 2
-  const who = pending.by === meId ? 'Du' : name(pending.by)
-  const what =
-    pending.kind === 'pair'
-      ? `ett par mot ${pending.target === meId ? 'dig' : name(pending.target!)}`
-      : pending.kind === 'triple'
-        ? `ett tretal och ber ${pending.target === meId ? 'dig' : name(pending.target!)} om ${cardName(pending.request!)}`
-        : pending.target
-          ? `${cardName(pending.cards[0])} på ${pending.target === meId ? 'dig' : name(pending.target)}`
-          : cardName(pending.cards[0])
+  const mine = pending.by === meId
+  const againstMe = pending.target === meId
+  // Kortet flyger in från spelarens plats, så att man ser varifrån det kommer (med "minska rörelse" ligger det direkt).
+  const boxRef = useRef<HTMLDivElement>(null)
+  const [arrived, setArrived] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
+  const [from, setFrom] = useState<{ x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    if (arrived) return
+    const box = boxRef.current?.getBoundingClientRect()
+    const seat = (mine ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(pending.by)}"]`))?.getBoundingClientRect()
+    if (box && seat) setFrom({ x: seat.left + seat.width / 2 - (box.left + box.width / 2), y: seat.top + seat.height / 2 - (box.top + box.height / 2) })
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setArrived(true)))
+    return () => cancelAnimationFrame(frame)
+    // En gång, när kortet spelas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const roleText = canNope ? null : pending.by === meId ? 'Vågar någon säga Nope?' : 'Någon kan säga Nope!'
 
   return (
@@ -78,14 +86,33 @@ export function NopeWindow({
       aria-label="Spelat kort"
       className={cn('flex size-full min-h-0 flex-col items-center justify-center gap-1.5 py-1', canNope && 'pr-28 sm:pr-0')}
     >
-      <p className="rounded-full bg-card/90 px-3 py-1 text-center text-sm font-semibold shadow-soft-sm md:text-base">
-        {who} spelade {what}.
-      </p>
+      {/* Vem som spelar, stort, och vem kortet är riktat mot. */}
+      {/* Kompakt på en telefon, så att kortet får plats. */}
+      <div className="flex max-w-full shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-0 rounded-2xl bg-card/95 px-3 py-1 shadow-lift sm:rounded-3xl sm:px-4 sm:py-2">
+        <LobbyFigur playerId={pending.by} avatar={state.players[pending.by]?.avatar ?? ''} className="shrink-0 text-3xl sm:text-5xl" />
+        <span className="font-heading text-lg leading-tight font-bold whitespace-nowrap sm:text-3xl">
+          {mine ? 'Du spelar:' : `${name(pending.by)} spelar:`}
+        </span>
+        {pending.target && (
+          <span className={cn('font-heading text-base leading-tight font-bold sm:text-2xl', againstMe ? 'text-destructive' : 'text-primary-button')}>
+            {againstMe ? '→ mot dig!' : `→ mot ${name(pending.target)}`}
+            {pending.kind === 'triple' && pending.request && (
+              <span className="ml-1.5 text-sm font-semibold text-muted-foreground sm:text-lg">(ber om {cardName(pending.request)})</span>
+            )}
+          </span>
+        )}
+      </div>
       <div className="flex min-h-0 w-full flex-1 items-center justify-center p-3">
         <div
+          ref={boxRef}
           className={cn('relative aspect-[107/147] max-h-full', pending.nopes > 0 && 'motion-safe:animate-stamp-shake')}
           key={pending.nopes}
-          style={{ height: '100%', maxWidth: `calc((100% - 24px) / ${1 + SPREAD_SHIFT * 2 * mid})` }}
+          style={{
+            height: '100%',
+            maxWidth: `calc((100% - 24px) / ${1 + SPREAD_SHIFT * 2 * mid})`,
+            transform: !arrived && from ? `translate(${from.x}px, ${from.y}px) scale(0.2)` : undefined,
+            transition: arrived ? 'transform 450ms cubic-bezier(0.3, 0.7, 0.3, 1.05)' : undefined,
+          }}
         >
           {/* Tiden: en tjock ram runt kortet som töms längs kanten. Den ligger utanför kortet och täcker ingen text. */}
           <svg
@@ -119,17 +146,21 @@ export function NopeWindow({
             />
           </svg>
           {pending.cards.map((type, i) => (
+            // Placeringen på det yttre elementet och rörelsen på det inre, så att animationen inte skriver över
+            // placeringen (då hamnar korten i ett par på varandra).
             <div
               key={i}
-              className="absolute inset-0 origin-bottom motion-safe:animate-pop"
+              className="absolute inset-0 origin-bottom"
               style={{ transform: `translateX(${(i - mid) * SPREAD_SHIFT * 100}%) rotate(${angles[i]}deg)`, zIndex: i }}
             >
-              <TantKort
-                type={type}
-                size="zoom"
-                sizes="420px"
-                className={cn('size-full drop-shadow-[0_18px_28px_rgb(0_0_0/0.4)]', stopped && 'grayscale-[60%]')}
-              />
+              <div className="size-full motion-safe:animate-pop">
+                <TantKort
+                  type={type}
+                  size="zoom"
+                  sizes="420px"
+                  className={cn('size-full drop-shadow-[0_18px_28px_rgb(0_0_0/0.4)]', stopped && 'grayscale-[60%]')}
+                />
+              </div>
             </div>
           ))}
           {/* Ett Nope! per stämpel, åt olika håll. Den senaste slås ned. */}
@@ -158,7 +189,7 @@ export function NopeWindow({
           key={pending.nopes}
           role="status"
           className={cn(
-            'rounded-full px-4 py-1 text-center font-heading font-bold shadow-soft-sm motion-safe:animate-pop md:text-lg',
+            'shrink-0 rounded-full px-3 py-0.5 text-center font-heading text-sm font-bold shadow-soft-sm motion-safe:animate-pop sm:px-4 sm:py-1 sm:text-base md:text-lg',
             stopped ? 'bg-destructive text-primary-foreground' : 'bg-mint text-accent-foreground',
           )}
         >
@@ -168,8 +199,8 @@ export function NopeWindow({
         </p>
       )}
       <div className="flex shrink-0 items-center gap-3">
-        <span className="flex items-center gap-1.5 rounded-full bg-primary-button px-3 py-1 font-heading text-base font-bold tracking-wide text-primary-foreground shadow-primary md:text-xl">
-          <Hand aria-hidden className="size-5 md:size-6" />
+        <span className="flex items-center gap-1.5 rounded-full bg-primary-button px-2.5 py-0.5 font-heading text-sm font-bold tracking-wide whitespace-nowrap text-primary-foreground shadow-primary sm:px-3 sm:py-1 sm:text-base md:text-xl">
+          <Hand aria-hidden className="size-4 sm:size-5 md:size-6" />
           NOPE-CHANS!
         </span>
         <span
@@ -177,7 +208,7 @@ export function NopeWindow({
           aria-label={`${secondsLeft} sekunder kvar`}
           key={secondsLeft}
           className={cn(
-            'font-heading text-5xl leading-none font-bold tabular-nums drop-shadow md:text-7xl',
+            'font-heading text-4xl leading-none font-bold tabular-nums drop-shadow sm:text-5xl md:text-7xl',
             hurry ? 'text-destructive motion-safe:animate-pop' : 'text-background',
           )}
         >

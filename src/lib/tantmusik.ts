@@ -63,6 +63,17 @@ type Source = { stop: () => void; setRate: (rate: number) => void }
 type Playing = { level: MusicLevel; source: Source; gain: GainNode }
 
 let volume = loadMusicVolume()
+// De som vill veta när volymen ändras (useMusicVolume), så att alla reglage och all musik följer samma värde.
+const volumeListeners = new Set<() => void>()
+
+export function getMusicVolume(): number {
+  return volume
+}
+
+export function subscribeMusicVolume(listener: () => void): () => void {
+  volumeListeners.add(listener)
+  return () => volumeListeners.delete(listener)
+}
 let context: AudioContext | null = null
 // Huvudvolymen: musikens volym, duck och tystnad. Spåren går hit genom sina egna GainNodes.
 let output: GainNode | null = null
@@ -253,6 +264,7 @@ export const tantMusic = {
     volume = Math.max(0, Math.min(1, next))
     saveMusicVolume(volume)
     if (playing) rampTo(targetVolume(), 0.1)
+    for (const listener of volumeListeners) listener()
   },
   // Ska musiken spela just nu (Exploderande Tanter valt, ljud på och musikvolym över 0)?
   setWanted(on: boolean) {

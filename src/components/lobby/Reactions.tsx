@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Volume2, VolumeX } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,8 +64,8 @@ export function ReactionsProvider({ enabled, floating, send, throws, seatedIds =
   return <ReactionsContext.Provider value={value}>{children}</ReactionsContext.Provider>
 }
 
-// Reaktionerna och en ljudknapp på en rad som aldrig bryts: reaktionerna krymper i stället (minst 40 px breda på en
-// skärm som är 320 px bred), och ljudknappen har en fast bredd. Visas inte om man är ensam i lobbyn eller utanför en lobby.
+// Reaktionerna på en rad som aldrig bryts: de krymper i stället (minst 40 px breda på en skärm som är 320 px bred).
+// Ljudet ställs med ljudknappen uppe till höger (LobbySound i LjudKnapp.tsx). Visas inte om man är ensam i lobbyn eller utanför en lobby.
 export function ReactionBar({ className }: { className?: string }) {
   const reactions = useReactions()
   const [cooling, setCooling] = useState(false)
@@ -95,15 +94,6 @@ export function ReactionBar({ className }: { className?: string }) {
           {reaction.emoji}
         </Button>
       ))}
-      <Button
-        variant="ghost"
-        className="h-12 w-9 shrink-0 px-0 sm:w-12"
-        aria-pressed={reactions.soundOn}
-        aria-label={reactions.soundOn ? 'Stäng av ljud' : 'Sätt på ljud'}
-        onClick={() => reactions.setSoundOn(!reactions.soundOn)}
-      >
-        {reactions.soundOn ? <Volume2 aria-hidden /> : <VolumeX aria-hidden />}
-      </Button>
     </div>
   )
 }

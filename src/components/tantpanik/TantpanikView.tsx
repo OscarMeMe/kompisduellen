@@ -12,8 +12,9 @@ import { GivePopup } from '@/components/tantpanik/TantVal'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { Konfetti } from '@/components/Konfetti'
-import { loadMusicVolume, tantMusic } from '@/lib/tantmusik'
-import { SoundControl } from '@/components/tantpanik/TantLjud'
+import { tantMusic } from '@/lib/tantmusik'
+import { SoundControl } from '@/components/lobby/LjudKnapp'
+import { useMusicVolume } from '@/hooks/useMusicVolume'
 import { loadSoundOn, playBullseye, playTurn, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
@@ -88,7 +89,7 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
     ((table.step === 'window' && table.pending !== null) || bombShowing || table.step === 'pick' || table.step === 'give' || table.step === 'place' || table.step === 'arrange')
   const bubble = useEventBubbles(table?.log ?? [], quiet)
   // Bakgrundsmusiken: volymen sparas för sig, och "Stäng av allt" (ljudet av) stänger av den också.
-  const [musicVolume, setMusicVolume] = useState(loadMusicVolume)
+  const musicVolume = useMusicVolume()
   const soundReactions = useReactions()
   const soundOn = soundReactions ? soundReactions.soundOn : loadSoundOn()
   const playing = !!table && state.phase === 'playing' && table.order.includes(me.id)
@@ -106,10 +107,17 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   // Var handen börjar, räknat från skärmens nederkant (px), för Nope!-fönstret ovanför den.
   const handBoxRef = useRef<HTMLDivElement>(null)
   const [handTop, setHandTop] = useState(200)
+  // Var motspelarraden slutar (px från skärmens överkant). Nope!-fönstret börjar under den, så att platserna syns.
+  const seatsRef = useRef<HTMLDivElement>(null)
+  const [seatsBottom, setSeatsBottom] = useState(120)
   useLayoutEffect(() => {
     const element = handBoxRef.current
     if (!element) return
-    const measure = () => setHandTop(Math.max(0, window.innerHeight - element.getBoundingClientRect().top))
+    const measure = () => {
+      setHandTop(Math.max(0, window.innerHeight - element.getBoundingClientRect().top))
+      const seats = seatsRef.current?.getBoundingClientRect()
+      if (seats) setSeatsBottom(seats.bottom)
+    }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(element)
@@ -223,12 +231,14 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
           <SoundControl
             soundOn={soundOn}
             onSoundOn={(on) => (soundReactions ? soundReactions.setSoundOn(on) : saveSoundOn(on))}
-            musicVolume={musicVolume}
-            onMusicVolume={setMusicVolume}
+            music
           />
         }
         onRules={() => setRules(true)} onMenu={() => setMenu(true)} />
-      <Opponents state={state} table={table} meId={me.id} />
+      {/* Ovanpå Nope!-fönstret, så att den som spelar syns lysa. */}
+      <div ref={seatsRef} className="relative z-[46]">
+        <Opponents state={state} table={table} meId={me.id} playingId={nopeOpen ? (table.pending?.by ?? null) : null} />
+      </div>
 
 
       {/* Bordet i mitten: högarna, och ovanpå dem det som väntar eller pågår. */}
@@ -320,14 +330,17 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
         // Det spelade kortet stort mellan statusraden och handen, så att det syns även när handen tar mycket plats på en
         // telefon. Rutan tar inga tryck, så att Nope!-knappen och korten i handen går att trycka på.
         <div
-          className="pointer-events-none fixed inset-x-0 top-16 z-[44] bg-foreground/35 px-2 pt-1 motion-safe:animate-fade lg:top-20"
-          // Plats ovanför handen för kort som lyfts (t.ex. Nope!-kortet som hoppar upp).
-          style={{ bottom: handTop + Math.round(handOverlap * 0.9) + 8 }}
+          className="pointer-events-none fixed inset-x-0 z-[44] bg-foreground/35 px-2 pt-1 motion-safe:animate-fade"
+          // Under motspelarraden, och plats ovanför handen för kort som lyfts (t.ex. Nope!-kortet som hoppar upp).
+          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 }}
         >
           <NopeWindow state={state} table={table} meId={me.id} clockOffset={clockOffset} canNope={canNope} />
         </div>
       )}
       {verdict && <NopeVerdict key={verdict.n} stopped={verdict.stopped} />}
+      {nopeOpen && table.pending?.target && (
+        <TargetArrow key={`${table.pending.by}-${table.pending.target}-${table.log.at(-1)?.n}`} from={table.pending.by} to={table.pending.target} meId={me.id} />
+      )}
       {popup}
       <TableAnimations state={state} table={table} meId={me.id} tantView={tantView} onShake={setShake} onIncoming={setIncoming} onBomb={setBombShowing} />
       {table.winner && !bombShowing && (
@@ -526,6 +539,64 @@ function usePeeker(table: TantTable | null): string | null {
 
 // Hur länge ett nytt kort är markerat i handen (ms).
 const FRESH_MS = 5000
+
+// Pilen från den som spelade ett riktat kort till målet (par, tretal, Tjänst, Riktad attack). Är det mot mig lyser min
+// hand rött en stund. Den tar inga tryck, och med "minska rörelse" ritas den direkt.
+function TargetArrow({ from, to, meId }: { from: string; to: string; meId: string }) {
+  const [line, setLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+  const [flash, setFlash] = useState(to === meId)
+  useLayoutEffect(() => {
+    const place = (id: string) =>
+      (id === meId ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(id)}"]`))?.getBoundingClientRect()
+    const measure = () => {
+      const a = place(from)
+      const b = place(to)
+      if (!a || !b) return
+      // Till handens överkant, eller mitt på en motspelares plats.
+      setLine({ x1: a.left + a.width / 2, y1: a.top + a.height / 2, x2: b.left + b.width / 2, y2: to === meId ? b.top + 12 : b.top + b.height / 2 })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [from, to, meId])
+  useEffect(() => {
+    if (!flash) return
+    const timer = setTimeout(() => setFlash(false), 1600)
+    return () => clearTimeout(timer)
+  }, [flash])
+  const hand = to === meId ? document.querySelector('[data-tant-hand]')?.getBoundingClientRect() : null
+  return (
+    <>
+      {line && (
+        <svg aria-hidden className="pointer-events-none fixed inset-0 z-[47] size-full">
+          <defs>
+            <marker id="tant-pil" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" className={to === meId ? 'fill-destructive' : 'fill-primary-button'} />
+            </marker>
+          </defs>
+          {/* En båge ned över bordet, så att den syns även mellan två som sitter bredvid varandra. Mot mig rakt ned till handen. */}
+          <path
+            d={`M ${line.x1} ${line.y1} Q ${(line.x1 + line.x2) / 2} ${to === meId ? (line.y1 + line.y2) / 2 : Math.max(line.y1, line.y2) + 140} ${line.x2} ${line.y2}`}
+            fill="none"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray="2 12"
+            markerEnd="url(#tant-pil)"
+            className={cn(to === meId ? 'stroke-destructive' : 'stroke-primary-button', 'drop-shadow-[0_0_4px_white]')}
+          />
+        </svg>
+      )}
+      {flash && hand && (
+        // Mot mig: min hand lyser rött en stund.
+        <span
+          aria-hidden
+          className="pointer-events-none fixed z-[45] rounded-3xl bg-destructive/15 shadow-[0_0_32px_10px] shadow-destructive/60 ring-4 ring-destructive motion-safe:animate-fade"
+          style={{ left: hand.left + 4, top: hand.top - 8, width: hand.width - 8, height: hand.height + 8 }}
+        />
+      )}
+    </>
+  )
+}
 
 // Hur länge stämpeln syns när Nope!-fönstret stängs (ms).
 const VERDICT_MS = 850
@@ -755,7 +826,8 @@ function statusText(
   if (table.out.includes(meId)) return { text: 'Du är ute. Följ resten av matchen', mine: false, waitingFor: null }
   if (table.step === 'window') {
     if (canNope) return { text: 'Säg Nope! om du vill stoppa kortet', mine: true, waitingFor: null }
-    return { text: 'Någon kan säga Nope!', mine: false, waitingFor: null }
+    // Nope!-chansen står bara vid nedräkningen. Här står bara vems tur det är.
+    return { text: table.current === meId ? 'Din tur' : `${name(table.current)}s tur`, mine: false, waitingFor: null }
   }
   if (table.step === 'pick' && table.pick) {
     if (table.pick.by === meId) return { text: `Välj ett kort ur ${name(table.pick.from)}s hand`, mine: true, waitingFor: null }
@@ -811,7 +883,8 @@ function HistoryButton({ table, onOpen }: { table: TantTable; onOpen: () => void
 
 // Motspelarna i turordning, från den som kommer efter mig: figur, namn och en liten solfjäder med baksidor. Den som har
 // tur lyser. Raden går att svepa när de inte får plats, och den som har tur scrollas fram.
-function Opponents({ state, table, meId }: { state: GameState; table: TantTable; meId: string }) {
+// playingId = den som just spelat ett kort (Nope!-fönstret): platsen lyser.
+function Opponents({ state, table, meId, playingId }: { state: GameState; table: TantTable; meId: string; playingId: string | null }) {
   const start = Math.max(0, table.order.indexOf(meId))
   const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
   const current = useRef<HTMLLIElement>(null)
@@ -825,7 +898,7 @@ function Opponents({ state, table, meId }: { state: GameState; table: TantTable;
         const turn = table.current === id && !out && !table.winner
         return (
           <li key={id} ref={turn ? current : undefined} data-seat={id} className="shrink-0">
-            <Opponent state={state} id={id} out={out} turn={turn} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
+            <Opponent state={state} id={id} out={out} turn={turn} playing={playingId === id} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
           </li>
         )
       })}
@@ -839,6 +912,7 @@ function Opponent({
   id,
   out,
   turn,
+  playing,
   count,
   narrow,
 }: {
@@ -846,6 +920,7 @@ function Opponent({
   id: string
   out: boolean
   turn: boolean
+  playing: boolean
   count: number
   narrow: boolean
 }) {
@@ -861,6 +936,8 @@ function Opponent({
         narrow ? 'max-w-32 md:max-w-40' : 'max-w-40 md:max-w-52',
         // Den som har tur är större och lyser.
         turn && 'z-10 mx-1.5 scale-110 bg-coral-soft shadow-[0_0_18px_5px] shadow-primary/60 ring-3 ring-primary',
+        // Spelar just ett kort: platsen lyser gult medan kortet ligger i mitten.
+        playing && 'z-10 bg-sun-soft shadow-[0_0_22px_8px] shadow-sun ring-4 ring-sun',
         out && 'opacity-45 grayscale',
       )}
     >

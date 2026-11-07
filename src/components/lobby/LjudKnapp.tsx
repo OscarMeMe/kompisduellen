@@ -1,31 +1,45 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Volume1, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { loadEffectsVolume, playPop, setEffectsVolume } from '@/lib/ljud'
+import { useLayout } from '@/hooks/useLayout'
+import { useMusicVolume } from '@/hooks/useMusicVolume'
+import { useReactions } from '@/hooks/useReactions'
+import { loadEffectsVolume, loadSoundOn, playPop, saveSoundOn, setEffectsVolume } from '@/lib/ljud'
+import { TANT_GAME } from '@/lib/tantpanik'
 import { tantMusic } from '@/lib/tantmusik'
 import { cn } from '@/lib/utils'
 
 // Under så här mycket räknas volymen som låg (ikonen med en våg).
 const LOW = 0.5
 
-// Högtalarikonen uppe till höger: en liten popover med reglage för ljudeffekter och musik (0–100 %) och "Stäng av allt".
-// Ikonen visar läget: av, lågt eller normalt. Volymerna sparas och gäller hela sajten. Släpper man ljudreglaget spelas
-// ett kort testljud. soundOn är det vanliga på/av för ljudet (samma som ljudknappen bland reaktionerna).
-export function SoundControl({
-  soundOn,
-  onSoundOn,
-  musicVolume,
-  onMusicVolume,
-}: {
-  soundOn: boolean
-  onSoundOn: (on: boolean) => void
-  musicVolume: number
-  onMusicVolume: (volume: number) => void
-}) {
+// Ljudknappen i lobbyn: samma knapp uppe till höger i sidhuvudet i väntrummet och alla spelvyer (en portal till platsen
+// i Layout, så att den kan läsa ljudet i ReactionsProvider). Musikreglaget finns bara i spel med musik.
+export function LobbySound({ game }: { game: string }) {
+  const { headerSlot } = useLayout()
+  const reactions = useReactions()
+  if (!headerSlot) return null
+  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
+  return createPortal(
+    <SoundControl
+      soundOn={soundOn}
+      onSoundOn={(on) => (reactions ? reactions.setSoundOn(on) : saveSoundOn(on))}
+      music={game === TANT_GAME}
+    />,
+    headerSlot,
+  )
+}
+
+// Högtalarikonen: en liten popover med reglage för ljudeffekter och (i spel med musik) musik, 0–100 %, och "Stäng av
+// allt". Ikonen visar läget: av, lågt eller normalt. Volymerna sparas och gäller hela sajten. Släpper man ljudreglaget
+// spelas ett kort testljud. soundOn är ljudet på eller av (ReactionsProvider, sparat i kd-ljud).
+export function SoundControl({ soundOn, onSoundOn, music }: { soundOn: boolean; onSoundOn: (on: boolean) => void; music: boolean }) {
+  const musicVolume = useMusicVolume()
   const [effects, setEffects] = useState(loadEffectsVolume)
-  const off = !soundOn || (effects === 0 && musicVolume === 0)
-  const low = !off && Math.max(effects, musicVolume) < LOW
+  const shownMusic = music ? musicVolume : 0
+  const off = !soundOn || (effects === 0 && shownMusic === 0)
+  const low = !off && Math.max(effects, shownMusic) < LOW
   const Icon = off ? VolumeX : low ? Volume1 : Volume2
   const label = off ? 'Ljudet är av' : low ? 'Ljudet är lågt' : 'Ljudet är på'
 
@@ -35,7 +49,6 @@ export function SoundControl({
     if (!soundOn && value > 0) onSoundOn(true)
   }
   function changeMusic(value: number) {
-    onMusicVolume(value)
     tantMusic.setVolume(value)
     if (!soundOn && value > 0) onSoundOn(true)
   }
@@ -56,7 +69,7 @@ export function SoundControl({
           // Ett kort testljud när man släpper reglaget.
           onRelease={() => soundOn && playPop()}
         />
-        <VolumeSlider label="Musik" value={soundOn ? musicVolume : 0} onChange={changeMusic} />
+        {music && <VolumeSlider label="Musik" value={soundOn ? musicVolume : 0} onChange={changeMusic} />}
         <Button variant="outline" className="w-full" onClick={() => onSoundOn(!soundOn)}>
           {soundOn ? 'Stäng av allt' : 'Slå på ljudet'}
         </Button>
