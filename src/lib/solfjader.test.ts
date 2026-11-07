@@ -67,6 +67,25 @@ describe('handens ordning och val', () => {
     expect(sortHand(hand).map((c) => c.type)).toEqual(['fika', 'nadu', 'regnbage', 'regnbage', 'vild'])
   })
 
+  it('Sortera lägger grupperna i en slumpad ordning, men likadana kort alltid bredvid varandra', () => {
+    const hand = [card('a', 'regnbage'), card('b', 'fika'), card('c', 'nadu'), card('d', 'regnbage'), card('e', 'blanda'), card('f', 'nadu')]
+    let a = 0x9e3779b9
+    const random = () => {
+      a = (Math.imul(a ^ (a >>> 15), 0x2c1b3c6d) + 0x6d2b79f5) | 0
+      return (a >>> 0) / 4294967296
+    }
+    const firsts = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      const types = sortHand(hand, random).map((c) => c.type)
+      // Varje sort ligger i ett enda sammanhängande block.
+      const blocks = types.filter((type, index) => index === 0 || types[index - 1] !== type)
+      expect(new Set(blocks).size).toBe(blocks.length)
+      firsts.add(types[0])
+    }
+    // Desarmera är inte alltid först: alla fyra sorterna har legat först.
+    expect([...firsts].sort()).toEqual(['blanda', 'fika', 'nadu', 'regnbage'])
+  })
+
   it('tantkort kan väljas tillsammans med samma sort eller en Vild tant', () => {
     const hand = [card('a', 'regnbage'), card('b', 'regnbage'), card('c', 'vild'), card('d', 'kupong'), card('e', 'blanda')]
     let selected = nextSelection(hand, [], 'a')

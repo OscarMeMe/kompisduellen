@@ -129,9 +129,19 @@ export function fanIndexAtPoint(x: number, y: number, layout: FanLayout): number
   return best
 }
 
-// Likadana kort bredvid varandra, i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).
-export function sortHand(hand: readonly TantCard[]): TantCard[] {
-  const order = (type: CardType) => CARD_TYPES.indexOf(type)
+// Likadana kort bredvid varandra. Utan random i katalogens ordning (tantsorterna och Vild tant ligger tillsammans).
+// Med random hamnar grupperna i en slumpad ordning (knappen Sortera och första sorteringen), så att ingen kan lista ut
+// var t.ex. Desarmera ligger av hur jag håller korten. Likadana kort ligger alltid bredvid varandra.
+export function sortHand(hand: readonly TantCard[], random?: () => number): TantCard[] {
+  let types: CardType[] = [...CARD_TYPES]
+  if (random) {
+    types = [...types]
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      ;[types[i], types[j]] = [types[j], types[i]]
+    }
+  }
+  const order = (type: CardType) => types.indexOf(type)
   return [...hand].sort((a, b) => order(a.type) - order(b.type) || a.id.localeCompare(b.id))
 }
 

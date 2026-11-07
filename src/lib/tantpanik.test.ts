@@ -1061,3 +1061,65 @@ describe('ingen genväg för värden', () => {
     expect(moveAllowed({ ...t, winner: 'bot' }, 'vard', { type: 'tFinish' })).toBe(true)
   })
 })
+
+describe('tjuven ser aldrig min handordning', () => {
+  // vard har tur och spelar ett par mot mig. Min hand i två olika ordningar hos värden.
+  function pairAgainstMe(myHand: CardType[], seed: number): TantHost {
+    const host = setup({ tjuv: ['regnbage', 'regnbage'], jag: myHand }, ['blanda', 'blanda', 'blanda'])
+    const played = tantMove(host, 'tjuv', { type: 'tPlay', cards: host.secrets.hands.tjuv.map((card) => card.id), target: 'jag' }, null, 1000, seeded(seed))
+    return tantDeadline(played, played.state.deadline!, played.state.deadline!, seeded(seed))
+  }
+  const sorted: CardType[] = ['fika', 'nadu', 'blanda', 'intemin', 'kupong']
+  const reversed = [...sorted].reverse()
+
+  it('tjuvens vy av min hand är densamma hur jag än ordnat den', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const a = pairAgainstMe(sorted, seed)
+      const b = pairAgainstMe(reversed, seed)
+      expect(table(a).step).toBe('pick')
+      // Allt tjuven får: bordet (bara antalet baksidor) och sitt eget besked.
+      expect(table(a).pick).toEqual(table(b).pick)
+      expect(table(a).pick).toEqual({ by: 'tjuv', from: 'jag', count: 5 })
+      const view = (host: TantHost) => {
+        const own = myTantView(host.secrets, table(host), 'tjuv')
+        return { ...own, hand: own.hand.map((card) => card.type) }
+      }
+      expect(view(a)).toEqual(view(b))
+    }
+  })
+
+  it('baksidorna blandas på nytt varje gång, oberoende av ordningen i min hand', () => {
+    const TRIES = 600
+    for (const hand of [sorted, reversed]) {
+      const firstAt: Record<string, number> = {}
+      for (let seed = 1; seed <= TRIES; seed++) {
+        const host = pairAgainstMe(hand, seed)
+        const first = host.secrets.hands.jag.find((card) => card.id === host.secrets.pickOrder![0])!.type
+        firstAt[first] = (firstAt[first] ?? 0) + 1
+      }
+      // Varje kort ligger först ungefär var femte gång, oavsett var det ligger i min hand.
+      for (const type of sorted) expect(Math.abs((firstAt[type] ?? 0) / TRIES - 0.2)).toBeLessThan(0.06)
+    }
+  })
+
+  it('Tantsnaran blandar tjuvens hand på nytt inför varje kort', () => {
+    let same = 0
+    const TRIES = 60
+    for (let seed = 1; seed <= TRIES; seed++) {
+      const host = setup({ tjuv: ['regnbage', 'regnbage', 'fika', 'nadu', 'blanda', 'intemin'], jag: ['snara'] }, ['blanda', 'blanda'])
+      const played = tantMove(host, 'tjuv', { type: 'tPlay', cards: host.secrets.hands.tjuv.slice(0, 2).map((card) => card.id), target: 'jag' }, null, 1000, seeded(seed))
+      let next = tantDeadline(played, played.state.deadline!, played.state.deadline!, seeded(seed))
+      next = tantMove(next, 'tjuv', { type: 'tPick', index: 0 }, null, 2000, seeded(seed + 1000))
+      expect(table(next).pick).toMatchObject({ by: 'jag', from: 'tjuv', trap: true, left: 2 })
+      const before = next.secrets.pickOrder!
+      const after = tantMove(next, 'jag', { type: 'tPick', index: 0 }, null, 3000, seeded(seed + 2000))
+      expect(table(after).pick).toMatchObject({ by: 'jag', trap: true, left: 1 })
+      expect(new Set(after.secrets.pickOrder)).toEqual(new Set(after.secrets.hands.tjuv.map((card) => card.id)))
+      // Samma ordning som förra gången, bara utan det tagna kortet?
+      if (JSON.stringify(before.slice(1)) === JSON.stringify(after.secrets.pickOrder)) same++
+    }
+    // Med fyra kort kvar blir det samma ordning ungefär var 24:e gång av en slump, inte varje gång.
+    expect(same).toBeLessThan(TRIES / 4)
+  })
+
+})

@@ -212,7 +212,7 @@ export function TantHand({
           </p>
         ) : (
           <>
-            {/* Ordnar handen som förut: likadana kort bredvid varandra. På dator till höger om handen i höjd med korten,
+            {/* Ordnar handen: likadana kort bredvid varandra, med grupperna i en ny slumpad ordning varje gång. På dator till höger om handen i höjd med korten,
                 med en egen plats så att den aldrig ligger över dem. På mobil precis ovanför handens högra hörn. */}
             {/* Dold medan Nope!-fönstret är öppet, så att den aldrig ligger vid nedräkningen. */}
             {cards.length > 1 && !pending && (
@@ -220,7 +220,7 @@ export function TantHand({
                 type="button"
                 aria-label="Sortera handen"
                 title="Sortera handen"
-                onClick={() => setOrder(sortHand(hand).map((card) => card.id))}
+                onClick={() => setOrder(sortHand(hand, Math.random).map((card) => card.id))}
                 className="absolute right-1 bottom-full z-50 mb-1 flex flex-col items-center gap-0.5 sm:top-1/2 sm:right-2 sm:bottom-auto sm:mb-0 sm:-translate-y-1/2"
               >
                 <span className="flex size-10 items-center justify-center rounded-full bg-card/90 shadow-soft-sm backdrop-blur-sm hover:bg-card sm:size-11">
@@ -338,7 +338,7 @@ function useHandOrder(key: string, hand: TantCard[]): [string[], (ids: string[])
     } catch {
       // Ingen sparad ordning.
     }
-    const sorted = sortHand(hand).map((card) => card.id)
+    const sorted = sortHand(hand, Math.random).map((card) => card.id)
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(sorted))
     } catch {
