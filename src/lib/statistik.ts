@@ -62,6 +62,8 @@ type Events = {
   match_avslutad: { spel: string; antal_spelare: number; antal_rundor: number; langd_sekunder: number }
   spelade_igen: { spel: string }
   bytte_spel: { fran_spel: string; till_spel: string }
+  // Fel i en fråga i Gissa priset (rapport.ts): frågans id och orsaken.
+  rapporterade_fel: { fraga: string; orsak: string }
 }
 
 export function track<E extends keyof Events>(event: E, properties: Events[E]) {

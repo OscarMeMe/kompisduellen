@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Konfetti } from '@/components/Konfetti'
 import { Stjarnstank } from '@/components/Stjarnstank'
 import { PriceAnswerCard, PriceFact } from '@/components/gissa-priset/PriceAnswerCard'
+import { RapporteraFel } from '@/components/gissa-priset/RapporteraFel'
 import { RoundBadge, Wide } from '@/components/lobby/LobbyLayout'
 import { LostMoveLine } from '@/components/lobby/LostMoveLine'
 import { RevealFooter } from '@/components/lobby/RevealFooter'
@@ -66,6 +67,8 @@ export function PriceRevealView({ state, me, isHost, clockOffset, lostMove, onNe
       </PriceAnswerCard>
 
       {revealed && item && <PriceFact item={item} />}
+      {/* Liten och grå, så att den inte stör spelet. */}
+      {revealed && item && <RapporteraFel itemId={item.id} />}
 
       {revealed && (
         <ul className="space-y-2" aria-label="Allas gissningar">
