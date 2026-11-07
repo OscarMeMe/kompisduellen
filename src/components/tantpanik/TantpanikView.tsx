@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { CircleHelp, Menu, ScrollText } from 'lucide-react'
+import { Bot, CircleHelp, Menu, ScrollText } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import type { TantViewProps } from '@/components/lobby/types'
@@ -54,6 +54,29 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
   const [handOverlap, setHandOverlap] = useState(0)
   // Kortet jag just drog, medan det visas stort (show) och medan det glider ner till sin plats i handen (land).
   const [incoming, setIncoming] = useState<Incoming>(null)
+  // Kortet jag senast fick: markerat i handen ("NY") en stund efter att det landat.
+  const [fresh, setFresh] = useState<string | null>(null)
+  const landingId = useRef<string | null>(null)
+  useEffect(() => {
+    if (incoming) {
+      landingId.current = incoming.id
+      return
+    }
+    if (landingId.current) setFresh(landingId.current)
+    landingId.current = null
+  }, [incoming])
+  useEffect(() => {
+    if (!fresh) return
+    const timer = setTimeout(() => setFresh(null), FRESH_MS)
+    return () => clearTimeout(timer)
+  }, [fresh])
+  // Markeringen försvinner när min nästa tur börjar (andras turer kan komma direkt efter, och då hinner man inte se den).
+  const myTurnNow = !!table && table.current === me.id && table.step === 'turn'
+  const wasMyTurn = useRef(myTurnNow)
+  useEffect(() => {
+    if (myTurnNow && !wasMyTurn.current) setFresh(null)
+    wasMyTurn.current = myTurnNow
+  }, [myTurnNow])
   // En explosion visas: valen (t.ex. Göm tanten) och firandet av vinnaren väntar tills den är klar.
   const [bombShowing, setBombShowing] = useState(false)
   // När Nope!-fönstret stängs syns en kort stämpel (KÖR! eller STOPPAT!), så att man förstår att det är över.
@@ -273,6 +296,8 @@ export function TantpanikView({ state, me, isHost, clockOffset, tantView, onMove
             onOverlap={setHandOverlap}
             dimmed={dimmed}
             incoming={incoming}
+            freshId={fresh}
+            onFreshSeen={() => setFresh(null)}
             orderKey={`${me.id}:${table.order.join(',')}`}
           />
         ) : (
@@ -498,6 +523,9 @@ function usePeeker(table: TantTable | null): string | null {
   }, [open, nopes])
   return peeker
 }
+
+// Hur länge ett nytt kort är markerat i handen (ms).
+const FRESH_MS = 5000
 
 // Hur länge stämpeln syns när Nope!-fönstret stängs (ms).
 const VERDICT_MS = 850
@@ -838,7 +866,11 @@ function Opponent({
     >
       <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} className="shrink-0 text-3xl md:text-4xl" />
       <span className="flex min-w-0 flex-col items-start leading-tight">
-        <span className="max-w-full truncate text-xs font-bold md:text-sm">{name}</span>
+        <span className="flex max-w-full items-center gap-0.5 text-xs font-bold md:text-sm">
+          {/* En bot har en liten robot vid namnet. */}
+          {state.players[id]?.bot && <Bot aria-label="Bot" className="size-3.5 shrink-0" />}
+          <span className="truncate">{name}</span>
+        </span>
         {out ? <span className="text-[11px] font-semibold text-muted-foreground">Ute</span> : <MiniFan count={count} />}
       </span>
     </span>

@@ -32,6 +32,8 @@ export function TantHand({
   incoming = null,
   orderKey,
   dimmed = false,
+  freshId = null,
+  onFreshSeen,
 }: {
   state: GameState
   table: TantTable
@@ -47,6 +49,9 @@ export function TantHand({
   orderKey: string
   // Inte min tur: handen är lätt dämpad och ligger lite lägre.
   dimmed?: boolean
+  // Kortet jag nyss fick (markerat "NY"), och att jag tryckt på det.
+  freshId?: string | null
+  onFreshSeen?: () => void
 }) {
   const [order, setOrder] = useHandOrder(orderKey, hand)
   const arranged = useMemo(() => arrangeHand(hand, order), [hand, order])
@@ -78,6 +83,7 @@ export function TantHand({
   const nopeIds = nope ? cards.filter((card) => card.type === 'nadu').map((card) => card.id) : []
 
   function tap(id: string) {
+    if (id === freshId) onFreshSeen?.()
     // Ett tryck på ett Nope!-kort när det går att säga Nope! spelar det direkt, som den stora knappen.
     if (nope && pending && nopeIds.includes(id)) {
       send({ type: 'tNope', card: id, level: pending.nopes })
@@ -221,6 +227,7 @@ export function TantHand({
               selected={chosen.map((card) => card.id)}
               glow={nopeIds}
               hiddenId={hiddenId}
+              freshId={freshId}
               onTap={tap}
               onReorder={setOrder}
               onOverlap={onOverlap}
