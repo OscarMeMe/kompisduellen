@@ -53,7 +53,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
 
   return (
-    <Wide tight>
+    // På bred, låg skärm (t.ex. en bärbar dator på 1366 × 768) ligger svarsdelen bredvid bordet, så att den aldrig täcker det.
+    <Wide tight className="lg:short:max-w-6xl">
       {(accusing || (table.countdownStarted && table.step === 'diskussion')) && (
         <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />
       )}
@@ -81,6 +82,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         })}
       />
 
+      <div className="flex flex-col gap-1.5 sm:gap-3 lg:short:grid lg:short:grid-cols-[minmax(0,1fr)_22rem] lg:short:items-start lg:short:gap-5">
       {/* Samma bord genom alla faser, så att det står still när de byts. Bara svarsdelen under tonas om. */}
       {table.step !== 'kort' && (
         <div className="motion-safe:animate-fade">
@@ -101,6 +103,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         </div>
       )}
       
+      {/* Svarsdelen: under bordet, eller i en egen kolumn bredvid det på bred, låg skärm. */}
+      <div className="flex min-w-0 flex-col gap-1.5 sm:gap-3 lg:short:sticky lg:short:top-2">
       {table.failedAccusation && !accusing && (
         <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
           Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.
@@ -113,6 +117,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {table.step === 'rostning' && !accusing && <VotingStep {...stepProps} choice={choice} />}
       {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
       {table.step === 'facit' && <FacitStep {...stepProps} />}
+      </div>
+      </div>
 
       {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
       {isHost && canChangeWord(table) && (
