@@ -1139,3 +1139,31 @@ describe('rätt tal i första rundan av Närmast vinner', () => {
     expect(new Set(targets).size).toBeGreaterThan(10)
   })
 })
+
+describe('tantklänningen', () => {
+  const players = { a: { name: 'A', avatar: '🤪' }, b: { name: 'B', avatar: '🎩' } }
+  // En match i Närmast vinner där a och b gissar och target avgör vem som vinner.
+  function finished(start: GameState, guesses: { a: number; b: number }): GameState {
+    let state = hostStart({ state: start, secrets: null }, Object.keys(start.players), 0).state
+    for (let step = 0; step < 20 && state.phase !== 'finished'; step++) {
+      const now = (step + 1) * 100_000
+      if (state.phase === 'guessing') {
+        state = addGuess(addGuess(state, 'a', guesses.a, now), 'b', guesses.b, now)
+        state = resolveRound(state, now, 50)
+      } else if (state.phase === 'reveal') state = advanceFromReveal(state, now, state.round)
+    }
+    return state
+  }
+  const lobby = (dressId: string | null = null): GameState => ({ ...initialState('narmast'), players, rounds: 1, dressId })
+
+  it('den som vinner ensam får klänningen, och den byter ägare', () => {
+    expect(finished(lobby(), { a: 50, b: 10 }).dressId).toBe('a')
+    expect(finished(lobby('a'), { a: 10, b: 50 }).dressId).toBe('b')
+  })
+
+  it('delad seger och en provomgång ändrar inget', () => {
+    expect(finished(lobby('a'), { a: 50, b: 50 }).dressId).toBe('a')
+    const solo: GameState = { ...initialState('gissa-priset'), players: { a: players.a }, dressId: 'b' }
+    expect(finished(solo, { a: 1, b: 1 }).dressId).toBe('b')
+  })
+})

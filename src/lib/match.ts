@@ -171,6 +171,9 @@ export type GameState = {
   // Botar som står över en match i ett spel utan botar. De kommer tillbaka till lobbyn när matchen är slut (resetMatch).
   // Saknas hos en värd med en äldre version.
   benchBots: Record<string, PlayerInfo>
+  // Den som vann senast och bär tantklänningen i lobbyn (alla spel). Byter ägare när någon annan vinner ensam. En
+  // provomgång eller delad seger ändrar inget. Saknas hos en värd med en äldre version.
+  dressId: string | null
 }
 
 // Värdens tillstånd: det som skickas ut till alla, och kortspelens, Imposterjaktens eller Exploderande Tanters hemliga data.
@@ -229,6 +232,7 @@ export function initialState(game = 'gissa-priset'): GameState {
     tantSettings: DEFAULT_TANT_SETTINGS,
     matchPlayerIds: [],
     benchBots: {},
+    dressId: null,
   }
 }
 
@@ -608,6 +612,7 @@ export function matchWinners(state: GameState): string[] {
 function finishMatch(state: GameState): GameState {
   if (state.practice) return state
   const winners = matchWinners(state)
+  const dressId = winners.length === 1 ? winners[0] : (state.dressId ?? null)
   const leaderboard = { ...state.leaderboard }
   for (const id of matchParticipants(state)) {
     const info = state.players[id]
@@ -621,6 +626,7 @@ function finishMatch(state: GameState): GameState {
   return {
     ...state,
     leaderboard,
+    dressId,
     matchesPlayed: state.matchesPlayed + 1,
     gamesPlayed: { ...state.gamesPlayed, [state.game]: (state.gamesPlayed[state.game] ?? 0) + 1 },
   }

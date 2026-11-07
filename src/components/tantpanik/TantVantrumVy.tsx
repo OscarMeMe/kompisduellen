@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bot, Plus, Share2 } from 'lucide-react'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
+import { VannSenast } from '@/components/lobby/VannSenast'
 import { TantKort } from '@/components/tantpanik/TantKort'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -92,7 +93,7 @@ export function TantVanta({
   )
 }
 
-export type KafferepGuest = { id: string; name: string; avatar: string; host: boolean; bot: boolean }
+export type KafferepGuest = { id: string; name: string; avatar: string; host: boolean; bot: boolean; dress?: boolean }
 
 // Kafferepsbordet sett ovanifrån: en stol och en kaffekopp per plats runt en rund duk. Den som går med hoppar in med
 // ett litet ljud. Lediga stolar bjuder in. Botar har sin robot.
@@ -149,7 +150,7 @@ export function TantKafferep({ guests: all, meId, maxPlayers }: { guests: Kaffer
                       arrived.includes(guest.id) && 'motion-safe:animate-hop',
                     )}
                   >
-                    <LobbyFigur playerId={guest.id} avatar={guest.avatar} className="text-4xl sm:text-5xl" />
+                    <LobbyFigur playerId={guest.id} avatar={guest.avatar} dress={guest.dress} className="text-4xl sm:text-5xl" />
                     {guest.bot && (
                       <Bot aria-label="Bot" className="absolute -top-1.5 -left-1.5 size-6 rounded-full bg-tant-kram p-1 text-tant-vin shadow-soft-sm" />
                     )}
@@ -160,6 +161,7 @@ export function TantKafferep({ guests: all, meId, maxPlayers }: { guests: Kaffer
                   <span className="max-w-full truncate rounded-full bg-tant-kram/95 px-2 text-xs font-bold text-tant-vin shadow-soft-sm sm:text-sm">
                     {guest.name}
                   </span>
+                  {guest.dress && <VannSenast />}
                 </>
               ) : (
                 <>

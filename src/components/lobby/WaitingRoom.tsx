@@ -111,6 +111,7 @@ export function WaitingRoom({
   const hasBots = gameHasBots(state.game)
   const playing = hasBots ? online : online.filter((p) => !p.bot)
   const watchingBots = online.length - playing.length
+  const dressWearer = online.find((p) => p.id === state.dressId)
   const theme = lobbyThemeFor(game)
   const howTo = tant ? TANT_HOW_TO : imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
   const scoringDetails = tant ? TANT_SCORING : imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
@@ -226,7 +227,7 @@ export function WaitingRoom({
         {tant ? (
           // Spelarna sitter runt ett kafferepsbord, med stol och kaffekopp.
           <TantKafferep
-            guests={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
+            guests={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined, dress: p.id === state.dressId }))}
             meId={meId}
             maxPlayers={game.maxPlayers ?? 10}
           />
@@ -239,10 +240,17 @@ export function WaitingRoom({
               host: p.host === true,
               bot: p.bot !== undefined,
               watching: p.bot !== undefined && !hasBots,
+              dress: p.id === state.dressId,
             }))}
             meId={meId}
             emptySeats={emptySeats(playing.length, game)}
           />
+        )}
+        {/* Den som vann senast bär tantklänningen, i alla spel i lobbyn. */}
+        {dressWearer && (
+          <p className="rounded-lg border-2 border-tant-guld-mork bg-sun-soft px-3 py-2.5 text-center text-sm leading-snug font-bold">
+            {lobbyName(dressWearer)} bär tantklänningen tills någon annan vinner. Den följer med i alla spel i lobbyn.
+          </p>
         )}
         {watchingBots > 0 && (
           <p className="rounded-md bg-muted px-3 py-2 text-center text-sm font-semibold text-muted-foreground">
