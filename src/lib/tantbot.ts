@@ -136,7 +136,8 @@ const PRECIOUS: CardType[] = ['fika', 'nadu', ...PROTECTIVE]
 // skyddskort.
 function findCombo(hand: TantCard[], size: 2 | 3, careful: boolean): TantCard[] | null {
   for (const card of hand) {
-    if (card.type === 'vild' || (careful && PRECIOUS.includes(card.type))) continue
+    // Tantsnaran spelas aldrig: den ska ligga kvar på handen som fälla.
+    if (card.type === 'vild' || card.type === 'snara' || (careful && PRECIOUS.includes(card.type))) continue
     const same = hand.filter((other) => other.type === card.type)
     const wild = CARDS[card.type].kind === 'collect' ? hand.filter((other) => other.type === 'vild') : []
     const chosen = [...same, ...wild].slice(0, size)

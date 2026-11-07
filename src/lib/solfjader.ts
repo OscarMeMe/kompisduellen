@@ -147,7 +147,8 @@ export function sortHand(hand: readonly TantCard[], random?: () => number): Tant
 
 // Kan de här korten bli ett par eller tretal om fler läggs till? Vilda tanter ensamma kan det, de väntar på en tant.
 export function canJoin(types: readonly CardType[]): boolean {
-  if (types.length > 3 || types.includes('tant')) return false
+  // Tantsnaran är en fälla och spelas aldrig, så den går inte att lägga ihop med något.
+  if (types.length > 3 || types.includes('tant') || types.includes('snara')) return false
   const real = types.filter((type) => type !== 'vild')
   if (real.length === 0) return true
   if (!real.every((type) => type === real[0])) return false
@@ -188,7 +189,7 @@ export function cardHint(types: readonly CardType[]): string | null {
     case 'joker':
       return 'Vild tant gör inget ensam. Tryck på en tant för att göra ett par eller tretal.'
     case 'trap':
-      return 'Fällan gör inget ensam. Den slår igen om någon stjäl den från dig.'
+      return 'Tantsnaran är en fälla och kan inte spelas.'
     default:
       return 'Tryck på fler likadana kort (eller en Vild tant) för ett par eller tretal.'
   }

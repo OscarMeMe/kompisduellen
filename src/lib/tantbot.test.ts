@@ -501,6 +501,25 @@ describe('botarna fastnar aldrig', () => {
     expect(fallbacks).toBe(0)
   })
 
+  it('botarna försöker aldrig spela Tantsnaran i ett par eller tretal', () => {
+    for (const level of ['latt', 'normal', 'svar'] as BotLevel[]) {
+      for (let seed = 1; seed <= 200; seed++) {
+        const host = startTantMatch(lobby(3), seeded(seed))
+        const t = host.state.tantpanik!
+        const me = t.current
+        const hand = [
+          { id: 's1', type: 'snara' as const },
+          { id: 's2', type: 'snara' as const },
+          { id: 's3', type: 'snara' as const },
+          { id: 'v', type: 'vild' as const },
+        ]
+        const sight = { me, table: t, view: { ...myTantView(host.secrets, t, me), hand } }
+        const move = decideBotMove(sight, level, seeded(seed * 7))
+        if (move?.type === 'tPlay') expect(move.cards.some((id) => id.startsWith('s'))).toBe(false)
+      }
+    }
+  })
+
   it('reservdraget finns i varje steg där en bot ska göra något', () => {
     const host = startTantMatch(lobby(3), seeded(4))
     const t = host.state.tantpanik!

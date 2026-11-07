@@ -601,9 +601,10 @@ function startPick(d: Draft, by: string, from: string, trap: boolean, left: numb
 }
 
 // Kan korten spelas tillsammans som par eller tretal? Samma titel räcker, även för vanliga kort. En vild tant kan ersätta
-// en tantsort, men kräver minst en riktig tant och matchar aldrig andra kort.
+// en tantsort, men kräver minst en riktig tant och matchar aldrig andra kort. Tantsnaran är bara en fälla på handen och
+// ingår aldrig i ett par eller tretal, inte heller med en Vild tant.
 export function isCombo(types: readonly CardType[]): boolean {
-  if (types.length < 2 || types.length > 3 || types.includes('tant')) return false
+  if (types.length < 2 || types.length > 3 || types.includes('tant') || types.includes('snara')) return false
   if (types.includes('vild')) {
     const real = types.filter((type) => type !== 'vild')
     return real.length > 0 && real.every((type) => type === real[0]) && CARDS[real[0]].kind === 'collect'

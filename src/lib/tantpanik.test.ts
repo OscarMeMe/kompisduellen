@@ -655,6 +655,24 @@ describe('Tantsnaran', () => {
     host = move(host, 'a', { type: 'tDraw' })
     expect(types(host, 'a')).toEqual(['snara', 'snara'])
   })
+
+  it('kan aldrig ingå i ett par eller tretal, inte heller med en Vild tant', () => {
+    expect(isCombo(['snara', 'snara'])).toBe(false)
+    expect(isCombo(['snara', 'snara', 'snara'])).toBe(false)
+    expect(isCombo(['snara', 'vild'])).toBe(false)
+    expect(isCombo(['snara', 'snara', 'vild'])).toBe(false)
+    expect(isCombo(['regnbage', 'vild', 'snara'])).toBe(false)
+    // Andra kort med samma namn går som förut.
+    expect(isCombo(['blanda', 'blanda'])).toBe(true)
+    expect(isCombo(['regnbage', 'vild'])).toBe(true)
+    for (const cards of [['snara', 'snara'], ['snara', 'snara', 'snara'], ['snara', 'vild']] as CardType[][]) {
+      const before = setup({ a: [...cards, 'regnbage'], b: ['fika', 'nadu'] }, ['regnbage'])
+      const after = play(before, 'a', cards, { target: 'b', request: 'fika' })
+      expect(after.state.tantpanik).toEqual(before.state.tantpanik)
+      expect(after.secrets.hands).toEqual(before.secrets.hands)
+      expect(after.secrets.notices.a?.text).toBe('Det gick inte just nu.')
+    }
+  })
 })
 
 describe('hemligheter och dubbla drag', () => {

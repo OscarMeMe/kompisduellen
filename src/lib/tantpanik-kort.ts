@@ -26,7 +26,7 @@ export type CardType =
   | 'vild'
   | 'snara'
 
-// Vad kortet gör när det spelas ensamt. Tantkorten och fällan gör inget ensamma, utan används i par och tretal.
+// Vad kortet gör när det spelas ensamt. Tantkorten gör inget ensamma, utan används i par och tretal. Fällan spelas aldrig.
 export type CardKind = 'bomb' | 'defuse' | 'action' | 'nope' | 'collect' | 'joker' | 'trap'
 
 export type CardDef = {
@@ -222,7 +222,7 @@ export const CARDS: Record<CardType, CardDef> = {
     name: 'Tantsnara',
     symbol: '🪤',
     text: 'Stjäl någon det här kortet får du välja två kort ur tjuvens hand.',
-    rule: 'Gör inget ensam. Stjäl någon den med ett par eller tretal slår fällan igen för alla att se, och du väljer två kort ur tjuvens hand (färre om tjuven har färre) utan att se vad de är. Fällan läggs i slänghögen. En tjänst utlöser den inte.',
+    rule: 'Kan inte spelas, inte heller i par eller tretal. Den ligger kvar på handen som fälla. Stjäl någon den med ett par eller tretal slår fällan igen för alla att se, och du väljer två kort ur tjuvens hand (färre om tjuven har färre) utan att se vad de är. Fällan läggs i slänghögen. En tjänst utlöser den inte.',
     image: 'tantsnara',
     kind: 'trap',
     color: 'bg-mint-soft',

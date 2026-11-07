@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   arrangeHand,
   canJoin,
+  cardHint,
   moveCard,
   fanIndexAtPoint,
   fanLayout,
@@ -84,6 +85,18 @@ describe('handens ordning och val', () => {
     }
     // Desarmera är inte alltid först: alla fyra sorterna har legat först.
     expect([...firsts].sort()).toEqual(['blanda', 'fika', 'nadu', 'regnbage'])
+  })
+
+  it('en vald Tantsnara går inte att lägga ihop med något, och säger att den är en fälla', () => {
+    const hand = [card('a', 'snara'), card('b', 'snara'), card('c', 'vild'), card('d', 'snara')]
+    // En till Tantsnara läggs inte till: den nya blir ensam vald i stället.
+    expect(nextSelection(hand, ['a'], 'b')).toEqual(['b'])
+    expect(nextSelection(hand, ['a'], 'c')).toEqual(['c'])
+    expect(nextSelection(hand, ['c'], 'a')).toEqual(['a'])
+    expect(canJoin(['snara', 'snara'])).toBe(false)
+    expect(canJoin(['vild', 'snara'])).toBe(false)
+    expect(cardHint(['snara'])).toBe('Tantsnaran är en fälla och kan inte spelas.')
+    expect(selectionLabel(['snara'])).toBeNull()
   })
 
   it('tantkort kan väljas tillsammans med samma sort eller en Vild tant', () => {
