@@ -23,7 +23,7 @@ describe('Exploderande Tanters slutskärm', () => {
     expect(awards).toEqual([
       { id: 'nope', title: 'Nope-drottningen', ids: ['a'], what: '4 Nope!' },
       { id: 'tjuv', title: 'Tjuven', ids: ['b'], what: '1 stulet kort' },
-      { id: 'overlevare', title: 'Överlevaren', ids: ['a', 'c'], what: '2 Desarmera' },
+      { id: 'overlevare', title: 'Överlevaren', ids: ['a', 'c'], what: 'Desarmerade 2' },
     ])
   })
 

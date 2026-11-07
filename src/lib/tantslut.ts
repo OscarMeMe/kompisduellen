@@ -45,7 +45,7 @@ export function tantAwards(table: Pick<TantTable, 'order' | 'stats'>): TantAward
   const thief = leaders(stats.steals, table.order)
   if (thief) awards.push({ id: 'tjuv', title: 'Tjuven', ids: thief.ids, what: `${thief.count} ${thief.count === 1 ? 'stulet kort' : 'stulna kort'}` })
   const survivor = leaders(stats.defuses, table.order)
-  if (survivor) awards.push({ id: 'overlevare', title: 'Överlevaren', ids: survivor.ids, what: `${survivor.count} Desarmera` })
+  if (survivor) awards.push({ id: 'overlevare', title: 'Överlevaren', ids: survivor.ids, what: `Desarmerade ${survivor.count}` })
   return awards
 }
 

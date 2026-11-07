@@ -126,7 +126,7 @@ export function TantSlutskarm({
               <AwardTile
                 key={award.id}
                 award={award}
-                who={award.ids.map((id) => (id === meId ? 'Du' : name(id))).join(' och ')}
+                who={award.ids.map((id) => (id === meId ? 'Du' : name(id)))}
                 style={enter('motion-safe:animate-slut-flip', AT.award + i * AT.awardStep).style}
                 className={enter('motion-safe:animate-slut-flip', AT.award + i * AT.awardStep).className}
               />
@@ -257,7 +257,7 @@ function Kafferepsbord() {
 }
 
 // En utmärkelse som en liten guldbricka: symbol, titel, vem och vad.
-function AwardTile({ award, who, className, style }: { award: TantAward; who: string; className: string; style?: CSSProperties }) {
+function AwardTile({ award, who, className, style }: { award: TantAward; who: string[]; className: string; style?: CSSProperties }) {
   return (
     <li
       className={cn(
@@ -267,9 +267,18 @@ function AwardTile({ award, who, className, style }: { award: TantAward; who: st
       style={style}
     >
       <AwardIcon id={award.id} />
-      <span className="font-heading text-sm leading-tight font-bold short:text-xs">{award.title}</span>
-      <span className="max-w-full truncate text-[13px] font-extrabold text-tant-vin short:text-xs">{who}</span>
-      <span className="text-[11.5px] font-bold text-[#6b4a3a]">{award.what}</span>
+      <span className="font-heading text-sm leading-tight font-bold short:text-[11px]">{award.title}</span>
+      {/* Delade utmärkelser radbryts mellan namnen ("Berit, Gunnel och Margit"), aldrig mitt i ett namn, så att alla syns.
+          Brickorna i raden blir lika höga (grid), och raden längst ner hamnar på samma höjd. */}
+      <span className="max-w-full text-[13px] leading-tight font-extrabold break-words text-tant-vin short:text-[11px] short:leading-[1.15]">
+        {who.map((one, i) => (
+          <span key={i}>
+            <span className="whitespace-nowrap">{one}</span>
+            {i < who.length - 2 ? ', ' : i === who.length - 2 ? ' och ' : ''}
+          </span>
+        ))}
+      </span>
+      <span className="mt-auto text-[11.5px] font-bold text-[#6b4a3a]">{award.what}</span>
     </li>
   )
 }
@@ -278,7 +287,7 @@ function AwardIcon({ id }: { id: TantAwardId }) {
   const ink = { stroke: 'var(--tant-ink)' }
   if (id === 'nope')
     return (
-      <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-7">
+      <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-6">
         <path d="M12 4 H26 L34 12 V26 L26 34 H12 L4 26 V12 Z" fill="#c8102e" style={ink} strokeWidth="2.5" strokeLinejoin="round" />
         <path d="M15 28 V16 M18.5 27 V12 M22 27 V13 M25.5 27 V16 M15 24 Q14 30 20 30 Q26 30 25.5 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
         <path d="M11 6 L14 1 L17 5 L19 0 L21 5 L24 1 L27 6" style={{ fill: 'var(--tant-guld)', ...ink }} strokeWidth="1.6" strokeLinejoin="round" />
@@ -286,14 +295,14 @@ function AwardIcon({ id }: { id: TantAwardId }) {
     )
   if (id === 'tjuv')
     return (
-      <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-7">
+      <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-6">
         <rect x="5" y="8" width="17" height="24" rx="3" transform="rotate(-12 13 20)" className="fill-tant-kram-2" style={ink} strokeWidth="2.5" />
         <rect x="15" y="6" width="17" height="24" rx="3" transform="rotate(10 23 18)" className="fill-tant-kram-2" style={ink} strokeWidth="2.5" />
         <path d="M17 15 Q24 12 31 16 L30 20 Q27 18 25 19 Q23 18 19 20 Z" className="fill-tant-ink" />
       </svg>
     )
   return (
-    <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-7">
+    <svg aria-hidden width="38" height="38" viewBox="0 0 38 38" className="short:size-6">
       <path d="M14 4 Q12 7 14 10 M20 3 Q18 6 20 9" fill="none" stroke="#6b4a3a" strokeWidth="2" strokeLinecap="round" />
       <path d="M7 14 H27 V24 Q27 31 17 31 Q7 31 7 24 Z" className="fill-tant-kram-2" style={ink} strokeWidth="2.5" strokeLinejoin="round" />
       <path d="M27 17 Q33 17 32 22 Q31 26 26 25" fill="none" style={ink} strokeWidth="2.5" />
