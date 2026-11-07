@@ -87,9 +87,20 @@ export function Layout() {
           Det finns en ny version. Den laddas när ni är klara.
         </p>
       )}
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6">
+      <main
+        className={cn(
+          'mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 sm:px-6',
+          inMatch ? 'pb-[max(3rem,env(safe-area-inset-bottom))]' : 'pb-10',
+        )}
+      >
         <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer, headerSlot } satisfies LayoutContext} />
       </main>
+      {/* En diskret sidfot längst ner på alla sidor, men inte under en pågående match. */}
+      {!inMatch && (
+        <footer className="mx-auto w-full max-w-5xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">
+          <p className="border-t border-border/70 pt-4 text-center text-xs text-muted-foreground">Skapad av vänner, för vänner.</p>
+        </footer>
+      )}
     </div>
   )
 }
