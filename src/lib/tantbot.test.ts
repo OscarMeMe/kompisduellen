@@ -115,16 +115,74 @@ describe('botarna i Exploderande Tanter', () => {
     expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0 })
   })
 
-  it('gömmer tanten överst när nästa ska dra (Normal)', () => {
-    let host = startTantMatch(lobby(2), seeded(11))
+  it('gömmer tanten på en slumpad plats, med olika fördelning per svårighet', () => {
+    let host = startTantMatch(lobby(3), seeded(11))
     const [a] = host.state.tantpanik!.order
     host = sync({
       ...host,
       secrets: { ...host.secrets, deck: [{ id: 'bomb', type: 'tant' }, ...host.secrets.deck], hands: { ...host.secrets.hands, [a]: [{ id: 'f', type: 'fika' }] } },
     })
     host = tantMove(host, a, { type: 'tDraw' }, null, 0, seeded(1))
-    expect(host.state.tantpanik!.step).toBe('place')
-    expect(decideBotMove(botSight(host, a)!, 'normal', () => 0.1)).toEqual({ type: 'tPlace', position: 0 })
+    const table = host.state.tantpanik!
+    expect(table.step).toBe('place')
+    const max = table.deckCount
+    expect(max).toBeGreaterThan(20)
+    const TRIES = 1000
+    // Andelen försök per plats, med botens riktiga beslut.
+    function spread(level: BotLevel, t = table): number[] {
+      const random = seeded(level.length + t.out.length)
+      const counts = Array.from({ length: max + 1 }, () => 0)
+      for (let i = 0; i < TRIES; i++) {
+        const move = decideBotMove({ ...botSight(host, a)!, table: t }, level, random)
+        if (move?.type !== 'tPlace') throw new Error('Ingen placering')
+        expect(move.position).toBeGreaterThanOrEqual(0)
+        expect(move.position).toBeLessThanOrEqual(max)
+        counts[move.position]++
+      }
+      return counts.map((count) => count / TRIES)
+    }
+    const near = (share: number, expected: number) => expect(Math.abs(share - expected)).toBeLessThan(0.05)
+    const sum = (shares: number[]) => shares.reduce((total, share) => total + share, 0)
+
+    // Lätt: helt slumpat, ingen plats sticker ut och toppen är sällsynt.
+    const easy = spread('latt')
+    expect(easy[0]).toBeLessThan(0.08)
+    expect(easy.filter((share) => share > 0).length).toBeGreaterThan(max * 0.8)
+
+    // Normal: ungefär 35 % överst, 25 % på plats 2–3, resten längre ned.
+    const normal = spread('normal')
+    near(normal[0], 0.35)
+    near(normal[1] + normal[2], 0.25)
+    near(sum(normal.slice(3)), 0.4)
+
+    // Svår: ungefär 40 % överst och 20 % näst överst.
+    const hard = spread('svar')
+    near(hard[0], 0.4)
+    near(hard[1], 0.2)
+    near(sum(hard.slice(2)), 0.4)
+    // Bara två kvar: oftare överst.
+    const two = spread('svar', { ...table, out: [table.order[2]] })
+    near(two[0], 0.55)
+    near(two[1], 0.2)
+  })
+
+  it('minns var den själv gömde tanten, även när platsen är slumpad', () => {
+    let host = startTantMatch(lobby(3), seeded(12))
+    const [a] = host.state.tantpanik!.order
+    host = sync({
+      ...host,
+      secrets: { ...host.secrets, deck: [{ id: 'bomb', type: 'tant' }, ...host.secrets.deck], hands: { ...host.secrets.hands, [a]: [{ id: 'f', type: 'fika' }] } },
+    })
+    host = tantMove(host, a, { type: 'tDraw' }, null, 0, seeded(1))
+    const sight = botSight(host, a)!
+    const move = decideBotMove(sight, 'normal', () => 0.9)!
+    expect(move.type).toBe('tPlace')
+    const after = tantMove(host, a, move, null, 0, seeded(1))
+    const memory = remember(newBotMemory(sight.table), move, sight, after.state.tantpanik!)
+    const position = (move as { position: number }).position
+    expect(position).toBeGreaterThanOrEqual(3)
+    expect(memory.bombAt).toBe(position)
+    expect(after.secrets.deck[position].type).toBe('tant')
   })
 })
 
