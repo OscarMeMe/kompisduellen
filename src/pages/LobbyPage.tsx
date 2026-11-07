@@ -432,6 +432,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
           onSetThrowsAllowed={actions.setThrowsAllowed}
           onSetImposterSettings={actions.setImposterSettings}
           onSetTantSettings={actions.setTantSettings}
+          botActions={actions}
           onStart={actions.start}
           onStartCountdown={actions.startCountdown}
         />

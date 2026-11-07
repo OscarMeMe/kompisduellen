@@ -29,6 +29,8 @@ import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, 
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
 import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
 import { TantVantrum } from '@/components/tantpanik/TantVantrum'
+import { TantBotar } from '@/components/tantpanik/TantBotar'
+import { MAX_BOTS, type BotLevel } from '@/lib/tantbot'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
@@ -55,6 +57,8 @@ type WaitingRoomProps = {
   onSetThrowsAllowed: (allowed: boolean) => void
   onSetImposterSettings: (settings: Partial<ImposterSettings>) => void
   onSetTantSettings: (settings: Partial<TantSettings>) => void
+  // Botar i Exploderande Tanter (bara värden).
+  botActions?: { addBot: () => void; removeBot: (id: string) => void; setBotLevel: (id: string, level: BotLevel) => void }
   // Solotestet: startar direkt. Starta med flera spelare går via nedräkningen (onStartCountdown).
   onStart: () => void
   onStartCountdown: () => void
@@ -76,6 +80,7 @@ export function WaitingRoom({
   onSetThrowsAllowed,
   onSetImposterSettings,
   onSetTantSettings,
+  botActions,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
@@ -190,7 +195,7 @@ export function WaitingRoom({
           {theme.playersTitle} ({online.length})
         </h2>
         <LobbyPlayers
-          players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true }))}
+          players={online.map((p) => ({ id: p.id, name: lobbyName(p), avatar: p.avatar, host: p.host === true, bot: p.bot !== undefined }))}
           meId={meId}
           emptySeats={emptySeats(online.length, game)}
         />
@@ -281,6 +286,16 @@ export function WaitingRoom({
 
             {tant && (
               <TantSvarighet settings={state.tantSettings} players={online.length} isHost onChange={onSetTantSettings} />
+            )}
+
+            {tant && botActions && (
+              <TantBotar
+                bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
+                canAdd={online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, online.length + 1)}
+                onAdd={botActions.addBot}
+                onRemove={botActions.removeBot}
+                onLevel={botActions.setBotLevel}
+              />
             )}
 
             {tant && (

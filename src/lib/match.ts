@@ -65,6 +65,7 @@ import {
   type TantTable,
 } from '@/lib/tantpanik'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
+import { BOT_NAMES, isBotLevel, MAX_BOTS, type BotLevel } from '@/lib/tantbot'
 
 // Antal rundor att välja mellan i gissningsspelen. Kortspelen har egna (roundOptionsFor).
 export const ROUND_OPTIONS = [3, 5, 10] as const
@@ -81,6 +82,8 @@ export type Phase = 'waiting' | 'guessing' | 'reveal' | 'playing' | 'finished'
 export type PlayerInfo = {
   name: string
   avatar: string
+  // En bot i Exploderande Tanter och dess svårighet (tantbot.ts). Värdens webbläsare spelar för den.
+  bot?: BotLevel
 }
 
 export type RoundResult = {
@@ -282,7 +285,62 @@ export function setGame(state: GameState, game: string): GameState {
   if (state.phase !== 'waiting') return state
   if (state.game === game) return state.choosingGame ? { ...state, choosingGame: false } : state
   const sameOptions = roundOptionsFor(game).join() === roundOptionsFor(state.game).join()
-  return { ...state, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
+  // Botar finns bara i Exploderande Tanter. Byter värden spel försvinner de.
+  const kept = game === TANT_GAME ? state : withoutBots(state)
+  return { ...kept, game, choosingGame: false, rounds: sameOptions ? state.rounds : defaultRoundsFor(game) }
+}
+
+// Botarna i lobbyn (bara Exploderande Tanter).
+export function botIds(state: Pick<GameState, 'players'>): string[] {
+  return Object.entries(state.players)
+    .filter(([, player]) => player.bot !== undefined)
+    .map(([id]) => id)
+}
+
+// Värden lägger till en bot i väntrummet: ett tantnamn, en blobb som ingen annan har, och svårigheten Normal. Högst
+// MAX_BOTS botar, och aldrig fler spelare än spelet klarar (humans = de riktiga spelarna som är med).
+export function addBot(state: GameState, id: string, avatars: readonly string[], humans: number, random = Math.random): GameState {
+  if (state.phase !== 'waiting' || state.game !== TANT_GAME || state.players[id]) return state
+  const bots = botIds(state)
+  if (bots.length >= MAX_BOTS || tooManyPlayers(state.game, humans + bots.length + 1)) return state
+  const names = Object.values(state.players).map((player) => player.name)
+  const name = BOT_NAMES.find((candidate) => !names.includes(candidate)) ?? `Bot ${bots.length + 1}`
+  const used = Object.values(state.players).map((player) => player.avatar)
+  const free = avatars.filter((avatar) => !used.includes(avatar))
+  const pool = free.length > 0 ? free : avatars
+  const avatar = pool[Math.floor(random() * pool.length)]
+  return {
+    ...state,
+    players: { ...state.players, [id]: { name, avatar, bot: 'normal' } },
+    scores: { ...state.scores, [id]: 0 },
+  }
+}
+
+export function removeBot(state: GameState, id: string): GameState {
+  if (state.phase !== 'waiting' || !state.players[id]?.bot) return state
+  const players = { ...state.players }
+  const scores = { ...state.scores }
+  delete players[id]
+  delete scores[id]
+  return { ...state, players, scores }
+}
+
+export function setBotLevel(state: GameState, id: string, level: BotLevel): GameState {
+  const player = state.players[id]
+  if (state.phase !== 'waiting' || !player?.bot || player.bot === level || !isBotLevel(level)) return state
+  return { ...state, players: { ...state.players, [id]: { ...player, bot: level } } }
+}
+
+function withoutBots(state: GameState): GameState {
+  const bots = botIds(state)
+  if (bots.length === 0) return state
+  const players = { ...state.players }
+  const scores = { ...state.scores }
+  for (const id of bots) {
+    delete players[id]
+    delete scores[id]
+  }
+  return { ...state, players, scores }
 }
 
 // Värdens val för Imposterjakten i väntrummet. Gäller bara i väntrummet, så inställningarna är låsta under matchen.
@@ -546,6 +604,8 @@ function finishMatch(state: GameState): GameState {
   const leaderboard = { ...state.leaderboard }
   for (const id of matchParticipants(state)) {
     const info = state.players[id]
+    // Botar räknas inte i kvällens ställning.
+    if (info?.bot) continue
     const previous = leaderboard[id]
     leaderboard[id] = {
       ...info,

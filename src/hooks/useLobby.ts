@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
-import { isTantSecrets, myTantView, setTantSettings, type MyTantView, type TantMove, type TantSettings } from '@/lib/tantpanik'
+import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
+import { botDelay, botSight, decideBotMove, type BotLevel } from '@/lib/tantbot'
+import { REACTIONS } from '@/lib/reaktioner'
+import { AVATARS } from '@/lib/player'
+import { randomId } from '@/lib/slumpid'
 import { myHand, type CardMove, type MyHand } from '@/lib/kort'
 import { track } from '@/lib/statistik'
 import {
@@ -72,7 +76,9 @@ import {
 import type { FloatingReaction } from '@/hooks/useReactions'
 import {
   abortMatch,
+  addBot,
   addGuess,
+  botIds,
   addPlayers,
   backToWaiting,
   changeGame,
@@ -97,6 +103,8 @@ import {
   resolveRound,
   resumeReveal,
   restoreHostState,
+  removeBot,
+  setBotLevel,
   setGame,
   setImposterSettings,
   setRematchWish,
@@ -122,6 +130,8 @@ import {
 
 export type OnlinePlayer = Player & {
   host: boolean
+  // En bot i Exploderande Tanter (finns bara i läget, inte i närvaron). Värdens webbläsare spelar för den.
+  bot?: BotLevel
   joinedAt: number
   // Skickar alltid med sitt id i läget och händerna (se meddelanden.ts). Saknas hos äldre versioner av sajten.
   sendsFrom?: boolean
@@ -381,6 +391,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     for (const [id, seen] of Object.entries(lastSeenRef.current)) {
       if (now - seen < AWAY_GRACE_MS) ids.add(id)
     }
+    // Botarna är alltid med.
+    for (const id of botIds(stateRef.current)) ids.add(id)
     return [...ids]
   }, [])
 
@@ -944,7 +956,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (!isHost || state.phase !== 'waiting' || at === null) return
     const delay = Math.max(0, at - Date.now()) + 100
     const timer = setTimeout(() => {
-      const ids = onlineRef.current.map((p) => p.id)
+      const ids = [...onlineRef.current.map((p) => p.id), ...botIds(stateRef.current)]
       commit(hostRematchStart(current(), ids, Date.now(), at))
     }, delay)
     return () => clearTimeout(timer)
@@ -962,10 +974,61 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
   }, [isHost, version])
 
   // Namnen i närvarolistan är det spelaren valt. Värden bestämmer namnet i lobbyn (se addPlayers), så att ingen heter likadant.
-  const shownOnline = useMemo(
-    () => online.map((p) => (state.players[p.id] && state.players[p.id].name !== p.name ? { ...p, name: state.players[p.id].name } : p)),
-    [online, state.players],
-  )
+  // Botarna finns bara i läget och läggs till sist, så att de syns i väntrummet och vid bordet som alla andra.
+  const shownOnline = useMemo(() => {
+    const people = online.map((p) => (state.players[p.id] && state.players[p.id].name !== p.name ? { ...p, name: state.players[p.id].name } : p))
+    const bots: OnlinePlayer[] = botIds(state).map((id) => ({
+      id,
+      name: state.players[id].name,
+      avatar: state.players[id].avatar,
+      host: false,
+      joinedAt: Number.MAX_SAFE_INTEGER,
+      noThrows: true,
+      bot: state.players[id].bot,
+    }))
+    return [...people, ...bots]
+  }, [online, state])
+
+  // Värden spelar för botarna i Exploderande Tanter. Varje bot ser bara det en riktig spelare på dess plats ser
+  // (botSight), tänker 1–3 sekunder och gör sitt drag genom samma kontroll som spelarnas drag. Ändras läget innan
+  // dess tänker boten om. Ibland skickar en bot en reaktion.
+  const botMovesRef = useRef(0)
+  useEffect(() => {
+    if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing' || !state.tantpanik) return
+    const host = current()
+    if (!isTantSecrets(host.secrets)) return
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (const id of botIds(host.state)) {
+      const sight = botSight(host as TantHost, id)
+      const level = host.state.players[id]?.bot
+      if (!sight || !level) continue
+      const move = decideBotMove(sight, level, Math.random)
+      if (!move) continue
+      timers.push(
+        setTimeout(() => {
+          const before = current()
+          // Läget har ändrats medan boten tänkte: effekten körs igen och boten tänker om.
+          if (before.state !== host.state) return
+          botMovesRef.current += 1
+          const nr = `${id}-bot-${botMovesRef.current}`
+          let next = hostMove(before, id, move, activeIds(), Date.now(), Math.random, nr)
+          const unchanged = (candidate: HostState) => JSON.stringify(candidate.state.tantpanik) === JSON.stringify(before.state.tantpanik)
+          // Gick draget inte (t.ex. ett mål som just åkt ut) drar boten i stället, om det är dess tur.
+          if (unchanged(next) && sight.table.step === 'turn' && sight.table.current === id) {
+            next = hostMove(before, id, { type: 'tDraw' }, activeIds(), Date.now(), Math.random, `${nr}-dra`)
+          }
+          if (unchanged(next)) return
+          commit(next)
+          // Ibland en reaktion, så att det känns som en riktig spelare.
+          if (Math.random() < 0.1) {
+            const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)]
+            void channelRef.current?.send({ type: 'broadcast', event: 'reaction', payload: { id, reaction: reaction.id } })
+          }
+        }, botDelay(sight, Math.random)),
+      )
+    }
+    return () => timers.forEach(clearTimeout)
+  }, [isHost, state, current, activeIds, commit])
 
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.
@@ -1019,13 +1082,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       start: () => {
         if (!isHost) return
-        const ids = onlineRef.current.map((p) => p.id)
+        const ids = [...onlineRef.current.map((p) => p.id), ...botIds(stateRef.current)]
         commit(hostStart(current(), ids, Date.now()))
       },
       // Första starten med nedräkning (Starta när flera är med). Solotestet startar direkt med start.
       startCountdown: () => {
         if (!isHost) return
-        const ids = onlineRef.current.map((p) => p.id)
+        const ids = [...onlineRef.current.map((p) => p.id), ...botIds(stateRef.current)]
         commit(hostCountdownStart(current(), ids, Date.now()))
       },
       guess: (value: number) => {
@@ -1091,6 +1154,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         void channelRef.current?.send({ type: 'broadcast', event: 'throw', payload: { id: me.id, to, item } })
       },
       // Värden slår på eller av kasten i lobbyn.
+      // Botar i Exploderande Tanter (bara värden).
+      addBot: () => {
+        if (isHost) publish(addBot(stateRef.current, `bot-${randomId()}`, AVATARS, onlineRef.current.length))
+      },
+      removeBot: (id: string) => {
+        if (isHost) publish(removeBot(stateRef.current, id))
+      },
+      setBotLevel: (id: string, level: BotLevel) => {
+        if (isHost) publish(setBotLevel(stateRef.current, id, level))
+      },
       setThrowsAllowed: (allowed: boolean) => {
         if (isHost) publish(setThrowsAllowed(stateRef.current, allowed))
       },
@@ -1183,9 +1256,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
 
 // Värden: statistik när en match startar eller tar slut. Bara värden skickar, så varje match räknas en gång.
 function trackMatch(prev: GameState, next: GameState, matchStart: { current: number }) {
+  const bots = botIds(next).length
   const props = {
     spel: next.game,
-    antal_spelare: Object.keys(next.players).length,
+    // Botar räknas inte som spelare i statistiken.
+    antal_spelare: Object.keys(next.players).length - bots,
+    antal_botar: bots,
     antal_rundor: next.rounds,
   }
   if (prev.phase === 'waiting' && (next.phase === 'guessing' || next.phase === 'playing')) {
