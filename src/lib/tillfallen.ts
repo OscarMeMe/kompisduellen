@@ -1,6 +1,11 @@
 // Tillfällena på startsidan: flikar ovanför spelen som sorterar dem efter vad som passar bäst. Inget spel göms eller
 // tonas ned. Väljer man ett tillfälle följer förvalen med till lobbyn, och värden kan ändra dem där.
 
+// Flikarna visas inte just nu: startsidan visar alla spel i vald ordning (sortering.ts). Uppgifterna om tillfällena
+// (ordningen, raderna om varför spelet passar, drickreglerna och förvalet i lobbyn) ligger kvar. Sätt SHOW_TILLFALLEN till
+// true för att visa flikarna igen.
+export const SHOW_TILLFALLEN = false
+
 export type TillfalleId = 'alla' | 'forfest' | 'spelkvall' | 'discord'
 
 export type Tillfalle = {
