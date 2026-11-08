@@ -109,106 +109,31 @@ const PREVIEWS: Record<string, ReactNode> = {
     </svg>
   ),
   tantpanik: (
-    // Handen som en solfjäder till vänster och draghögen i mitten. Ett kort dras från högen, vänds och visar sig vara
-    // en exploderande tant (svart kort, arg tant i röd kavaj som pekar på dig), och det smäller bakom henne. Spelas en gång när kortet syns och igen vid hover. Utan rörelse
-    // ligger tanten redan uppvänd bredvid högen med smällen bakom sig.
-    <svg viewBox="0 0 220 92" className="h-22 w-auto overflow-visible">
-      {/* Min hand. Korten fläktar ut lite och lägger sig igen, ett i taget. */}
-      <g>
-        <g transform="rotate(-30 41 96)">
-          <g
-            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
-            style={{ '--fan': '-14deg', animationDelay: '0ms' } as CSSProperties}
-          >
-            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-mint stroke-foreground/25" strokeWidth="1.5" />
-            <circle cx="33" cy="42" r="2.6" className="fill-card" />
-          </g>
-        </g>
-        <g transform="rotate(-15 41 96)">
-          <g
-            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
-            style={{ '--fan': '-7deg', animationDelay: '60ms' } as CSSProperties}
-          >
-            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-sky stroke-foreground/25" strokeWidth="1.5" />
-            <circle cx="33" cy="42" r="2.6" className="fill-card" />
-          </g>
-        </g>
-        <g transform="rotate(0 41 96)">
-          <g
-            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
-            style={{ '--fan': '0deg', animationDelay: '120ms' } as CSSProperties}
-          >
-            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-lilac stroke-foreground/25" strokeWidth="1.5" />
-            <circle cx="33" cy="42" r="2.6" className="fill-card" />
-          </g>
-        </g>
-        <g transform="rotate(15 41 96)">
-          <g
-            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
-            style={{ '--fan': '7deg', animationDelay: '180ms' } as CSSProperties}
-          >
-            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-sun stroke-foreground/25" strokeWidth="1.5" />
-            <circle cx="33" cy="42" r="2.6" className="fill-card" />
-          </g>
-        </g>
-        <g transform="rotate(30 41 96)">
-          <g
-            className="origin-[41px_96px] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
-            style={{ '--fan': '14deg', animationDelay: '240ms' } as CSSProperties}
-          >
-            <rect x="27" y="36" width="28" height="40" rx="4" className="fill-coral-soft stroke-foreground/25" strokeWidth="1.5" />
-            <circle cx="33" cy="42" r="2.6" className="fill-card" />
-          </g>
-        </g>
-      </g>
-      {/* Draghögen. */}
-      <rect x="88" y="58" width="40" height="50" rx="5" transform="rotate(-6 108 80)" className="fill-foreground stroke-card" strokeWidth="2" />
-      <rect x="92" y="56" width="40" height="50" rx="5" transform="rotate(4 112 78)" className="fill-foreground stroke-card" strokeWidth="2" />
-      <rect x="90" y="54" width="40" height="50" rx="5" className="fill-foreground stroke-card" strokeWidth="2" />
-      <text x="110" y="80" textAnchor="middle" fontSize="15" className="fill-card font-heading font-bold">
-        ?
-      </text>
-      {/* Smällen bakom tanten. */}
-      <g className="origin-center [transform-box:fill-box] motion-safe:group-hover:animate-tant-boom motion-safe:group-data-[play=true]:animate-tant-boom">
-        <polygon points="168.0,-14.0 176.2,8.2 195.0,-6.1 189.9,17.0 213.5,15.2 196.7,31.9 217.5,43.1 194.4,48.0 205.8,68.7 183.7,60.4 182.1,84.0 168.0,65.0 153.9,84.0 152.3,60.4 130.2,68.7 141.6,48.0 118.5,43.1 139.3,31.9 122.5,15.2 146.1,17.0 141.0,-6.1 159.8,8.2" className="fill-sun" />
-        <polygon points="168.0,2.0 174.5,18.1 189.9,10.0 184.5,26.5 201.5,30.1 186.7,39.3 197.4,53.0 180.2,50.6 179.6,67.9 168.0,55.0 156.4,67.9 155.8,50.6 138.6,53.0 149.3,39.3 134.5,30.1 151.5,26.5 146.1,10.0 161.5,18.1" className="fill-primary" />
-      </g>
-      {/* Kortet som dras: från högen upp till höger, där det vänds och visar tanten. */}
-      <g transform="rotate(8 168 40)">
-        <g className="origin-[168px_40px] motion-safe:group-hover:animate-tant-draw motion-safe:group-data-[play=true]:animate-tant-draw">
-          {/* Den exploderande tanten, som på kortbilden: svart kort, blont hår med en grå slinga, svarta glasögon,
-              pärlörhängen, röd kavaj och svart tröja. Arg blick och ett finger som pekar rakt på dig. */}
-          <rect x="145" y="9" width="46" height="62" rx="6" className="fill-foreground stroke-card" strokeWidth="2" />
-          <g transform="translate(68 0)">
-            <circle cx="100" cy="15" r="4.5" className="fill-sun" />
-            <ellipse cx="100" cy="26" rx="13" ry="9" className="fill-sun" />
-            <path d="M93 19 Q97 22 96 28" fill="none" strokeWidth="2.4" strokeLinecap="round" className="stroke-muted-foreground" />
-            <circle cx="100" cy="32" r="10" className="fill-coral-soft" />
-            <circle cx="89.6" cy="35.5" r="1.7" className="fill-card stroke-foreground/30" strokeWidth="0.6" />
-            <circle cx="110.4" cy="35.5" r="1.7" className="fill-card stroke-foreground/30" strokeWidth="0.6" />
-            <path d="M91.5 26.5 L98 29.5 M108.5 26.5 L102 29.5" strokeWidth="2" strokeLinecap="round" className="stroke-foreground" />
-            <circle cx="95.5" cy="32" r="3" fill="none" strokeWidth="2.2" className="stroke-foreground" />
-            <circle cx="104.5" cy="32" r="3" fill="none" strokeWidth="2.2" className="stroke-foreground" />
-            <path d="M98.5 32 H101.5" strokeWidth="1.6" className="stroke-foreground" />
-            <path d="M95.5 39.5 Q100 36.5 104.5 39.5" fill="none" strokeWidth="1.8" strokeLinecap="round" className="stroke-foreground" />
-            <path d="M81 71 Q81 47 100 44 Q119 47 119 71 Z" className="fill-destructive" />
-            <path d="M95 44.5 L100 53 L105 44.5 Z" className="fill-foreground" />
-            {/* Armen kommer fram mot dig, och fingret pekar rakt ut ur kortet. */}
-            <path d="M113 50 Q118 58 108 62" fill="none" strokeWidth="6" strokeLinecap="round" className="stroke-destructive" />
-            <circle cx="105" cy="62" r="5" className="fill-coral-soft stroke-foreground/30" strokeWidth="1" />
-            <circle cx="102" cy="64.5" r="3.2" className="fill-coral-soft stroke-foreground/40" strokeWidth="1" />
-            <path d="M95 62 L92 61 M95.5 66 L92.5 67.5 M98 69 L96.5 71.5" strokeWidth="1.3" strokeLinecap="round" className="stroke-sun" />
-          </g>
-          {/* Baksidan, som syns tills kortet vänts. */}
-          <g className="opacity-0 motion-safe:group-hover:animate-tant-cover motion-safe:group-data-[play=true]:animate-tant-cover">
-            <rect x="145" y="9" width="46" height="62" rx="6" className="fill-foreground stroke-card" strokeWidth="2" />
-            <text x="168" y="46" textAnchor="middle" fontSize="16" className="fill-card font-heading font-bold">
-              ?
-            </text>
-          </g>
-        </g>
-      </g>
-    </svg>
+    // Loggan till vänster och riktiga kortbilder i en liten solfjäder: två baksidor och den exploderande tanten överst.
+    // Loggan står här i stället för som rubrik, eftersom den blev för hög där och gjorde kortet större än de andra.
+    // Korten fläktar ut lite en gång när kortet kommer i bild och igen vid hover (fan-spread). Utan rörelse ligger de stilla.
+    <div className="flex items-end gap-1">
+    <img src="/images/tantpanik/logga-800.webp" alt="" width={800} height={468} className="mb-1 h-auto w-28 shrink-0" />
+    <div className="relative h-24 w-40">
+      {[
+        { src: '/images/tantpanik/baksida-360.webp', rotate: -16, x: 18, fan: '-8deg', delay: 0 },
+        { src: '/images/tantpanik/baksida-360.webp', rotate: -3, x: 52, fan: '-2deg', delay: 80 },
+        { src: '/images/tantpanik/exploderande-tant-360.webp', rotate: 12, x: 86, fan: '9deg', delay: 160 },
+      ].map((card, i) => (
+        <div key={i} className="absolute bottom-0" style={{ left: card.x, rotate: `${card.rotate}deg`, transformOrigin: '50% 120%' }}>
+          <img
+            src={card.src}
+            alt=""
+            width={360}
+            height={495}
+            loading="lazy"
+            className="block h-auto w-14 origin-[50%_120%] rounded-[6px] drop-shadow-[0_4px_6px_rgb(0_0_0/0.25)] motion-safe:group-hover:animate-fan-spread motion-safe:group-data-[play=true]:animate-fan-spread"
+            style={{ '--fan': card.fan, animationDelay: `${card.delay}ms` } as CSSProperties}
+          />
+        </div>
+      ))}
+    </div>
+    </div>
   ),
 }
 
@@ -251,15 +176,22 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
   // Ny key vid varje tryck, så att bildens rörelse börjar om, även när musen redan är över kortet.
   const [plays, setPlays] = useState(0)
   const page = gamePageFor(game.id)
+  // Exploderande Tanter har sin egen stil på kortet: krämvitt med mönstret svagt bakom, vinröd kant och loggan.
+  const tant = game.id === 'tantpanik'
+  const title = game.name
   return (
     <article
       ref={ref}
       data-play={playing}
       data-spel={game.id}
+      data-spelkort={tant ? 'tantpanik' : undefined}
       onAnimationEnd={(event) => {
         if (event.target === event.currentTarget && reveal.state === 'shown') reveal.done()
       }}
-      style={reveal.state === 'shown' ? { animationDelay: `${index * 90}ms` } : undefined}
+      style={{
+        ...(reveal.state === 'shown' ? { animationDelay: `${index * 90}ms` } : {}),
+        ...(tant ? TANT_CARD_BACKGROUND : {}),
+      }}
       className={cn(
         // Lyfter och lutar lite med större skugga när musen är över kortet (hover gäller bara enheter med mus), åt olika
         // håll varannan gång, och trycks ned lite när man trycker på det.
@@ -267,6 +199,8 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
         reveal.state === 'waiting' && 'opacity-0',
         reveal.state === 'shown' && 'motion-safe:animate-card-in',
         highlight && 'motion-safe:animate-pop ring-4 ring-primary/40',
+        // Kanten ritas inåt, så att kortet blir lika stort som de andra.
+        tant && 'ring-2 ring-tant-vinrod ring-inset',
       )}
     >
       <div
@@ -281,7 +215,14 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
           {PREVIEWS[game.id]}
         </div>
         {game.feel && (
-          <span className="absolute top-2 left-2 z-10 rounded-full bg-card px-3 py-0.5 text-sm font-bold text-foreground shadow-soft-sm">{game.feel}</span>
+          <span
+            className={cn(
+              'absolute top-2 left-2 z-10 rounded-full px-3 py-0.5 text-sm font-bold shadow-soft-sm',
+              tant ? 'bg-tant-vinrod text-tant-kram-2' : 'bg-card text-foreground',
+            )}
+          >
+            {game.feel}
+          </span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
@@ -293,10 +234,10 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
             {/* Namnet leder till spelets egen sida med mer om spelet. */}
             {page ? (
               <Link to={`/spel/${page.slug}`} className="underline-offset-4 hover:underline">
-                {game.name}
+                {title}
               </Link>
             ) : (
-              game.name
+              title
             )}
           </h3>
         </div>
@@ -317,6 +258,13 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
       </div>
     </article>
   )
+}
+
+// Exploderande Tanters kort: krämvitt med väntrummets mönster svagt bakom (ett krämvitt lager över mönstret).
+const TANT_CARD_BACKGROUND = {
+  backgroundImage:
+    'linear-gradient(color-mix(in oklch, var(--tant-kram-2) 91%, transparent), color-mix(in oklch, var(--tant-kram-2) 91%, transparent)), url(/images/tantpanik/vantrum-monster.webp)',
+  backgroundSize: 'auto, 260px 260px',
 }
 
 // Så länge räknas animationen som igång. Spotlighten i Imposterjakten är längst.

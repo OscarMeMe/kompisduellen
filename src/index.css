@@ -36,6 +36,15 @@
 [data-spel='imposterjakten'] {
   --spel-yta: var(--mint);
 }
+/* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant, knapp och etikett. Bara
+   kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
+[data-spel][data-spelkort='tantpanik'] {
+  --spel-yta: var(--tant-kram-2);
+  --spel-knapp: var(--tant-vinrod);
+  --spel-knapp-text: var(--tant-kram-2);
+  --spel-knapp-hover: var(--tant-vinrod-mork);
+  --spel-knapp-hover-text: var(--tant-kram-2);
+}
 
 /* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
 @custom-variant low (@media (max-width: 639.98px) and (max-height: 779.98px));
@@ -82,6 +91,7 @@
     --color-tant-guld-mork: var(--tant-guld-mork);
     --color-tant-ink: var(--tant-ink);
     --color-tant-kram-2: var(--tant-kram-2);
+    --color-tant-vinrod: var(--tant-vinrod);
     --color-klanning: var(--klanning);
     --color-wood-edge: var(--wood-edge);
     --color-chair: var(--chair);
@@ -914,6 +924,9 @@
     --tant-guld-mork: #b8860b;
     --tant-ink: #2a1a12;
     --tant-kram-2: #fff8ec;
+    /* Vinrött på Exploderande Tanters spelkort (kant, knapp och etikett), och lite mörkare när musen är över knappen. */
+    --tant-vinrod: #8e1b30;
+    --tant-vinrod-mork: #6c1424;
     /* Vinnarklänningen: en blommig rosa tantklänning med vit spetskrage och pärlhalsband (Tantklanning). */
     --klanning: #c9557f;
     --klanning-mork: #8e2d55;
