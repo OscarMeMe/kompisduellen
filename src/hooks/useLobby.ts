@@ -3,6 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
+import { workerTimeout } from '@/lib/arbetstimer'
 import { botGuess, botGuessDelay } from '@/lib/botgissning'
 import { BOT_STUCK_MS, botDelay, botFallbackMove, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
 import { REACTIONS } from '@/lib/reaktioner'
@@ -950,8 +951,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (state.phase !== 'guessing' && state.phase !== 'reveal' && state.phase !== 'playing') return
 
     const delay = Math.max(0, deadline - Date.now()) + 300
-    const timer = setTimeout(() => commit(hostDeadline(current(), Date.now(), deadline, activeIds())), delay)
-    return () => clearTimeout(timer)
+    // I workern (arbetstimer.ts), så att t.ex. Nope!-fönstret stängs i tid även när värdens flik ligger i bakgrunden.
+    return workerTimeout(() => commit(hostDeadline(current(), Date.now(), deadline, activeIds())), delay)
   }, [isHost, state.phase, state.deadline, state.round, commit, current, activeIds, wakeTick])
 
   // Värden: revanschens nedräkning är slut, så matchen startar. Timern gäller bara sin egen klocka (rematchAt),
@@ -960,11 +961,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     const at = state.rematchAt
     if (!isHost || state.phase !== 'waiting' || at === null) return
     const delay = Math.max(0, at - Date.now()) + 100
-    const timer = setTimeout(() => {
+    return workerTimeout(() => {
       const ids = [...onlineRef.current.map((p) => p.id), ...botIds(stateRef.current)]
       commit(hostRematchStart(current(), ids, Date.now(), at))
     }, delay)
-    return () => clearTimeout(timer)
   }, [isHost, state.phase, state.rematchAt, commit, current, wakeTick])
 
   // Stämmer versionerna? Hos värden räknas bara de som är med just nu.
@@ -1007,7 +1007,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing' || !state.tantpanik) return
     const host = current()
     if (!isTantSecrets(host.secrets)) return
-    const timers: ReturnType<typeof setTimeout>[] = []
+    // Botarnas tänketid går i workern (arbetstimer.ts), så att de spelar som vanligt även när värdens flik är dold.
+    const timers: (() => void)[] = []
     for (const id of botIds(host.state)) {
       const sight = botSight(host as TantHost, id)
       const level = host.state.players[id]?.bot
@@ -1017,7 +1018,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const move = decideBotMove(sight, level, Math.random, memory)
       if (!move) continue
       timers.push(
-        setTimeout(() => {
+        workerTimeout(() => {
           const before = current()
           // Läget har ändrats medan boten tänkte: effekten körs igen och boten tänker om.
           if (before.state !== host.state) return
@@ -1040,15 +1041,16 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         }, botDelay(sight, Math.random)),
       )
     }
-    return () => timers.forEach(clearTimeout)
-  }, [isHost, state, current, activeIds, commit])
+    return () => timers.forEach((cancel) => cancel())
+    // wakeTick: när värdens flik syns igen tänker botarna om direkt.
+  }, [isHost, state, current, activeIds, commit, wakeTick])
 
   // Skydd mot en bot som fastnat: har läget stått still i BOT_STUCK_MS medan en bot ska göra något (dess tur eller ett
   // val), gör värden ett enkelt giltigt drag åt den (botFallbackMove) och skriver det i konsolen, så att felet märks.
   useEffect(() => {
     if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing' || !state.tantpanik) return
     const watched = state
-    const timer = setTimeout(() => {
+    return workerTimeout(() => {
       const before = current()
       if (before.state !== watched || !isTantSecrets(before.secrets)) return
       for (const id of botIds(before.state)) {
@@ -1066,7 +1068,6 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         return
       }
     }, BOT_STUCK_MS)
-    return () => clearTimeout(timer)
   }, [isHost, state, current, activeIds, commit])
 
   // Värden gissar åt botarna i gissningsspelen (botgissning.ts): en gång per runda, en stund efter att rundan startat,
@@ -1078,13 +1079,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     const seconds = guessSecondsFor(state)
     const start = state.deadline - seconds * 1000
     const round = state.round
-    const timers: ReturnType<typeof setTimeout>[] = []
+    const timers: (() => void)[] = []
     for (const id of botIds(state)) {
       if (state.guesses[id] !== undefined || !matchParticipants(state).includes(id)) continue
       const key = `${round}-${state.itemId ?? ''}-${start}-${id}`
       botGuessAtRef.current[key] ??= start + botGuessDelay(seconds, Math.random)
       timers.push(
-        setTimeout(() => {
+        workerTimeout(() => {
           const now = stateRef.current
           const level = now.players[id]?.bot
           if (now.phase !== 'guessing' || now.round !== round || now.guesses[id] !== undefined || !level) return
@@ -1094,8 +1095,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         }, Math.max(0, botGuessAtRef.current[key] - Date.now())),
       )
     }
-    return () => timers.forEach(clearTimeout)
-  }, [isHost, state, publish, resolveIfEveryoneGuessed])
+    return () => timers.forEach((cancel) => cancel())
+  }, [isHost, state, publish, resolveIfEveryoneGuessed, wakeTick])
 
   const hostOnline = online.some((p) => p.host)
   // Jag har ett tillstånd men värden är borta: någon tar över strax.

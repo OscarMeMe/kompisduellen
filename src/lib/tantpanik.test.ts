@@ -23,6 +23,10 @@ import {
   bombsInDeck,
   levelFor,
   levelLine,
+  disconnectedPlayers,
+  hostSeemsAway,
+  HOST_AWAY_MS,
+  HOST_LATE_MS,
   moveAllowed,
   validTargets,
 } from '@/lib/tantpanik'
@@ -1168,5 +1172,36 @@ describe('matchens siffror', () => {
     expect(stats.moves).toBe(8)
     // Ett ogiltigt drag räknas inte.
     expect(table(move(host, 'a', { type: 'tPlace', position: 0 })).stats!.moves).toBe(8)
+  })
+})
+
+describe('värden i bakgrunden och frånkopplade spelare', () => {
+  const players: GameState['players'] = { a: { name: 'A', avatar: '🙂' }, bot: { name: 'Bot', avatar: '🙂', bot: 'normal' } }
+  const base = (over: Partial<TantTable> = {}): TantTable => ({ ...table(setup({ a: ['blanda'], bot: ['kupong'] }, ['regnbage'])), ...over })
+
+  it('Väntar på värden: när en bot borde ha spelat för länge sedan', () => {
+    const botsTurn = base({ current: 'bot', step: 'turn' })
+    expect(hostSeemsAway(botsTurn, players, null, 0, 2000)).toBe(false)
+    expect(hostSeemsAway(botsTurn, players, null, 0, HOST_AWAY_MS + 1)).toBe(true)
+    // En riktig spelare som tänker länge är inte värdens fel.
+    expect(hostSeemsAway(base({ current: 'a', step: 'turn' }), players, null, 0, 60_000)).toBe(false)
+  })
+
+  it('Väntar på värden: när Nope!-fönstret eller vinnarens ögonblick borde ha gått ut', () => {
+    const window = base({ step: 'window' })
+    expect(hostSeemsAway(window, players, 10_000, 9_000, 0)).toBe(false)
+    expect(hostSeemsAway(window, players, 10_000, 10_000 + HOST_LATE_MS - 1, 0)).toBe(false)
+    expect(hostSeemsAway(window, players, 10_000, 10_000 + HOST_LATE_MS + 1, 0)).toBe(true)
+    expect(hostSeemsAway(base({ winner: 'a', ending: true }), players, 10_000, 20_000, 0)).toBe(true)
+    // Ett felbesked står redan på bordet.
+    expect(hostSeemsAway(base({ step: 'window', error: 'Fel' }), players, 10_000, 99_000, 0)).toBe(false)
+  })
+
+  it('Frånkopplad: riktiga spelare som inte är med i närvarolistan, aldrig botar eller de som är ute', () => {
+    const t = base({ order: ['a', 'b', 'bot', 'ute'], out: ['ute'] })
+    const all: GameState['players'] = { ...players, b: { name: 'B', avatar: '🙂' }, ute: { name: 'Ute', avatar: '🙂' } }
+    expect(disconnectedPlayers(t, all, ['a', 'b'])).toEqual([])
+    expect(disconnectedPlayers(t, all, ['a'])).toEqual(['b'])
+    expect(disconnectedPlayers(t, all, [])).toEqual(['a', 'b'])
   })
 })
