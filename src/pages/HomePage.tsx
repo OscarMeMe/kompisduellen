@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { ArrowDown } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { HeroFigurer } from '@/components/HeroFigurer'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
+import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
 import { Button } from '@/components/ui/button'
 import { GAMES, type GameInfo } from '@/lib/games'
 import { cn } from '@/lib/utils'
@@ -59,6 +59,7 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
+      <StartsidansPrickar />
       {/* Hero. På mobil ligger exempelrundan under spelen (order), så att spelkorten syns tidigt. Därför är sektionen
           bara en låda från md och uppåt (contents), och sektionerna efter spelen får order-2 på mobil. */}
       <section className="contents md:grid md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
@@ -207,30 +208,25 @@ export function HomePage() {
         </ul>
       </section>
 
-      {/* Kommande spel, diskret och utan knappar */}
+      {/* Kommande spel: ett tryck visar hur spelet spelas (ingen Skapa lobby), och under dem kan man önska ett spel. */}
       <section aria-labelledby="kommande-rubrik" className="space-y-3 border-t pt-6 max-md:order-2">
         <h2 id="kommande-rubrik" className="text-xl">
           Fler dueller är på väg.
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {GAMES.filter((game) => !game.playable).map((game) => (
-            <li key={game.id} className="flex items-center gap-3 rounded-lg border bg-card/60 p-3 opacity-80">
-              <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-md text-xl', game.color)}>
-                <Emoji emoji={game.emoji} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                  <h3 className="text-base leading-tight">{game.name}</h3>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                    Kommer snart
-                  </span>
-                </div>
-                <p className="text-sm leading-snug text-muted-foreground">{game.tagline}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <KommandeSpel games={GAMES.filter((game) => !game.playable)} />
+        <Onskelada />
       </section>
     </div>
+  )
+}
+
+// Prickmönstret på startsidan, med en mjuk våg som drar snett över skärmen (se .startsida-prickar och .startsida-vag i
+// index.css). Bara på startsidan. Lagren ligger bakom allt och tar inga tryck.
+function StartsidansPrickar() {
+  return (
+    <>
+      <div aria-hidden className="startsida-prickar" />
+      <div aria-hidden className="startsida-vag" />
+    </>
   )
 }

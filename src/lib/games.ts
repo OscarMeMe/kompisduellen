@@ -139,6 +139,15 @@ export const GAMES: GameInfo[] = [
     color: 'bg-mint-soft',
     minPlayers: 3,
     playable: false,
+    intro: {
+      emoji: '🕵️',
+      pitch: 'Alla svarar anonymt. Kan du lista ut vem som skrev vad?',
+      steps: [
+        'Alla svarar i hemlighet på samma fråga.',
+        'Svaren visas ett i taget, och alla gissar vem som skrev vilket.',
+        'Rätt gissning ger poäng, och den som lurar flest får också poäng.',
+      ],
+    },
   },
   {
     id: 'mest-trolig',
@@ -148,6 +157,55 @@ export const GAMES: GameInfo[] = [
     color: 'bg-sky-soft',
     minPlayers: 3,
     playable: false,
+    intro: {
+      emoji: '🗳️',
+      pitch: 'Vem i gänget passar bäst in på påståendet?',
+      steps: [
+        'Ett påstående visas, till exempel "Mest trolig att missa tåget".',
+        'Alla röstar i hemlighet på den i gänget som passar bäst.',
+        'Rösterna visas, och ni får förklara er. Gissa vem som får flest röster så får du poäng.',
+      ],
+    },
+  },
+  {
+    id: 'ordflykt',
+    name: 'Ordflykt',
+    tagline: 'Förklara ordet för ditt lag utan att säga det. Hur många hinner ni?',
+    emoji: '💬',
+    color: 'bg-peach',
+    minPlayers: 4,
+    maxPlayers: 12,
+    playable: false,
+    intro: {
+      emoji: '💬',
+      pitch: 'Förklara ord för ditt lag utan att säga ordet, så många som möjligt innan tiden tar slut.',
+      steps: [
+        'Ni delar upp er i två lag. En i laget förklarar och de andra gissar.',
+        'Förklara ordet på skärmen utan att säga det eller någon del av det.',
+        'Varje ord som laget gissar rätt ger en poäng. Fastnar ni går det att hoppa över.',
+        'Lagen turas om, och flest poäng när tiden är slut vinner.',
+      ],
+    },
+  },
+  {
+    id: 'agentduellen',
+    name: 'Agentduellen',
+    tagline: 'Två lag och ett rutnät med ord. Hitta era ord och undvik fällan.',
+    emoji: '🕶️',
+    color: 'bg-lilac',
+    minPlayers: 4,
+    maxPlayers: 12,
+    playable: false,
+    intro: {
+      emoji: '🕶️',
+      pitch: 'Två lag, ett rutnät med ord och en lagledare som vet vilka ord som är era.',
+      steps: [
+        'Två lag med var sin lagledare. Bara lagledarna ser vilka ord som hör till vilket lag.',
+        'Lagledaren ger en ledtråd med ett ord och en siffra, till exempel "Frukt, 2".',
+        'Laget gissar vilka ord ledtråden syftar på. Fel ord ger turen till motståndarna, och fällan förlorar direkt.',
+        'Det lag som först hittar alla sina ord vinner.',
+      ],
+    },
   },
 ]
 
