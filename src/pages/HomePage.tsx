@@ -59,6 +59,7 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
+      <StartsidansPrickar />
       {/* Hero. På mobil ligger exempelrundan under spelen (order), så att spelkorten syns tidigt. Därför är sektionen
           bara en låda från md och uppåt (contents), och sektionerna efter spelen får order-2 på mobil. */}
       <section className="contents md:grid md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
@@ -219,3 +220,13 @@ export function HomePage() {
   )
 }
 
+// Prickmönstret på startsidan, med en mjuk våg som drar snett över skärmen (se .startsida-prickar och .startsida-vag i
+// index.css). Bara på startsidan. Lagren ligger bakom allt och tar inga tryck.
+function StartsidansPrickar() {
+  return (
+    <>
+      <div aria-hidden className="startsida-prickar" />
+      <div aria-hidden className="startsida-vag" />
+    </>
+  )
+}
