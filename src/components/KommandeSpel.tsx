@@ -109,8 +109,11 @@ export function Onskelada() {
               onChange={(event) => setText(event.target.value.slice(0, WISH_MAX_LENGTH))}
               placeholder="Berätta kort om spelet eller leken"
             />
-            <span className="block text-right text-xs text-muted-foreground tabular-nums">
-              {text.length}/{WISH_MAX_LENGTH}
+            <span className="flex justify-between gap-3 text-xs text-muted-foreground">
+              <span>Skriv inga personuppgifter i texten.</span>
+              <span className="tabular-nums">
+                {text.length}/{WISH_MAX_LENGTH}
+              </span>
             </span>
           </label>
           <label className="block space-y-1.5">
