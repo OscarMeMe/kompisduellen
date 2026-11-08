@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router'
 import { ArrowDown } from 'lucide-react'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
-import { DRINK_RULES, gamesForTillfalle, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
+import { DRINK_RULES, gamesForTillfalle, SHOW_TILLFALLEN, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { HeroFigurer } from '@/components/HeroFigurer'
@@ -111,14 +111,19 @@ export function HomePage() {
 
       {/* Alla spel */}
       <section id="spel" tabIndex={-1} aria-labelledby="spel-rubrik" className="scroll-mt-6 space-y-4 outline-none">
-        <div className="space-y-1">
-          <h2 id="spel-rubrik" className="text-3xl">
-            Vad ska ni spela?
-          </h2>
-          <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
+        {/* Rubriken och Sortera på samma rad. På smal skärm ligger väljaren under rubriken. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <h2 id="spel-rubrik" className="text-3xl">
+              Vad ska ni spela?
+            </h2>
+            <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
+          </div>
+          <SortChoice sort={sort} onChange={setSort} />
         </div>
         {/* Vad är det för kväll? Flikarna sorterar spelen så att det som passar bäst kommer först. På mobil står de på en
-            rad som går att svepa, så att spelkorten kommer högre upp. */}
+            rad som går att svepa, så att spelkorten kommer högre upp. Dolda just nu (SHOW_TILLFALLEN). */}
+        {SHOW_TILLFALLEN && (
         <div
           role="group"
           aria-label="Vad är det för kväll?"
@@ -136,26 +141,8 @@ export function HomePage() {
             </Button>
           ))}
         </div>
-        {/* Sorteringen: diskret, en vanlig väljare som fungerar med tangentbord och på mobil. */}
-        <label className="flex w-fit items-center gap-2 text-sm text-muted-foreground sm:ml-auto">
-          Sortera
-          <select
-            value={sort}
-            onChange={(event) => {
-              const next = event.target.value as GameSort
-              setSort(next)
-              saveGameSort(next)
-            }}
-            className="h-11 rounded-md border bg-card px-3 font-semibold text-foreground shadow-soft-sm outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
-          >
-            {GAME_SORTS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {tillfalle === 'forfest' && (
+        )}
+        {SHOW_TILLFALLEN && tillfalle === 'forfest' && (
           <details className="rounded-lg bg-coral-soft px-4 py-3">
             <summary className="cursor-pointer font-semibold">
               <span className="font-heading font-bold">Drickregler</span>{' '}
@@ -257,8 +244,34 @@ function StartsidansPrickar() {
 // bäst först), och de andra sorteringarna gäller som vanligt. Tillfällets korta rad om varför spelet passar följer med.
 function orderedGames(tillfalle: TillfalleId, sort: GameSort): { game: GameInfo; note?: string }[] {
   const playable = sortGames(GAMES.filter((game) => game.playable), 'populart')
+  // Utan flikarna (SHOW_TILLFALLEN) visas alla spel i vald ordning, utan tillfällenas rader.
+  if (!SHOW_TILLFALLEN) return sortGames(playable, sort).map((game) => ({ game }))
   const byOccasion = gamesForTillfalle(tillfalle, playable)
   if (sort === 'populart') return byOccasion
   const notes = new Map(byOccasion.map(({ game, note }) => [game.id, note]))
   return sortGames(playable, sort).map((game) => ({ game, note: notes.get(game.id) }))
+}
+
+// Sortera: diskret, en vanlig väljare som fungerar med tangentbord och på mobil. Valet sparas (sortering.ts).
+function SortChoice({ sort, onChange }: { sort: GameSort; onChange: (sort: GameSort) => void }) {
+  return (
+    <label className="flex w-fit shrink-0 items-center gap-2 text-sm text-muted-foreground">
+      Sortera
+      <select
+        value={sort}
+        onChange={(event) => {
+          const next = event.target.value as GameSort
+          onChange(next)
+          saveGameSort(next)
+        }}
+        className="h-11 rounded-md border bg-card px-3 font-semibold text-foreground shadow-soft-sm outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
+      >
+        {GAME_SORTS.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
 }
