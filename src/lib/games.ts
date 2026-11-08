@@ -15,6 +15,11 @@ export type GameInfo = {
   // Hur det känns att spela, i några ord.
   feel?: string
   playable: boolean
+  // Ordningen under Populärast på startsidan (1 först). Vi bestämmer den själva, det är ingen statistik. Spel utan värde
+  // hamnar sist. Ändra ordningen här.
+  popularOrder?: number
+  // När spelet lades till (från git-historiken, ÅÅÅÅ-MM-DD). Nyheter på startsidan visar det nyaste först.
+  addedAt?: string
   // Kan botar spela? I andra spel står botarna över matchen och tittar på (se gameHasBots i match.ts).
   bots?: boolean
   // Förklaringen som visas när man klickar på spelet: en bild (emoji), en rolig mening och kort hur det går till.
@@ -34,6 +39,8 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 12,
     feel: 'Klurigt',
     playable: true,
+    popularOrder: 2,
+    addedAt: '2026-10-25',
     bots: true,
     intro: {
       emoji: '💸',
@@ -57,6 +64,8 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 12,
     feel: 'Slumpigt',
     playable: true,
+    popularOrder: 5,
+    addedAt: '2026-10-24',
     bots: true,
     intro: {
       emoji: '🍀',
@@ -81,6 +90,8 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 9,
     feel: 'Pratigt',
     playable: true,
+    popularOrder: 3,
+    addedAt: '2026-10-27',
   },
   {
     id: 'imposterjakten',
@@ -93,6 +104,8 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 10,
     feel: 'Bluffigt',
     playable: true,
+    popularOrder: 4,
+    addedAt: '2026-11-01',
     intro: {
       emoji: '🔍',
       pitch: 'Alla vet ordet. Utom en. Lista ut vem som bluffar innan bluffaren listar ut ordet.',
@@ -118,6 +131,8 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 10,
     feel: 'Nervigt',
     playable: true,
+    popularOrder: 1,
+    addedAt: '2026-11-06',
     bots: true,
     intro: {
       emoji: '💥',
