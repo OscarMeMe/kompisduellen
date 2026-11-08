@@ -984,7 +984,7 @@
     }
   /* Startsidans prickmönster med en våg (StartsidansPrickar i HomePage). Prickarna ligger i ett eget lager som står still
      i fönstret, och vågen i ett lager ovanpå med samma prickar lite mörkare. En bred, mjuk diagonal mask drar vågen från
-     uppe till vänster till nere till höger ungefär var nionde sekund. Bara CSS: masken flyttas (startsida-vag), inget
+     uppe till vänster till nere till höger ungefär var sjunde sekund: svepet tar 3,6 s och pausen 3,4 s. Bara CSS: masken flyttas (startsida-vag), inget
      per prick. Webbläsaren ritar inget när fliken inte syns, och med "minska rörelse" finns ingen våg. */
   .startsida-prickar,
   .startsida-vag {
@@ -1009,14 +1009,15 @@
     mask-repeat: no-repeat;
     -webkit-mask-position: 100% 100%;
     mask-position: 100% 100%;
-    animation: startsida-vag 9s linear infinite;
+    animation: startsida-vag 7s linear infinite;
     }
   @keyframes startsida-vag {
     0% {
       -webkit-mask-position: 100% 100%;
       mask-position: 100% 100%;
     }
-    40%,
+    /* 3,6 s av 7 s: samma fart som förut. */
+    51.4%,
     100% {
       -webkit-mask-position: 0% 0%;
       mask-position: 0% 0%;
