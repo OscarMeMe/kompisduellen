@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ChevronDown, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -79,13 +79,38 @@ export function Onskelada() {
   const [name, setName] = useState('')
   // Har fliken redan skickat ett önskemål nyss syns tacket direkt.
   const [sent, setSent] = useState(() => !canSendWish(Date.now()))
+  // Hopfällt från början. Ett tryck på rubriken fäller ut formuläret och sätter fokus i textfältet.
+  const [open, setOpen] = useState(false)
+  const textRef = useRef<HTMLTextAreaElement>(null)
   const trimmed = text.trim()
   const ready = trimmed.length >= 3
   return (
-    <section aria-labelledby="onskelada-rubrik" className="space-y-3 rounded-lg border bg-card p-4 shadow-soft-sm sm:p-5">
-      <h3 id="onskelada-rubrik" className="text-lg">
-        Saknar du något spel?
+    <section className="rounded-lg border bg-card shadow-soft-sm">
+      <h3 className="text-lg">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="onskelada-innehall"
+          onClick={() => {
+            const next = !open
+            setOpen(next)
+            // Fokus i textfältet när det fälls ut (inte när tacket visas).
+            if (next) requestAnimationFrame(() => textRef.current?.focus())
+          }}
+          className="flex min-h-14 w-full items-center justify-between gap-3 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-4 focus-visible:ring-ring/50 sm:px-5"
+        >
+          Saknar du något spel?
+          <ChevronDown aria-hidden className={cn('size-5 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-200', open && 'rotate-180')} />
+        </button>
       </h3>
+      {/* Mjuk utfällning med grid-raderna (ingen rörelse med "minska rörelse"). Hopfällt går innehållet inte att nå. */}
+      <div
+        id="onskelada-innehall"
+        inert={!open}
+        className={cn('grid motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-out', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
       {sent ? (
         <p role="status" className="font-semibold">
           Tack! Vi läser alla önskemål.
@@ -103,6 +128,7 @@ export function Onskelada() {
           <label className="block space-y-1.5">
             <span className="text-sm font-semibold">Vilket spel skulle du vilja spela?</span>
             <Textarea
+              ref={textRef}
               value={text}
               maxLength={WISH_MAX_LENGTH}
               rows={3}
@@ -125,6 +151,9 @@ export function Onskelada() {
           </Button>
         </form>
       )}
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
