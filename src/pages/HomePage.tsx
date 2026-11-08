@@ -4,6 +4,7 @@ import { ArrowDown } from 'lucide-react'
 import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
+import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
 import { ExempelRunda } from '@/components/ExempelRunda'
 import { HeroFigurer } from '@/components/HeroFigurer'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
@@ -35,6 +36,8 @@ export function HomePage() {
   const [highlightGames, setHighlightGames] = useState(false)
   // Tillfället sorterar spelen, och inget spel göms.
   const [tillfalle, setTillfalle] = useState<TillfalleId>('alla')
+  // Sorteringen av spelen. Populärast om man inte valt något själv (sortering.ts).
+  const [sort, setSort] = useState<GameSort>(loadGameSort)
   // Spelet vars förklaring visas. Spelet ligger kvar medan rutan stängs, så att innehållet inte försvinner i animationen.
   const [introGame, setIntroGame] = useState<GameInfo | null>(null)
   const [introOpen, setIntroOpen] = useState(false)
@@ -133,6 +136,25 @@ export function HomePage() {
             </Button>
           ))}
         </div>
+        {/* Sorteringen: diskret, en vanlig väljare som fungerar med tangentbord och på mobil. */}
+        <label className="flex w-fit items-center gap-2 text-sm text-muted-foreground sm:ml-auto">
+          Sortera
+          <select
+            value={sort}
+            onChange={(event) => {
+              const next = event.target.value as GameSort
+              setSort(next)
+              saveGameSort(next)
+            }}
+            className="h-11 rounded-md border bg-card px-3 font-semibold text-foreground shadow-soft-sm outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
+          >
+            {GAME_SORTS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         {tillfalle === 'forfest' && (
           <details className="rounded-lg bg-coral-soft px-4 py-3">
             <summary className="cursor-pointer font-semibold">
@@ -152,7 +174,7 @@ export function HomePage() {
         )}
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {gamesForTillfalle(tillfalle, GAMES.filter((game) => game.playable)).map(({ game, note }, index) => (
+          {orderedGames(tillfalle, sort).map(({ game, note }, index) => (
             <SpelKort
               key={game.id}
               index={index}
@@ -229,4 +251,14 @@ function StartsidansPrickar() {
       <div aria-hidden className="startsida-vag" />
     </>
   )
+}
+
+// De spelbara spelen i vald ordning. Under ett tillfälle är tillfällets egen ordning dess Populärast (det som passar
+// bäst först), och de andra sorteringarna gäller som vanligt. Tillfällets korta rad om varför spelet passar följer med.
+function orderedGames(tillfalle: TillfalleId, sort: GameSort): { game: GameInfo; note?: string }[] {
+  const playable = sortGames(GAMES.filter((game) => game.playable), 'populart')
+  const byOccasion = gamesForTillfalle(tillfalle, playable)
+  if (sort === 'populart') return byOccasion
+  const notes = new Map(byOccasion.map(({ game, note }) => [game.id, note]))
+  return sortGames(playable, sort).map((game) => ({ game, note: notes.get(game.id) }))
 }
