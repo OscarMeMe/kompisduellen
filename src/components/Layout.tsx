@@ -119,7 +119,8 @@ function Logo() {
   return (
     <span className="font-heading text-xl font-bold tracking-tight whitespace-nowrap sm:text-2xl">
       Kompis{' '}
-      <span className="inline-block -rotate-3 rounded-full bg-primary px-3 pb-0.5 text-primary-foreground shadow-primary transition-[rotate] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-safe:group-hover:rotate-3">
+      {/* Breda, sneda ränder i två nära nyanser av korallen (--logga-rand). */}
+      <span className="inline-block -rotate-3 rounded-full bg-primary bg-[repeating-linear-gradient(135deg,var(--primary)_0_10px,var(--logga-rand)_10px_20px)] px-3 pb-0.5 text-primary-foreground shadow-primary transition-[rotate] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-safe:group-hover:rotate-3">
         duellen
       </span>
     </span>
