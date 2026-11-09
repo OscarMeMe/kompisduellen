@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 // En mjuk våg i överkanten av en sektion, i sektionens egen färg, så att sektionerna ser ut som rullande kullar.
 // flip = vågen spegelvänd, så att varannan sektion rullar åt andra hållet. Bara en liten SVG, inga bilder.
-// squish = vågens kant trycks ned där muspekaren står på den, och studsar tillbaka när den går därifrån (VagSlag).
+// squish = vågens kant trycks ned där muspekaren står på den, och kryper sakta tillbaka upp när den går därifrån (VagSlag).
 export function Vag({ color, flip = false, squish = false }: { color: string; flip?: boolean; squish?: boolean }) {
   return (
     <svg
@@ -57,9 +57,14 @@ const WAVE_EDGE: number[] = (() => {
 const DENT_DEPTH = 22
 const DENT_WIDTH = 110
 const HIT_PX = 36
+// Fjäderns drag och hur mycket av farten som behålls per bildruta: lugnt ned, mycket långsamt och trögt upp.
+const SINK_PULL = 0.05
+const SINK_KEEP = 0.78
+const RISE_PULL = 0.012
+const RISE_KEEP = 0.8
 
 // Vågens kant som går att slå på: står muspekaren på kanten trycks den ned i en mjuk grop som följer pekaren, och när
-// pekaren går därifrån studsar den tillbaka som en fjäder. På en telefon ger ett tryck på kanten en kort smäll. Ritar
+// pekaren går därifrån kryper den sakta tillbaka upp, lite trögflytande. På en telefon ger ett tryck på kanten en kort smäll. Ritar
 // bara när något rör sig, och står still med "minska rörelse".
 function VagSlag({ color, flip }: { color: string; flip: boolean }) {
   const pathRef = useRef<SVGPathElement>(null)
@@ -76,6 +81,7 @@ function VagSlag({ color, flip }: { color: string; flip: boolean }) {
     let speed = 0
     let target = 0
     let center = 720
+    let aim = 720
     let frame = 0
     let tapTimer = 0
     const draw = () => {
@@ -88,12 +94,15 @@ function VagSlag({ color, flip }: { color: string; flip: boolean }) {
       path.removeAttribute('transform')
       path.setAttribute('d', `${d}L1440 90Z`)
     }
-    // En fjäder: gropen sjunker in och studsar lite förbi när den släpps.
+    // Trögflytande: gropen sjunker in lugnt och kryper sakta tillbaka upp när pekaren går därifrån, utan att studsa.
+    // Gropen följer också pekaren i sidled med lite eftersläpning.
     const tick = () => {
-      speed = (speed + (target - depth) * 0.16) * 0.78
+      const sinking = target > depth
+      speed = (speed + (target - depth) * (sinking ? SINK_PULL : RISE_PULL)) * (sinking ? SINK_KEEP : RISE_KEEP)
       depth += speed
+      center += (aim - center) * 0.08
       draw()
-      if (Math.abs(speed) > 0.02 || Math.abs(target - depth) > 0.05) frame = requestAnimationFrame(tick)
+      if (Math.abs(speed) > 0.01 || Math.abs(target - depth) > 0.05 || Math.abs(aim - center) > 0.5) frame = requestAnimationFrame(tick)
       else {
         depth = target
         draw()
@@ -114,7 +123,11 @@ function VagSlag({ color, flip }: { color: string; flip: boolean }) {
     const onMove = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse') return
       const x = onEdge(event.clientX, event.clientY)
-      if (x !== null) center = x
+      if (x !== null) {
+        // En ny grop börjar där pekaren är. En grop som redan finns glider efter.
+        if (depth < 0.5) center = x
+        aim = x
+      }
       const next = x === null ? 0 : DENT_DEPTH
       if (next !== target || x !== null) {
         target = next
@@ -126,13 +139,14 @@ function VagSlag({ color, flip }: { color: string; flip: boolean }) {
       const x = onEdge(event.clientX, event.clientY)
       if (x === null) return
       center = x
+      aim = x
       target = DENT_DEPTH
       start()
       clearTimeout(tapTimer)
       tapTimer = window.setTimeout(() => {
         target = 0
         start()
-      }, 160)
+      }, 260)
     }
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('pointerdown', onDown, { passive: true })
