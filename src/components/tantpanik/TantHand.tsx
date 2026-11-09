@@ -158,6 +158,7 @@ export function TantHand({
                 <Choice
                   types={types}
                   myTurn={myTurn}
+                  noTargets={wantsTarget && targetOptions.length === 0}
                   nopeLevel={pending && chosen.length === 1 && types[0] === 'nadu' && nope ? pending.nopes : null}
                   onPlay={() => (wantsTarget ? setAsking('target') : play(null))}
                   onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level, play: pending?.n })}
@@ -382,12 +383,15 @@ const LABEL =
 function Choice({
   types,
   myTurn,
+  noTargets,
   nopeLevel,
   onPlay,
   onNope,
 }: {
   types: CardType[]
   myTurn: boolean
+  // Korten behöver en annan spelare med kort på handen (par, tretal, Tjänst), och ingen har några.
+  noTargets: boolean
   nopeLevel: number | null
   onPlay: () => void
   onNope: (level: number) => void
@@ -402,6 +406,7 @@ function Choice({
   const label = selectionLabel(types)
   if (!label) return <p className={LABEL}>{cardHint(types)}</p>
   if (!myTurn) return <p className={LABEL}>Bara förstorat. Du kan spela när det är din tur.</p>
+  if (noTargets) return <p className={LABEL}>Ingen annan har några kort just nu.</p>
   return (
     <Button size="lg" className="w-full" onClick={onPlay}>
       {label}
