@@ -229,19 +229,19 @@ function HeroFace({ kind, animated, gaze }: { kind: HeroExpression; animated: bo
   const open = (lookY = 0) => <OpenEyes eyes={eyes} lookY={lookY} blink={animated} pupilClass={gaze ? GAZE_CLASS : undefined} />
   switch (kind) {
     case 'musik':
-      // Njuter av musiken: glada stängda ögon som bågar uppåt (^ ^) och en liten öppen glad mun.
+      // Njuter av musiken: stora glada stängda ögon som bågar uppåt (^ ^) och en tydlig liten öppen glad mun.
       return (
         <>
-          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 8}Q${x} ${EYE_Y - 14 * s} ${x + 20 * s} ${EYE_Y + 8}`} width={6} />
-          <path d="M88 144Q100 148 112 144Q110 162 100 162Q90 162 88 144Z" className="fill-current" />
+          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 24 * s} ${EYE_Y + 10}Q${x} ${EYE_Y - 18 * s} ${x + 24 * s} ${EYE_Y + 10}`} width={7} />
+          <path d="M84 140Q100 147 116 140Q113 166 100 166Q87 166 84 140Z" className="fill-current" />
         </>
       )
     case 'mobil':
-      // Läser något spännande: runda ögon som tittar ned mot mobilen och en liten rund o-mun.
+      // Läser något spännande: runda ögon med pupillerna längst ned, mot mobilen, och en liten rund o-mun.
       return (
         <>
-          {open(8)}
-          <ellipse cx="100" cy="152" rx="6" ry="7" className="fill-current" />
+          {open(10)}
+          <ellipse cx="100" cy="142" rx="6" ry="7" className="fill-current" />
         </>
       )
     case 'hej':
@@ -253,12 +253,11 @@ function HeroFace({ kind, animated, gaze }: { kind: HeroExpression; animated: bo
         </>
       )
     case 'fluga':
-      // Knipglad: ihopknipna ögon (> <) och en liten mun som ett w.
+      // Knipglad: glada ihopknipna ögon som bågar nedåt (∪ ∪) och en mun som ett w.
       return (
         <>
-          <Stroke d={`M${EYE_X[0] - 16} ${EYE_Y - 12}L${EYE_X[0] + 12} ${EYE_Y}L${EYE_X[0] - 16} ${EYE_Y + 12}`} width={6} />
-          <Stroke d={`M${EYE_X[1] + 16} ${EYE_Y - 12}L${EYE_X[1] - 12} ${EYE_Y}L${EYE_X[1] + 16} ${EYE_Y + 12}`} width={6} />
-          <Stroke d="M86 146Q93 156 100 146Q107 156 114 146" width={6} />
+          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 22 * s} ${EYE_Y - 4}Q${x} ${EYE_Y + 18 * s} ${x + 22 * s} ${EYE_Y - 4}`} width={7} />
+          <Stroke d="M80 144Q90 160 100 144Q110 160 120 144" width={7} />
         </>
       )
   }
