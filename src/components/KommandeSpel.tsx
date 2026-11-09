@@ -29,10 +29,10 @@ export function KommandeSpel({ games }: { games: GameInfo[] }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                  <span className="font-heading text-base leading-tight font-bold">{game.name}</span>
+                  <span className="font-heading text-lg leading-tight font-bold">{game.name}</span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">Kommer snart</span>
                 </span>
-                <span className="block text-sm leading-snug text-muted-foreground">{game.tagline}</span>
+                <span className="block text-base leading-snug text-muted-foreground">{game.tagline}</span>
               </span>
             </button>
           </li>
@@ -86,7 +86,7 @@ export function Onskelada() {
   const ready = trimmed.length >= 3
   return (
     <section className="rounded-lg border bg-card shadow-soft-sm">
-      <h3 className="text-lg">
+      <h3 className="text-xl">
         <button
           type="button"
           aria-expanded={open}

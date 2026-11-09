@@ -885,6 +885,8 @@
     --primary-foreground: oklch(0.99 0.01 85);
     /* Korallknapparna (Button): en mörkare korall, så att den vita texten klarar WCAG AA (4,7:1) */
     --primary-button: oklch(0.57 0.16 30);
+    /* Ränderna i loggans "duellen" (Layout): en lite mörkare korall bredvid primary. */
+    --logga-rand: oklch(0.6 0.165 30);
     --secondary: oklch(0.93 0.024 78);
     --secondary-foreground: oklch(0.3 0.025 260);
     --muted: oklch(0.93 0.018 78);
@@ -1008,6 +1010,13 @@
     --chair: oklch(0.63 0.07 55);
     --sun-soft: oklch(0.97 0.05 90);
     --sky-soft: oklch(0.955 0.03 235);
+    /* Startsidans sektioner (HomePage, VagSektion i Vag.tsx): spelen på krämvitt, de kommande spelen på ljus persika, Så
+       fungerar det på ljusblått, och tipsen och sidfoten tillsammans på en mörkare sandton. Hero ligger på --background
+       med prickarna. */
+    --startsida-spel: oklch(0.985 0.01 85);
+    --startsida-kommande: oklch(0.955 0.035 60);
+    --startsida-steg: oklch(0.955 0.025 235);
+    --startsida-fot: oklch(0.91 0.028 72);
     /* Guld för kronan. Mörk nog att synas (minst 3:1) mot korten och pastellerna */
     --crown: oklch(0.62 0.13 68);
 }
@@ -1050,52 +1059,30 @@
   h1, h2, h3 {
     @apply font-heading font-bold tracking-[-0.015em];
     }
-  /* Startsidans prickmönster med en våg (StartsidansPrickar i HomePage). Prickarna ligger i ett eget lager som står still
-     i fönstret, och vågen i ett lager ovanpå med samma prickar lite mörkare. En bred, mjuk diagonal mask drar vågen från
-     uppe till vänster till nere till höger ungefär var sjunde sekund: svepet tar 3,6 s och pausen 3,4 s. Bara CSS: masken flyttas (startsida-vag), inget
-     per prick. Webbläsaren ritar inget när fliken inte syns, och med "minska rörelse" finns ingen våg. */
+  /* Startsidans prickmönster (StartsidansPrickar.tsx). Prickarna ritas på en canvas bakom hero, där de viker undan för
+     muspekaren, ringar sprider sig från Välj spel och en liten ring kommer vid ett tryck på mobil. CSS-prickarna här har
+     samma rutnät och syns innan canvasen ritat, och står kvar som de är med "minska rörelse" (data-canvas sätts bara när
+     canvasen ritar). Sektionerna under hero täcker båda. */
   .startsida-prickar,
-  .startsida-vag {
+  .startsida-prickar-canvas {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-size: 22px 22px;
     }
   .startsida-prickar {
     z-index: -10;
     background-color: var(--background);
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
+    background-size: 22px 22px;
     }
-  .startsida-vag {
+  .startsida-prickar[data-canvas] {
+    background-image: none;
+    }
+  .startsida-prickar-canvas {
     z-index: -9;
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 34%, transparent) 1.3px, transparent 1.3px);
-    -webkit-mask-image: linear-gradient(135deg, transparent 36%, #000 47%, #000 53%, transparent 64%);
-    mask-image: linear-gradient(135deg, transparent 36%, #000 47%, #000 53%, transparent 64%);
-    -webkit-mask-size: 300% 300%;
-    mask-size: 300% 300%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: 100% 100%;
-    mask-position: 100% 100%;
-    animation: startsida-vag 7s linear infinite;
+    width: 100%;
+    height: 100%;
     }
-  @keyframes startsida-vag {
-    0% {
-      -webkit-mask-position: 100% 100%;
-      mask-position: 100% 100%;
-    }
-    /* 3,6 s av 7 s: samma fart som förut. */
-    51.4%,
-    100% {
-      -webkit-mask-position: 0% 0%;
-      mask-position: 0% 0%;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .startsida-vag {
-      display: none;
-      }
-  }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
