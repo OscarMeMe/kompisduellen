@@ -289,8 +289,11 @@ export const LEGACY_AVATARS: Readonly<Record<string, BlobId>> = {
 
 // En gammal figur blir sin blobb. Allt annat (blobbar och okända värden) lämnas som det är.
 export function upgradeAvatar(avatar: string): string {
-  const id = LEGACY_AVATARS[avatar.replace(/\uFE0F/g, '')]
-  return id ? BLOBS.find((blob) => blob.id === id)!.emoji : avatar
+  // Bara listans egna nycklar: ett v\u00E4rde som "constructor" (t.ex. fr\u00E5n en trasig n\u00E4rvaro) finns inbyggt i alla objekt
+  // och \u00E4r ingen gammal figur. F\u00F6rut kraschade det h\u00E4r.
+  const key = avatar.replace(/\uFE0F/g, '')
+  const id = Object.prototype.hasOwnProperty.call(LEGACY_AVATARS, key) ? LEGACY_AVATARS[key] : undefined
+  return BLOBS.find((blob) => blob.id === id)?.emoji ?? avatar
 }
 
 // Sjusovaren somnar när inget har hänt i väntrummet på så här länge (ms): ingen har gått med, lämnat, reagerat eller kastat.
