@@ -334,7 +334,7 @@ function useRevealOnScroll(ref: RefObject<HTMLElement | null>, show: boolean) {
       },
       // Ytan ovanför skärmen räknas också, så att ett kort som hoppar från under skärmen till ovanför den (ett snabbt
       // svep eller en länk längre ned) också ger ett besked. rootMargin gäller bara med en uttalad root (även i en iframe).
-      { root: element.ownerDocument, threshold: 0.15, rootMargin: '100000px 0px 0px 0px' },
+      { root: element.ownerDocument, threshold: 0.1, rootMargin: '100000px 0px 0px 0px' },
     )
     observer.observe(element)
     return () => observer.disconnect()

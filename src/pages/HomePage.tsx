@@ -72,23 +72,14 @@ export function HomePage() {
   return (
     <div className="flex flex-col pt-1 sm:pt-3">
       <Prickar origin={chooseButton} />
-      {/* Hero: texten och vägarna in, centrerat på alla skärmar. Figurerna står i en rad ovanför rubriken, och från
-          lg två på var sida om den. Luften är så liten att vågen och spelkortens överkant syns direkt på 1366 × 768. */}
-      <section className="flex flex-col items-center gap-3 pb-10 sm:pb-12 lg:gap-4 lg:pb-10">
-        <HeroFigurer target={entryArea} className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:hidden" />
+      {/* Hero: figurerna i en rad ovanför rubriken, och under dem texten och vägarna in, centrerat på alla skärmar. */}
+      <section className="flex flex-col items-center gap-3 pb-14 sm:pb-16 lg:gap-4 lg:pb-16">
+        <HeroFigurer
+          target={entryArea}
+          className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:-space-x-6 lg:text-[6.5rem]"
+        />
         <div className="space-y-4 text-center lg:space-y-5">
-          {/* Från lg står två figurer på var sida om rubriken, utanför textens flöde, så att de inte krockar med något. */}
-          <div className="relative mx-auto space-y-2 lg:w-[42rem]">
-            <HeroFigurer
-              target={entryArea}
-              only={[0, 1]}
-              className="absolute top-1/2 right-full mr-3 hidden -translate-y-1/2 -space-x-4 text-[4.5rem] lg:flex xl:mr-5 xl:-space-x-8 xl:text-[8rem] min-[1360px]:text-[9rem]"
-            />
-            <HeroFigurer
-              target={entryArea}
-              only={[2, 3]}
-              className="absolute top-1/2 left-full ml-3 hidden -translate-y-1/2 -space-x-4 text-[4.5rem] lg:flex xl:ml-5 xl:-space-x-8 xl:text-[8rem] min-[1360px]:text-[9rem]"
-            />
+          <div className="space-y-2">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
             <p className="text-base font-bold text-muted-foreground sm:text-lg">
               <span className="block lg:inline">Sällskapsspel online</span>

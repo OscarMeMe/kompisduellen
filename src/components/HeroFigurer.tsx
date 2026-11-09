@@ -19,15 +19,13 @@ const POSES = [
 
 // Figurerna i startsidans hero. De andas, blinkar och guppar lite, var och en i sin egen takt, och med mus följer de
 // muspekaren med blicken. Bara dekoration, så de göms för skärmläsare. Med "minska rörelse" står de still och tittar
-// rakt fram. only = vilka av de fyra (index i HERO_FIGURES), t.ex. två på var sida om rubriken på bred skärm.
+// rakt fram.
 // target = området med Välj spel och kodfältet: med mus jublar figurerna när muspekaren är där.
 export function HeroFigurer({
   className,
-  only = [0, 1, 2, 3],
   target,
 }: {
   className?: string
-  only?: readonly number[]
   target?: RefObject<HTMLElement | null>
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -36,8 +34,8 @@ export function HeroFigurer({
   return (
     // En figur är 1.2em hög. Rutorna är bredare än kropparna, så negativ space-x ger bara lite luft mellan figurerna.
     <div ref={ref} aria-hidden className={cn('flex items-end', className)}>
-      {only.map((index) => (
-        <HeroFigur key={HERO_FIGURES[index].id} index={index} mood={mood} />
+      {HERO_FIGURES.map((figure, index) => (
+        <HeroFigur key={figure.id} index={index} mood={mood} />
       ))}
     </div>
   )
