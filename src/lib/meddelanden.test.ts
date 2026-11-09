@@ -7,6 +7,7 @@ import {
   parseHandover,
   parseImposterCard,
   parseMove,
+  parsePresence,
   parseRematchWish,
   parseStateMessage,
   parseThrow,
@@ -335,5 +336,38 @@ describe('Imposterjakten i läget', () => {
     }
     expect(parseStateMessage({ state: { ...lobby, imposter: bad }, sentAt: 1 })).toBeNull()
     expect(parseStateMessage({ state: { ...lobby, imposterSettings: { hard: 'ja' } }, sentAt: 1 })).toBeNull()
+  })
+})
+
+describe('närvaron', () => {
+  const meta = { id: 'a', name: 'Anna', avatar: '🤪', host: true, joinedAt: 5, sendsFrom: true, noThrows: false }
+
+  it('godtar en vanlig spelare', () => {
+    expect(parsePresence(meta)).toEqual(meta)
+  })
+
+  it('slänger en post med trasigt id eller namn, så att värden inte kraschar när namnen bestäms', () => {
+    expect(parsePresence({ ...meta, name: { text: 'Anna' } })).toBeNull()
+    expect(parsePresence({ ...meta, name: undefined })).toBeNull()
+    expect(parsePresence({ ...meta, name: '   ' })).toBeNull()
+    expect(parsePresence({ ...meta, id: 7 })).toBeNull()
+    expect(parsePresence({ ...meta, id: '' })).toBeNull()
+    expect(parsePresence({ ...meta, avatar: null })).toBeNull()
+    expect(parsePresence(null)).toBeNull()
+    expect(parsePresence('a')).toBeNull()
+  })
+
+  it('kortar ett för långt namn till sajtens längsta namn', () => {
+    expect(parsePresence({ ...meta, name: 'x'.repeat(500) })?.name).toHaveLength(20)
+  })
+
+  it('räknar bara uttalat sanna flaggor, och en trasig tid som noll', () => {
+    const parsed = parsePresence({ id: 'b', name: 'Bo', avatar: '🎩', host: 'ja', joinedAt: 'nyss', noThrows: 1 })
+    expect(parsed).toEqual({ id: 'b', name: 'Bo', avatar: '🎩', host: false, joinedAt: 0, sendsFrom: false, noThrows: false })
+  })
+
+  it('ger ett namn som värden kan lägga till utan fel', () => {
+    const parsed = parsePresence({ ...meta, id: 'c', name: '  Cilla  ' })!
+    expect(addPlayers(lobby, { [parsed.id]: { name: parsed.name, avatar: parsed.avatar } }).players.c.name).toBe('Cilla')
   })
 })
