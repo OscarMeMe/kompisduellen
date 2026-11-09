@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   abortMatch,
+  addBot,
   addGuess,
   addPlayers,
   uniqueName,
@@ -10,6 +11,7 @@ import {
   changeGame,
   countThrow,
   everyoneHasGuessed,
+  everyonePresentHasGuessed,
   guessSecondsFor,
   handleDeadline,
   hostAdvance,
@@ -206,6 +208,27 @@ describe('svar', () => {
     expect(everyoneHasGuessed(state, ['a', 'b', 'c'])).toBe(false)
     // c har lämnat: de två som är kvar har svarat.
     expect(everyoneHasGuessed(state, ['a', 'b'])).toBe(true)
+  })
+
+  it('avslutar inte rundan i förtid när värden själv saknas i närvarolistan', () => {
+    // Värden (a) har laddat om sidan mitt i rundan. En kort stund syns bara gästen (b), som redan gissat.
+    let state = startGame(lobby('gissa-priset', ['a', 'b']), ['a', 'b'], NOW)
+    state = addGuess(state, 'b', 20)
+    expect(everyonePresentHasGuessed(state, ['b'], 'a')).toBe(false)
+    // När värden syns igen väntar rundan på värdens gissning, och slutar först när den kommit.
+    expect(everyonePresentHasGuessed(state, ['a', 'b'], 'a')).toBe(false)
+    expect(everyonePresentHasGuessed(addGuess(state, 'a', 10), ['a', 'b'], 'a')).toBe(true)
+    // En gäst som lämnat väntar rundan inte på.
+    expect(everyonePresentHasGuessed(addGuess(state, 'a', 10), ['a'], 'a')).toBe(true)
+    // Bara medan man gissar.
+    expect(everyonePresentHasGuessed({ ...addGuess(state, 'a', 10), phase: 'reveal' }, ['a', 'b'], 'a')).toBe(false)
+  })
+
+  it('väntar på botarna innan rundan avslutas i förtid', () => {
+    let state = startGame(addBot(lobby('gissa-priset', ['a']), 'bot-1', ['🤪'], 1), ['a', 'bot-1'], NOW)
+    state = addGuess(state, 'a', 10)
+    expect(everyonePresentHasGuessed(state, ['a'], 'a')).toBe(false)
+    expect(everyonePresentHasGuessed(addGuess(state, 'bot-1', 30), ['a'], 'a')).toBe(true)
   })
 
   it('tar inte emot svar efter facit eller två gånger', () => {

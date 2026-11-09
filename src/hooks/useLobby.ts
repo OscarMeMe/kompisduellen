@@ -89,7 +89,7 @@ import {
   backToWaiting,
   changeGame,
   cancelRematch,
-  everyoneHasGuessed,
+  everyonePresentHasGuessed,
   hostAdvance,
   hostDeadline,
   hostImposterNewWord,
@@ -404,17 +404,14 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return [...ids]
   }, [])
 
-  // Värden: avsluta rundan direkt om alla som är online har gissat.
+  // Värden: avsluta rundan direkt om alla som är online har gissat (och värden själv syns i närvarolistan, se
+  // everyonePresentHasGuessed).
   const resolveIfEveryoneGuessed = useCallback(
     (current: GameState) => {
-      // Botarna räknas med, så att rundan inte slutar innan de har gissat.
-      const ids = [...onlineRef.current.map((p) => p.id), ...botIds(current)]
-      if (current.phase === 'guessing' && everyoneHasGuessed(current, ids)) {
-        return resolveRound(current, Date.now())
-      }
-      return current
+      const ids = onlineRef.current.map((p) => p.id)
+      return meId !== null && everyonePresentHasGuessed(current, ids, meId) ? resolveRound(current, Date.now()) : current
     },
-    [],
+    [meId],
   )
 
   useEffect(() => {
