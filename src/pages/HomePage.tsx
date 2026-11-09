@@ -117,6 +117,7 @@ export function HomePage() {
       <VagSektion
         color="var(--startsida-spel)"
         id="spel"
+        squish
         tabIndex={-1}
         aria-labelledby="spel-rubrik"
         className="scroll-mt-16 outline-none"
