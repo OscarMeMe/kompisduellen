@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { TantKonfetti } from '@/components/tantpanik/TantKonfetti'
@@ -35,6 +35,18 @@ export function TantSlutskarm({
   leaderboard: ReactNode
 }) {
   const [skipped, setSkipped] = useState(false)
+  // Knapparnas höjd, så att innehållet får lika mycket luft nedtill.
+  const buttonsRef = useRef<HTMLDivElement>(null)
+  const [buttonsHeight, setButtonsHeight] = useState(160)
+  useLayoutEffect(() => {
+    const element = buttonsRef.current
+    if (!element) return
+    const measure = () => setButtonsHeight(element.offsetHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
   const reduced = typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const still = skipped || reduced
   // En del som kommer fram: rörelsen (med "minska rörelse" ingen) och när den börjar. Överhoppad: allt på plats direkt.
@@ -59,7 +71,11 @@ export function TantSlutskarm({
       style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: '300px 300px' }}
       onClick={() => setSkipped(true)}
     >
-      <div className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))] pb-40">
+      {/* Luft nedtill lika hög som knapparna som ligger fast längst ner, så att Kvällens ställning går att skrolla fram helt. */}
+      <div
+        className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))] pb-40"
+        style={{ paddingBottom: buttonsHeight + 16 }}
+      >
 
         <img src={LOGO} alt="Exploderande Tanter" width={800} height={468} style={enter('motion-safe:animate-slut-fade', 0).style} className={cn('h-auto w-42 short:w-24', enter('motion-safe:animate-slut-fade', 0).className)} />
 
@@ -144,6 +160,7 @@ export function TantSlutskarm({
 
       {/* Revansch och Byt spel ligger alltid fast längst ner, och tonas in sist. */}
       <div
+        ref={buttonsRef}
         style={enter('motion-safe:animate-slut-fade', AT.buttons).style}
         onClick={(event) => event.stopPropagation()}
         className={cn(

@@ -121,6 +121,7 @@ export function TantpanikView({
     root.classList.add('motion-safe:animate-table-shake')
   }, [shake])
   const [pileRef, pileSize, pilesTight] = usePileSize()
+  useLockPageScroll()
   // Hur mycket handen ligger över bordets nederkant (px). Högarna lämnar plats för den.
   const [handOverlap, setHandOverlap] = useState(0)
   // Kortet jag just drog, medan det visas stort (show) och medan det glider ner till sin plats i handen (land).
@@ -158,6 +159,15 @@ export function TantpanikView({
     !!table &&
     ((table.step === 'window' && table.pending !== null) || bombShowing || table.step === 'pick' || table.step === 'give' || table.step === 'place' || table.step === 'arrange')
   const bubble = useEventBubbles(table?.log ?? [], quiet)
+  // Var pratbubblan börjar: under etiketten på draghögen (data-tant-etikett), mätt när en bubbla visas.
+  const tableRef = useRef<HTMLElement>(null)
+  const [bubbleTop, setBubbleTop] = useState(4)
+  useLayoutEffect(() => {
+    if (!bubble) return
+    const label = tableRef.current?.querySelector('[data-tant-etikett]')?.getBoundingClientRect()
+    const area = tableRef.current?.getBoundingClientRect()
+    if (label && area) setBubbleTop(Math.max(4, Math.round(label.bottom - area.top + 6)))
+  }, [bubble])
   // Bakgrundsmusiken: volymen sparas för sig, och "Stäng av allt" (ljudet av) stänger av den också.
   const musicVolume = useMusicVolume()
   const soundReactions = useReactions()
@@ -180,13 +190,19 @@ export function TantpanikView({
   // Var motspelarraden slutar (px från skärmens överkant). Nope!-fönstret börjar under den, så att platserna syns.
   const seatsRef = useRef<HTMLDivElement>(null)
   const [seatsBottom, setSeatsBottom] = useState(120)
+  // Min plats ("Du" och koppen) ligger ovanför handen på en telefon: hur högt den når från skärmens nederkant (px), så att
+  // Nope!-fönstret slutar ovanför den.
+  const [mySeatTop, setMySeatTop] = useState(0)
   useLayoutEffect(() => {
     const element = handBoxRef.current
     if (!element) return
     const measure = () => {
-      setHandTop(Math.max(0, window.innerHeight - element.getBoundingClientRect().top))
+      const hand = element.getBoundingClientRect()
+      setHandTop(Math.max(0, window.innerHeight - hand.top))
       const seats = seatsRef.current?.getBoundingClientRect()
       if (seats) setSeatsBottom(seats.bottom)
+      const mySeat = element.querySelector('[data-cup-seat]')?.getBoundingClientRect()
+      setMySeatTop(mySeat && mySeat.top < hand.top ? window.innerHeight - mySeat.top : 0)
     }
     measure()
     const observer = new ResizeObserver(measure)
@@ -291,7 +307,8 @@ export function TantpanikView({
       data-spel="tantpanik"
       // Mönstret från väntrummet bakom hela matchen. Högarna och handen ligger direkt på det.
       // Lite luft under handen även utan säker marginal, så att webbläsarens list aldrig skär av korten.
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      // h-dvh: bordet följer skärmens höjd även när Safaris verktygsfält döljs eller visas (se också useLockPageScroll).
+      className="fixed inset-x-0 top-0 z-10 flex h-dvh flex-col overflow-hidden overscroll-none bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       style={{ backgroundImage: `url(${TANT_PATTERN})`, backgroundSize: '512px 512px' }}
     >
       <StatusBar
@@ -316,6 +333,7 @@ export function TantpanikView({
           table={table}
           meId={me.id}
           playingId={nopeOpen ? (table.pending?.by ?? null) : null}
+          targetId={nopeOpen ? (table.pending?.target ?? null) : null}
           away={disconnectedPlayers(table, state.players, online.map((player) => player.id))}
         />
         {/* Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här. */}
@@ -330,6 +348,7 @@ export function TantpanikView({
 
       {/* Bordet i mitten: högarna, och ovanpå dem det som väntar eller pågår. */}
       <section
+        ref={tableRef}
         aria-label="Bordet"
         // Högarna ligger direkt på mönstret och dämpas aldrig. Vems tur det är syns på statusraden och spelaren överst.
         className="relative mx-2 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 p-2"
@@ -367,8 +386,9 @@ export function TantpanikView({
         )}
         {/* Det senaste som hänt, som en pratbubbla vid högarna. En i taget. */}
         {bubble && !nopeOpen && !bombShowing && !popup && (
-          <div className="pointer-events-none absolute inset-x-2 top-1 z-20 flex justify-center">
-            <EventBubble key={bubble.n} event={bubble} state={state} />
+          // Under etiketten på draghögen ("25 kort · 2 tanter"), så att den alltid syns.
+          <div className="pointer-events-none absolute inset-x-2 z-20 flex justify-center" style={{ top: bubbleTop }}>
+            <EventBubble key={bubble.n} event={bubble} state={state} meId={me.id} />
           </div>
         )}
         {/* Någon väljer ett kort (Tjänst, par): etiketten överst på bordet, nära spelarnas platser. */}
@@ -444,7 +464,7 @@ export function TantpanikView({
         <div
           className="pointer-events-none fixed inset-x-0 z-[44] bg-foreground/35 px-2 pt-1 motion-safe:animate-fade"
           // Under motspelarraden, och plats ovanför handen för kort som lyfts (t.ex. Nope!-kortet som hoppar upp).
-          style={{ top: seatsBottom, bottom: handTop + Math.round(handOverlap * 0.9) + 8 + (canNope ? 40 : 0) }}
+          style={{ top: seatsBottom, bottom: Math.max(handTop + Math.round(handOverlap * 0.9) + 8 + (canNope ? 40 : 0), mySeatTop + 8) }}
         >
           <NopeWindow
             state={state}
@@ -460,9 +480,7 @@ export function TantpanikView({
         </div>
       )}
       {verdict && <NopeVerdict key={verdict.n} stopped={verdict.stopped} />}
-      {nopeOpen && table.pending?.target && (
-        <TargetArrow key={`${table.pending.by}-${table.pending.target}-${table.log.at(-1)?.n}`} from={table.pending.by} to={table.pending.target} meId={me.id} />
-      )}
+      {nopeOpen && table.pending?.target === me.id && <HandGlow key={`${table.pending.by}-${table.log.at(-1)?.n}`} />}
       {popup}
       <TableAnimations state={state} table={table} meId={me.id} tantView={tantView} onShake={setShake} onIncoming={setIncoming} onBomb={setBombShowing} />
       {table.winner && !bombShowing && (
@@ -714,68 +732,36 @@ function useHostAway(table: TantTable | null, state: GameState, isHost: boolean,
 // Hur länge ett nytt kort är markerat i handen (ms).
 const FRESH_MS = 5000
 
-// Pilen från den som spelade ett riktat kort till målet (par, tretal, Tjänst, Riktad attack). Är det mot mig lyser min
-// hand rött en stund. Den tar inga tryck, och med "minska rörelse" ritas den direkt.
-function TargetArrow({ from, to, meId }: { from: string; to: string; meId: string }) {
-  const [line, setLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
-  const [flash, setFlash] = useState(to === meId)
-  useLayoutEffect(() => {
-    const place = (id: string) =>
-      (id === meId ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(id)}"]`))?.getBoundingClientRect()
-    const measure = () => {
-      const a = place(from)
-      const b = place(to)
-      if (!a || !b) return
-      // Mot mig på en smal skärm räcker "→ mot dig!" i rött: ingen pil. Annars till handens överkant (aldrig in bland
-      // korten), eller mitt på en motspelares plats.
-      if (to === meId && window.innerWidth <= 420) return setLine(null)
-      setLine({ x1: a.left + a.width / 2, y1: a.top + a.height / 2, x2: b.left + b.width / 2, y2: to === meId ? b.top - 10 : b.top + b.height / 2 })
-    }
-    // Raden med motspelare går att svepa: målet (eller den som spelar) rullas fram, så att pilen syns hela vägen.
-    const seat = (id: string) => (id === meId ? null : document.querySelector(`[data-seat="${CSS.escape(id)}"]`))
-    seat(to)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    if (to === meId) seat(from)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [from, to, meId])
+// Ett kort i Nope!-fönstret är riktat mot mig: en tunn röd glöd längs handens överkant i en sekund. Ingen pil mellan
+// spelarna (den korsade korten och texten), målets plats visar i stället vem kortet gäller.
+function HandGlow() {
+  const [hand] = useState(() => document.querySelector('[data-tant-hand]')?.getBoundingClientRect() ?? null)
+  const [on, setOn] = useState(true)
   useEffect(() => {
-    if (!flash) return
-    const timer = setTimeout(() => setFlash(false), 1000)
+    const timer = setTimeout(() => setOn(false), 1000)
     return () => clearTimeout(timer)
-  }, [flash])
-  const hand = to === meId ? document.querySelector('[data-tant-hand]')?.getBoundingClientRect() : null
+  }, [])
+  if (!on || !hand) return null
   return (
-    <>
-      {line && (
-        <svg aria-hidden className="pointer-events-none fixed inset-0 z-[47] size-full">
-          <defs>
-            <marker id="tant-pil" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" className={to === meId ? 'fill-destructive' : 'fill-primary-button'} />
-            </marker>
-          </defs>
-          {/* En båge ned över bordet, så att den syns även mellan två som sitter bredvid varandra. Mot mig rakt ned till handen. */}
-          <path
-            d={`M ${line.x1} ${line.y1} Q ${(line.x1 + line.x2) / 2} ${to === meId ? (line.y1 + line.y2) / 2 : Math.max(line.y1, line.y2) + 140} ${line.x2} ${line.y2}`}
-            fill="none"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeDasharray="2 12"
-            markerEnd="url(#tant-pil)"
-            className={cn(to === meId ? 'stroke-destructive' : 'stroke-primary-button', 'drop-shadow-[0_0_4px_white]')}
-          />
-        </svg>
-      )}
-      {flash && hand && (
-        // Mot mig: en tunn röd glöd längs handens överkant i en sekund.
-        <span
-          aria-hidden
-          className="pointer-events-none fixed z-[45] h-1 rounded-full bg-destructive shadow-[0_0_16px_5px] shadow-destructive/70 motion-safe:animate-fade"
-          style={{ left: hand.left + 16, top: hand.top - 2, width: hand.width - 32 }}
-        />
-      )}
-    </>
+    <span
+      aria-hidden
+      className="pointer-events-none fixed z-[45] h-1 rounded-full bg-destructive shadow-[0_0_16px_5px] shadow-destructive/70 motion-safe:animate-fade"
+      style={{ left: hand.left + 16, top: hand.top - 2, width: hand.width - 32 }}
+    />
   )
+}
+
+// Sidan bakom bordet skrollar inte medan bordet visas, så att Safari inte flyttar sitt verktygsfält och lämnar ett tomt
+// fält under bordet.
+function useLockPageScroll() {
+  useEffect(() => {
+    const root = document.documentElement
+    const before = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => {
+      root.style.overflow = before
+    }
+  }, [])
 }
 
 // Hur länge stämpeln syns när Nope!-fönstret stängs (ms).
@@ -952,23 +938,25 @@ function statusText(
 ): { text: string; short: string; mine: boolean; waitingFor: string | null } {
   const say = (text: string, short: string, mine: boolean, waitingFor: string | null = null) => ({ text, short, mine, waitingFor })
   if (table.winner) {
-    const text = bombShowing ? 'Exploderande tant!' : `${name(table.winner)} vinner!`
+    const text = bombShowing ? 'Exploderande tant!' : table.winner === meId ? 'Du vinner!' : `${name(table.winner)} vinner!`
     return say(text, text, false)
   }
+  // Kort namn på smal skärm: botarna har redan roboten på figuren, så "Bot-" behövs inte.
+  const short = (id: string) => name(id).replace(/^Bot-/, '')
   // Den som är ute ser vems tur det är, som alla andra. Att man är ute står längst ner.
   const playing = !table.out.includes(meId)
   if (table.step === 'window') {
     if (canNope) return say('Säg Nope! om du vill stoppa kortet', 'Säg Nope?', true)
     // Nope!-chansen står bara vid nedräkningen. Här står bara vems tur det är.
-    return table.current === meId && playing ? say('Din tur', 'Din tur', false) : say(`${name(table.current)}s tur`, 'har turen', false, table.current)
+    return table.current === meId && playing ? say('Din tur', 'Din tur', false) : say(`${name(table.current)}s tur`, `${short(table.current)}s tur`, false, table.current)
   }
   if (table.step === 'pick' && table.pick) {
     if (table.pick.by === meId) return say(`Välj ett kort ur ${name(table.pick.from)}s hand`, 'Välj ett kort', true)
-    return say(`${name(table.pick.by)} väljer ett kort`, 'väljer ett kort', false, table.pick.by)
+    return say(`${name(table.pick.by)} väljer ett kort`, `${short(table.pick.by)} väljer`, false, table.pick.by)
   }
   if (table.step === 'give' && table.favor) {
     if (table.favor.from === meId) return say(`Välj ett kort att ge ${name(table.favor.to)}`, `Ge ${name(table.favor.to)} ett kort`, true)
-    return say(`${name(table.favor.from)} väljer ett kort`, 'väljer ett kort', false, table.favor.from)
+    return say(`${name(table.favor.from)} väljer ett kort`, `${short(table.favor.from)} väljer`, false, table.favor.from)
   }
   if (table.current === meId && playing) {
     if (table.step === 'place') return say('Göm tanten i högen', 'Göm tanten', true)
@@ -976,7 +964,7 @@ function statusText(
     // Turerna kvar vid attack står på koppen.
     return say('Spela kort eller dra', 'Spela eller dra', true)
   }
-  return say(`${name(table.current)} funderar`, 'funderar', false, table.current)
+  return say(`${name(table.current)} funderar`, `${short(table.current)} funderar`, false, table.current)
 }
 
 // Tre punkter som hoppar efter texten (står still med "minska rörelse").
@@ -1019,7 +1007,22 @@ function HistoryButton({ table, onOpen }: { table: TantTable; onOpen: () => void
 // tur lyser. Raden går att svepa när de inte får plats, och den som har tur scrollas fram.
 // playingId = den som just spelat ett kort (Nope!-fönstret): platsen lyser.
 // away = riktiga spelare som tappat anslutningen. Platsen visar "Frånkopplad", och matchen väntar på dem som vanligt.
-function Opponents({ state, table, meId, playingId, away }: { state: GameState; table: TantTable; meId: string; playingId: string | null; away: string[] }) {
+function Opponents({
+  state,
+  table,
+  meId,
+  playingId,
+  targetId,
+  away,
+}: {
+  state: GameState
+  table: TantTable
+  meId: string
+  playingId: string | null
+  // Den som ett kort i Nope!-fönstret är riktat mot: platsen får en vinröd ring och etiketten Mål.
+  targetId: string | null
+  away: string[]
+}) {
   const start = Math.max(0, table.order.indexOf(meId))
   const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
   const listRef = useRef<HTMLUListElement>(null)
@@ -1040,7 +1043,17 @@ function Opponents({ state, table, meId, playingId, away }: { state: GameState; 
         const turn = table.current === id && !out && !table.winner
         return (
           <li key={id} data-seat={id} className="shrink-0">
-            <Opponent state={state} id={id} out={out} away={away.includes(id)} turn={turn} playing={playingId === id} count={table.handCounts[id] ?? 0} narrow={ids.length > 4} />
+            <Opponent
+              state={state}
+              id={id}
+              out={out}
+              away={away.includes(id)}
+              turn={turn}
+              playing={playingId === id}
+              target={targetId === id}
+              count={table.handCounts[id] ?? 0}
+              narrow={ids.length > 4}
+            />
           </li>
         )
       })}
@@ -1056,6 +1069,7 @@ function Opponent({
   away,
   turn,
   playing,
+  target,
   count,
   narrow,
 }: {
@@ -1066,6 +1080,7 @@ function Opponent({
   away: boolean
   turn: boolean
   playing: boolean
+  target: boolean
   count: number
   narrow: boolean
 }) {
@@ -1081,15 +1096,22 @@ function Opponent({
       className={cn(
         'relative flex items-center gap-1.5 rounded-full bg-card/85 py-0.5 pr-2.5 pl-0.5 shadow-soft-sm backdrop-blur-sm motion-safe:transition-[transform,background-color] motion-safe:duration-300 max-[420px]:max-w-[5.25rem] max-[420px]:gap-1 max-[420px]:pr-2',
         narrow ? 'max-w-32 md:max-w-40' : 'max-w-40 md:max-w-52',
-        // Den som har tur är större och lyser (på en telefon utan att ta mer plats i sidled).
-        turn && 'z-10 mx-1.5 scale-110 bg-coral-soft shadow-[0_0_18px_5px] shadow-primary/60 ring-3 ring-primary max-[420px]:mx-0 max-[420px]:scale-100',
-        // Spelar just ett kort: platsen lyser gult medan kortet ligger i mitten.
+        // Två färger: guld för vems tur det är (och den som spelar kortet i Nope!-fönstret), vinrött för vem ett kort är
+        // riktat mot. Den som har tur är större (på en telefon utan att ta mer plats i sidled).
+        turn && 'z-10 mx-1.5 scale-110 bg-sun-soft shadow-[0_0_18px_5px] shadow-sun/70 ring-3 ring-sun max-[420px]:mx-0 max-[420px]:scale-100',
         playing && 'z-10 bg-sun-soft shadow-[0_0_22px_8px] shadow-sun ring-4 ring-sun',
+        // Målet: en tydlig vinröd ring och en kort skakning när kortet läggs fram.
+        target && 'z-10 bg-tant-kram-2 shadow-[0_0_18px_6px] shadow-tant-vinrod/45 ring-4 ring-tant-vinrod motion-safe:animate-shake',
         out && 'opacity-45 grayscale',
         // Frånkopplad: platsen får bli bredare på smal skärm, så att hela ordet syns.
         away && !out && 'opacity-70 max-[420px]:max-w-none',
       )}
     >
+      {target && (
+        <span className="absolute -bottom-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-tant-vinrod px-1.5 py-px font-heading text-[10px] leading-tight font-bold tracking-wide text-tant-kram-2 uppercase shadow-soft-sm motion-safe:animate-pop">
+          Mål
+        </span>
+      )}
       <span className="relative shrink-0">
         <LobbyFigur playerId={id} avatar={state.players[id]?.avatar ?? ''} lively={false} className="text-3xl max-[420px]:text-2xl md:text-4xl" />
         {/* På smala skärmar sitter roboten som ett litet märke på figuren, så att namnet får plats. */}
@@ -1114,7 +1136,7 @@ function Opponent({
       </span>
     </span>
   )
-  const label = `${name}, ${out ? 'ute' : `${count} kort`}${away ? ', frånkopplad' : ''}${turn ? ', har turen' : ''}`
+  const label = `${name}, ${out ? 'ute' : `${count} kort`}${away ? ', frånkopplad' : ''}${turn ? ', har turen' : ''}${target ? ', mål för kortet' : ''}`
   if (!canThrow) return <div aria-label={label}>{seat}</div>
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -1227,7 +1249,7 @@ const PILE_GAP = 0.12
 const PILES_WIDE = 1 + PILE_GAP + DISCARD_SCALE + 0.1
 // På höga, smala skärmar ligger slänghögen en bit in bakom draghögen (andel av draghögens bredd), så att högarna kan
 // växa och fylla höjden i stället för att begränsas av bredden.
-const PILE_TUCK = 0.38
+const PILE_TUCK = 0.12
 const PILES_WIDE_TIGHT = 1 + DISCARD_SCALE - PILE_TUCK + 0.1
 // De översta korten i slänghögen ligger åt lite olika håll, som om de slängts dit (grader, översta sist).
 const DISCARD_TILT = [-7, 4, 11]
@@ -1301,7 +1323,7 @@ function Piles({
             <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
           )}
           {/* Antalet kort och tanter i högen. */}
-          <span className="absolute -top-2.5 -left-2 z-10 rounded-full bg-foreground px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-background tabular-nums shadow-soft-sm md:text-sm">
+          <span data-tant-etikett className="absolute -top-2.5 -left-2 z-10 rounded-full bg-foreground px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-background tabular-nums shadow-soft-sm md:text-sm">
             {table.deckCount} kort · {bombText(table)}
           </span>
           {/* Min tur: Dra! på själva högen. */}
@@ -1405,15 +1427,18 @@ function eventPlayer(state: GameState, text: string): string | null {
 }
 
 // En händelse som en stor pratbubbla med spelarens figur. Tonas in och ut (med "minska rörelse" utan rörelse).
-function EventBubble({ event, state }: { event: TantEvent; state: GameState }) {
+function EventBubble({ event, state, meId }: { event: TantEvent; state: GameState; meId: string }) {
   const player = eventPlayer(state, event.text)
+  // Mig själv tilltalar den med du: "Du är sist kvar och vinner!".
+  const myName = state.players[meId]?.name
+  const text = myName && player === meId && event.text === `${myName} är sist kvar och vinner!` ? 'Du är sist kvar och vinner!' : event.text
   return (
     <div
       role="status"
       className="relative flex max-w-[min(32rem,100%)] items-center gap-2.5 rounded-3xl bg-card/95 py-2 pr-4 pl-2 shadow-lift motion-safe:animate-pop"
     >
       {player && <LobbyFigur playerId={player} avatar={state.players[player]?.avatar ?? ''} className="shrink-0 text-4xl md:text-5xl" />}
-      <p className="font-heading text-base leading-snug font-bold text-balance md:text-xl">{event.text}</p>
+      <p className="font-heading text-base leading-snug font-bold text-balance md:text-xl">{text}</p>
       {/* Pratbubblans spets, nedåt mot högarna. */}
       <span aria-hidden className="absolute -bottom-2 left-10 size-4 rotate-45 bg-card/95" />
     </div>

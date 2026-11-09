@@ -142,7 +142,8 @@ export function MySeat({ state, meId, turn, raised, className }: { state: GameSt
         className={cn(
           // Fickan till höger (pr-10) är koppens plats.
           'flex items-center gap-1.5 rounded-full bg-card/85 py-0.5 pr-10 pl-0.5 shadow-soft-sm backdrop-blur-sm motion-safe:transition-[background-color,box-shadow] motion-safe:duration-300 max-[420px]:gap-1 md:pr-12',
-          turn && 'bg-coral-soft ring-3 ring-primary',
+          // Guld för vems tur det är, som motspelarnas platser.
+          turn && 'bg-sun-soft ring-3 ring-sun',
         )}
       >
         <LobbyFigur playerId={meId} avatar={state.players[meId]?.avatar ?? ''} lively={false} className="text-3xl max-[420px]:text-2xl md:text-4xl" />

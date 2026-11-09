@@ -27,6 +27,8 @@ const SPREAD_SHIFT = 0.42
 const NOPE_HURRY_SECONDS = 2
 
 const CARD_RATIO = 147 / 107
+// Hur långt (px) ett riktat kort glider mot målet innan det lägger sig i mitten.
+const NUDGE_PX = 22
 
 function useSize(ref: React.RefObject<HTMLElement | null>) {
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -87,11 +89,23 @@ export function NopeWindow({
   const boxRef = useRef<HTMLDivElement>(null)
   const [arrived, setArrived] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const [from, setFrom] = useState<{ x: number; y: number } | null>(null)
+  const [nudge, setNudge] = useState<{ x: number; y: number } | null>(null)
   useLayoutEffect(() => {
     if (arrived) return
     const box = boxRef.current?.getBoundingClientRect()
     const seat = (mine ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(pending.by)}"]`))?.getBoundingClientRect()
     if (box && seat) setFrom({ x: seat.left + seat.width / 2 - (box.left + box.width / 2), y: seat.top + seat.height / 2 - (box.top + box.height / 2) })
+    // Riktat kort: korten glider en liten bit mot målet innan de lägger sig i mitten (--nudge-x, --nudge-y).
+    const target = pending.target
+    const aim = target
+      ? (target === meId ? document.querySelector('[data-tant-hand]') : document.querySelector(`[data-seat="${CSS.escape(target)}"]`))?.getBoundingClientRect()
+      : null
+    if (box && aim) {
+      const dx = aim.left + aim.width / 2 - (box.left + box.width / 2)
+      const dy = aim.top + aim.height / 2 - (box.top + box.height / 2)
+      const length = Math.hypot(dx, dy) || 1
+      setNudge({ x: (dx / length) * NUDGE_PX, y: (dy / length) * NUDGE_PX })
+    }
     const frame = requestAnimationFrame(() => requestAnimationFrame(() => setArrived(true)))
     return () => cancelAnimationFrame(frame)
     // En gång, när kortet spelas.
@@ -139,6 +153,10 @@ export function NopeWindow({
           }}
         >
         <div
+          className={cn('absolute inset-0', nudge && 'motion-safe:animate-tant-nudge')}
+          style={nudge ? ({ '--nudge-x': `${nudge.x}px`, '--nudge-y': `${nudge.y}px` } as React.CSSProperties) : undefined}
+        >
+        <div
           className={cn('absolute', pending.nopes > 0 && 'motion-safe:animate-stamp-shake')}
           key={pending.nopes}
           style={{ left: fit.left, top: fit.top, width: fit.card, height: fit.card * CARD_RATIO }}
@@ -180,6 +198,7 @@ export function NopeWindow({
               </Stamp>
             </span>
           ))}
+        </div>
         </div>
         </div>
       </div>
