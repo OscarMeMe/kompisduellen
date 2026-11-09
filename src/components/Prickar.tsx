@@ -26,11 +26,6 @@ const RING_ALPHA = 0.16
 // Ringen vid ett tryck på mobil.
 const TAP_MS = 900
 const TAP_MAX = 220
-// Fläcken mitt i muspekaren över pricksektionen på startsidan: radie (px) och hur mörk den är.
-const SPOT_RADIUS = 13
-const SPOT_ALPHA = 0.15
-// Hur snabbt fläcken hinner ikapp pekaren per bildruta (lägre = mjukare).
-const SPOT_FOLLOW = 0.14
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3
 
@@ -68,13 +63,6 @@ export function Prickar({ origin }: { origin?: RefObject<HTMLElement | null> }) 
     const start = performance.now()
     let frame = 0
     let visible = true
-    // Hur synlig fläcken vid muspekaren är (0–1).
-    let spot = 0
-    const spotAt = { x: -9999, y: -9999 }
-    // Fläckens töjning i rörelsens riktning (1 = rund), med fart så att den gungar.
-    let stretch = 1
-    let stretchSpeed = 0
-    let angle = 0
 
     function draw(now: number) {
       frame = 0
@@ -139,40 +127,8 @@ export function Prickar({ origin }: { origin?: RefObject<HTMLElement | null> }) 
           ctx.fill()
         }
       }
-      // Startsidan: en liten mörktonad fläck mitt i muspekaren när den är över pricksektionen (hero). Tonas in och ut.
-      const overHero = Boolean(origin) && target.on && target.y < heroBottom
-      spot += ((overHero ? 1 : 0) - spot) * 0.15
-      // Fläcken glider mjukt efter pekaren och dras ut lite i rörelsens riktning, som en droppe.
-      // En ny fläck börjar där pekaren är, i stället för att glida dit från där den förra försvann.
-      if (spotAt.x < -999 || spot <= 0.02) Object.assign(spotAt, { x: target.x, y: target.y })
-      const lagX = target.x - spotAt.x
-      const lagY = target.y - spotAt.y
-      spotAt.x += lagX * SPOT_FOLLOW
-      spotAt.y += lagY * SPOT_FOLLOW
-      if (spot > 0.01) {
-        // Som slime: töjningen är en fjäder, så att fläcken dras ut när den släpar och gungar som gelé när pekaren stannar.
-        const lag = Math.hypot(lagX, lagY)
-        stretchSpeed = (stretchSpeed + (Math.min(1.9, 1 + lag / 28) - stretch) * 0.2) * 0.8
-        stretch = Math.max(0.75, stretch + stretchSpeed)
-        if (lag > 0.5) angle = Math.atan2(lagY, lagX)
-        ctx.save()
-        ctx.translate(spotAt.x, spotAt.y)
-        ctx.rotate(angle)
-        ctx.scale(stretch, 1 / Math.sqrt(stretch))
-        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, SPOT_RADIUS)
-        glow.addColorStop(0, String(fill))
-        glow.addColorStop(0.3, String(fill))
-        glow.addColorStop(1, 'transparent')
-        ctx.globalAlpha = SPOT_ALPHA * spot
-        ctx.fillStyle = glow
-        ctx.beginPath()
-        ctx.arc(0, 0, SPOT_RADIUS, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.restore()
-        ctx.fillStyle = fill
-      }
       // Ringarna rör sig hela tiden. Annars ritas bara så länge muspekaren eller ett tryck rör prickarna.
-      const moving = Boolean(origin) || target.on || pointer.strength > 0.005 || taps.length > 0 || spot > 0.01
+      const moving = Boolean(origin) || target.on || pointer.strength > 0.005 || taps.length > 0
       if (visible && moving) frame = requestAnimationFrame(draw)
     }
     const wake = () => {

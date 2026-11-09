@@ -54,8 +54,8 @@ const WAVE_EDGE: number[] = (() => {
 })()
 
 // Hur djupt kanten trycks ned (vågens enheter, höjden är 90), hur bred gropen är och hur nära kanten muspekaren ska stå (px).
-const DENT_DEPTH = 22
-const DENT_WIDTH = 110
+const DENT_DEPTH = 40
+const DENT_WIDTH = 180
 const HIT_PX = 36
 // Fjäderns drag och hur mycket av farten som behålls per bildruta: lugnt ned, mycket långsamt och trögt upp.
 const SINK_PULL = 0.05
@@ -88,7 +88,9 @@ function VagSlag({ color, flip }: { color: string; flip: boolean }) {
       let d = 'M0 90'
       for (let x = 0; x <= 1440; x += STEP) {
         const dent = depth * Math.exp(-((x - center) ** 2) / (2 * DENT_WIDTH ** 2))
-        d += `L${x} ${(edgeAt(x) + dent).toFixed(1)}`
+        // Mjukt tak: gropen saktar in mot vågens nederkant i stället för att tvärstanna där, så att den aldrig får hörn.
+        const room = 88 - edgeAt(x)
+        d += `L${x} ${(edgeAt(x) + room * (1 - Math.exp(-dent / room))).toFixed(1)}`
       }
       // Punkterna är redan spegelvända (edgeAt), så vågens egen spegling tas bort.
       path.removeAttribute('transform')
