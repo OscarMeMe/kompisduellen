@@ -46,7 +46,8 @@ export function HomePage() {
     setIntroOpen(true)
   }
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const heroFigures = useRef<HTMLDivElement>(null)
+  // Knappen Välj spel, där ringarna i prickarna sprider sig ifrån.
+  const chooseButton = useRef<HTMLButtonElement>(null)
   function pointAtGames() {
     const games = document.getElementById('spel')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -66,13 +67,10 @@ export function HomePage() {
   // mörkare sandton som sidfoten fortsätter på (Layout). Färgerna är --startsida-* i index.css.
   return (
     <div className="flex flex-col pt-2 sm:pt-6">
-      <StartsidansPrickar origin={heroFigures} />
+      <StartsidansPrickar origin={chooseButton} />
       {/* Hero: blobbarna överst och under dem texten och vägarna in, centrerat på alla skärmar. */}
       <section className="flex flex-col items-center gap-6 pb-14 sm:pb-20 lg:gap-7 lg:pb-24">
-        {/* Ringarna i prickarna sprider sig härifrån. */}
-        <div ref={heroFigures}>
-          <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
-        </div>
+        <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
         <div className="space-y-6 text-center lg:space-y-7">
           <div className="space-y-3">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
@@ -102,7 +100,7 @@ export function HomePage() {
           <div className="mx-auto flex max-w-sm flex-col gap-5">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames} className="text-lg">
+            <Button ref={chooseButton} size="lg" onClick={pointAtGames} className="text-lg">
               Välj spel
               <ArrowDown aria-hidden />
             </Button>
@@ -240,8 +238,8 @@ export function HomePage() {
   )
 }
 
-// Prickmönstret på startsidan (se .startsida-prickar och lagren efter i index.css): ringar som sprider sig från blobbarna
-// (origin), prickar som blir större där muspekaren är, och en liten ring från fingret vid ett tryck på mobil. Bara på
+// Prickmönstret på startsidan (se .startsida-prickar och lagren efter i index.css): ringar som sprider sig från knappen
+// Välj spel (origin), prickar som blir större där muspekaren är, och en liten ring från fingret vid ett tryck på mobil. Bara på
 // startsidan. Lagren ligger bakom allt och tar inga tryck. Positionerna sätts som CSS-variabler, högst en gång per
 // bildruta, så att React aldrig ritar om. Med "minska rörelse" finns bara de stilla prickarna.
 function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement | null> }) {
@@ -254,14 +252,14 @@ function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement | null> 
     const tap = tapRef.current
     if (!ring || !lamp || !tap) return
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
-    // Ringarnas mitt följer blobbarna, och ringarna står still när hero inte syns.
+    // Ringarnas mitt följer knappen, och ringarna står still när hero inte syns.
     let ringFrame = 0
     const place = () => {
       ringFrame = 0
       const box = origin.current?.getBoundingClientRect()
       if (!box) return
       ring.style.setProperty('--ring-x', `${box.left + box.width / 2}px`)
-      ring.style.setProperty('--ring-y', `${box.top + box.height * 0.6}px`)
+      ring.style.setProperty('--ring-y', `${box.top + box.height / 2}px`)
       ring.dataset.paused = String(box.bottom < -400 || box.top > window.innerHeight)
     }
     const placeSoon = () => {
