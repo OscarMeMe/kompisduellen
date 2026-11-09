@@ -6,6 +6,7 @@ import type { LayoutContext } from '@/hooks/useLayout'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { loadPlayer } from '@/lib/player'
 import { cn } from '@/lib/utils'
+import { Prickar } from '@/components/Prickar'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
@@ -33,10 +34,15 @@ export function Layout() {
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   const { pathname } = useLocation()
   const home = pathname === '/'
+  const inLobby = pathname.startsWith('/lobby/')
   const player = lobbyPlayer ?? loadPlayer()
 
   return (
-    <div className="flex min-h-svh flex-col overflow-x-clip">
+    // data-knappar: utanför lobbyn byter knapparna färg när musen är över dem (se index.css).
+    <div className="flex min-h-svh flex-col overflow-x-clip" data-knappar={inLobby ? undefined : 'hover'}>
+      {/* Prickarna som viker undan för muspekaren på alla sidor utom startsidan (som har egna, med ringar) och lobbyn
+          (där spelen kan ha egen bakgrund, och prickarna står still). */}
+      {!home && !inLobby && <Prickar />}
       <header className="pt-[env(safe-area-inset-top)]">
         <div
           className={cn(

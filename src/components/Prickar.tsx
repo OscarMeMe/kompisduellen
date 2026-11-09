@@ -1,13 +1,13 @@
 import { useEffect, useRef, type RefObject } from 'react'
 
-// Prickmönstret bakom startsidans hero, ritat på en canvas så att varje prick kan röra sig:
+// Prickmönstret bakom sidorna, ritat på en canvas så att varje prick kan röra sig:
 // - Med mus viker prickarna undan för muspekaren och glider tillbaka när den går vidare.
-// - Två ringar av lite mörkare prickar sprider sig sakta från origin (knappen Välj spel) var tionde sekund, som ringar
-//   på vattnet.
 // - På mobil sprider sig en liten ring från fingret vid ett tryck.
-// Rutnätet är detsamma som CSS-prickarna i .startsida-prickar (22 px, pricken mitt i rutan), som syns tills canvasen har
-// ritat och står kvar som de är med "minska rörelse". Bara raderna som syns i hero ritas, och inget ritas när hero inte
-// syns. Sektionerna under hero täcker canvasen.
+// - Bara på startsidan (origin = knappen Välj spel): två ringar av lite mörkare prickar sprider sig sakta från knappen var
+//   tionde sekund, som ringar på vattnet. Där ritas bara raderna i hero, och inget när hero inte syns.
+// Utan ringar ritar canvasen bara när något rör sig. Rutnätet är detsamma som CSS-prickarna i .prickar (22 px, pricken
+// mitt i rutan), som syns tills canvasen har ritat och står kvar som de är med "minska rörelse". Allt med egen bakgrund
+// (kort, sektioner) täcker canvasen.
 const GRID = 22
 const DOT = 1.25
 // Prickarnas vanliga täckning (lite tydligare än förut).
@@ -29,7 +29,7 @@ const TAP_MAX = 220
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3
 
-export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement | null> }) {
+export function Prickar({ origin }: { origin?: RefObject<HTMLElement | null> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // CSS-prickarna göms när canvasen har börjat rita (data-canvas), så att det inte blir dubbla.
   const dotsRef = useRef<HTMLDivElement>(null)
@@ -70,10 +70,10 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
       pointer.strength += ((target.on ? 1 : 0) - pointer.strength) * 0.12
       pointer.x += (target.x - pointer.x) * 0.3
       pointer.y += (target.y - pointer.y) * 0.3
-      // Bara raderna ovanför sektionen under hero (och vågen).
-      const button = origin.current
+      // På startsidan bara raderna ovanför sektionen under hero (och vågen).
+      const button = origin?.current
       const box = button?.getBoundingClientRect()
-      const heroBottom = button?.closest('section')?.getBoundingClientRect().bottom ?? height
+      const heroBottom = (origin && button?.closest('section')?.getBoundingClientRect().bottom) || height
       const bottom = Math.min(height, heroBottom + 90)
       const cx = box ? box.left + box.width / 2 : width / 2
       const cy = box ? box.top + box.height / 2 : height / 2
@@ -81,7 +81,7 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
       const t = ((now - start) / 1000) % RING_PERIOD
       const grow = Math.min(1, t / RING_GROW)
       const ringR = easeOut(grow) * RING_MAX
-      const ringFade = t < RING_GROW ? Math.min(1, t / 0.6) * (1 - grow) : 0
+      const ringFade = origin && t < RING_GROW ? Math.min(1, t / 0.6) * (1 - grow) : 0
       const rings = [ringR, ringR - RING_GAP]
       // Trycken på mobil som fortfarande syns.
       while (taps.length > 0 && now - taps[0].at > TAP_MS) taps.shift()
@@ -127,14 +127,19 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
           ctx.fill()
         }
       }
-      if (visible) frame = requestAnimationFrame(draw)
+      // Ringarna rör sig hela tiden. Annars ritas bara så länge muspekaren eller ett tryck rör prickarna.
+      const moving = Boolean(origin) || target.on || pointer.strength > 0.005 || taps.length > 0
+      if (visible && moving) frame = requestAnimationFrame(draw)
+    }
+    const wake = () => {
+      if (!frame) frame = requestAnimationFrame(draw)
     }
     frame = requestAnimationFrame(draw)
     const dots = dotsRef.current
     if (dots) dots.dataset.canvas = 'true'
 
     // Ingen ritning när hero inte syns.
-    const hero = origin.current?.closest('section')
+    const hero = origin?.current?.closest('section')
     const observer = hero
       ? new IntersectionObserver(([entry]) => {
           visible = entry.isIntersecting
@@ -152,15 +157,22 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
       target.x = event.clientX
       target.y = event.clientY
       target.on = true
+      wake()
     }
     const leave = () => {
       target.on = false
+      wake()
     }
     const press = (event: PointerEvent) => {
       if (event.pointerType === 'mouse') return
       taps.push({ x: event.clientX, y: event.clientY, at: performance.now() })
+      wake()
     }
-    window.addEventListener('resize', resize)
+    const resizeAndDraw = () => {
+      resize()
+      wake()
+    }
+    window.addEventListener('resize', resizeAndDraw)
     window.addEventListener('pointermove', move, { passive: true })
     window.addEventListener('pointerdown', press, { passive: true })
     document.documentElement.addEventListener('mouseleave', leave)
@@ -168,7 +180,7 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
       if (dots) delete dots.dataset.canvas
       cancelAnimationFrame(frame)
       observer?.disconnect()
-      window.removeEventListener('resize', resize)
+      window.removeEventListener('resize', resizeAndDraw)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerdown', press)
       document.documentElement.removeEventListener('mouseleave', leave)
@@ -177,8 +189,8 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
 
   return (
     <>
-      <div ref={dotsRef} aria-hidden className="startsida-prickar" />
-      <canvas ref={canvasRef} aria-hidden className="startsida-prickar-canvas" />
+      <div ref={dotsRef} aria-hidden className="prickar" />
+      <canvas ref={canvasRef} aria-hidden className="prickar-canvas" />
     </>
   )
 }

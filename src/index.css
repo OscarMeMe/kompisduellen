@@ -36,14 +36,10 @@
 [data-spel='imposterjakten'] {
   --spel-yta: var(--mint);
 }
-/* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant, knapp och etikett. Bara
-   kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
+/* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant och etikett. Skapa lobby
+   är samma som på de andra spelkorten. Bara kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
 [data-spel][data-spelkort='tantpanik'] {
   --spel-yta: var(--tant-kram-2);
-  --spel-knapp: var(--tant-vinrod);
-  --spel-knapp-text: var(--tant-kram-2);
-  --spel-knapp-hover: var(--tant-vinrod-mork);
-  --spel-knapp-hover-text: var(--tant-kram-2);
 }
 
 /* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
@@ -141,7 +137,7 @@
     /* utröstad smälter till en pöl, sur vänder sig lite bort. Spelas en gång när minen byts. */
     --animate-blob-melt: blob-melt 0.6s ease-in both;
     --animate-blob-sulk: blob-sulk 0.5s ease-out both;
-    /* Personligheterna i väntrummet (figurer.ts, idle). Långa perioder och bara transform och opacity, så att tio figurer
+    /* Personligheterna i väntrummet (figurer.ts, idle). Små rörelser (figurerna ska inte flytta sig långt), långa perioder och bara transform och opacity, så att tio figurer
        inte blir tunga på en mobil. Undantag från regeln om att inget pågår hela tiden. */
     --animate-blob-bounce: blob-bounce 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
     --animate-blob-tremble: blob-tremble 3s linear infinite;
@@ -366,9 +362,9 @@
     }
 
     @keyframes blob-bounce {
-        0%, 100% { transform: translateY(0) scale(1.08, 0.9); }
-        15% { transform: translateY(0) scale(0.94, 1.08); }
-        50% { transform: translateY(-22px) scale(0.98, 1.02); }
+        0%, 100% { transform: translateY(0) scale(1.03, 0.96); }
+        15% { transform: translateY(0) scale(0.98, 1.03); }
+        50% { transform: translateY(-8px) scale(0.99, 1.01); }
         85% { transform: translateY(0) scale(1, 1); }
     }
 
@@ -383,29 +379,29 @@
 
     @keyframes blob-glance {
         0%, 55%, 100% { transform: rotate(0deg) translateX(0); }
-        62%, 78% { transform: rotate(-9deg) translateX(-6px); }
-        84% { transform: rotate(3deg) translateX(2px); }
+        62%, 78% { transform: rotate(-4deg) translateX(-3px); }
+        84% { transform: rotate(1deg) translateX(1px); }
     }
 
     @keyframes blob-dance {
-        0%, 100% { transform: rotate(-7deg) translateY(0); }
-        25% { transform: rotate(0deg) translateY(-8px); }
-        50% { transform: rotate(7deg) translateY(0); }
-        75% { transform: rotate(0deg) translateY(-8px); }
+        0%, 100% { transform: rotate(-3deg) translateY(0); }
+        25% { transform: rotate(0deg) translateY(-3px); }
+        50% { transform: rotate(3deg) translateY(0); }
+        75% { transform: rotate(0deg) translateY(-3px); }
     }
 
     @keyframes blob-stomp {
         0%, 30%, 100% { transform: translateY(0) scale(1, 1); }
-        6% { transform: translateY(-10px) scale(0.96, 1.04); }
-        11% { transform: translateY(0) scale(1.1, 0.88); }
-        17% { transform: translateY(-10px) scale(0.96, 1.04); }
-        22% { transform: translateY(0) scale(1.1, 0.88); }
+        6% { transform: translateY(-4px) scale(0.98, 1.02); }
+        11% { transform: translateY(0) scale(1.04, 0.95); }
+        17% { transform: translateY(-4px) scale(0.98, 1.02); }
+        22% { transform: translateY(0) scale(1.04, 0.95); }
     }
 
     @keyframes blob-peek {
         0%, 35%, 80%, 100% { transform: translate(0, 0) scale(1); }
-        45%, 65% { transform: translate(-10px, 34px) scale(0.86); }
-        55% { transform: translate(-6px, 26px) scale(0.88) rotate(6deg); }
+        45%, 65% { transform: translate(-3px, 10px) scale(0.95); }
+        55% { transform: translate(-2px, 8px) scale(0.96) rotate(3deg); }
     }
 
     @keyframes blob-hair {
@@ -459,15 +455,15 @@
 
     @keyframes blob-aerobic {
         0%, 100% { transform: translateX(0) rotate(0deg); }
-        25% { transform: translateX(-6px) rotate(-7deg); }
-        50% { transform: translateY(-8px) scale(0.97, 1.04); }
-        75% { transform: translateX(6px) rotate(7deg); }
+        25% { transform: translateX(-3px) rotate(-3deg); }
+        50% { transform: translateY(-3px) scale(0.99, 1.02); }
+        75% { transform: translateX(3px) rotate(3deg); }
     }
 
     @keyframes blob-nod {
         0%, 55%, 100% { transform: rotate(0deg) translateY(0); }
-        70% { transform: rotate(-9deg) translateY(4px); }
-        74% { transform: rotate(2deg) translateY(-3px); }
+        70% { transform: rotate(-4deg) translateY(2px); }
+        74% { transform: rotate(1deg) translateY(-1px); }
         80% { transform: rotate(0deg) translateY(0); }
     }
 
@@ -1055,32 +1051,33 @@
   /* Varm sandfärgad bakgrund med diskret prickmönster */
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
+    /* Samma prickar som på startsidan (Prickar.tsx). */
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
     background-size: 22px 22px;
     }
   h1, h2, h3 {
     @apply font-heading font-bold tracking-[-0.015em];
     }
-  /* Startsidans prickmönster (StartsidansPrickar.tsx). Prickarna ritas på en canvas bakom hero, där de viker undan för
-     muspekaren, ringar sprider sig från Välj spel och en liten ring kommer vid ett tryck på mobil. CSS-prickarna här har
-     samma rutnät och syns innan canvasen ritat, och står kvar som de är med "minska rörelse" (data-canvas sätts bara när
-     canvasen ritar). Sektionerna under hero täcker båda. */
-  .startsida-prickar,
-  .startsida-prickar-canvas {
+  /* Prickmönstret bakom sidorna (Prickar.tsx, i Layout och på startsidan). Prickarna ritas på en canvas, där de viker
+     undan för muspekaren och en liten ring kommer vid ett tryck på mobil, och på startsidan sprider sig ringar från Välj
+     spel. CSS-prickarna här har samma rutnät och utseende som body (lobbyn) och syns innan canvasen ritat, och står kvar
+     som de är med "minska rörelse" (data-canvas sätts bara när canvasen ritar). Allt med egen bakgrund täcker båda. */
+  .prickar,
+  .prickar-canvas {
     position: fixed;
     inset: 0;
     pointer-events: none;
     }
-  .startsida-prickar {
+  .prickar {
     z-index: -10;
     background-color: var(--background);
     background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
     background-size: 22px 22px;
     }
-  .startsida-prickar[data-canvas] {
+  .prickar[data-canvas] {
     background-image: none;
     }
-  .startsida-prickar-canvas {
+  .prickar-canvas {
     z-index: -9;
     width: 100%;
     height: 100%;
@@ -1088,4 +1085,14 @@
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+}
+
+/* Utanför spelen (data-knappar i Layout, inte i lobbyn) byter alla vanliga knappar färg när musen är över dem: de
+   korallröda och de vita blir mörka, som Skapa lobby på spelkorten blir korallröd. Knappar med egen färg (data-egen-farg,
+   spelkortens Skapa lobby) behåller sin. Utanför lagren, så att det går före knappens egen hoverfärg. Dialoger ligger
+   utanför sidan och påverkas inte. */
+[data-knappar='hover'] [data-slot='button']:is([data-variant='default'], [data-variant='outline']):not([data-egen-farg]):not(:disabled):hover {
+  background-color: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
 }

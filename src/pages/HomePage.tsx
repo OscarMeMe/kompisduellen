@@ -6,7 +6,7 @@ import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, SHOW_TILLFALLEN, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
 import { HeroFigurer } from '@/components/HeroFigurer'
-import { StartsidansPrickar } from '@/components/StartsidansPrickar'
+import { Prickar } from '@/components/Prickar'
 import { VagSektion } from '@/components/Vag'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
@@ -68,7 +68,7 @@ export function HomePage() {
   // mörkare sandton som sidfoten fortsätter på (Layout). Färgerna är --startsida-* i index.css.
   return (
     <div className="flex flex-col pt-2 sm:pt-6">
-      <StartsidansPrickar origin={chooseButton} />
+      <Prickar origin={chooseButton} />
       {/* Hero: blobbarna överst och under dem texten och vägarna in, centrerat på alla skärmar. */}
       <section className="flex flex-col items-center gap-6 pb-14 sm:pb-20 lg:gap-7 lg:pb-24">
         <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
@@ -94,13 +94,14 @@ export function HomePage() {
               </span>
             </h1>
           </div>
-          <p className="mx-auto max-w-lg text-lg text-muted-foreground sm:text-xl">
-            Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
+          <p className="mx-auto max-w-lg text-lg text-balance text-muted-foreground sm:text-xl">
+            Välj ett spel, dela koden och spela på varsin mobil eller dator.
           </p>
           {/* De två vägarna in, under varandra. */}
           <div className="mx-auto flex max-w-sm flex-col gap-5">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
+            {/* Byter färg när musen är över, som alla knappar utanför spelen (index.css, data-knappar i Layout). */}
             <Button ref={chooseButton} size="lg" onClick={pointAtGames} className="text-lg">
               Välj spel
               <ArrowDown aria-hidden />
