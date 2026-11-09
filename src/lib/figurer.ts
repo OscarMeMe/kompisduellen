@@ -374,7 +374,7 @@ export const HERO_FIGURES: readonly BlobFigure[] = [
     name: 'Gul med partyhatt',
     palette: colors('hero-hej'),
     body: heroPicture(3),
-    face: { x: 100, y: 116, scale: 0.4, rotate: 6 },
+    face: { x: 100, y: 116, scale: 0.52, rotate: 6 },
     traits: { hero: 'hej' },
     line: '',
     idle: '',

@@ -80,14 +80,14 @@ export function BlobShape({ figure, uid }: { figure: BlobFigure; uid: string }) 
   )
 }
 
-// Rosiga kinder på alla, under ögonen. Blygis rodnar mer, och likaså hero-figurerna med stängda eller nedtittande ögon,
-// så att kinderna syns lika tydligt som på den gula.
+// Rosiga kinder på alla, under ögonen. Blygis och hero-figurerna på startsidan rodnar mer, så att kinderna syns tydligt
+// även när ansiktet är litet.
 function Cheeks({ figure, uid }: { figure: BlobFigure; uid: string }) {
   const cyclops = figure.traits?.cyclops
   const [left, right] = cyclops ? [54, 146] : [48, 152]
   const y = cyclops ? 150 : 142
   const hero = figure.traits?.hero
-  const strong = figure.id === 'blygis' || (hero !== undefined && hero !== 'hej')
+  const strong = figure.id === 'blygis' || hero !== undefined
   return (
     <g fill={`url(#${uid}-kind)`}>
       <ellipse cx={left} cy={y} rx={strong ? 21 : 18} ry={strong ? 13 : 11} />
