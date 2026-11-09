@@ -328,13 +328,15 @@ function useZoomWidth(): number {
 }
 
 // Min ordning av handen, bara hos mig (sessionStorage). Första gången sorteras handen och den ordningen sparas, så att
-// kort jag får sedan hamnar längst till höger.
+// kort jag får sedan hamnar längst till höger. En sparad ordning utan något av handens kort är från en tidigare match
+// med samma turordning (kortens id är nya i varje match), och då sorteras handen på nytt.
 function useHandOrder(key: string, hand: TantCard[]): [string[], (ids: string[]) => void] {
   const storageKey = `kd-tant-hand:${key}`
   const [order, setOrderState] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null')
-      if (Array.isArray(saved) && saved.every((id) => typeof id === 'string')) return saved
+      const mine = Array.isArray(saved) && saved.every((id) => typeof id === 'string') && saved.some((id) => hand.some((card) => card.id === id))
+      if (mine) return saved
     } catch {
       // Ingen sparad ordning.
     }
