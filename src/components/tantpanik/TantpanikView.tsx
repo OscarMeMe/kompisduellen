@@ -22,7 +22,23 @@ import { loadSoundOn, playBullseye, saveSoundOn } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
-import { bombsInDeck, disconnectedPlayers, hostSeemsAway, moveAllowed, waitingFor, type MyTantView, type TantEvent, type TantMove, type TantTable } from '@/lib/tantpanik'
+import {
+  bombsInDeck,
+  canFinish,
+  disconnectedPlayers,
+  END_MS,
+  FINISH_AFTER_MS,
+  hostSeemsAway,
+  MOVE_LOCK_MS,
+  moveAllowed,
+  moveInFlight,
+  waitingFor,
+  type MyTantView,
+  type SentMove,
+  type TantEvent,
+  type TantMove,
+  type TantTable,
+} from '@/lib/tantpanik'
 import { cardName } from '@/lib/tantpanik-kort'
 import { cn } from '@/lib/utils'
 
@@ -50,9 +66,38 @@ export function TantpanikView({
   const hostAway = useHostAway(table ?? null, state, isHost, clockOffset)
   // Bara drag som är tillåtna just nu skickas (moveAllowed, samma regel som spelmotorn), så att ett tryck på något som
   // inte är mitt aldrig blir ett drag. Spelmotorn avvisar dem ändå.
+  // Ett drag i taget: medan mitt förra drag är på väg till värden skickas inget nytt (moveInFlight), så att ett dubbeltryck
+  // aldrig blir två drag. sentRef gäller direkt, även för två tryck innan vyn hunnit ritas om.
+  const sentRef = useRef<SentMove | null>(null)
+  const [sent, setSent] = useState<SentMove | null>(null)
+  const handled = tantView?.handled
+  const handledRef = useRef(handled)
+  useEffect(() => {
+    handledRef.current = handled
+  }, [handled])
   const onMove = (move: TantMove) => {
-    if (table && moveAllowed(table, me.id, move)) sendMove(move)
+    if (!table || !moveAllowed(table, me.id, move)) return
+    // Hoppa vidare till slutskärmen spärras inte och spärrar inget: värden svarar med slutskärmen.
+    if (move.type === 'tFinish') {
+      if (canFinish(table, state.deadline, Date.now() - clockOffset)) sendMove(move)
+      return
+    }
+    if (moveInFlight(sentRef.current, handledRef.current, Date.now())) return
+    const nr = sendMove(move)
+    if (!nr) return
+    sentRef.current = { nr, at: Date.now() }
+    setSent(sentRef.current)
   }
+  // Draget är på väg: högen slutar blinka, så att det syns att trycket gick fram. Svarar värden aldrig släpper spärren.
+  const busy = sent !== null && !(handled ?? []).includes(sent.nr)
+  useEffect(() => {
+    if (!sent) return
+    const timer = setTimeout(() => {
+      if (sentRef.current === sent) sentRef.current = null
+      setSent((current) => (current === sent ? null : current))
+    }, MOVE_LOCK_MS)
+    return () => clearTimeout(timer)
+  }, [sent])
   const [rules, setRules] = useState(false)
   const [menu, setMenu] = useState(false)
   const [history, setHistory] = useState(false)
@@ -296,7 +341,7 @@ export function TantpanikView({
               table={table}
               size={pileSize}
               tight={pilesTight}
-              canDraw={canDraw}
+              canDraw={canDraw && !busy}
               onDraw={() => onMove({ type: 'tDraw' })}
               activity={atPile}
               avatar={atPile ? (state.players[atPile.playerId]?.avatar ?? '') : ''}
@@ -408,7 +453,7 @@ export function TantpanikView({
             canNope={canNope}
             onNope={() => {
               const card = tantView?.hand.find((c) => c.type === 'nadu')
-              if (card && table.pending) onMove({ type: 'tNope', card: card.id, level: table.pending.nopes })
+              if (card && table.pending) onMove({ type: 'tNope', card: card.id, level: table.pending.nopes, play: table.pending.n })
             }}
           />
         </div>
@@ -425,6 +470,9 @@ export function TantpanikView({
           winner={table.winner}
           meId={me.id}
           canSkip={inMatch}
+          // Tidigast FINISH_AFTER_MS efter vinsten (värdens klocka), så att alla hinner se slutet.
+          skipAt={state.deadline === null ? 0 : state.deadline - END_MS + FINISH_AFTER_MS}
+          clockOffset={clockOffset}
           onSkip={() => onMove({ type: 'tFinish' })}
         />
       )}
@@ -451,15 +499,27 @@ function WinnerCelebration({
   state,
   winner,
   meId,
-  canSkip,
+  canSkip: inMatch,
+  skipAt,
+  clockOffset,
   onSkip,
 }: {
   state: GameState
   winner: string
   meId: string
   canSkip: boolean
+  // Värdens klocka när det går att hoppa vidare, och skillnaden mellan min klocka och värdens.
+  skipAt: number
+  clockOffset: number
   onSkip: () => void
 }) {
+  // Ett tryck flyttar alla till slutskärmen, så det går först när alla hunnit se slutet.
+  const [waited, setWaited] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setWaited(true), Math.max(0, skipAt - (Date.now() - clockOffset)))
+    return () => clearTimeout(timer)
+  }, [skipAt, clockOffset])
+  const canSkip = inMatch && waited
   const reactions = useReactions()
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   useEffect(() => {

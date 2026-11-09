@@ -76,6 +76,9 @@ export type TantPending = {
   // Hur många Nope! som spelats. Udda = stoppat just nu.
   nopes: number
   lastNopeBy: string | null
+  // Spelets nummer (samma som lastAction.n när kortet spelades). Ett Nope! säger vilket spel det gäller (play), så att ett
+  // Nope! som skickas igen aldrig träffar ett kort som spelats senare. Saknas i äldre sparade matcher.
+  n?: number
 }
 
 export type TantStep = 'turn' | 'window' | 'give' | 'arrange' | 'place' | 'pick'
@@ -208,7 +211,8 @@ export type TantMove =
       target?: string | null
       request?: CardType | null
     }
-  | { type: 'tNope'; card: string; level: number }
+  // level = kedjans längd när spelaren tryckte, play = numret på spelet som ska stoppas (TantPending.n).
+  | { type: 'tNope'; card: string; level: number; play?: number }
   | { type: 'tGive'; card: string }
   | { type: 'tPlace'; position: number }
   | { type: 'tArrange'; order: number[] }
@@ -433,6 +437,15 @@ function draft(host: TantHost, random: Random): Draft {
 // När någon vunnit står matchen kvar vid bordet så här länge (ms): den sista explosionen och vinnaren firas, och
 // sedan kommer slutskärmen (endMatch, via värdens klocka i tantDeadline).
 export const END_MS = 6500
+// Så länge efter vinsten (ms, värdens klocka) går det inte att hoppa vidare till slutskärmen, så att alla hinner se den
+// sista explosionen och firandet. Ett tryck från en spelare flyttar ju alla.
+export const FINISH_AFTER_MS = 3000
+
+// Går det att hoppa vidare till slutskärmen nu? deadline = klockan för slutskärmen (vinsten + END_MS), hostNow = värdens
+// klocka just nu.
+export function canFinish(table: TantTable, deadline: number | null, hostNow: number): boolean {
+  return !!table.winner && (deadline === null || hostNow >= deadline - END_MS + FINISH_AFTER_MS)
+}
 
 function finish(d: Draft, now: number): TantHost {
   let state: GameState = { ...d.state, tantpanik: d.table }
@@ -711,7 +724,7 @@ function play(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tPlay
     }
   }
   d.secrets.hands[playerId] = hand.filter((card) => !move.cards.includes(card.id))
-  act(d, 'play', playerId, types[0])
+  pending.n = act(d, 'play', playerId, types[0])
   d.secrets.discard.push(...(cards as TantCard[]))
   delete d.secrets.peek[playerId]
   log(d, playText(d, pending))
@@ -735,6 +748,8 @@ function nope(d: Draft, playerId: string, move: Extract<TantMove, { type: 'tNope
   if (d.table.step !== 'window' || !pending || d.table.out.includes(playerId) || !d.table.order.includes(playerId)) return 'invalid'
   // Draget gäller kedjan som den såg ut när spelaren tryckte. Har någon hunnit före gäller det inte.
   if (move.level !== pending.nopes) return 'invalid'
+  // Draget gäller ett visst spelat kort. Kommer det fram först när ett annat kort väntar (det skickades igen) gäller det inte.
+  if (move.play !== undefined && pending.n !== undefined && move.play !== pending.n) return 'invalid'
   const hand = d.secrets.hands[playerId]
   const index = hand.findIndex((card) => card.id === move.card && card.type === 'nadu')
   if (index < 0) return 'invalid'
@@ -927,12 +942,16 @@ function applyMove(d: Draft, playerId: string, move: TantMove, now: number): Res
 // som hanterade (även ogiltiga), så att spelaren ser att värden fått dem.
 export function tantMove(host: TantHost, playerId: string, move: TantMove, nr: string | null, now: number, random: Random): TantHost {
   if (!host.state.tantpanik || host.state.phase !== 'playing') return host
-  // Efter vinsten går bara att hoppa vidare till slutskärmen, för den som var med i matchen.
+  const seen = host.secrets.handled[playerId] ?? []
+  // Efter vinsten går bara att hoppa vidare till slutskärmen, för den som var med i matchen, och tidigast efter
+  // FINISH_AFTER_MS. Ett för tidigt tryck sparas som hanterat, så att det inte skickas igen och går igenom senare.
   if (move.type === 'tFinish') {
     const table = host.state.tantpanik
-    return table.winner && table.order.includes(playerId) ? endMatch(host) : host
+    if (!table.winner || !table.order.includes(playerId) || (nr !== null && seen.includes(nr))) return host
+    if (canFinish(table, host.state.deadline, now)) return endMatch(host)
+    if (nr === null) return host
+    return { ...host, secrets: { ...host.secrets, handled: { ...host.secrets.handled, [playerId]: [...seen, nr].slice(-HANDLED_KEPT) } } }
   }
-  const seen = host.secrets.handled[playerId] ?? []
   if (nr !== null && seen.includes(nr)) return host
   const d = draft(host, random)
   const result = applyMove(d, playerId, move, now)
@@ -952,6 +971,19 @@ export function tantDeadline(host: TantHost, now: number, deadline: number, rand
   const d = draft(host, random)
   resolve(d, random)
   return finish(d, now)
+}
+
+// Mitt senaste drag som är på väg till värden: numret och när det skickades.
+export type SentMove = { nr: string; at: number }
+// Så länge spärras nya drag som längst (ms), om värden aldrig svarar. Lika länge som draget skickas igen (leverans.ts).
+export const MOVE_LOCK_MS = 30_000
+
+// Är mitt förra drag fortfarande på väg? Då skickas inget nytt, så att ett dubbeltryck aldrig blir två drag (t.ex. två
+// kort ur högen när man har flera turer). Spärren släpper när värden visar draget som hanterat (handled), eller efter
+// MOVE_LOCK_MS.
+export function moveInFlight(sent: SentMove | null, handled: readonly string[] | undefined, now: number): boolean {
+  if (!sent) return false
+  return !(handled ?? []).includes(sent.nr) && now - sent.at < MOVE_LOCK_MS
 }
 
 // Det bara spelaren får se.

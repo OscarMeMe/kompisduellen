@@ -113,7 +113,7 @@ describe('botarna i Exploderande Tanter', () => {
     host = sync(host)
     host = tantMove(host, a, { type: 'tPlay', cards: ['att'], target: b }, null, 0, seeded(1))
     expect(host.state.tantpanik!.step).toBe('window')
-    expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0 })
+    expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0, play: host.state.tantpanik!.pending!.n })
   })
 
   it('gömmer tanten på en slumpad plats, med olika fördelning per svårighet', () => {

@@ -134,6 +134,8 @@ const isTantTable = (value: unknown): value is TantTable =>
         request: orNull(isCardType),
         nopes: isNumber,
         lastNopeBy: orNull(isString),
+        // Saknas hos en värd med en äldre version.
+        n: (n: unknown) => n === undefined || isNumber(n),
       }),
     ),
     favor: orNull(shape({ from: isString, to: isString })),
@@ -321,7 +323,8 @@ function parseTantMove(move: Unknown): TantMove | null {
       return { type: 'tPlay', cards: move.cards, target: (move.target as string | null | undefined) ?? null, request: (move.request as CardType | null | undefined) ?? null }
     }
     case 'tNope':
-      return isString(move.card) && isNumber(move.level) ? { type: 'tNope', card: move.card, level: move.level } : null
+      if (!isString(move.card) || !isNumber(move.level) || !(move.play === undefined || isNumber(move.play))) return null
+      return move.play === undefined ? { type: 'tNope', card: move.card, level: move.level } : { type: 'tNope', card: move.card, level: move.level, play: move.play }
     case 'tGive':
       return isString(move.card) ? { type: 'tGive', card: move.card } : null
     case 'tPlace':

@@ -13,6 +13,10 @@ import {
   tantDeadline,
   tantMove,
   END_MS,
+  FINISH_AFTER_MS,
+  MOVE_LOCK_MS,
+  canFinish,
+  moveInFlight,
   tantPlacementText,
   type TantHost,
   type TantMove,
@@ -988,10 +992,30 @@ describe('slutet av matchen', () => {
   it('ett tryck hoppar vidare till slutskärmen, men bara för den som var med', () => {
     let host = setup({ a: [], b: ['fika'] }, ['tant'])
     host = move(host, 'a', { type: 'tDraw' })
-    expect(tantMove(host, 'x', { type: 'tFinish' }, null, 2000, random).state.phase).toBe('playing')
-    host = tantMove(host, 'a', { type: 'tFinish' }, null, 2000, random)
+    const later = 1000 + FINISH_AFTER_MS
+    expect(tantMove(host, 'x', { type: 'tFinish' }, null, later, random).state.phase).toBe('playing')
+    host = tantMove(host, 'a', { type: 'tFinish' }, null, later, random)
     expect(host.state.phase).toBe('finished')
     expect(host.state.scores).toEqual({ a: 1, b: 2 })
+  })
+
+  it('direkt efter vinsten går det inte att hoppa vidare, så att alla hinner se slutet', () => {
+    let host = setup({ a: [], b: ['fika'] }, ['tant'])
+    host = move(host, 'a', { type: 'tDraw' })
+    expect(table(host).winner).toBe('b')
+    expect(canFinish(table(host), host.state.deadline, 1050)).toBe(false)
+    // Ett dubbeltryck från den som just exploderade, 50 ms efter vinsten.
+    const early = tantMove(host, 'a', { type: 'tFinish' }, 'tidigt', 1050, random)
+    expect(early.state.phase).toBe('playing')
+    expect(early.state.deadline).toBe(1000 + END_MS)
+    // Draget är hanterat, så det skickas inte igen och går igenom av sig självt senare.
+    expect(myTantView(early.secrets, table(early), 'a').handled).toContain('tidigt')
+    expect(tantMove(early, 'a', { type: 'tFinish' }, 'tidigt', 1000 + FINISH_AFTER_MS, random).state.phase).toBe('playing')
+    // Ett nytt tryck när tiden gått flyttar alla till slutskärmen.
+    expect(canFinish(table(early), early.state.deadline, 1000 + FINISH_AFTER_MS)).toBe(true)
+    expect(tantMove(early, 'b', { type: 'tFinish' }, 'senare', 1000 + FINISH_AFTER_MS, random).state.phase).toBe('finished')
+    // Slutskärmen kommer ändå av sig själv när klockan gått ut.
+    expect(tantDeadline(early, 1000 + END_MS, 1000 + END_MS, random).state.phase).toBe('finished')
   })
 
   it('tFinish går igenom kontrollen', () => {
@@ -1203,5 +1227,56 @@ describe('värden i bakgrunden och frånkopplade spelare', () => {
     expect(disconnectedPlayers(t, all, ['a', 'b'])).toEqual([])
     expect(disconnectedPlayers(t, all, ['a'])).toEqual(['b'])
     expect(disconnectedPlayers(t, all, [])).toEqual(['a', 'b'])
+  })
+})
+
+describe('ett drag i taget', () => {
+  it('ett Nope! som skickas igen träffar aldrig ett kort som spelats senare', () => {
+    let host = setup({ a: ['tjuvkika', 'dubbelpass'], b: ['nadu', 'fika'] }, ['blanda', 'blanda', 'blanda', 'blanda'])
+    host = play(host, 'a', ['tjuvkika'])
+    const first = table(host).pending!.n
+    expect(first).toBeTypeOf('number')
+    // b trycker Nope! mot Se framtiden, men meddelandet försvinner på vägen. Fönstret stängs och a spelar Attack.
+    const nope: TantMove = { type: 'tNope', card: cardId(host, 'b', 'nadu'), level: 0, play: first }
+    host = play(settle(host), 'a', ['dubbelpass'])
+    expect(table(host).pending!.n).not.toBe(first)
+    // Nu kommer det gamla draget fram. Det gäller inte attacken, och b har sitt Nope! kvar.
+    const stale = tantMove(host, 'b', nope, 'gammalt', 9000, random)
+    expect(table(stale).pending).toMatchObject({ cards: ['dubbelpass'], nopes: 0 })
+    expect(types(stale, 'b')).toEqual(['fika', 'nadu'])
+    expect(myTantView(stale.secrets, table(stale), 'b').handled).toContain('gammalt')
+    // Ett Nope! mot attacken går som vanligt.
+    const fresh = move(stale, 'b', { type: 'tNope', card: cardId(stale, 'b', 'nadu'), level: 0, play: table(stale).pending!.n })
+    expect(table(fresh).pending).toMatchObject({ cards: ['dubbelpass'], nopes: 1, lastNopeBy: 'b' })
+  })
+
+  it('numret på det spelade kortet går igenom kontrollen', () => {
+    expect(parseMove({ id: 'a', nr: 'x', move: { type: 'tNope', card: 'c1', level: 0, play: 12 } })?.move).toEqual({ type: 'tNope', card: 'c1', level: 0, play: 12 })
+    expect(parseMove({ id: 'a', nr: 'x', move: { type: 'tNope', card: 'c1', level: 0, play: 'tolv' } })).toBeNull()
+    const host = play(setup({ a: ['blanda'], b: ['fika'] }, ['regnbage']), 'a', ['blanda'])
+    expect(parseStateMessage({ state: host.state, sentAt: 1, from: 'a', hands: {}, version: 1 })?.state.tantpanik?.pending?.n).toBe(table(host).pending!.n)
+  })
+
+  it('med flera turer är det andra trycket på Dra! spärrat tills värden hanterat det första', () => {
+    let host = setup({ a: ['intemin'], b: ['fika'] }, ['blanda', 'tant', 'regnbage'])
+    host = sync({ ...host, state: { ...host.state, tantpanik: { ...table(host), turnsLeft: 2, attacked: true } } })
+    const view = () => myTantView(host.secrets, table(host), 'a')
+    // Första trycket skickas. Värden har inte svarat än, så det andra trycket skickas aldrig.
+    const sent = { nr: 'dra1', at: 1000 }
+    expect(moveInFlight(null, view().handled, 1000)).toBe(false)
+    expect(moveInFlight(sent, view().handled, 1150)).toBe(true)
+    host = tantMove(host, 'a', { type: 'tDraw' }, sent.nr, 1200, random)
+    // a har en tur kvar och kan välja själv: Hoppa över i stället för att dra tanten som ligger överst.
+    expect(table(host)).toMatchObject({ current: 'a', turnsLeft: 1, step: 'turn', out: [] })
+    expect(types(host, 'a')).toEqual(['blanda', 'intemin'])
+    // När värden visat draget som hanterat går det att göra nästa.
+    expect(moveInFlight(sent, view().handled, 1400)).toBe(false)
+  })
+
+  it('spärren släpper om värden aldrig svarar', () => {
+    const sent = { nr: 'dra1', at: 1000 }
+    expect(moveInFlight(sent, [], 1000 + MOVE_LOCK_MS - 1)).toBe(true)
+    expect(moveInFlight(sent, [], 1000 + MOVE_LOCK_MS)).toBe(false)
+    expect(moveInFlight(sent, undefined, 2000)).toBe(true)
   })
 })

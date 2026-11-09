@@ -1170,8 +1170,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare. Imposterjakten: läst kortet,
       // skriva ett ord, passa eller säga sitt ord högt.
-      move: (move: CardMove | ImposterMove | TantMove) => {
-        if (!me || versionBlockedRef.current) return
+      // Ger tillbaka dragets nummer (Exploderande Tanter spärrar nya drag tills värden hanterat det).
+      move: (move: CardMove | ImposterMove | TantMove): string | undefined => {
+        if (!me || versionBlockedRef.current) return undefined
         moveCountRef.current += 1
         const nr = `${me.id}-${Date.now()}-${moveCountRef.current}`
         const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current, tant: tantViewRef.current }
@@ -1181,6 +1182,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           event: 'move',
           payload: { id: me.id, nr, move },
         })
+        return nr
       },
       // Tryck igen: drag som gett upp skickas igen.
       retryMoves: () => {
