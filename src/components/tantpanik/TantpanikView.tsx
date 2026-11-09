@@ -244,7 +244,8 @@ export function TantpanikView({
     ) : null
   // Väntar vi på någon annan: en kort etikett med figuren, vid draghögen eller överst på bordet, och en liten animation.
   const activity: Activity | null =
-    table.step === 'arrange' && !tantView?.arrange
+    // Aldrig om mig själv: korten jag ska ordna kommer i mitt eget meddelande, ibland strax efter läget.
+    table.step === 'arrange' && !tantView?.arrange && table.current !== me.id
       ? { kind: 'arrange', playerId: table.current, text: `${name(table.current)} möblerar om högen` }
       : table.step === 'place' && table.current !== me.id
         ? { kind: 'hide', playerId: table.current, text: `${name(table.current)} gömmer tanten` }
