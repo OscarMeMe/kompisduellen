@@ -63,10 +63,14 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
                 avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
-              {/* Blobbarna fyller nästan hela rutan och står stilla, i den stora bilden. Andra figurer vickar när musen är
-                  över dem, och den valda gör ett litet hopp (ny key startar om hoppet). */}
+              {/* Blobbarna fyller nästan hela rutan och står stilla, men den som väljs hoppar till en gång. Andra figurer
+                  vickar när musen är över dem. Den valda gör ett litet hopp (ny key startar om hoppet). */}
               {findBlob(option) ? (
-                <Figur figure={findBlob(option)!} className="size-full" />
+                <Figur
+                  key={avatar === option ? 'vald' : 'inte-vald'}
+                  figure={findBlob(option)!}
+                  className={cn('size-full', avatar === option && 'motion-safe:animate-hop')}
+                />
               ) : (
                 <Emoji
                   key={avatar === option ? 'vald' : 'inte-vald'}
