@@ -36,14 +36,10 @@
 [data-spel='imposterjakten'] {
   --spel-yta: var(--mint);
 }
-/* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant, knapp och etikett. Bara
-   kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
+/* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant och etikett. Skapa lobby
+   är samma som på de andra spelkorten. Bara kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
 [data-spel][data-spelkort='tantpanik'] {
   --spel-yta: var(--tant-kram-2);
-  --spel-knapp: var(--tant-vinrod);
-  --spel-knapp-text: var(--tant-kram-2);
-  --spel-knapp-hover: var(--tant-vinrod-mork);
-  --spel-knapp-hover-text: var(--tant-kram-2);
 }
 
 /* Låga telefoner: smal och lägre än cirka 780 px. Där får orden vid Imposterjaktens bord mindre plats. */
@@ -141,7 +137,7 @@
     /* utröstad smälter till en pöl, sur vänder sig lite bort. Spelas en gång när minen byts. */
     --animate-blob-melt: blob-melt 0.6s ease-in both;
     --animate-blob-sulk: blob-sulk 0.5s ease-out both;
-    /* Personligheterna i väntrummet (figurer.ts, idle). Långa perioder och bara transform och opacity, så att tio figurer
+    /* Personligheterna i väntrummet (figurer.ts, idle). Små rörelser (figurerna ska inte flytta sig långt), långa perioder och bara transform och opacity, så att tio figurer
        inte blir tunga på en mobil. Undantag från regeln om att inget pågår hela tiden. */
     --animate-blob-bounce: blob-bounce 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
     --animate-blob-tremble: blob-tremble 3s linear infinite;
@@ -366,9 +362,9 @@
     }
 
     @keyframes blob-bounce {
-        0%, 100% { transform: translateY(0) scale(1.08, 0.9); }
-        15% { transform: translateY(0) scale(0.94, 1.08); }
-        50% { transform: translateY(-22px) scale(0.98, 1.02); }
+        0%, 100% { transform: translateY(0) scale(1.03, 0.96); }
+        15% { transform: translateY(0) scale(0.98, 1.03); }
+        50% { transform: translateY(-8px) scale(0.99, 1.01); }
         85% { transform: translateY(0) scale(1, 1); }
     }
 
@@ -383,29 +379,29 @@
 
     @keyframes blob-glance {
         0%, 55%, 100% { transform: rotate(0deg) translateX(0); }
-        62%, 78% { transform: rotate(-9deg) translateX(-6px); }
-        84% { transform: rotate(3deg) translateX(2px); }
+        62%, 78% { transform: rotate(-4deg) translateX(-3px); }
+        84% { transform: rotate(1deg) translateX(1px); }
     }
 
     @keyframes blob-dance {
-        0%, 100% { transform: rotate(-7deg) translateY(0); }
-        25% { transform: rotate(0deg) translateY(-8px); }
-        50% { transform: rotate(7deg) translateY(0); }
-        75% { transform: rotate(0deg) translateY(-8px); }
+        0%, 100% { transform: rotate(-3deg) translateY(0); }
+        25% { transform: rotate(0deg) translateY(-3px); }
+        50% { transform: rotate(3deg) translateY(0); }
+        75% { transform: rotate(0deg) translateY(-3px); }
     }
 
     @keyframes blob-stomp {
         0%, 30%, 100% { transform: translateY(0) scale(1, 1); }
-        6% { transform: translateY(-10px) scale(0.96, 1.04); }
-        11% { transform: translateY(0) scale(1.1, 0.88); }
-        17% { transform: translateY(-10px) scale(0.96, 1.04); }
-        22% { transform: translateY(0) scale(1.1, 0.88); }
+        6% { transform: translateY(-4px) scale(0.98, 1.02); }
+        11% { transform: translateY(0) scale(1.04, 0.95); }
+        17% { transform: translateY(-4px) scale(0.98, 1.02); }
+        22% { transform: translateY(0) scale(1.04, 0.95); }
     }
 
     @keyframes blob-peek {
         0%, 35%, 80%, 100% { transform: translate(0, 0) scale(1); }
-        45%, 65% { transform: translate(-10px, 34px) scale(0.86); }
-        55% { transform: translate(-6px, 26px) scale(0.88) rotate(6deg); }
+        45%, 65% { transform: translate(-3px, 10px) scale(0.95); }
+        55% { transform: translate(-2px, 8px) scale(0.96) rotate(3deg); }
     }
 
     @keyframes blob-hair {
@@ -459,15 +455,15 @@
 
     @keyframes blob-aerobic {
         0%, 100% { transform: translateX(0) rotate(0deg); }
-        25% { transform: translateX(-6px) rotate(-7deg); }
-        50% { transform: translateY(-8px) scale(0.97, 1.04); }
-        75% { transform: translateX(6px) rotate(7deg); }
+        25% { transform: translateX(-3px) rotate(-3deg); }
+        50% { transform: translateY(-3px) scale(0.99, 1.02); }
+        75% { transform: translateX(3px) rotate(3deg); }
     }
 
     @keyframes blob-nod {
         0%, 55%, 100% { transform: rotate(0deg) translateY(0); }
-        70% { transform: rotate(-9deg) translateY(4px); }
-        74% { transform: rotate(2deg) translateY(-3px); }
+        70% { transform: rotate(-4deg) translateY(2px); }
+        74% { transform: rotate(1deg) translateY(-1px); }
         80% { transform: rotate(0deg) translateY(0); }
     }
 
@@ -909,56 +905,58 @@
     /* Blobbarnas kroppar: högdager (-ljus), bas och skugga (-mork). Basen skiljer sig tydligt från alla andras, så att
        figurerna går att skilja åt i emoji-storlek (testet i figurer.test.ts mäter det). Står fast i det mörka läget. */
     /* Klumpen, korall */
-    --figur-klump-ljus: oklch(0.82 0.13 32);
-    --figur-klump: oklch(0.68 0.18 30);
-    --figur-klump-mork: oklch(0.5 0.16 28);
+    --figur-klump-ljus: oklch(0.779 0.127 25);
+    --figur-klump: oklch(0.679 0.169 25);
+    --figur-klump-mork: oklch(0.529 0.161 25);
     /* Bråkis, vinröd */
-    --figur-brak-ljus: oklch(0.58 0.14 18);
-    --figur-brak: oklch(0.44 0.15 15);
-    --figur-brak-mork: oklch(0.32 0.11 15);
+    --figur-brak-ljus: oklch(0.470 0.101 22);
+    --figur-brak: oklch(0.370 0.134 22);
+    --figur-brak-mork: oklch(0.220 0.127 22);
     /* Burret, bärnsten */
-    --figur-burr-ljus: oklch(0.88 0.11 78);
-    --figur-burr: oklch(0.78 0.16 70);
-    --figur-burr-mork: oklch(0.62 0.15 62);
+    --figur-burr-ljus: oklch(0.798 0.134 42);
+    --figur-burr: oklch(0.698 0.179 42);
+    --figur-burr-mork: oklch(0.548 0.170 42);
     /* Ögat, gul */
-    --figur-oga-ljus: oklch(0.95 0.1 104);
-    --figur-oga: oklch(0.89 0.16 100);
-    --figur-oga-mork: oklch(0.74 0.15 92);
+    --figur-oga-ljus: oklch(0.970 0.138 99);
+    --figur-oga: oklch(0.892 0.184 99);
+    --figur-oga-mork: oklch(0.742 0.175 99);
     /* Plugghästen, lime */
-    --figur-plugg-ljus: oklch(0.9 0.12 138);
-    --figur-plugg: oklch(0.8 0.19 142);
-    --figur-plugg-mork: oklch(0.62 0.17 145);
+    --figur-plugg-ljus: oklch(0.875 0.178 139);
+    --figur-plugg: oklch(0.775 0.237 139);
+    --figur-plugg-mork: oklch(0.625 0.225 139);
     /* Kungen, skogsgrön */
-    --figur-kung-ljus: oklch(0.67 0.1 156);
-    --figur-kung: oklch(0.52 0.12 158);
-    --figur-kung-mork: oklch(0.38 0.09 160);
+    --figur-kung-ljus: oklch(0.905 0.061 152);
+    --figur-kung: oklch(0.805 0.082 152);
+    --figur-kung-mork: oklch(0.655 0.078 152);
     /* Smältis, turkos */
-    --figur-smalt-ljus: oklch(0.87 0.08 195);
-    --figur-smalt: oklch(0.75 0.12 195);
-    --figur-smalt-mork: oklch(0.57 0.1 200);
+    --figur-smalt-ljus: oklch(0.970 0.069 186);
+    --figur-smalt: oklch(0.889 0.092 186);
+    --figur-smalt-mork: oklch(0.739 0.087 186);
     /* Droppan, blå */
-    --figur-droppe-ljus: oklch(0.76 0.11 252);
-    --figur-droppe: oklch(0.6 0.17 258);
-    --figur-droppe-mork: oklch(0.44 0.15 262);
+    --figur-droppe-ljus: oklch(0.788 0.126 244);
+    --figur-droppe: oklch(0.688 0.168 244);
+    --figur-droppe-mork: oklch(0.538 0.160 244);
     /* Sjusovaren, lila */
-    --figur-sova-ljus: oklch(0.78 0.1 305);
-    --figur-sova: oklch(0.62 0.15 305);
-    --figur-sova-mork: oklch(0.46 0.13 305);
+    --figur-sova-ljus: oklch(0.736 0.128 321);
+    --figur-sova: oklch(0.636 0.170 321);
+    --figur-sova-mork: oklch(0.486 0.162 321);
     /* Festis, magenta */
-    --figur-fest-ljus: oklch(0.76 0.16 350);
-    --figur-fest: oklch(0.62 0.22 350);
-    --figur-fest-mork: oklch(0.48 0.19 350);
+    --figur-fest-ljus: oklch(0.747 0.191 358);
+    --figur-fest: oklch(0.647 0.254 358);
+    --figur-fest-mork: oklch(0.497 0.241 358);
     /* Blygis, ljusrosa */
-    --figur-blyg-ljus: oklch(0.94 0.04 15);
-    --figur-blyg: oklch(0.86 0.085 12);
-    --figur-blyg-mork: oklch(0.68 0.12 10);
+    --figur-blyg-ljus: oklch(0.943 0.061 1);
+    --figur-blyg: oklch(0.843 0.081 1);
+    --figur-blyg-mork: oklch(0.693 0.077 1);
     /* Spionen, grå */
-    --figur-spion-ljus: oklch(0.84 0.008 260);
-    --figur-spion: oklch(0.66 0.012 260);
-    --figur-spion-mork: oklch(0.46 0.014 260);
+    --figur-spion-ljus: oklch(0.415 0.086 266);
+    --figur-spion: oklch(0.315 0.115 266);
+    --figur-spion-mork: oklch(0.200 0.109 266);
     --figur-svart: oklch(0.22 0.012 260);
     /* Kinderna på alla blobbar, och prylarnas färger (Kroppar.tsx, Armar.tsx). */
     --figur-kind: oklch(0.72 0.17 18);
+    /* Munnen och linjerna i ansiktet på de mörka figurerna (Spionen, Bråkis), så att de syns. */
+    --figur-ansikte-ljus: oklch(0.95 0.03 85);
     --pryl-keps: oklch(0.6 0.15 250);
     --pryl-keps-mork: oklch(0.46 0.14 254);
     --pryl-tuggummi: oklch(0.84 0.12 345);
@@ -967,10 +965,12 @@
     --pryl-rock-mork: oklch(0.6 0.07 70);
     --pryl-sovmask: oklch(0.85 0.08 350);
     --pryl-sovmask-mork: oklch(0.62 0.12 350);
+    --pryl-badmossa-ljus: oklch(0.9 0.08 20);
     --pryl-badmossa: oklch(0.82 0.12 20);
     --pryl-badmossa-mork: oklch(0.66 0.14 20);
     --pryl-simglas: oklch(0.7 0.15 160);
     --pryl-vin: oklch(0.42 0.16 15);
+    --pryl-guld-mork: oklch(0.62 0.13 70);
     --pryl-neon: oklch(0.66 0.26 350);
     --pryl-turkos: oklch(0.78 0.13 190);
     --pryl-mossa: oklch(0.3 0.02 260);
@@ -1051,32 +1051,33 @@
   /* Varm sandfärgad bakgrund med diskret prickmönster */
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
+    /* Samma prickar som på startsidan (Prickar.tsx). */
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
     background-size: 22px 22px;
     }
   h1, h2, h3 {
     @apply font-heading font-bold tracking-[-0.015em];
     }
-  /* Startsidans prickmönster (StartsidansPrickar.tsx). Prickarna ritas på en canvas bakom hero, där de viker undan för
-     muspekaren, ringar sprider sig från Välj spel och en liten ring kommer vid ett tryck på mobil. CSS-prickarna här har
-     samma rutnät och syns innan canvasen ritat, och står kvar som de är med "minska rörelse" (data-canvas sätts bara när
-     canvasen ritar). Sektionerna under hero täcker båda. */
-  .startsida-prickar,
-  .startsida-prickar-canvas {
+  /* Prickmönstret bakom sidorna (Prickar.tsx, i Layout och på startsidan). Prickarna ritas på en canvas, där de viker
+     undan för muspekaren och en liten ring kommer vid ett tryck på mobil, och på startsidan sprider sig ringar från Välj
+     spel. CSS-prickarna här har samma rutnät och utseende som body (lobbyn) och syns innan canvasen ritat, och står kvar
+     som de är med "minska rörelse" (data-canvas sätts bara när canvasen ritar). Allt med egen bakgrund täcker båda. */
+  .prickar,
+  .prickar-canvas {
     position: fixed;
     inset: 0;
     pointer-events: none;
     }
-  .startsida-prickar {
+  .prickar {
     z-index: -10;
     background-color: var(--background);
     background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
     background-size: 22px 22px;
     }
-  .startsida-prickar[data-canvas] {
+  .prickar[data-canvas] {
     background-image: none;
     }
-  .startsida-prickar-canvas {
+  .prickar-canvas {
     z-index: -9;
     width: 100%;
     height: 100%;
@@ -1084,4 +1085,14 @@
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+}
+
+/* Utanför spelen (data-knappar i Layout, inte i lobbyn) byter alla vanliga knappar färg när musen är över dem: de
+   korallröda och de vita blir mörka, som Skapa lobby på spelkorten blir korallröd. Knappar med egen färg (data-egen-farg,
+   spelkortens Skapa lobby) behåller sin. Utanför lagren, så att det går före knappens egen hoverfärg. Dialoger ligger
+   utanför sidan och påverkas inte. */
+[data-knappar='hover'] [data-slot='button']:is([data-variant='default'], [data-variant='outline']):not([data-egen-farg]):not(:disabled):hover {
+  background-color: var(--foreground);
+  border-color: var(--foreground);
+  color: var(--background);
 }

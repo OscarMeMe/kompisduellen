@@ -87,7 +87,7 @@ describe('spelkortens kontrast (WCAG AA)', () => {
     expect(contrast(foreground, card)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('Exploderande Tanters vinröda knapp och etikett', () => {
+  it('Exploderande Tanters vinröda etikett (knappen är samma som på de andra korten)', () => {
     const cream = oklchVar('tant-kram-2')
     expect(contrast(cream, oklchVar('tant-vinrod'))).toBeGreaterThanOrEqual(4.5)
     expect(contrast(cream, oklchVar('tant-vinrod-mork'))).toBeGreaterThanOrEqual(4.5)

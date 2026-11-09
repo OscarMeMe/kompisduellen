@@ -18,7 +18,7 @@ export function Emoji({ emoji, className }: EmojiProps) {
   const [failed, setFailed] = useState(false)
 
   const blob = findBlob(emoji)
-  if (blob) return <Figur figure={blob} className={className} />
+  if (blob) return <Figur figure={blob} small className={className} />
 
   if (!info || failed) {
     return (

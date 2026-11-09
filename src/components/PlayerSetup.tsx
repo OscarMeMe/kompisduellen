@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Emoji } from '@/components/Emoji'
+import { Figur } from '@/components/figurer/Figur'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,15 +63,24 @@ export function PlayerSetup({ submitLabel, onDone }: PlayerSetupProps) {
                 avatar === option ? 'scale-105 bg-sun ring-2 ring-primary' : 'bg-muted/70 hover:bg-muted',
               )}
             >
-              {/* Figurerna vickar när musen är över dem, och den valda gör ett litet hopp (ny key startar om hoppet). */}
-              <Emoji
-                key={avatar === option ? 'vald' : 'inte-vald'}
-                emoji={option}
-                className={cn(
-                  'motion-safe:group-hover:animate-wiggle',
-                  avatar === option && 'motion-safe:animate-hop motion-safe:group-hover:animate-hop',
-                )}
-              />
+              {/* Blobbarna fyller nästan hela rutan och står stilla, men den som väljs hoppar till en gång. Andra figurer
+                  vickar när musen är över dem. Den valda gör ett litet hopp (ny key startar om hoppet). */}
+              {findBlob(option) ? (
+                <Figur
+                  key={avatar === option ? 'vald' : 'inte-vald'}
+                  figure={findBlob(option)!}
+                  className={cn('size-full', avatar === option && 'motion-safe:animate-hop')}
+                />
+              ) : (
+                <Emoji
+                  key={avatar === option ? 'vald' : 'inte-vald'}
+                  emoji={option}
+                  className={cn(
+                    'motion-safe:group-hover:animate-wiggle',
+                    avatar === option && 'motion-safe:animate-hop motion-safe:group-hover:animate-hop',
+                  )}
+                />
+              )}
             </button>
           ))}
         </div>

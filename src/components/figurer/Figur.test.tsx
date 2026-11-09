@@ -4,6 +4,9 @@ import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { BLOBS, MOOD_MOTION, MOODS, type BlobFigure } from '@/lib/figurer'
 
+// Nodes inbyggda fs, för att kolla att bildfilerna finns (testerna körs i Node).
+const node = globalThis as unknown as { process: { getBuiltinModule(id: 'node:fs'): { existsSync(path: string): boolean } } }
+
 // Ett lager ur figurens markup. Lagren är inte nästlade i varandra.
 function layer(html: string, name: string): string {
   const start = html.indexOf(`data-lager="${name}"`)
@@ -28,13 +31,16 @@ describe('Figur', () => {
     expect(back('traffad')).toBe(back('vantar'))
   })
 
-  it('en kropp som PNG ger samma min och samma lager, och bilden ritas i stället', () => {
-    const drawn = BLOBS[1]
-    const png: BlobFigure = { ...drawn, body: { kind: 'png', src: '/figurer/spion.png', frontSrc: '/figurer/spion-glas.png' } }
+  it('en kropp som bild ger samma min som en ritad, och bilden ritas i stället', () => {
+    const spy = BLOBS.find((blob) => blob.id === 'spionen')!
+    const png: BlobFigure = { ...spy, body: { kind: 'png', src: '/figurer/spion.png', frontSrc: '/figurer/spion-glas.png' } }
+    const drawn: BlobFigure = { ...spy, body: { kind: 'svg' } }
     for (const mood of MOODS) {
-      const fromDrawn = renderToStaticMarkup(<Figur figure={drawn} mood={mood} />)
       const fromPng = renderToStaticMarkup(<Figur figure={png} mood={mood} />)
-      expect(layer(fromPng, 'min')).toBe(layer(fromDrawn, 'min'))
+      const fromDrawn = renderToStaticMarkup(<Figur figure={drawn} mood={mood} />)
+      // Samma min, men på bilden med ansiktets placering och kinderna.
+      const face = (html: string) => (layer(html, 'min').match(/<path[^>]*d="[^"]*"/g) ?? []).join()
+      expect(face(fromPng)).toBe(face(fromDrawn))
       expect(layer(fromPng, 'bak')).toContain('href="/figurer/spion.png"')
       expect(layer(fromPng, 'fram')).toContain('href="/figurer/spion-glas.png"')
     }
@@ -42,7 +48,7 @@ describe('Figur', () => {
 
   it('låter Spionens glasögon hamna snett bara när den är träffad eller anklagad', () => {
     const spy = BLOBS.find((blob) => blob.id === 'spionen')!
-    const hasTilt = (mood: (typeof MOODS)[number]) => layer(renderToStaticMarkup(<Figur figure={spy} mood={mood} />), 'fram').includes('transform="')
+    const hasTilt = (mood: (typeof MOODS)[number]) => layer(renderToStaticMarkup(<Figur figure={spy} mood={mood} />), 'fram').includes('rotate(')
     expect(MOODS.filter(hasTilt)).toEqual(['anklagad', 'traffad'])
   })
 
@@ -56,23 +62,30 @@ describe('Figur', () => {
   })
 })
 
-describe('armar och prylar', () => {
-  const arms = (blob: BlobFigure, mood: (typeof MOODS)[number]) => layer(renderToStaticMarkup(<Figur figure={blob} mood={mood} />), 'armar')
+describe('figurerna som bilder', () => {
+  // Bilderna förbereds med scripts/figurbilder.py.
+  const publicFiles = node.process.getBuiltinModule('node:fs')
 
-  it('ger alla tolv armar som följer minen', () => {
+  it('är bilder i stor och liten storlek för alla tolv, och filerna finns', () => {
     for (const blob of BLOBS) {
-      const poses = new Set(MOODS.map((mood) => arms(blob, mood)))
-      expect(poses.size, blob.name).toBe(MOODS.length)
-      for (const mood of MOODS) expect(arms(blob, mood), `${blob.name} ${mood}`).toMatch(/<path/)
+      expect(blob.body, blob.name).toEqual({ kind: 'png', src: `/figurer/${blob.id}.webp`, smallSrc: `/figurer/${blob.id}-liten.webp` })
+      expect(publicFiles.existsSync(`public/figurer/${blob.id}.webp`), blob.id).toBe(true)
+      expect(publicFiles.existsSync(`public/figurer/${blob.id}-liten.webp`), blob.id).toBe(true)
+      expect(blob.face, blob.name).toBeDefined()
+      expect(layer(renderToStaticMarkup(<Figur figure={blob} />), 'bak')).toContain(`href="/figurer/${blob.id}.webp"`)
+      expect(renderToStaticMarkup(<Emoji emoji={blob.emoji} />)).toContain(`href="/figurer/${blob.id}-liten.webp"`)
     }
   })
 
-  it('låter en kropp som bild ha egna armar', () => {
-    const png: BlobFigure = { ...BLOBS[0], body: { kind: 'png', src: '/figurer/klump.png' } }
-    expect(arms(png, 'vann')).not.toMatch(/<path|<circle/)
+  it('ritar ansiktet på figurens egen plats, med ljusa linjer på de mörka figurerna', () => {
+    for (const blob of BLOBS) {
+      const face = layer(renderToStaticMarkup(<Figur figure={blob} mood="sur" />), 'min')
+      expect(face, blob.name).toContain(`translate(${blob.face!.x} ${blob.face!.y}) scale(${blob.face!.scale})`)
+      expect(face.includes('--figur-ansikte-ljus'), blob.name).toBe(['spionen', 'brakis'].includes(blob.id))
+    }
   })
 
-  it('ritar inga filter och rör prylarna bara i väntrummet', () => {
+  it('ritar inga filter och rör prylarna i koden bara i väntrummet', () => {
     for (const blob of BLOBS) {
       for (const mood of MOODS) {
         const html = renderToStaticMarkup(<Figur figure={blob} mood={mood} />)
@@ -82,19 +95,19 @@ describe('armar och prylar', () => {
     }
     const lively = (id: string) => renderToStaticMarkup(<Figur figure={BLOBS.find((blob) => blob.id === id)!} animated lively />)
     expect(lively('klumpen')).toContain('motion-safe:animate-blob-bubble')
-    expect(lively('brakis')).toContain('motion-safe:animate-blob-smoke')
-    expect(lively('plugghasten')).toContain('motion-safe:animate-blob-propeller')
+    expect(lively('plugghasten')).toContain('motion-safe:animate-blob-glasses')
   })
 
-  it('drar ned Sjusovarens sovmask över ögonen när den sover', () => {
-    const sova = BLOBS.find((blob) => blob.id === 'sjusovaren')!
-    expect(layer(renderToStaticMarkup(<Figur figure={sova} animated lively asleep />), 'fram')).toContain('pryl-sovmask')
-    expect(layer(renderToStaticMarkup(<Figur figure={sova} animated lively />), 'fram')).not.toContain('pryl-sovmask')
+  it('ritar armar bara på en ritad kropp, och de följer minen', () => {
+    const drawn: BlobFigure = { ...BLOBS[0], body: { kind: 'svg' } }
+    const arms = (figure: BlobFigure, mood: (typeof MOODS)[number]) => layer(renderToStaticMarkup(<Figur figure={figure} mood={mood} />), 'armar')
+    expect(new Set(MOODS.map((mood) => arms(drawn, mood))).size).toBe(MOODS.length)
+    for (const mood of MOODS) expect(arms(BLOBS[0], mood)).not.toMatch(/<path|<circle/)
   })
 
   it('har kvar tantklänningen och vinnarkronan, under och över armarna', () => {
     for (const blob of BLOBS) {
-      const html = renderToStaticMarkup(<Figur figure={blob} mood="vann" dress crown />)
+      const html = renderToStaticMarkup(<Figur figure={blob} mood="vann" crown dress />)
       const armsAt = html.indexOf('data-lager="armar"')
       expect(html.indexOf('var(--klanning)'), blob.name).toBeGreaterThan(-1)
       expect(html.indexOf('var(--klanning)'), blob.name).toBeLessThan(armsAt)
