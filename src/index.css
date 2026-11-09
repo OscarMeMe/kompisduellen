@@ -885,6 +885,8 @@
     --primary-foreground: oklch(0.99 0.01 85);
     /* Korallknapparna (Button): en mörkare korall, så att den vita texten klarar WCAG AA (4,7:1) */
     --primary-button: oklch(0.57 0.16 30);
+    /* Ränderna i loggans "duellen" (Layout): en lite mörkare korall bredvid primary. */
+    --logga-rand: oklch(0.6 0.165 30);
     --secondary: oklch(0.93 0.024 78);
     --secondary-foreground: oklch(0.3 0.025 260);
     --muted: oklch(0.93 0.018 78);
