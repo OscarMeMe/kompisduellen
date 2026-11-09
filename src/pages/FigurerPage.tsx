@@ -3,7 +3,7 @@ import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { Button } from '@/components/ui/button'
 import { useGazeFollow } from '@/hooks/useGazeFollow'
-import { BLOBS, MOOD_NAMES, MOODS } from '@/lib/figurer'
+import { BLOBS, HERO_FIGURES, MOOD_NAMES, MOODS } from '@/lib/figurer'
 import { AVATARS } from '@/lib/player'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,9 @@ export function FigurerPage() {
   // Väntrummets figurer följer muspekaren, som i lobbyn.
   const lobbyRef = useRef<HTMLUListElement>(null)
   const gaze = useGazeFollow(lobbyRef)
+  // Hero-figurerna på startsidan, stora, med blicken som följer muspekaren.
+  const heroRef = useRef<HTMLUListElement>(null)
+  const heroGaze = useGazeFollow(heroRef)
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -30,6 +33,21 @@ export function FigurerPage() {
           Spela rörelserna igen
         </Button>
       </div>
+
+      <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Startsidans hero">
+        <h2 className="text-xl">Startsidans hero</h2>
+        <p className="text-sm text-muted-foreground">De fyra figurerna i hero (HERO_FIGURES). De är inte spelarfigurer.</p>
+        <ul ref={heroRef} className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {HERO_FIGURES.map((figure, i) => (
+            <li key={figure.id} className="flex flex-col items-center gap-1 text-center">
+              <span data-gaze className="block text-[9rem]" style={{ '--blink-delay': `${-i * 1.7}s` } as React.CSSProperties}>
+                <Figur figure={figure} animated gaze={heroGaze} delay={i * 1.3} className="block" />
+              </span>
+              <span className="text-sm font-semibold">{figure.name}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {BLOBS.map((blob) => (
         <section key={blob.id} className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label={blob.name}>

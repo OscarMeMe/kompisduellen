@@ -130,6 +130,7 @@ export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1
 const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*9px)_calc(var(--gaze-y,0)*6px)]'
 
 function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
+  if (figure.traits?.hero) return <HeroFace kind={figure.traits.hero} animated={animated} gaze={gaze} />
   const eyes = eyesFor(figure)
   const { crossEyed, sleepy, haughty } = figure.traits ?? {}
   // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn. Med gaze sneglar han efter
@@ -213,6 +214,53 @@ function WaitingMouth({ kind }: { kind: MouthKind }) {
       )
     default:
       return <Stroke d="M86 146Q100 158 114 146" />
+  }
+}
+
+// Hero-figurernas uttryck på startsidan (HERO_FIGURES i figurer.ts). Samma linjer, ögon och mun som Sjusovaren som sover
+// vid vågen, bara uttrycket skiljer sig. Öppna ögon blinkar (animated) och följer muspekaren (gaze). Stängda ögon gör
+// inget av det.
+export type HeroExpression = 'musik' | 'mobil' | 'hej' | 'fluga'
+
+const ROUND_EYES: Eyes = { xs: EYE_X, scale: 1, cyclops: false, ...EYE_SHAPES.round }
+
+function HeroFace({ kind, animated, gaze }: { kind: HeroExpression; animated: boolean; gaze: boolean }) {
+  const eyes = ROUND_EYES
+  const open = (lookY = 0) => <OpenEyes eyes={eyes} lookY={lookY} blink={animated} pupilClass={gaze ? GAZE_CLASS : undefined} />
+  switch (kind) {
+    case 'musik':
+      // Njuter av musiken: glada stängda ögon som bågar uppåt (^ ^) och en liten öppen glad mun.
+      return (
+        <>
+          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 8}Q${x} ${EYE_Y - 14 * s} ${x + 20 * s} ${EYE_Y + 8}`} width={6} />
+          <path d="M88 144Q100 148 112 144Q110 162 100 162Q90 162 88 144Z" className="fill-current" />
+        </>
+      )
+    case 'mobil':
+      // Läser något spännande: runda ögon som tittar ned mot mobilen och en liten rund o-mun.
+      return (
+        <>
+          {open(8)}
+          <ellipse cx="100" cy="152" rx="6" ry="7" className="fill-current" />
+        </>
+      )
+    case 'hej':
+      // Ropar hej: runda ögon och ett brett, glatt leende med öppen mun.
+      return (
+        <>
+          {open()}
+          <path d="M78 140Q100 148 122 140Q118 170 100 170Q82 170 78 140Z" className="fill-current" />
+        </>
+      )
+    case 'fluga':
+      // Knipglad: ihopknipna ögon (> <) och en liten mun som ett w.
+      return (
+        <>
+          <Stroke d={`M${EYE_X[0] - 16} ${EYE_Y - 12}L${EYE_X[0] + 12} ${EYE_Y}L${EYE_X[0] - 16} ${EYE_Y + 12}`} width={6} />
+          <Stroke d={`M${EYE_X[1] + 16} ${EYE_Y - 12}L${EYE_X[1] - 12} ${EYE_Y}L${EYE_X[1] + 16} ${EYE_Y + 12}`} width={6} />
+          <Stroke d="M86 146Q93 156 100 146Q107 156 114 146" width={6} />
+        </>
+      )
   }
 }
 

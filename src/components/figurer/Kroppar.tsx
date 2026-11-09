@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { BlobFigure, BlobId, BlobShape, Mood } from '@/lib/figurer'
+import type { BlobFigure, BlobShape, Mood } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
 // Kropparna i koordinaterna 200 × 200. Minen (Miner.tsx) ritas ovanpå, och de stora ögonen sitter alltid kring
@@ -374,10 +374,10 @@ function PropellerCap({ lively }: { lively: boolean }) {
 // Prylar och drag som hör till kroppen: Under ritas före kroppen och Over ovanpå den (efter kinderna), men båda under
 // minen. lively = figuren är i väntrummet och har sin egen rörelse. asleep = Sjusovaren sover.
 type Extras = { figure: BlobFigure; uid: string; lively: boolean; asleep: boolean }
-const UNDER: Partial<Record<BlobId, (extras: Extras) => ReactNode>> = {
+const UNDER: Partial<Record<BlobFigure['id'], (extras: Extras) => ReactNode>> = {
   burret: ({ figure, lively }) => <SpikyHair figure={figure} lively={lively} />,
 }
-const OVER: Partial<Record<BlobId, (extras: Extras) => ReactNode>> = {
+const OVER: Partial<Record<BlobFigure['id'], (extras: Extras) => ReactNode>> = {
   klumpen: ({ figure }) => <BackwardsCap figure={figure} />,
   spionen: () => <CollarAndEarpiece />,
   sjusovaren: ({ figure, asleep }) => (
