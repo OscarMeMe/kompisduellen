@@ -4,7 +4,7 @@
 // Värdet som sparas och skickas som avatar är en vanlig emoji som ingen annan figur använder. Då ser en flik med en
 // äldre version av sajten en emoji, och findBlob gör om den till blobben i den nya koden.
 
-import type { MouthKind } from '@/components/figurer/Miner'
+import type { HeroExpression, MouthKind } from '@/components/figurer/Miner'
 import type { ImposterTable } from '@/lib/imposterjakten'
 
 export const MOODS = ['vantar', 'misstankt', 'anklagad', 'traffad', 'vann', 'utrostad', 'sur'] as const
@@ -42,7 +42,8 @@ export type BlobBody = { kind: 'svg' } | { kind: 'png'; src: string; smallSrc?: 
 // Var ansiktet sitter på en figur som bild: ansiktets mitt (x, y) och hur stort det är (scale) i figurens koordinater.
 // Bilderna är olika (Blygis har huvan runt ansiktet, Spionen kragen nedanför, Smältis sitter lägre), så varje figur har
 // sin egen placering mitt i den släta ytan.
-export type FacePlacement = { x: number; y: number; scale: number }
+// rotate = ansiktet lutar med kroppen (grader, medurs), t.ex. hero-figuren med partyhatten.
+export type FacePlacement = { x: number; y: number; scale: number; rotate?: number }
 
 // Kroppens form. Ansiktet sitter på samma ställe i alla, så att minerna passar.
 export type BlobShape = 'blob' | 'droppe' | 'smalt'
@@ -62,7 +63,8 @@ export type BlobId =
   | 'plugghasten'
 
 export type BlobFigure = {
-  id: BlobId
+  // Hero-figurerna på startsidan (HERO_FIGURES) har egna id:n. De är inte spelarfigurer.
+  id: BlobId | HeroId
   // Värdet som sparas och skickas som avatar.
   emoji: string
   name: string
@@ -90,6 +92,8 @@ export type BlobFigure = {
     brows?: 'worried' | 'angry'
     droopy?: boolean
     shy?: boolean
+    // Hero-figurernas eget uttryck på startsidan (Miner.tsx, HeroFace).
+    hero?: HeroExpression
   }
   // Repliken när man väljer figuren, och figurens egen rörelse i väntrummet (tom = står still). Rörelserna ligger i
   // index.css och använder bara transform och opacity, så att tio figurer inte blir tunga på en mobil.
@@ -330,3 +334,61 @@ export function findBlob(avatar: string): BlobFigure | undefined {
   const clean = avatar.replace(/️/g, '')
   return BLOBS.find((blob) => blob.emoji === clean)
 }
+
+// Figurerna i startsidans hero (HeroFigurer). De är bara dekoration och inte spelarfigurer, så de finns inte i BLOBS och
+// går inte att välja. Bilderna (public/figurer/hero/, scripts/figurbilder.py) har inget ansikte: det ritas i koden med
+// samma linjer, ögon och kinder som de andra, och bara uttrycket (hero i traits) skiljer sig.
+export type HeroId = 'hero-musik' | 'hero-mobil' | 'hero-hej' | 'hero-fluga'
+
+const heroPicture = (n: number): BlobBody => ({ kind: 'png', src: `/figurer/hero/hero-${n}.webp` })
+
+export const HERO_FIGURES: readonly BlobFigure[] = [
+  {
+    // Blåviolett med hörlurar: njuter av musiken med stängda ögon.
+    id: 'hero-musik',
+    emoji: '',
+    name: 'Blåviolett med hörlurar',
+    palette: colors('hero-musik'),
+    body: heroPicture(1),
+    face: { x: 100, y: 120, scale: 0.52 },
+    traits: { hero: 'musik' },
+    line: '',
+    idle: '',
+  },
+  {
+    // Korallröd med mobil: läser något spännande.
+    id: 'hero-mobil',
+    emoji: '',
+    name: 'Korallröd med mobil',
+    palette: colors('hero-mobil'),
+    body: heroPicture(2),
+    face: { x: 100, y: 112, scale: 0.52 },
+    traits: { hero: 'mobil' },
+    line: '',
+    idle: '',
+  },
+  {
+    // Gul med partyhatt: ropar hej. Kroppen lutar lite, så ansiktet gör det också.
+    id: 'hero-hej',
+    emoji: '',
+    name: 'Gul med partyhatt',
+    palette: colors('hero-hej'),
+    body: heroPicture(3),
+    face: { x: 100, y: 116, scale: 0.52, rotate: 6 },
+    traits: { hero: 'hej' },
+    line: '',
+    idle: '',
+  },
+  {
+    // Mintgrön med fluga: knipglad, med händerna vid sidorna av ansiktet.
+    id: 'hero-fluga',
+    emoji: '',
+    name: 'Mintgrön med fluga',
+    palette: colors('hero-fluga'),
+    body: heroPicture(4),
+    face: { x: 100, y: 116, scale: 0.52 },
+    traits: { hero: 'fluga' },
+    line: '',
+    idle: '',
+  },
+]

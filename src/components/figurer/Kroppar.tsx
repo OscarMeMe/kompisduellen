@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { BlobFigure, BlobId, BlobShape, Mood } from '@/lib/figurer'
+import type { BlobFigure, BlobShape, Mood } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
 // Kropparna i koordinaterna 200 × 200. Minen (Miner.tsx) ritas ovanpå, och de stora ögonen sitter alltid kring
@@ -80,12 +80,14 @@ export function BlobShape({ figure, uid }: { figure: BlobFigure; uid: string }) 
   )
 }
 
-// Rosiga kinder på alla, under ögonen. Blygis rodnar mer.
+// Rosiga kinder på alla, under ögonen. Blygis och hero-figurerna på startsidan rodnar mer, så att kinderna syns tydligt
+// även när ansiktet är litet.
 function Cheeks({ figure, uid }: { figure: BlobFigure; uid: string }) {
   const cyclops = figure.traits?.cyclops
   const [left, right] = cyclops ? [54, 146] : [48, 152]
   const y = cyclops ? 150 : 142
-  const strong = figure.id === 'blygis'
+  const hero = figure.traits?.hero
+  const strong = figure.id === 'blygis' || hero !== undefined
   return (
     <g fill={`url(#${uid}-kind)`}>
       <ellipse cx={left} cy={y} rx={strong ? 21 : 18} ry={strong ? 13 : 11} />
@@ -374,10 +376,10 @@ function PropellerCap({ lively }: { lively: boolean }) {
 // Prylar och drag som hör till kroppen: Under ritas före kroppen och Over ovanpå den (efter kinderna), men båda under
 // minen. lively = figuren är i väntrummet och har sin egen rörelse. asleep = Sjusovaren sover.
 type Extras = { figure: BlobFigure; uid: string; lively: boolean; asleep: boolean }
-const UNDER: Partial<Record<BlobId, (extras: Extras) => ReactNode>> = {
+const UNDER: Partial<Record<BlobFigure['id'], (extras: Extras) => ReactNode>> = {
   burret: ({ figure, lively }) => <SpikyHair figure={figure} lively={lively} />,
 }
-const OVER: Partial<Record<BlobId, (extras: Extras) => ReactNode>> = {
+const OVER: Partial<Record<BlobFigure['id'], (extras: Extras) => ReactNode>> = {
   klumpen: ({ figure }) => <BackwardsCap figure={figure} />,
   spionen: () => <CollarAndEarpiece />,
   sjusovaren: ({ figure, asleep }) => (

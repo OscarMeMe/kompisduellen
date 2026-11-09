@@ -918,6 +918,19 @@
     --coral-soft: oklch(0.94 0.04 30);
     --mint-soft: oklch(0.955 0.04 165);
     --room: oklch(0.885 0.03 65);
+    /* Hero-figurerna på startsidan (HERO_FIGURES), tagna från hudfärgen i bilderna. De är inte spelarfigurer. */
+    --figur-hero-musik-ljus: oklch(0.689 0.14 285);
+    --figur-hero-musik: oklch(0.589 0.164 285);
+    --figur-hero-musik-mork: oklch(0.459 0.15 285);
+    --figur-hero-mobil-ljus: oklch(0.782 0.12 27);
+    --figur-hero-mobil: oklch(0.682 0.152 27);
+    --figur-hero-mobil-mork: oklch(0.552 0.14 27);
+    --figur-hero-hej-ljus: oklch(0.932 0.13 94);
+    --figur-hero-hej: oklch(0.872 0.168 94);
+    --figur-hero-hej-mork: oklch(0.742 0.15 94);
+    --figur-hero-fluga-ljus: oklch(0.896 0.05 177);
+    --figur-hero-fluga: oklch(0.816 0.064 177);
+    --figur-hero-fluga-mork: oklch(0.686 0.06 177);
     /* Blobbarnas kroppar: högdager (-ljus), bas och skugga (-mork). Basen skiljer sig tydligt från alla andras, så att
        figurerna går att skilja åt i emoji-storlek (testet i figurer.test.ts mäter det). Står fast i det mörka läget. */
     /* Klumpen, korall */

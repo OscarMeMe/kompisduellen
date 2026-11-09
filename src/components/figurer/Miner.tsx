@@ -128,8 +128,11 @@ export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1
 
 // Pupillerna flyttas med CSS-variabler, så att React inte behöver rita om figuren när blicken ändras.
 const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*9px)_calc(var(--gaze-y,0)*6px)]'
+// Bara i sidled, för ögon som redan tittar ned (hero-figuren med mobilen), så att pupillerna aldrig hamnar utanför ögat.
+const GAZE_X_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*7px)_0]'
 
 function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
+  if (figure.traits?.hero) return <HeroFace kind={figure.traits.hero} animated={animated} gaze={gaze} />
   const eyes = eyesFor(figure)
   const { crossEyed, sleepy, haughty } = figure.traits ?? {}
   // Kungen står still och dömer i väntrummet: halvstängda ögon och ett höjt bryn. Med gaze sneglar han efter
@@ -213,6 +216,54 @@ function WaitingMouth({ kind }: { kind: MouthKind }) {
       )
     default:
       return <Stroke d="M86 146Q100 158 114 146" />
+  }
+}
+
+// Hero-figurernas uttryck på startsidan (HERO_FIGURES i figurer.ts). Samma linjer, ögon och mun som Sjusovaren som sover
+// vid vågen, bara uttrycket skiljer sig. Öppna ögon blinkar (animated) och följer muspekaren (gaze). Stängda ögon gör
+// inget av det.
+export type HeroExpression = 'musik' | 'mobil' | 'hej' | 'fluga'
+
+const ROUND_EYES: Eyes = { xs: EYE_X, scale: 1, cyclops: false, ...EYE_SHAPES.round }
+
+function HeroFace({ kind, animated, gaze }: { kind: HeroExpression; animated: boolean; gaze: boolean }) {
+  const eyes = ROUND_EYES
+  const open = (lookY = 0) => (
+    <OpenEyes eyes={eyes} lookY={lookY} blink={animated} pupilClass={gaze ? (lookY ? GAZE_X_CLASS : GAZE_CLASS) : undefined} />
+  )
+  switch (kind) {
+    case 'musik':
+      // Njuter av musiken: stora glada stängda ögon som bågar uppåt (^ ^) och en tydlig liten öppen glad mun.
+      return (
+        <>
+          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 24 * s} ${EYE_Y + 10}Q${x} ${EYE_Y - 18 * s} ${x + 24 * s} ${EYE_Y + 10}`} width={7} />
+          <path d="M84 140Q100 147 116 140Q113 166 100 166Q87 166 84 140Z" className="fill-current" />
+        </>
+      )
+    case 'mobil':
+      // Läser något spännande: runda ögon med pupillerna längst ned, mot mobilen, och en liten rund o-mun.
+      return (
+        <>
+          {open(9)}
+          <ellipse cx="100" cy="142" rx="6" ry="7" className="fill-current" />
+        </>
+      )
+    case 'hej':
+      // Ropar hej: runda ögon och ett brett, glatt leende med öppen mun.
+      return (
+        <>
+          {open()}
+          <path d="M78 140Q100 148 122 140Q118 170 100 170Q82 170 78 140Z" className="fill-current" />
+        </>
+      )
+    case 'fluga':
+      // Knipglad: glada ihopknipna ögon som bågar nedåt (∪ ∪) och en mun som ett w.
+      return (
+        <>
+          <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 22 * s} ${EYE_Y - 4}Q${x} ${EYE_Y + 18 * s} ${x + 22 * s} ${EYE_Y - 4}`} width={7} />
+          <Stroke d="M80 144Q90 160 100 144Q110 160 120 144" width={7} />
+        </>
+      )
   }
 }
 

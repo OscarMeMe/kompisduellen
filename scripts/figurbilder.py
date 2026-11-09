@@ -12,6 +12,10 @@ Så här:
 3. Alla skalas så att kroppen blir lika bred (BODY_WIDTH av 200) och ställs på samma baslinje (BASELINE av 200), i en
    kvadrat på 200 × 200 som figurens koordinater i Figur. Det som sticker upp (hattar, hår) får plats ovanför.
 
+Hero-figurerna på startsidan (HERO, hero-1.png till hero-4.png) förbereds på samma sätt men sparas i en storlek i
+public/figurer/hero/, och bara den största sammanhängande delen av bilden behålls, så att lösa prickar runt kanterna
+försvinner. De är inte spelarfigurer.
+
 Dessutom bilder som bara beskärs och sparas i en storlek (CROPPED), t.ex. Sjusovaren som vilar på vågen ovanför
 sidfoten på startsidan (sjusovaren-kant.webp).
 
@@ -42,11 +46,51 @@ def widest_run(row: np.ndarray) -> int:
     return best
 
 
-def prepare(name: str) -> None:
+def largest_part(mask: np.ndarray) -> np.ndarray:
+    """Den största sammanhängande delen av masken (fyra grannar), på en förminskad kopia för att gå fort."""
+    step = 4
+    small = mask[::step, ::step]
+    labels = np.zeros(small.shape, dtype=np.int32)
+    sizes = [0]
+    for start in zip(*np.where(small)):
+        if labels[start]:
+            continue
+        label = len(sizes)
+        labels[start] = label
+        stack = [start]
+        count = 0
+        while stack:
+            y, x = stack.pop()
+            count += 1
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < small.shape[0] and 0 <= nx < small.shape[1] and small[ny, nx] and not labels[ny, nx]:
+                    labels[ny, nx] = label
+                    stack.append((ny, nx))
+        sizes.append(count)
+    keep = labels == int(np.argmax(sizes))
+    # Tillbaka till full storlek, med en ruta marginal så att kanten inte klipps.
+    big = np.kron(keep, np.ones((step, step), dtype=bool))[: mask.shape[0], : mask.shape[1]]
+    grown = big.copy()
+    for dy in (-step, 0, step):
+        for dx in (-step, 0, step):
+            grown |= np.roll(np.roll(big, dy, 0), dx, 1)
+    return mask & grown
+
+
+def prepare(
+    name: str,
+    sizes: dict[str, int] = SIZES,
+    target: Path = TARGET,
+    only_largest: bool = False,
+    body_width: float = BODY_WIDTH,
+    measure_at: float | None = None,
+) -> None:
     image = Image.open(SOURCE / f'{name}.png').convert('RGBA')
     pixels = np.array(image)
     alpha = pixels[:, :, 3]
     alpha[alpha < HAZE] = 0
+    if only_largest:
+        alpha[~largest_part(alpha > 0)] = 0
     pixels[alpha == 0] = 0
     mask = alpha > 0
     ys, xs = np.where(mask)
@@ -54,13 +98,16 @@ def prepare(name: str) -> None:
     height = bottom - top
     lower = range(int(top + height * 0.5), bottom + 1)
     body = max(widest_run(mask[y]) for y in lower) * BODY_FIX.get(name, 1)
+    if measure_at is not None:
+        # Kroppen mäts nära foten, under armarna, så att utsträckta armar och händer inte räknas.
+        body = widest_run(mask[int(top + height * measure_at)])
     cleaned = Image.fromarray(pixels).crop((xs.min(), top, xs.max() + 1, bottom + 1))
     # Kroppens mitt: mitten av den bredaste raden i nedre halvan.
     widest_y = max(lower, key=lambda y: widest_run(mask[y]))
     row = np.where(mask[widest_y])[0]
     center_x = (row.min() + row.max()) / 2 - xs.min()
-    scale = BODY_WIDTH / body
-    for suffix, size in SIZES.items():
+    scale = body_width / body
+    for suffix, size in sizes.items():
         unit = size / 200
         width = round(cleaned.width * scale * unit)
         height_px = round(cleaned.height * scale * unit)
@@ -71,8 +118,18 @@ def prepare(name: str) -> None:
         if upper < 0 or left < 0 or left + width > size:
             print(f'  {name}{suffix}: sticker utanför rutan (vänster {left}, överst {upper}, höger {left + width})')
         canvas.alpha_composite(resized, (max(0, left), max(0, upper)), (max(0, -left), max(0, -upper)))
-        canvas.save(TARGET / f'{name}{suffix}.webp', 'WEBP', quality=86, method=6)
+        canvas.save(target / f'{name}{suffix}.webp', 'WEBP', quality=86, method=6)
     print(f'{name}: kropp {body:.0f} px, skala {scale:.3f}')
+
+
+# Hero-figurerna på startsidan: 240 px räcker (de är cirka 55 px höga, även på en skärm med tät upplösning).
+HERO = ['hero-1', 'hero-2', 'hero-3', 'hero-4']
+HERO_SIZES = {'': 240}
+HERO_TARGET = TARGET / 'hero'
+# Kroppens bredd mäts på den här höjden (andel av figurens höjd), och blir HERO_BODY_WIDTH av 200: smalare än
+# spelarfigurerna, så att armar, hörlurar och partyhatten får plats i rutan.
+HERO_MEASURE_AT = 0.88
+HERO_BODY_WIDTH = 118
 
 
 # Bilder som bara beskärs till figuren och sparas i en bredd (px).
@@ -97,3 +154,6 @@ if __name__ == '__main__':
         prepare(name)
     for name, width in CROPPED.items():
         crop(name, width)
+    HERO_TARGET.mkdir(exist_ok=True)
+    for name in HERO:
+        prepare(name, HERO_SIZES, HERO_TARGET, only_largest=True, body_width=HERO_BODY_WIDTH, measure_at=HERO_MEASURE_AT)

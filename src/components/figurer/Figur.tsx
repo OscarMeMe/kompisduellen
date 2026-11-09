@@ -67,7 +67,9 @@ export function Figur({
   const face = png ? figure.face : undefined
   // Med tantklänningen på flyttas ansiktet lite uppåt och klänningen lite nedåt, så att kragen inte täcker munnen.
   const faceY = face ? face.y - (dress ? DRESS_FACE_LIFT : 0) : 0
-  const faceTransform = face ? `translate(${face.x} ${faceY}) scale(${face.scale}) translate(-100 -118)` : undefined
+  const faceTransform = face
+    ? `translate(${face.x} ${faceY})${face.rotate ? ` rotate(${face.rotate})` : ''} scale(${face.scale}) translate(-100 -118)`
+    : undefined
   const tiltTransform = tilt && `translate(${tilt.x} ${tilt.y}) rotate(${tilt.rotate} 100 108)`
   const front = png ? (
     <>

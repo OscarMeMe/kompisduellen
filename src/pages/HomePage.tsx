@@ -50,6 +50,8 @@ export function HomePage() {
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Knappen Välj spel, där ringarna i prickarna sprider sig ifrån.
   const chooseButton = useRef<HTMLButtonElement>(null)
+  // Området med Välj spel och kodfältet: där jublar hero-figurerna.
+  const entryArea = useRef<HTMLDivElement>(null)
   function pointAtGames() {
     const games = document.getElementById('spel')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -68,13 +70,16 @@ export function HomePage() {
   // krämvitt, de kommande spelen och önskelådan på ljus persika, Så fungerar det på ljusblått, och sist tipsen på en
   // mörkare sandton som sidfoten fortsätter på (Layout). Färgerna är --startsida-* i index.css.
   return (
-    <div className="flex flex-col pt-2 sm:pt-6">
+    <div className="flex flex-col pt-1 sm:pt-3">
       <Prickar origin={chooseButton} />
-      {/* Hero: blobbarna överst och under dem texten och vägarna in, centrerat på alla skärmar. */}
-      <section className="flex flex-col items-center gap-6 pb-14 sm:pb-20 lg:gap-7 lg:pb-24">
-        <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
-        <div className="space-y-6 text-center lg:space-y-7">
-          <div className="space-y-3">
+      {/* Hero: figurerna i en rad ovanför rubriken, och under dem texten och vägarna in, centrerat på alla skärmar. */}
+      <section className="flex flex-col items-center gap-3 pb-[6.25rem] sm:pb-[6.75rem] lg:gap-4 lg:pb-[6.75rem]">
+        <HeroFigurer
+          target={entryArea}
+          className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:-space-x-6 lg:text-[6.5rem]"
+        />
+        <div className="space-y-4 text-center lg:space-y-5">
+          <div className="space-y-2">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
             <p className="text-base font-bold text-muted-foreground sm:text-lg">
               <span className="block lg:inline">Sällskapsspel online</span>
@@ -99,7 +104,7 @@ export function HomePage() {
             Välj ett spel, dela koden och spela på varsin mobil eller dator.
           </p>
           {/* De två vägarna in, under varandra. */}
-          <div className="mx-auto flex max-w-sm flex-col gap-5">
+          <div ref={entryArea} className="mx-auto flex max-w-sm flex-col gap-4">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
             {/* Byter färg när musen är över, som alla knappar utanför spelen (index.css, data-knappar i Layout). */}
@@ -120,7 +125,7 @@ export function HomePage() {
         squish
         tabIndex={-1}
         aria-labelledby="spel-rubrik"
-        className="scroll-mt-16 outline-none"
+        className="scroll-mt-16 outline-none lg:pt-6"
         innerClassName="space-y-5"
       >
         {/* Rubriken och Sortera på samma rad. På smal skärm ligger väljaren under rubriken. */}

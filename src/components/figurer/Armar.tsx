@@ -1,4 +1,4 @@
-import type { BlobFigure, BlobId, Mood } from '@/lib/figurer'
+import type { BlobFigure, Mood } from '@/lib/figurer'
 
 // Korta, knubbiga armar som följer minen, ritade ovanpå allt annat i figuren (de kan hålla för ansiktet). Varje arm är
 // en tjock böjd linje från axeln till handen med en mörkare kant, och handen är en rund vante. Bara former, inga filter.
@@ -56,7 +56,7 @@ const POSES: Record<Mood, Pose> = {
 const HOLDING: Arm = { shoulder: [152, 138], bend: [168, 162], hand: [142, 160] }
 
 // Prylen i handen, ritad med handen i (0, 0) och uppåt. Handen ritas ovanpå, så att den håller i prylen.
-const PROPS: Partial<Record<BlobId, (lively: boolean) => React.ReactNode>> = {
+const PROPS: Partial<Record<BlobFigure['id'], (lively: boolean) => React.ReactNode>> = {
   // Festis drink med paraply och sugrör.
   festis: () => (
     <g>
