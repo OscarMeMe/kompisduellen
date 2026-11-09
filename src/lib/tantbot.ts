@@ -72,7 +72,8 @@ function deckEffect(event: TantEvent): 'top' | 'none' | 'forget' {
 }
 
 // Läser det som hänt vid bordet sedan sist: varje kort som dras uppifrån flyttar tanten ett steg närmare toppen, ett kort
-// underifrån ändrar inget, och blandas högen, ordnas den om eller göms en annan tant glöms platsen bort.
+// underifrån ändrar inget, och blandas högen, ordnas den om eller göms en annan tant glöms platsen bort. Finns platsen
+// inte kvar i högen (någon drog tanten underifrån och exploderade) glöms den också.
 export function observe(memory: BotMemory, table: TantTable): BotMemory {
   let { bombAt } = memory
   let n = memory.n
@@ -84,6 +85,7 @@ export function observe(memory: BotMemory, table: TantTable): BotMemory {
     if (effect === 'forget') bombAt = null
     else if (effect === 'top') bombAt = bombAt === 0 ? null : bombAt - 1
   }
+  if (bombAt !== null && bombAt >= table.deckCount) bombAt = null
   return n === memory.n && bombAt === memory.bombAt ? memory : { n, bombAt }
 }
 
@@ -222,7 +224,7 @@ export function decideBotMove(sight: BotSight, level: BotLevel, random: Random, 
     const pending = table.pending
     const nope = has('nadu')
     if (!nope || (pending.lastNopeBy ?? pending.by) === me) return null
-    const nope0: TantMove = { type: 'tNope', card: nope.id, level: pending.nopes }
+    const nope0: TantMove = { type: 'tNope', card: nope.id, level: pending.nopes, play: pending.n }
     // Mitt eget kort har stoppats: stoppa stoppet.
     if (pending.by === me && pending.nopes % 2 === 1) return level === 'latt' ? (random() < 0.3 ? nope0 : null) : nope0
     if (pending.nopes % 2 === 1) return null
@@ -423,12 +425,15 @@ export function fastForwardBots(
       memories[id] = memory
       const move = decideBotMove(sight, level, random, memory)
       if (!move) continue
+      // Ett ogiltigt drag ger också ett nytt bordsobjekt, så borden jämförs till innehållet (som i useLobby).
+      const before = JSON.stringify(table)
+      const unchanged = (candidate: TantHost) => JSON.stringify(candidate.state.tantpanik) === before
       let next = tantMove(current, id, move, null, now, random)
       // Ett drag som inte går: boten drar i stället om det är dess tur, som i lobbyn.
-      if (next.state.tantpanik === table && table.step === 'turn' && table.current === id) {
+      if (unchanged(next) && table.step === 'turn' && table.current === id) {
         next = tantMove(current, id, { type: 'tDraw' }, null, now, random)
       }
-      if (next.state.tantpanik === table) continue
+      if (unchanged(next)) continue
       if (next.state.tantpanik) memories[id] = remember(memory, move, sight, next.state.tantpanik)
       current = next
       moved = true

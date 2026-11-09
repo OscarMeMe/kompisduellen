@@ -144,7 +144,7 @@ function simulate({ players, level, trap, seed }: Config): SimResult {
       if (table.out.includes(table.current)) fail(`steg ${step}: ${table.current} har tur men är ute`)
       if (table.turnsLeft < 1) fail(`steg ${step}: ${table.turnsLeft} turer kvar`)
     }
-    if (table.deckCount !== host.secrets.deck.length) fail(`steg ${step}: deckCount stämmer inte`)
+    if (table.deckCount !== host.secrets.deck.length + host.secrets.arranging.length) fail(`steg ${step}: deckCount stämmer inte`)
     for (const id of table.order) if ((table.handCounts[id] ?? 0) !== (host.secrets.hands[id]?.length ?? 0)) fail(`steg ${step}: handCounts för ${id}`)
     for (const id of table.out) if ((host.secrets.hands[id]?.length ?? 0) !== 0) fail(`steg ${step}: ${id} är ute men har kort`)
     if (step % 5 === 0) {

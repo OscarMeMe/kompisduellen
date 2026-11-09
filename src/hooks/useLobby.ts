@@ -332,6 +332,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const table = stateRef.current.tantpanik
       if (!table) return
       for (const id of table.order) {
+        // Botarna finns bara hos värden, så deras händer skickas aldrig i kanalen.
+        if (stateRef.current.players[id]?.bot) continue
         const view = myTantView(secrets, table, id)
         const json = JSON.stringify(view)
         if (sentHandsRef.current[id] === json) continue
@@ -1170,8 +1172,9 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       },
       // Kortspelen: välja kort, klicka Klar eller (för domaren) välja vinnare. Imposterjakten: läst kortet,
       // skriva ett ord, passa eller säga sitt ord högt.
-      move: (move: CardMove | ImposterMove | TantMove) => {
-        if (!me || versionBlockedRef.current) return
+      // Ger tillbaka dragets nummer (Exploderande Tanter spärrar nya drag tills värden hanterat det).
+      move: (move: CardMove | ImposterMove | TantMove): string | undefined => {
+        if (!me || versionBlockedRef.current) return undefined
         moveCountRef.current += 1
         const nr = `${me.id}-${Date.now()}-${moveCountRef.current}`
         const view = { state: stateRef.current, id: me.id, hand: handRef.current, card: imposterCardRef.current, tant: tantViewRef.current }
@@ -1181,6 +1184,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           event: 'move',
           payload: { id: me.id, nr, move },
         })
+        return nr
       },
       // Tryck igen: drag som gett upp skickas igen.
       retryMoves: () => {

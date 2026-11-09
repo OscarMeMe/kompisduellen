@@ -87,7 +87,7 @@ export function TantHand({
     if (id === freshId) onFreshSeen?.()
     // Ett tryck på ett Nope!-kort när det går att säga Nope! spelar det direkt, som den stora knappen.
     if (nope && pending && nopeIds.includes(id)) {
-      send({ type: 'tNope', card: id, level: pending.nopes })
+      send({ type: 'tNope', card: id, level: pending.nopes, play: pending.n })
       return
     }
     // Inte min tur: ett tryck förstorar bara kortet. Inget lyfts eller läggs ihop till par, så att det aldrig ser ut som
@@ -158,9 +158,10 @@ export function TantHand({
                 <Choice
                   types={types}
                   myTurn={myTurn}
+                  noTargets={wantsTarget && targetOptions.length === 0}
                   nopeLevel={pending && chosen.length === 1 && types[0] === 'nadu' && nope ? pending.nopes : null}
                   onPlay={() => (wantsTarget ? setAsking('target') : play(null))}
-                  onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level })}
+                  onNope={(level) => send({ type: 'tNope', card: chosen[0].id, level, play: pending?.n })}
                 />
               </div>
             </div>
@@ -328,13 +329,15 @@ function useZoomWidth(): number {
 }
 
 // Min ordning av handen, bara hos mig (sessionStorage). Första gången sorteras handen och den ordningen sparas, så att
-// kort jag får sedan hamnar längst till höger.
+// kort jag får sedan hamnar längst till höger. En sparad ordning utan något av handens kort är från en tidigare match
+// med samma turordning (kortens id är nya i varje match), och då sorteras handen på nytt.
 function useHandOrder(key: string, hand: TantCard[]): [string[], (ids: string[]) => void] {
   const storageKey = `kd-tant-hand:${key}`
   const [order, setOrderState] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null')
-      if (Array.isArray(saved) && saved.every((id) => typeof id === 'string')) return saved
+      const mine = Array.isArray(saved) && saved.every((id) => typeof id === 'string') && saved.some((id) => hand.some((card) => card.id === id))
+      if (mine) return saved
     } catch {
       // Ingen sparad ordning.
     }
@@ -380,12 +383,15 @@ const LABEL =
 function Choice({
   types,
   myTurn,
+  noTargets,
   nopeLevel,
   onPlay,
   onNope,
 }: {
   types: CardType[]
   myTurn: boolean
+  // Korten behöver en annan spelare med kort på handen (par, tretal, Tjänst), och ingen har några.
+  noTargets: boolean
   nopeLevel: number | null
   onPlay: () => void
   onNope: (level: number) => void
@@ -400,6 +406,7 @@ function Choice({
   const label = selectionLabel(types)
   if (!label) return <p className={LABEL}>{cardHint(types)}</p>
   if (!myTurn) return <p className={LABEL}>Bara förstorat. Du kan spela när det är din tur.</p>
+  if (noTargets) return <p className={LABEL}>Ingen annan har några kort just nu.</p>
   return (
     <Button size="lg" className="w-full" onClick={onPlay}>
       {label}

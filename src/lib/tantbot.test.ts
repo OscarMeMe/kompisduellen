@@ -113,7 +113,7 @@ describe('botarna i Exploderande Tanter', () => {
     host = sync(host)
     host = tantMove(host, a, { type: 'tPlay', cards: ['att'], target: b }, null, 0, seeded(1))
     expect(host.state.tantpanik!.step).toBe('window')
-    expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0 })
+    expect(decideBotMove(botSight(host, b)!, 'normal', seeded(2))).toEqual({ type: 'tNope', card: 'nej', level: 0, play: host.state.tantpanik!.pending!.n })
   })
 
   it('gömmer tanten på en slumpad plats, med olika fördelning per svårighet', () => {
@@ -364,6 +364,15 @@ describe('risk och kunskap', () => {
     expect(observe(memory, at(['top', 'bottom', undefined, 'top', 'shuffle'])).bombAt).toBeNull()
     expect(observe({ n: 99, bombAt: 3 }, at(['arrange'])).bombAt).toBeNull()
     expect(observe({ n: 99, bombAt: 3 }, at(['place'])).bombAt).toBeNull()
+  })
+
+  it('glömmer en tant som någon annan dragit underifrån', () => {
+    const table = startTantMatch(lobby(3), seeded(2)).state.tantpanik!
+    const bottom = (deckCount: number) => ({ ...table, deckCount, log: [{ n: 100, text: 'vad som helst', deck: 'bottom' as DeckChange }] })
+    // Boten minns tanten underst i en hög på fem kort (fyra ovanför). Någon drar underifrån och exploderar: fyra kort kvar.
+    expect(observe({ n: 99, bombAt: 4 }, bottom(4)).bombAt).toBeNull()
+    // Låg tanten högre upp finns den kvar.
+    expect(observe({ n: 99, bombAt: 3 }, bottom(4)).bombAt).toBe(3)
   })
 
   it('spelmotorn märker händelserna med vad som hände med högen', () => {

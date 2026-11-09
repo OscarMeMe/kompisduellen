@@ -77,7 +77,8 @@ export type TantViewProps = {
   clockOffset: number
   // Min hand och det bara jag får veta. null innan det har kommit.
   tantView: MyTantView | null
-  onMove: (move: TantMove) => void
+  // Ger tillbaka dragets nummer, eller undefined om det inte skickades.
+  onMove: (move: TantMove) => string | undefined
   // Bordet tar hela skärmen, så värdens Avbryt matchen och Lämna lobbyn ligger i bordets meny.
   onAbort: () => void
   onLeave: () => void
