@@ -73,7 +73,7 @@ export function HomePage() {
     <div className="flex flex-col pt-1 sm:pt-3">
       <Prickar origin={chooseButton} />
       {/* Hero: figurerna i en rad ovanför rubriken, och under dem texten och vägarna in, centrerat på alla skärmar. */}
-      <section className="flex flex-col items-center gap-3 pb-14 sm:pb-16 lg:gap-4 lg:pb-16">
+      <section className="flex flex-col items-center gap-3 pb-[6.25rem] sm:pb-[6.75rem] lg:gap-4 lg:pb-[6.75rem]">
         <HeroFigurer
           target={entryArea}
           className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:-space-x-6 lg:text-[6.5rem]"
