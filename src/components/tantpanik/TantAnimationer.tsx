@@ -227,7 +227,7 @@ export function TableAnimations({
         <div
           role="status"
           className={
-            'fixed inset-0 z-[45] flex flex-col items-center justify-center gap-3 px-4 transition-colors duration-300 ' +
+            'fixed inset-0 z-[59] flex flex-col items-center justify-center gap-3 px-4 transition-colors duration-300 ' +
             (leaving ? 'bg-transparent' : 'bg-foreground/45 motion-safe:animate-fade')
           }
           // Ett tryck hoppar över animationen: mitt kort hamnar direkt i handen.

@@ -136,7 +136,8 @@ export function TantHand({
           <button
             type="button"
             aria-label="Lägg tillbaka korten"
-            className="fixed inset-0 z-30 bg-foreground/45 motion-safe:animate-fade"
+            // Över motspelarna och koppen (z-46, z-47), så att det förstorade kortet alltid ligger överst.
+            className="fixed inset-0 z-[48] bg-foreground/45 motion-safe:animate-fade"
             onClick={close}
           />
           <section
@@ -144,7 +145,7 @@ export function TantHand({
             {...SPLAT_SHIELD}
             // Från skärmens överkant ned till handen och det lyfta kortet i den, så att inget överlappar. Rutan själv tar
             // inga tryck, så att ett tryck bredvid kortet lägger tillbaka det.
-            className="pointer-events-none fixed inset-x-0 z-40 px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
+            className="pointer-events-none fixed inset-x-0 z-[50] px-3 pt-[max(0.5rem,env(safe-area-inset-top))]"
             style={{
               bottom: `calc(${popupBottom}px + env(safe-area-inset-bottom))`,
               height: `calc(100dvh - ${popupBottom}px - env(safe-area-inset-bottom))`,
@@ -196,7 +197,8 @@ export function TantHand({
         ref={handRef}
         aria-label={`Din hand, ${cards.length} kort`}
         {...SPLAT_SHIELD}
-        className="relative z-40 px-2"
+        // Medan ett kort är förstorat ligger handen över mörkläggningen, så att fler kort går att välja.
+        className={cn('relative px-2', popped ? 'z-[49]' : 'z-40')}
       >
         {/* Min plats, där turkoppen landar. På mobil precis ovanför handens vänstra hörn, på dator till vänster om handen i
             höjd med korten, med en egen plats så att den aldrig ligger över dem. */}
