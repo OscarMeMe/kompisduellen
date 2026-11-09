@@ -8,6 +8,7 @@ import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from
 import { HeroFigurer } from '@/components/HeroFigurer'
 import { Prickar } from '@/components/Prickar'
 import { VagSektion } from '@/components/Vag'
+import { SovandeSjusovare } from '@/components/SovandeSjusovare'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
 import { Button } from '@/components/ui/button'
@@ -197,7 +198,14 @@ export function HomePage() {
       </VagSektion>
 
       {/* Så fungerar det, på ljusblått. */}
-      <VagSektion color="var(--startsida-steg)" id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-16" innerClassName="space-y-6">
+      {/* Extra luft nedtill, så att Sjusovaren som vilar på vågen under aldrig täcker stegen. */}
+      <VagSektion
+        color="var(--startsida-steg)"
+        id="sa-funkar"
+        aria-labelledby="sa-funkar-rubrik"
+        className="scroll-mt-16 pb-32 sm:pb-44 lg:pb-44"
+        innerClassName="space-y-6"
+      >
         <h2 id="sa-funkar-rubrik" className="text-4xl text-balance sm:text-5xl">
           Så fungerar det
         </h2>
@@ -222,7 +230,17 @@ export function HomePage() {
       </VagSektion>
 
       {/* Guiderna, för den som vill läsa mer, på sidfotens sandton så att de och sidfoten blir en sektion. */}
-      <VagSektion color="var(--startsida-fot)" flip aria-labelledby="tips-rubrik" className="pb-6 sm:pb-8 lg:pb-10" innerClassName="space-y-4">
+      <VagSektion
+        color="var(--startsida-fot)"
+        flip
+        aria-labelledby="tips-rubrik"
+        className="pb-6 sm:pb-8 lg:pb-10"
+        innerClassName="space-y-4"
+        // Sjusovaren vilar händerna på vågens kant, mot höger, och nederkanten döljs bakom vågen.
+        behindWave={
+          <SovandeSjusovare className="absolute right-[6%] bottom-full w-28 sm:right-[10%] sm:w-36 lg:right-[calc(50%-27rem)] lg:w-44" />
+        }
+      >
         <h2 id="tips-rubrik" className="text-3xl text-balance sm:text-4xl">
           Tips inför kvällen
         </h2>

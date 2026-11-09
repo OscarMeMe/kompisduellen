@@ -157,6 +157,8 @@
     --animate-blob-propeller: blob-propeller 3s linear infinite;
     --animate-blob-aerobic: blob-aerobic 1.8s ease-in-out infinite;
     --animate-blob-nod: blob-nod 6s ease-in-out infinite;
+    /* Sjusovaren vid sidfoten på startsidan (SovandeSjusovare): ett z stiger och tonas bort då och då. */
+    --animate-sjusovare-z: sjusovare-z 6s ease-out infinite;
     /* Väntrummet: figurerna gungar lätt och spelets ikon i rubrikraden rör sig sakta. Undantag från regeln om att
        inget pågår hela tiden. Bara med motion-safe:, så att de står still med "minska rörelse". */
     --animate-sway: sway 3.2s ease-in-out infinite;
@@ -465,6 +467,12 @@
         70% { transform: rotate(-4deg) translateY(2px); }
         74% { transform: rotate(1deg) translateY(-1px); }
         80% { transform: rotate(0deg) translateY(0); }
+    }
+
+    @keyframes sjusovare-z {
+        0%, 55%, 100% { transform: translate(0, 0) scale(0.7); opacity: 0; }
+        62% { opacity: 1; }
+        92% { transform: translate(12px, -26px) scale(1.15); opacity: 0; }
     }
 
     @keyframes blob-sink {
