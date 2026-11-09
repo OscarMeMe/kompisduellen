@@ -83,17 +83,20 @@ function Cheeks({ figure, uid }: { figure: BlobFigure; uid: string }) {
 
 const svart = { fill: 'var(--figur-svart)' }
 
-// Klumpen: kepsen bak och fram. Skärmen pekar bakåt och syns ovanför, och hårtussen sticker ut genom hålet fram.
+// Klumpen: kepsen bak och fram, lite på sned. Skärmen sticker ut bakåt snett uppåt, och fram syns kepsens öppning
+// med det lilla bandet som spänns åt.
 function BackwardsCap({ figure }: { figure: BlobFigure }) {
   return (
-    <g>
-      <ellipse cx="100" cy="31" rx="38" ry="8" style={{ fill: 'var(--pryl-keps-mork)' }} />
-      <path d="M54 68Q56 28 100 26Q144 28 146 68Q100 58 54 68Z" style={{ fill: 'var(--pryl-keps)' }} />
-      <path d="M68 44Q80 32 98 30" className="fill-none stroke-card opacity-35" strokeWidth="5" strokeLinecap="round" />
-      <path d="M84 64Q100 44 116 64Z" style={{ fill: figure.palette.base }} />
-      <path d="M93 63Q86 46 97 41Q95 51 103 55Q107 42 118 46Q108 52 109 63Z" style={{ fill: figure.palette.dark }} />
-      <path d="M85 64L115 64" style={{ stroke: 'var(--pryl-keps-mork)' }} strokeWidth="4" strokeLinecap="round" />
-      <circle cx="100" cy="27" r="4" style={{ fill: 'var(--pryl-keps-mork)' }} />
+    <g transform="rotate(-8 100 50)">
+      <path d="M126 40Q160 14 190 30Q186 42 168 46Q148 48 132 52Z" style={{ fill: 'var(--pryl-keps-mork)' }} />
+      <path d="M134 44Q160 26 184 32" className="fill-none stroke-card opacity-30" strokeWidth="3" strokeLinecap="round" />
+      <path d="M50 70Q52 24 100 22Q148 24 150 70Q100 60 50 70Z" style={{ fill: 'var(--pryl-keps)' }} />
+      <path d="M100 24Q84 40 80 64M100 24Q116 40 120 64" className="fill-none" style={{ stroke: 'var(--pryl-keps-mork)' }} strokeWidth="2.5" />
+      <path d="M64 46Q76 32 94 28" className="fill-none stroke-card opacity-35" strokeWidth="5" strokeLinecap="round" />
+      <path d="M82 66Q100 42 118 66Z" style={{ fill: figure.palette.base }} />
+      <path d="M84 61L116 61" style={{ stroke: 'var(--pryl-keps-mork)' }} strokeWidth="5" strokeLinecap="round" />
+      <rect x="95" y="57" width="10" height="8" rx="2" className="fill-card" />
+      <circle cx="100" cy="23" r="4.5" style={{ fill: 'var(--pryl-keps-mork)' }} />
     </g>
   )
 }
@@ -254,14 +257,10 @@ function Sweatband() {
   )
 }
 
-// Bråkis: plåster på näsan, mössa, och hornen som sticker ut genom mössan.
+// Bråkis: mössa, och hornen som sticker ut genom mössan.
 function BrakisGear({ figure }: { figure: BlobFigure }) {
   return (
     <g>
-      <g transform="rotate(-18 100 127)">
-        <rect x="85" y="121" width="30" height="12" rx="5" style={{ fill: 'var(--pryl-plaster)' }} />
-        <rect x="95" y="121" width="10" height="12" style={{ fill: 'var(--pryl-plaster-mork)' }} />
-      </g>
       <path d="M52 72Q54 24 100 22Q146 24 148 72Z" style={{ fill: 'var(--pryl-mossa)' }} />
       <rect x="48" y="60" width="104" height="18" rx="9" style={{ fill: 'var(--pryl-mossa-ljus)' }} />
       <path d="M62 62v14M76 62v14M90 62v14M104 62v14M118 62v14M132 62v14" className="fill-none" style={{ stroke: 'var(--pryl-mossa)' }} strokeWidth="2.5" />

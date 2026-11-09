@@ -158,7 +158,7 @@ export const BLOBS: readonly BlobFigure[] = [
   },
   // Svettband och armband i 80-talsstil. Kör aerobics.
   { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG, line: 'Ni andra är för stela.', idle: 'motion-safe:animate-blob-aerobic' },
-  // Mössa, cigarett i mungipan, plåster på näsan och rökringar i väntrummet. Stampar.
+  // Mössa, cigarett i mungipan och rökringar i väntrummet. Stampar.
   { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG, line: 'Vad glor du på?', idle: 'motion-safe:animate-blob-stomp' },
   // Luvtröja med huvan uppe, hörlurar och mobilen i handen. Duckar och kikar fram.
   { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG, line: 'Jag är bara här för snacksen.', idle: 'motion-safe:animate-blob-peek' },

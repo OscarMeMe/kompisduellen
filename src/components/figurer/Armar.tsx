@@ -79,12 +79,16 @@ const PROPS: Partial<Record<BlobId, (lively: boolean) => React.ReactNode>> = {
       <path d="M-10 -34Q-9 -24 -4 -21" className="fill-none stroke-card" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" />
     </g>
   ),
-  // Blygis mobil, med skärmen tänd.
+  // Blygis mobil, med skärmen mot Blygis: vi ser baksidan med kameran, och skärmens sken syns runt kanten.
   blygis: () => (
     <g transform="rotate(-10)">
+      <rect x="-12" y="-38" width="24" height="38" rx="6" className="fill-sky" opacity="0.45" />
       <rect x="-10" y="-36" width="20" height="34" rx="4.5" style={{ fill: 'var(--pryl-luren)' }} />
-      <rect x="-7.5" y="-33" width="15" height="25" rx="2" className="fill-sky" />
-      <path d="M-4 -28h8M-4 -23h5" className="fill-none stroke-card" strokeWidth="2" strokeLinecap="round" />
+      <rect x="-7" y="-33" width="8" height="11" rx="3" className="fill-foreground" />
+      <circle cx="-3" cy="-30" r="2" className="fill-sky" />
+      <circle cx="-3" cy="-25" r="2" className="fill-sky" />
+      <circle cx="5" cy="-31" r="1.4" className="fill-sun" />
+      <path d="M6 -20L6 -8" className="fill-none stroke-card" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
     </g>
   ),
   // Smältis glasstrut som droppar.
