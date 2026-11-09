@@ -28,7 +28,7 @@ const TAP_MS = 900
 const TAP_MAX = 220
 // Fläcken mitt i muspekaren över pricksektionen på startsidan: radie (px) och hur mörk den är.
 const SPOT_RADIUS = 13
-const SPOT_ALPHA = 0.3
+const SPOT_ALPHA = 0.15
 // Hur snabbt fläcken hinner ikapp pekaren per bildruta (lägre = mjukare).
 const SPOT_FOLLOW = 0.14
 
