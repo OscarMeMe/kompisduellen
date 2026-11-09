@@ -308,7 +308,9 @@ export function TantpanikView({
       // Mönstret från väntrummet bakom hela matchen. Högarna och handen ligger direkt på det.
       // Lite luft under handen även utan säker marginal, så att webbläsarens list aldrig skär av korten.
       // h-dvh: bordet följer skärmens höjd även när Safaris verktygsfält döljs eller visas (se också useLockPageScroll).
-      className="fixed inset-x-0 top-0 z-10 flex h-dvh flex-col overflow-hidden overscroll-none bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      // inset-0 är reserven: en webbläsare som inte förstår dvh (iPhone före iOS 15.4) struntar i höjden och fyller då
+      // skärmen med top och bottom i stället för att bordet faller ihop.
+      className="fixed inset-0 z-10 flex h-dvh flex-col overflow-hidden overscroll-none bg-background bg-repeat pt-[env(safe-area-inset-top)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       style={{ backgroundImage: `url(${TANT_PATTERN})`, backgroundSize: '512px 512px' }}
     >
       <StatusBar
