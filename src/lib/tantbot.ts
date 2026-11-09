@@ -72,7 +72,8 @@ function deckEffect(event: TantEvent): 'top' | 'none' | 'forget' {
 }
 
 // Läser det som hänt vid bordet sedan sist: varje kort som dras uppifrån flyttar tanten ett steg närmare toppen, ett kort
-// underifrån ändrar inget, och blandas högen, ordnas den om eller göms en annan tant glöms platsen bort.
+// underifrån ändrar inget, och blandas högen, ordnas den om eller göms en annan tant glöms platsen bort. Finns platsen
+// inte kvar i högen (någon drog tanten underifrån och exploderade) glöms den också.
 export function observe(memory: BotMemory, table: TantTable): BotMemory {
   let { bombAt } = memory
   let n = memory.n
@@ -84,6 +85,7 @@ export function observe(memory: BotMemory, table: TantTable): BotMemory {
     if (effect === 'forget') bombAt = null
     else if (effect === 'top') bombAt = bombAt === 0 ? null : bombAt - 1
   }
+  if (bombAt !== null && bombAt >= table.deckCount) bombAt = null
   return n === memory.n && bombAt === memory.bombAt ? memory : { n, bombAt }
 }
 

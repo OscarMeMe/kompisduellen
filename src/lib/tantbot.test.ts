@@ -366,6 +366,15 @@ describe('risk och kunskap', () => {
     expect(observe({ n: 99, bombAt: 3 }, at(['place'])).bombAt).toBeNull()
   })
 
+  it('glömmer en tant som någon annan dragit underifrån', () => {
+    const table = startTantMatch(lobby(3), seeded(2)).state.tantpanik!
+    const bottom = (deckCount: number) => ({ ...table, deckCount, log: [{ n: 100, text: 'vad som helst', deck: 'bottom' as DeckChange }] })
+    // Boten minns tanten underst i en hög på fem kort (fyra ovanför). Någon drar underifrån och exploderar: fyra kort kvar.
+    expect(observe({ n: 99, bombAt: 4 }, bottom(4)).bombAt).toBeNull()
+    // Låg tanten högre upp finns den kvar.
+    expect(observe({ n: 99, bombAt: 3 }, bottom(4)).bombAt).toBe(3)
+  })
+
   it('spelmotorn märker händelserna med vad som hände med högen', () => {
     let host = startTantMatch(lobby(2), seeded(6))
     const [a, b] = host.state.tantpanik!.order
