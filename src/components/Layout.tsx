@@ -32,6 +32,7 @@ export function Layout() {
   const { showNotice } = useAppUpdate()
   // Läses om vid varje sidbyte, så att ett nytt namn syns när man gått vidare.
   const { pathname } = useLocation()
+  const home = pathname === '/'
   const player = lobbyPlayer ?? loadPlayer()
 
   return (
@@ -90,17 +91,26 @@ export function Layout() {
       <main
         className={cn(
           'mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 sm:px-6',
-          inMatch ? 'pb-[max(3rem,env(safe-area-inset-bottom))]' : 'pb-10',
+          // Startsidans sektioner går ända ned till sidfoten.
+          inMatch ? 'pb-[max(3rem,env(safe-area-inset-bottom))]' : home ? 'pb-0' : 'pb-10',
         )}
       >
         <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer, headerSlot } satisfies LayoutContext} />
       </main>
       {/* En diskret sidfot längst ner på alla sidor, men inte under en pågående match. */}
-      {!inMatch && (
-        <footer className="mx-auto w-full max-w-5xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">
-          <p className="border-t border-border/70 pt-4 text-center text-xs text-muted-foreground">Skapad av vänner, för vänner.</p>
-        </footer>
-      )}
+      {/* På startsidan fortsätter den på samma mörkare sandton som den sista sektionen (tipsen). */}
+      {!inMatch &&
+        (home ? (
+          <footer style={{ backgroundColor: 'var(--startsida-fot)' }}>
+            <p className="mx-auto max-w-5xl border-t border-foreground/10 px-4 pt-5 pb-[max(1.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground sm:px-6">
+              Skapad av vänner, för vänner.
+            </p>
+          </footer>
+        ) : (
+          <footer className="mx-auto w-full max-w-5xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">
+            <p className="border-t border-border/70 pt-4 text-center text-xs text-muted-foreground">Skapad av vänner, för vänner.</p>
+          </footer>
+        ))}
     </div>
   )
 }
