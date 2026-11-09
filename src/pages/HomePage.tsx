@@ -6,6 +6,7 @@ import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, SHOW_TILLFALLEN, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
 import { HeroFigurer } from '@/components/HeroFigurer'
+import { StartsidansPrickar } from '@/components/StartsidansPrickar'
 import { VagSektion } from '@/components/Vag'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
@@ -46,6 +47,8 @@ export function HomePage() {
     setIntroOpen(true)
   }
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Knappen Välj spel, där ringarna i prickarna sprider sig ifrån.
+  const chooseButton = useRef<HTMLButtonElement>(null)
   function pointAtGames() {
     const games = document.getElementById('spel')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -65,7 +68,7 @@ export function HomePage() {
   // mörkare sandton som sidfoten fortsätter på (Layout). Färgerna är --startsida-* i index.css.
   return (
     <div className="flex flex-col pt-2 sm:pt-6">
-      <StartsidansPrickar />
+      <StartsidansPrickar origin={chooseButton} />
       {/* Hero: blobbarna överst och under dem texten och vägarna in, centrerat på alla skärmar. */}
       <section className="flex flex-col items-center gap-6 pb-14 sm:pb-20 lg:gap-7 lg:pb-24">
         <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
@@ -98,7 +101,7 @@ export function HomePage() {
           <div className="mx-auto flex max-w-sm flex-col gap-5">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames} className="text-lg">
+            <Button ref={chooseButton} size="lg" onClick={pointAtGames} className="text-lg">
               Välj spel
               <ArrowDown aria-hidden />
             </Button>
@@ -233,17 +236,6 @@ export function HomePage() {
         </ul>
       </VagSektion>
     </div>
-  )
-}
-
-// Prickmönstret på startsidan, med en mjuk våg som drar snett över skärmen (se .startsida-prickar och .startsida-vag i
-// index.css). Bara på startsidan. Lagren ligger bakom allt och tar inga tryck.
-function StartsidansPrickar() {
-  return (
-    <>
-      <div aria-hidden className="startsida-prickar" />
-      <div aria-hidden className="startsida-vag" />
-    </>
   )
 }
 
