@@ -5,8 +5,8 @@ import { GaMedKod } from '@/components/GaMedKod'
 import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, SHOW_TILLFALLEN, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
-import { ExempelRunda } from '@/components/ExempelRunda'
 import { HeroFigurer } from '@/components/HeroFigurer'
+import { VagSektion } from '@/components/Vag'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
 import { Button } from '@/components/ui/button'
@@ -60,26 +60,28 @@ export function HomePage() {
     }, 30)
   }
 
+  // Startsidan är sektioner som avlöser varandra med mjuka vågor (VagSektion): hero på sanden med prickarna, spelen på
+  // krämvitt, de kommande spelen och önskelådan på ljus persika, Så fungerar det på ljusblått och tipsen på ljusgult.
+  // Sidfoten ligger sist på en mörkare sandton (Layout). Färgerna är --startsida-* i index.css.
   return (
-    <div className="flex flex-col gap-7 pt-2 sm:gap-10 sm:pt-5">
+    <div className="flex flex-col pt-2 sm:pt-6">
       <StartsidansPrickar />
-      {/* Hero. På mobil ligger exempelrundan under spelen (order), så att spelkorten syns tidigt. Därför är sektionen
-          bara en låda från md och uppåt (contents), och sektionerna efter spelen får order-2 på mobil. */}
-      <section className="contents md:grid md:grid-cols-[1.15fr_1fr] md:items-stretch md:gap-12">
-        <div className="space-y-5 text-center md:space-y-6 md:self-center md:text-left">
-          <HeroFigurer className="justify-center md:justify-start" />
-          <div className="space-y-2">
+      {/* Hero: texten och vägarna in, och blobbarna. På dator står blobbarna stora till höger. */}
+      <section className="grid gap-6 pb-14 sm:pb-20 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:gap-8 lg:pb-24">
+        <HeroFigurer className="justify-center text-[2.75rem] sm:text-[3.5rem] lg:order-2 lg:justify-center lg:-space-x-6 lg:text-[7rem]" />
+        <div className="space-y-6 text-center lg:space-y-7 lg:text-left">
+          <div className="space-y-3">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
-            <p className="text-sm font-bold text-muted-foreground">
+            <p className="text-base font-bold text-muted-foreground sm:text-lg">
               <span className="block lg:inline">Sällskapsspel online</span>
               <span className="hidden lg:inline" aria-hidden>
                 {' · '}
               </span>
               <span className="block lg:inline">Gratis · Ingen app · Inget konto</span>
             </p>
-            {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken lite
-                i stället för att radbrytas eller klippas, från ca 400 px är den 36 px som förut. */}
-            <h1 className="text-[clamp(1.75rem,9vw,2.25rem)] leading-[1.1] sm:text-5xl lg:text-[3.5rem]">
+            {/* "Dåliga förlorare." står alltid på en rad. På riktigt smala skärmar krymper rubriken i stället för att
+                radbrytas eller klippas. */}
+            <h1 className="text-[clamp(1.85rem,9.6vw,2.75rem)] leading-[1.08] sm:text-6xl lg:text-[4.25rem]">
               Bra sällskap. <span className="relative inline-block whitespace-nowrap text-primary motion-safe:hover:animate-wiggle">
                 Dåliga förlorare.
                 {/* Ett handritat streck under orden. */}
@@ -89,14 +91,14 @@ export function HomePage() {
               </span>
             </h1>
           </div>
-          <p className="mx-auto max-w-md text-lg text-muted-foreground md:mx-0">
+          <p className="mx-auto max-w-lg text-lg text-muted-foreground sm:text-xl lg:mx-0">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
           {/* De två vägarna in, under varandra. */}
-          <div className="mx-auto flex max-w-sm flex-col gap-5 md:mx-0">
+          <div className="mx-auto flex max-w-sm flex-col gap-5 lg:mx-0">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames} className="md:self-start">
+            <Button size="lg" onClick={pointAtGames} className="text-lg lg:self-start">
               Välj spel
               <ArrowDown aria-hidden />
             </Button>
@@ -104,20 +106,24 @@ export function HomePage() {
             <GaMedKod className="text-left" />
           </div>
         </div>
-
-        {/* En liten spelbar exempelrunda, helt lokal. */}
-        <ExempelRunda className="max-md:order-1" />
       </section>
 
-      {/* Alla spel */}
-      <section id="spel" tabIndex={-1} aria-labelledby="spel-rubrik" className="scroll-mt-6 space-y-4 outline-none">
+      {/* Alla spel, på krämvitt. Exempelrundan (ExempelRunda) är borttagen från startsidan men finns kvar i koden. */}
+      <VagSektion
+        color="var(--startsida-spel)"
+        id="spel"
+        tabIndex={-1}
+        aria-labelledby="spel-rubrik"
+        className="scroll-mt-16 outline-none"
+        innerClassName="space-y-5"
+      >
         {/* Rubriken och Sortera på samma rad. På smal skärm ligger väljaren under rubriken. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h2 id="spel-rubrik" className="text-3xl">
+            <h2 id="spel-rubrik" className="text-4xl text-balance sm:text-5xl">
               Vad ska ni spela?
             </h2>
-            <p className="text-muted-foreground">Välj ett spel och skapa en lobby.</p>
+            <p className="text-lg text-muted-foreground">Välj ett spel och skapa en lobby.</p>
           </div>
           <SortChoice sort={sort} onChange={setSort} />
         </div>
@@ -160,7 +166,7 @@ export function HomePage() {
           </details>
         )}
         {/* Spelbara spel först och större. Kommande spel på en egen rad, nedtonade. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {orderedGames(tillfalle, sort).map(({ game, note }, index) => (
             <SpelKort
               key={game.id}
@@ -173,58 +179,59 @@ export function HomePage() {
             />
           ))}
         </div>
-      </section>
+      </VagSektion>
       <GameIntroDialog game={introGame} open={introOpen} onOpenChange={setIntroOpen} />
 
-      {/* Så fungerar det, efter spelen så att spellistan syns direkt */}
-      <section id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-6 space-y-4 max-md:order-2">
-        <h2 id="sa-funkar-rubrik" className="text-3xl">
+      {/* Kommande spel på ljus persika: ett tryck visar hur spelet spelas (ingen Skapa lobby), och under dem kan man
+          önska ett spel. */}
+      <VagSektion color="var(--startsida-kommande)" flip aria-labelledby="kommande-rubrik" innerClassName="space-y-5">
+        <h2 id="kommande-rubrik" className="text-3xl text-balance sm:text-4xl">
+          Fler dueller är på väg.
+        </h2>
+        <KommandeSpel games={GAMES.filter((game) => !game.playable)} />
+        <Onskelada />
+      </VagSektion>
+
+      {/* Så fungerar det, på ljusblått. */}
+      <VagSektion color="var(--startsida-steg)" id="sa-funkar" aria-labelledby="sa-funkar-rubrik" className="scroll-mt-16" innerClassName="space-y-6">
+        <h2 id="sa-funkar-rubrik" className="text-4xl text-balance sm:text-5xl">
           Så fungerar det
         </h2>
-        <ol className="grid gap-4 sm:grid-cols-3">
+        <ol className="grid gap-5 sm:grid-cols-3 sm:gap-6">
           {STEPS.map((step, index) => (
-            <li key={step.title} className="flex items-start gap-3">
+            <li key={step.title} className="flex items-start gap-4">
               <span
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-full font-heading text-lg font-bold',
+                  'flex size-12 shrink-0 items-center justify-center rounded-full font-heading text-xl font-bold shadow-soft-sm',
                   step.color,
                 )}
               >
                 {index + 1}
               </span>
               <div>
-                <h3 className="text-lg leading-tight">{step.title}</h3>
-                <p className="mt-0.5 text-muted-foreground">{step.text}</p>
+                <h3 className="text-xl leading-tight sm:text-2xl">{step.title}</h3>
+                <p className="mt-1 text-lg text-muted-foreground">{step.text}</p>
               </div>
             </li>
           ))}
         </ol>
-      </section>
+      </VagSektion>
 
-      {/* Guiderna, för den som vill läsa mer. */}
-      <section aria-labelledby="tips-rubrik" className="space-y-3 max-md:order-2">
-        <h2 id="tips-rubrik" className="text-xl">
+      {/* Guiderna på ljusgult, för den som vill läsa mer. */}
+      <VagSektion color="var(--startsida-tips)" flip aria-labelledby="tips-rubrik" innerClassName="space-y-4">
+        <h2 id="tips-rubrik" className="text-3xl text-balance sm:text-4xl">
           Tips inför kvällen
         </h2>
-        <ul className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-6">
+        <ul className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-8">
           {GUIDE_LINKS.map((guide) => (
             <li key={guide.to}>
-              <Link to={guide.to} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4 hover:text-primary">
+              <Link to={guide.to} className="inline-flex min-h-11 items-center text-lg font-semibold underline underline-offset-4 hover:text-primary">
                 {guide.text}
               </Link>
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* Kommande spel: ett tryck visar hur spelet spelas (ingen Skapa lobby), och under dem kan man önska ett spel. */}
-      <section aria-labelledby="kommande-rubrik" className="space-y-3 border-t pt-6 max-md:order-2">
-        <h2 id="kommande-rubrik" className="text-xl">
-          Fler dueller är på väg.
-        </h2>
-        <KommandeSpel games={GAMES.filter((game) => !game.playable)} />
-        <Onskelada />
-      </section>
+      </VagSektion>
     </div>
   )
 }
@@ -255,7 +262,7 @@ function orderedGames(tillfalle: TillfalleId, sort: GameSort): { game: GameInfo;
 // Sortera: diskret, en vanlig väljare som fungerar med tangentbord och på mobil. Valet sparas (sortering.ts).
 function SortChoice({ sort, onChange }: { sort: GameSort; onChange: (sort: GameSort) => void }) {
   return (
-    <label className="flex w-fit shrink-0 items-center gap-2 text-sm text-muted-foreground">
+    <label className="flex w-fit shrink-0 items-center gap-2 text-base text-muted-foreground">
       Sortera
       <select
         value={sort}
