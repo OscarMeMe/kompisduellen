@@ -26,6 +26,9 @@ const RING_ALPHA = 0.16
 // Ringen vid ett tryck på mobil.
 const TAP_MS = 900
 const TAP_MAX = 220
+// Fläcken mitt i muspekaren över pricksektionen på startsidan: radie (px) och hur mörk den är.
+const SPOT_RADIUS = 9
+const SPOT_ALPHA = 0.35
 
 const easeOut = (t: number) => 1 - (1 - t) ** 3
 
@@ -63,6 +66,8 @@ export function Prickar({ origin }: { origin?: RefObject<HTMLElement | null> }) 
     const start = performance.now()
     let frame = 0
     let visible = true
+    // Hur synlig fläcken vid muspekaren är (0–1).
+    let spot = 0
 
     function draw(now: number) {
       frame = 0
@@ -127,8 +132,23 @@ export function Prickar({ origin }: { origin?: RefObject<HTMLElement | null> }) 
           ctx.fill()
         }
       }
+      // Startsidan: en liten mörktonad fläck mitt i muspekaren när den är över pricksektionen (hero). Tonas in och ut.
+      const overHero = Boolean(origin) && target.on && target.y < heroBottom
+      spot += ((overHero ? 1 : 0) - spot) * 0.15
+      if (spot > 0.01) {
+        const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, SPOT_RADIUS)
+        glow.addColorStop(0, String(fill))
+        glow.addColorStop(0.45, String(fill))
+        glow.addColorStop(1, 'transparent')
+        ctx.globalAlpha = SPOT_ALPHA * spot
+        ctx.fillStyle = glow
+        ctx.beginPath()
+        ctx.arc(pointer.x, pointer.y, SPOT_RADIUS, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = fill
+      }
       // Ringarna rör sig hela tiden. Annars ritas bara så länge muspekaren eller ett tryck rör prickarna.
-      const moving = Boolean(origin) || target.on || pointer.strength > 0.005 || taps.length > 0
+      const moving = Boolean(origin) || target.on || pointer.strength > 0.005 || taps.length > 0 || spot > 0.01
       if (visible && moving) frame = requestAnimationFrame(draw)
     }
     const wake = () => {
