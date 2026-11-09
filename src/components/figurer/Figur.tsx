@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { Arms } from '@/components/figurer/Armar'
 import { DrawnBack, DrawnFront } from '@/components/figurer/Kroppar'
 import { Face } from '@/components/figurer/Miner'
 import { Tantklanning, Vinnarkrona } from '@/components/figurer/Tantklanning'
@@ -53,7 +54,9 @@ export function Figur({
   const lifelike = animated && lively && mood === 'vantar'
   asleep = asleep && figure.traits?.sleepy === true
   const motion = !animated ? undefined : lifelike ? (asleep ? MOOD_MOTION.vantar : figure.idle) : MOOD_MOTION[mood]
-  const front = body.kind === 'png' ? body.frontSrc && <Picture src={body.frontSrc} /> : <DrawnFront figure={figure} lively={lifelike && !asleep} />
+  const sleeping = lifelike && asleep
+  const front =
+    body.kind === 'png' ? body.frontSrc && <Picture src={body.frontSrc} /> : <DrawnFront figure={figure} mood={mood} lively={lifelike && !asleep} asleep={sleeping} />
 
   return (
     <svg
@@ -68,7 +71,7 @@ export function Figur({
     >
       <g>
         <g data-lager="bak">
-          {body.kind === 'png' ? <Picture src={body.src} /> : <DrawnBack figure={figure} uid={uid} lively={lifelike && !asleep} />}
+          {body.kind === 'png' ? <Picture src={body.src} /> : <DrawnBack figure={figure} uid={uid} lively={lifelike && !asleep} asleep={sleeping} />}
         </g>
         <g data-lager="min">
           <Face mood={mood} figure={figure} animated={animated} lively={lifelike} asleep={lifelike && asleep} look={look} gaze={gaze} />
@@ -77,6 +80,8 @@ export function Figur({
           {front}
         </g>
         {dress && <Tantklanning />}
+        {/* Armarna följer minen och ligger överst, så att de kan hålla för ansiktet. En kropp som bild har egna armar. */}
+        <g data-lager="armar">{body.kind === 'svg' && <Arms figure={figure} mood={mood} lively={lifelike && !asleep} />}</g>
         {crown && <Vinnarkrona />}
         {/* Sjusovaren sover: ett z som stiger och tonas bort, om och om igen. */}
         {lifelike && asleep && (
