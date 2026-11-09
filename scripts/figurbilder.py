@@ -12,6 +12,9 @@ Så här:
 3. Alla skalas så att kroppen blir lika bred (BODY_WIDTH av 200) och ställs på samma baslinje (BASELINE av 200), i en
    kvadrat på 200 × 200 som figurens koordinater i Figur. Det som sticker upp (hattar, hår) får plats ovanför.
 
+Dessutom bilder som bara beskärs och sparas i en storlek (CROPPED), t.ex. Sjusovaren som vilar på vågen ovanför
+sidfoten på startsidan (sjusovaren-kant.webp).
+
 Kör: python scripts/figurbilder.py (kräver Pillow och numpy).
 """
 from pathlib import Path
@@ -72,7 +75,25 @@ def prepare(name: str) -> None:
     print(f'{name}: kropp {body:.0f} px, skala {scale:.3f}')
 
 
+# Bilder som bara beskärs till figuren och sparas i en bredd (px).
+CROPPED = {'sjusovaren-kant': 300}
+
+
+def crop(name: str, width: int) -> None:
+    pixels = np.array(Image.open(SOURCE / f'{name}.png').convert('RGBA'))
+    alpha = pixels[:, :, 3]
+    alpha[alpha < HAZE] = 0
+    pixels[alpha == 0] = 0
+    ys, xs = np.where(alpha > 0)
+    cleaned = Image.fromarray(pixels).crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    height = round(cleaned.height * width / cleaned.width)
+    cleaned.resize((width, height), Image.LANCZOS).save(TARGET / f'{name}.webp', 'WEBP', quality=86, method=6)
+    print(f'{name}: {width} × {height}')
+
+
 if __name__ == '__main__':
     TARGET.mkdir(parents=True, exist_ok=True)
     for name in NAMES:
         prepare(name)
+    for name, width in CROPPED.items():
+        crop(name, width)
