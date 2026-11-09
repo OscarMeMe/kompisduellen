@@ -1055,12 +1055,20 @@
   h1, h2, h3 {
     @apply font-heading font-bold tracking-[-0.015em];
     }
-  /* Startsidans prickmönster med en våg (StartsidansPrickar i HomePage). Prickarna ligger i ett eget lager som står still
-     i fönstret, och vågen i ett lager ovanpå med samma prickar lite mörkare. En bred, mjuk diagonal mask drar vågen från
-     uppe till vänster till nere till höger ungefär var sjunde sekund: svepet tar 3,6 s och pausen 3,4 s. Bara CSS: masken flyttas (startsida-vag), inget
-     per prick. Webbläsaren ritar inget när fliken inte syns, och med "minska rörelse" finns ingen våg. */
+  /* Startsidans prickmönster (StartsidansPrickar i HomePage). Prickarna ligger i ett eget lager som står still i fönstret,
+     och ovanpå ligger lager med samma prickrutnät, som bara syns genom en mask:
+     - startsida-ringar: två ringar av mörkare prickar sprider sig från blobbarna i hero, som ringar på vattnet, var
+       sjätte sekund. Mitten (--ring-x, --ring-y) följer blobbarna när sidan skrollas, och ringarna står still när hero
+       inte syns (data-paused).
+     - startsida-ficklampa: med mus blir prickarna närmast muspekaren större och korallröda (--mx, --my), och tonas bort
+       när musen lämnar fönstret.
+     - startsida-tryck: på mobil sprider sig en liten ring från fingret vid ett tryck (--tap-x, --tap-y, klassen spela).
+     Bara masker och opacity, inget per prick. Sektionerna under hero täcker lagren. Med "minska rörelse" finns bara de
+     stilla prickarna. */
   .startsida-prickar,
-  .startsida-vag {
+  .startsida-ringar,
+  .startsida-ficklampa,
+  .startsida-tryck {
     position: fixed;
     inset: 0;
     pointer-events: none;
@@ -1071,37 +1079,69 @@
     background-color: var(--background);
     background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
     }
-  .startsida-vag {
+  .startsida-ringar,
+  .startsida-tryck {
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 55%, transparent) 1.9px, transparent 2.1px);
+    }
+  .startsida-ringar {
     z-index: -9;
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 34%, transparent) 1.3px, transparent 1.3px);
-    -webkit-mask-image: linear-gradient(135deg, transparent 36%, #000 47%, #000 53%, transparent 64%);
-    mask-image: linear-gradient(135deg, transparent 36%, #000 47%, #000 53%, transparent 64%);
-    -webkit-mask-size: 300% 300%;
-    mask-size: 300% 300%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    -webkit-mask-position: 100% 100%;
-    mask-position: 100% 100%;
-    animation: startsida-vag 7s linear infinite;
+    -webkit-mask-image: radial-gradient(circle at var(--ring-x, 50%) var(--ring-y, 25%), transparent calc(var(--ring-r) - 230px), #000 calc(var(--ring-r) - 204px), #000 calc(var(--ring-r) - 180px), transparent calc(var(--ring-r) - 154px), transparent calc(var(--ring-r) - 56px), #000 calc(var(--ring-r) - 30px), #000 var(--ring-r), transparent calc(var(--ring-r) + 26px));
+    mask-image: radial-gradient(circle at var(--ring-x, 50%) var(--ring-y, 25%), transparent calc(var(--ring-r) - 230px), #000 calc(var(--ring-r) - 204px), #000 calc(var(--ring-r) - 180px), transparent calc(var(--ring-r) - 154px), transparent calc(var(--ring-r) - 56px), #000 calc(var(--ring-r) - 30px), #000 var(--ring-r), transparent calc(var(--ring-r) + 26px));
+    animation: startsida-ringar 6s cubic-bezier(0.25, 0.6, 0.45, 1) infinite;
     }
-  @keyframes startsida-vag {
-    0% {
-      -webkit-mask-position: 100% 100%;
-      mask-position: 100% 100%;
+  .startsida-ringar[data-paused="true"] {
+    animation-play-state: paused;
     }
-    /* 3,6 s av 7 s: samma fart som förut. */
-    51.4%,
-    100% {
-      -webkit-mask-position: 0% 0%;
-      mask-position: 0% 0%;
+  .startsida-ficklampa {
+    z-index: -8;
+    background-image: radial-gradient(color-mix(in oklab, var(--primary) 80%, var(--foreground)) 2.4px, transparent 2.6px);
+    -webkit-mask-image: radial-gradient(circle at var(--mx, -999px) var(--my, -999px), #000 0, #000 34px, transparent 150px);
+    mask-image: radial-gradient(circle at var(--mx, -999px) var(--my, -999px), #000 0, #000 34px, transparent 150px);
+    opacity: 0;
+    transition: opacity 0.35s ease-out;
     }
+  .startsida-ficklampa[data-on="true"] {
+    opacity: 1;
+    }
+  .startsida-tryck {
+    z-index: -8;
+    opacity: 0;
+    -webkit-mask-image: radial-gradient(circle at var(--tap-x, 50%) var(--tap-y, 50%), transparent calc(var(--tap-r) - 34px), #000 calc(var(--tap-r) - 16px), #000 var(--tap-r), transparent calc(var(--tap-r) + 18px));
+    mask-image: radial-gradient(circle at var(--tap-x, 50%) var(--tap-y, 50%), transparent calc(var(--tap-r) - 34px), #000 calc(var(--tap-r) - 16px), #000 var(--tap-r), transparent calc(var(--tap-r) + 18px));
+    }
+  .startsida-tryck.spela {
+    animation: startsida-tryck 0.9s ease-out forwards;
+    }
+  @keyframes startsida-ringar {
+    0% { --ring-r: 0px; opacity: 1; }
+    40% { opacity: 0.9; }
+    72%, 100% { --ring-r: 1100px; opacity: 0; }
+  }
+  @keyframes startsida-tryck {
+    0% { --tap-r: 0px; opacity: 1; }
+    100% { --tap-r: 220px; opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .startsida-vag {
+    .startsida-ringar,
+    .startsida-ficklampa,
+    .startsida-tryck {
       display: none;
       }
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+}
+
+/* Ringarnas och tryckets storlek på startsidan (startsida-ringar, startsida-tryck), registrerade så att de går att
+   animera i en mask. */
+@property --ring-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tap-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
 }
