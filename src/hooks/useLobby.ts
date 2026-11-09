@@ -332,6 +332,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const table = stateRef.current.tantpanik
       if (!table) return
       for (const id of table.order) {
+        // Botarna finns bara hos värden, så deras händer skickas aldrig i kanalen.
+        if (stateRef.current.players[id]?.bot) continue
         const view = myTantView(secrets, table, id)
         const json = JSON.stringify(view)
         if (sentHandsRef.current[id] === json) continue
