@@ -22,7 +22,7 @@ function eyesFor(figure: BlobFigure): Eyes {
 const LINE = { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
 function Stroke({ d, width = 7 }: { d: string; width?: number }) {
-  return <path d={d} {...LINE} strokeWidth={width} className="stroke-foreground" />
+  return <path d={d} {...LINE} strokeWidth={width} className="stroke-current" />
 }
 
 // Munnen och det som hör till den. Hos Ögat flyttas den ned, under det stora ögat.
@@ -153,7 +153,7 @@ function Sleeping({ figure }: { figure: BlobFigure }) {
     <>
       <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 2}Q${x} ${EYE_Y + 14 * s} ${x + 20 * s} ${EYE_Y + 2}`} width={6} />
       <Mouth eyes={eyes}>
-        <ellipse cx="100" cy="150" rx="6" ry="7" className="fill-foreground" />
+        <ellipse cx="100" cy="150" rx="6" ry="7" className="fill-current" />
       </Mouth>
     </>
   )
@@ -179,7 +179,7 @@ function Accused({ figure }: { figure: BlobFigure }) {
       <OpenEyes eyes={eyes} r={27} pupil={7} />
       <Brows eyes={eyes} left="M44 74Q70 58 96 70" right="M104 70Q130 58 156 74" single="M58 50Q100 32 142 50" />
       <Mouth eyes={eyes}>
-        <ellipse cx="100" cy="154" rx="11" ry="13" className="fill-foreground" />
+        <ellipse cx="100" cy="154" rx="11" ry="13" className="fill-current" />
       </Mouth>
       <path d="M164 62Q174 80 164 88Q154 80 164 62Z" className="fill-sky" />
     </>
@@ -213,7 +213,7 @@ function Won({ figure }: { figure: BlobFigure }) {
     <>
       <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 6 * s}Q${x} ${EYE_Y - 20 * s} ${x + 20 * s} ${EYE_Y + 6 * s}`} width={9} />
       <Mouth eyes={eyes}>
-        <path d="M76 136Q100 142 124 136Q120 166 100 166Q80 166 76 136Z" className="fill-foreground" />
+        <path d="M76 136Q100 142 124 136Q120 166 100 166Q80 166 76 136Z" className="fill-current" />
         <ellipse cx="100" cy="158" rx="13" ry="6.5" className="fill-coral-soft" />
       </Mouth>
     </>
@@ -243,7 +243,7 @@ function Sulky({ figure }: { figure: BlobFigure }) {
       <Brows eyes={eyes} left="M44 74L96 90" right="M104 90L156 74" single="M54 52L100 68L146 52" />
       <Mouth eyes={eyes}>
         <Stroke d="M88 156Q100 146 112 156" />
-        <ellipse cx="119" cy="154" rx="4" ry="3" className="fill-foreground" />
+        <ellipse cx="119" cy="154" rx="4" ry="3" className="fill-current" />
       </Mouth>
     </>
   )

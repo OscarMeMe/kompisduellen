@@ -67,6 +67,22 @@ export function FigurerPage() {
         </ul>
       </section>
 
+      <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Krona och klänning">
+        <h2 className="text-xl">Krona och klänning</h2>
+        <p className="text-sm text-muted-foreground">
+          Som vinnaren på Exploderande Tanters slutskärm (krona och tantklänning) och den som vann senast i väntrummet (bara
+          klänningen).
+        </p>
+        <ul className="grid grid-cols-3 gap-4 sm:grid-cols-6">
+          {BLOBS.map((blob) => (
+            <li key={blob.id} className="flex flex-col items-center gap-1 text-center">
+              <Figur figure={blob} mood="vann" crown dress className="block text-6xl" />
+              <span className="text-sm font-semibold">{blob.name}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="space-y-3 rounded-lg border bg-card p-4 shadow-soft" aria-label="Blobbarna i liten storlek">
         <h2 className="text-xl">Blobbarna i liten storlek</h2>
         <p className="text-sm text-muted-foreground">Alla tolv bredvid varandra, som i spelarlistorna. Inga två ska gå att blanda ihop.</p>

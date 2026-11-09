@@ -24,7 +24,8 @@ export default defineConfig(({ isSsrBuild }) => ({
         registerType: 'autoUpdate',
         // Registreras i src/lib/pwa.ts.
         injectRegister: false,
-        includeAssets: ['favicon.png', 'apple-touch-icon.png', 'emoji/*.png'],
+        // Figurernas bilder sparas också, så att blobbarna syns även utan nät.
+        includeAssets: ['favicon.png', 'apple-touch-icon.png', 'emoji/*.png', 'figurer/*.webp'],
         manifest: {
           name: 'Kompisduellen',
           short_name: 'Kompisduellen',

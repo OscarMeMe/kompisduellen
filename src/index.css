@@ -909,56 +909,58 @@
     /* Blobbarnas kroppar: högdager (-ljus), bas och skugga (-mork). Basen skiljer sig tydligt från alla andras, så att
        figurerna går att skilja åt i emoji-storlek (testet i figurer.test.ts mäter det). Står fast i det mörka läget. */
     /* Klumpen, korall */
-    --figur-klump-ljus: oklch(0.82 0.13 32);
-    --figur-klump: oklch(0.68 0.18 30);
-    --figur-klump-mork: oklch(0.5 0.16 28);
+    --figur-klump-ljus: oklch(0.779 0.127 25);
+    --figur-klump: oklch(0.679 0.169 25);
+    --figur-klump-mork: oklch(0.529 0.161 25);
     /* Bråkis, vinröd */
-    --figur-brak-ljus: oklch(0.58 0.14 18);
-    --figur-brak: oklch(0.44 0.15 15);
-    --figur-brak-mork: oklch(0.32 0.11 15);
+    --figur-brak-ljus: oklch(0.470 0.101 22);
+    --figur-brak: oklch(0.370 0.134 22);
+    --figur-brak-mork: oklch(0.220 0.127 22);
     /* Burret, bärnsten */
-    --figur-burr-ljus: oklch(0.88 0.11 78);
-    --figur-burr: oklch(0.78 0.16 70);
-    --figur-burr-mork: oklch(0.62 0.15 62);
+    --figur-burr-ljus: oklch(0.798 0.134 42);
+    --figur-burr: oklch(0.698 0.179 42);
+    --figur-burr-mork: oklch(0.548 0.170 42);
     /* Ögat, gul */
-    --figur-oga-ljus: oklch(0.95 0.1 104);
-    --figur-oga: oklch(0.89 0.16 100);
-    --figur-oga-mork: oklch(0.74 0.15 92);
+    --figur-oga-ljus: oklch(0.970 0.138 99);
+    --figur-oga: oklch(0.892 0.184 99);
+    --figur-oga-mork: oklch(0.742 0.175 99);
     /* Plugghästen, lime */
-    --figur-plugg-ljus: oklch(0.9 0.12 138);
-    --figur-plugg: oklch(0.8 0.19 142);
-    --figur-plugg-mork: oklch(0.62 0.17 145);
+    --figur-plugg-ljus: oklch(0.875 0.178 139);
+    --figur-plugg: oklch(0.775 0.237 139);
+    --figur-plugg-mork: oklch(0.625 0.225 139);
     /* Kungen, skogsgrön */
-    --figur-kung-ljus: oklch(0.67 0.1 156);
-    --figur-kung: oklch(0.52 0.12 158);
-    --figur-kung-mork: oklch(0.38 0.09 160);
+    --figur-kung-ljus: oklch(0.905 0.061 152);
+    --figur-kung: oklch(0.805 0.082 152);
+    --figur-kung-mork: oklch(0.655 0.078 152);
     /* Smältis, turkos */
-    --figur-smalt-ljus: oklch(0.87 0.08 195);
-    --figur-smalt: oklch(0.75 0.12 195);
-    --figur-smalt-mork: oklch(0.57 0.1 200);
+    --figur-smalt-ljus: oklch(0.970 0.069 186);
+    --figur-smalt: oklch(0.889 0.092 186);
+    --figur-smalt-mork: oklch(0.739 0.087 186);
     /* Droppan, blå */
-    --figur-droppe-ljus: oklch(0.76 0.11 252);
-    --figur-droppe: oklch(0.6 0.17 258);
-    --figur-droppe-mork: oklch(0.44 0.15 262);
+    --figur-droppe-ljus: oklch(0.788 0.126 244);
+    --figur-droppe: oklch(0.688 0.168 244);
+    --figur-droppe-mork: oklch(0.538 0.160 244);
     /* Sjusovaren, lila */
-    --figur-sova-ljus: oklch(0.78 0.1 305);
-    --figur-sova: oklch(0.62 0.15 305);
-    --figur-sova-mork: oklch(0.46 0.13 305);
+    --figur-sova-ljus: oklch(0.736 0.128 321);
+    --figur-sova: oklch(0.636 0.170 321);
+    --figur-sova-mork: oklch(0.486 0.162 321);
     /* Festis, magenta */
-    --figur-fest-ljus: oklch(0.76 0.16 350);
-    --figur-fest: oklch(0.62 0.22 350);
-    --figur-fest-mork: oklch(0.48 0.19 350);
+    --figur-fest-ljus: oklch(0.747 0.191 358);
+    --figur-fest: oklch(0.647 0.254 358);
+    --figur-fest-mork: oklch(0.497 0.241 358);
     /* Blygis, ljusrosa */
-    --figur-blyg-ljus: oklch(0.94 0.04 15);
-    --figur-blyg: oklch(0.86 0.085 12);
-    --figur-blyg-mork: oklch(0.68 0.12 10);
+    --figur-blyg-ljus: oklch(0.943 0.061 1);
+    --figur-blyg: oklch(0.843 0.081 1);
+    --figur-blyg-mork: oklch(0.693 0.077 1);
     /* Spionen, grå */
-    --figur-spion-ljus: oklch(0.84 0.008 260);
-    --figur-spion: oklch(0.66 0.012 260);
-    --figur-spion-mork: oklch(0.46 0.014 260);
+    --figur-spion-ljus: oklch(0.415 0.086 266);
+    --figur-spion: oklch(0.315 0.115 266);
+    --figur-spion-mork: oklch(0.200 0.109 266);
     --figur-svart: oklch(0.22 0.012 260);
     /* Kinderna på alla blobbar, och prylarnas färger (Kroppar.tsx, Armar.tsx). */
     --figur-kind: oklch(0.72 0.17 18);
+    /* Munnen och linjerna i ansiktet på de mörka figurerna (Spionen, Bråkis), så att de syns. */
+    --figur-ansikte-ljus: oklch(0.95 0.03 85);
     --pryl-keps: oklch(0.6 0.15 250);
     --pryl-keps-mork: oklch(0.46 0.14 254);
     --pryl-tuggummi: oklch(0.84 0.12 345);

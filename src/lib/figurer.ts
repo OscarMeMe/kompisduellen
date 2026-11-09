@@ -33,9 +33,15 @@ export const MOOD_MOTION: Record<Mood, string> = {
 // Hur frontlagret (t.ex. glasögon) hamnar snett med en viss min, i figurens koordinater (200 × 200).
 export type FrontTilt = { rotate: number; x: number; y: number }
 
-// Kroppen är antingen ritad i kod (Kroppar.tsx) eller en bild på 200 × 200 punkter i samma koordinater. frontSrc är
-// det som ligger över minen, som glasögonen.
-export type BlobBody = { kind: 'svg' } | { kind: 'png'; src: string; frontSrc?: string }
+// Kroppen är antingen ritad i kod (Kroppar.tsx) eller en bild på 200 × 200 punkter i samma koordinater (public/figurer/,
+// förberedda med scripts/figurbilder.py). smallSrc är samma bild i liten storlek, för emoji-storlek. frontSrc är det som
+// ligger över minen, om det är en bild.
+export type BlobBody = { kind: 'svg' } | { kind: 'png'; src: string; smallSrc?: string; frontSrc?: string }
+
+// Var ansiktet sitter på en figur som bild: ansiktets mitt (x, y) och hur stort det är (scale) i figurens koordinater.
+// Bilderna är olika (Blygis har huvan runt ansiktet, Spionen kragen nedanför, Smältis sitter lägre), så varje figur har
+// sin egen placering mitt i den släta ytan.
+export type FacePlacement = { x: number; y: number; scale: number }
 
 // Kroppens form. Ansiktet sitter på samma ställe i alla, så att minerna passar.
 export type BlobShape = 'blob' | 'droppe' | 'smalt'
@@ -66,9 +72,11 @@ export type BlobFigure = {
   // En tunn kant i figurens mörka färg, för en ljus figur som annars försvinner mot den ljusa bakgrunden.
   outline?: boolean
   body: BlobBody
+  face?: FacePlacement
   // Små drag i minen. crossEyed och sleepy gäller bara öppna ögon. cyclops = ett enda stort öga i alla miner.
-  // haughty = dömande blick när figuren väntar i väntrummet (Kungen).
-  traits?: { crossEyed?: boolean; sleepy?: boolean; cyclops?: boolean; haughty?: boolean }
+  // haughty = dömande blick när figuren väntar i väntrummet (Kungen). lightFace = mun och linjer i en ljus färg, så att
+  // de syns på en mörk figur (Spionen, Bråkis).
+  traits?: { crossEyed?: boolean; sleepy?: boolean; cyclops?: boolean; haughty?: boolean; lightFace?: boolean }
   // Repliken när man väljer figuren, och figurens egen rörelse i väntrummet (tom = står still). Rörelserna ligger i
   // index.css och använder bara transform och opacity, så att tio figurer inte blir tunga på en mobil.
   line: string
@@ -81,7 +89,8 @@ function colors(name: string): BlobFigure['palette'] {
   return { light: `var(--figur-${name}-ljus)`, base: `var(--figur-${name})`, dark: `var(--figur-${name}-mork)` }
 }
 
-const SVG: BlobBody = { kind: 'svg' }
+// Kroppen som bild, i stor och liten storlek (scripts/figurbilder.py).
+const picture = (id: BlobId): BlobBody => ({ kind: 'png', src: `/figurer/${id}.webp`, smallSrc: `/figurer/${id}-liten.webp` })
 
 export const BLOBS: readonly BlobFigure[] = [
   {
@@ -89,7 +98,8 @@ export const BLOBS: readonly BlobFigure[] = [
     emoji: '🤪',
     name: 'Klumpen',
     palette: colors('klump'),
-    body: SVG,
+    body: picture('klumpen'),
+    face: { x: 100, y: 134, scale: 0.8 },
     traits: { crossEyed: true },
     // Keps bak och fram och en tuggummibubbla som blåses upp och spricker i väntrummet.
     line: 'Lugn, jag kör på känsla.',
@@ -100,7 +110,9 @@ export const BLOBS: readonly BlobFigure[] = [
     emoji: '🎩',
     name: 'Spionen',
     palette: colors('spion'),
-    body: SVG,
+    body: picture('spionen'),
+    face: { x: 100, y: 96, scale: 0.72 },
+    traits: { lightFace: true },
     // Glasögonen döljer ögonen. När något händer hamnar de snett, så att reaktionen syns.
     frontTilt: {
       anklagad: { rotate: 14, x: 14, y: 8 },
@@ -115,7 +127,8 @@ export const BLOBS: readonly BlobFigure[] = [
     emoji: '😴',
     name: 'Sjusovaren',
     palette: colors('sova'),
-    body: SVG,
+    body: picture('sjusovaren'),
+    face: { x: 100, y: 125, scale: 0.85 },
     traits: { sleepy: true },
     // Sovmask i pannan (över ögonen när den sover) och kudd-märke på kinden. Nickar till och rycker upp sig.
     line: 'Väck mig när det är min tur.',
@@ -127,7 +140,8 @@ export const BLOBS: readonly BlobFigure[] = [
     name: 'Droppan',
     palette: colors('droppe'),
     shape: 'droppe',
-    body: SVG,
+    body: picture('droppan'),
+    face: { x: 100, y: 130, scale: 0.82 },
     // Badmössa och simglasögon. Fryser och darrar.
     line: 'Vattnet var iskallt, men jag kör ändå.',
     idle: 'motion-safe:animate-blob-tremble',
@@ -138,18 +152,30 @@ export const BLOBS: readonly BlobFigure[] = [
     emoji: '🥳',
     name: 'Festis',
     palette: colors('fest'),
-    body: SVG,
+    body: picture('festis'),
+    face: { x: 100, y: 110, scale: 0.75 },
     line: 'Vem har lagt på den här låten? Snyggt.',
     idle: 'motion-safe:animate-blob-dance',
   },
   // Sned krona, guldkedja och vinpokal. Står still och dömer: ingen rörelse, bara blicken.
-  { id: 'kungen', emoji: '🤴', name: 'Kungen', palette: colors('kung'), body: SVG, traits: { haughty: true }, line: 'Jag har sett bättre gissningar.', idle: '' },
+  {
+    id: 'kungen',
+    emoji: '🤴',
+    name: 'Kungen',
+    palette: colors('kung'),
+    body: picture('kungen'),
+    face: { x: 100, y: 105, scale: 0.75 },
+    traits: { haughty: true },
+    line: 'Jag har sett bättre gissningar.',
+    idle: '',
+  },
   {
     id: 'ogat',
     emoji: '🧿',
     name: 'Ögat',
     palette: colors('oga'),
-    body: SVG,
+    body: picture('ogat'),
+    face: { x: 98, y: 138, scale: 0.68 },
     traits: { cyclops: true },
     // Monokel och hög hatt. Monokeln åker snett när den träffas.
     frontTilt: { traffad: { rotate: 22, x: 14, y: 14 } },
@@ -157,18 +183,48 @@ export const BLOBS: readonly BlobFigure[] = [
     idle: 'motion-safe:animate-blob-idle',
   },
   // Svettband och armband i 80-talsstil. Kör aerobics.
-  { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG, line: 'Ni andra är för stela.', idle: 'motion-safe:animate-blob-aerobic' },
+  {
+    id: 'burret',
+    emoji: '🦔',
+    name: 'Burret',
+    palette: colors('burr'),
+    body: picture('burret'),
+    face: { x: 100, y: 130, scale: 0.8 },
+    line: 'Ni andra är för stela.',
+    idle: 'motion-safe:animate-blob-aerobic',
+  },
   // Mössa, cigarett i mungipan och rökringar i väntrummet. Stampar.
-  { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG, line: 'Vad glor du på?', idle: 'motion-safe:animate-blob-stomp' },
+  {
+    id: 'brakis',
+    emoji: '😈',
+    name: 'Bråkis',
+    palette: colors('brak'),
+    body: picture('brakis'),
+    face: { x: 98, y: 138, scale: 0.75 },
+    traits: { lightFace: true },
+    line: 'Vad glor du på?',
+    idle: 'motion-safe:animate-blob-stomp',
+  },
   // Luvtröja med huvan uppe, hörlurar och mobilen i handen. Duckar och kikar fram.
-  { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG, line: 'Jag är bara här för snacksen.', idle: 'motion-safe:animate-blob-peek' },
+  {
+    id: 'blygis',
+    emoji: '😳',
+    name: 'Blygis',
+    palette: colors('blyg'),
+    outline: true,
+    body: picture('blygis'),
+    face: { x: 100, y: 104, scale: 0.64 },
+    line: 'Jag är bara här för snacksen.',
+    idle: 'motion-safe:animate-blob-peek',
+  },
   {
     id: 'smaltis',
     emoji: '🧊',
     name: 'Smältis',
     palette: colors('smalt'),
     shape: 'smalt',
-    body: SVG,
+    body: picture('smaltis'),
+    face: { x: 98, y: 118, scale: 0.82 },
     // Glasstrut som droppar och solkräm på näsan.
     line: 'Det är för varmt här inne.',
     idle: 'motion-safe:animate-blob-idle',
@@ -178,7 +234,8 @@ export const BLOBS: readonly BlobFigure[] = [
     emoji: '🤓',
     name: 'Plugghästen',
     palette: colors('plugg'),
-    body: SVG,
+    body: picture('plugghasten'),
+    face: { x: 100, y: 135, scale: 0.8 },
     // De stora glasögonen åker snett när den träffas.
     frontTilt: { traffad: { rotate: -14, x: -6, y: 10 } },
     // Propellerkeps (propellern snurrar i väntrummet), glasögonen och pennor i fickan.

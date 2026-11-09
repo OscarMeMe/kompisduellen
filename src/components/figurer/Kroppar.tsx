@@ -486,6 +486,47 @@ function Cigarette({ at, smoke }: { at: [number, number]; smoke: boolean }) {
   )
 }
 
+// Främre lagret för en figur som bild: det som fortfarande ritas i koden över ansiktet, i ansiktets koordinater.
+// Spionens solglasögon, Plugghästens glasögon och Klumpens tuggummibubbla (bara när den väntar, och den blåses upp och
+// spricker i väntrummet). Resten (Ögats monokel, Bråkis cigarett, Sjusovarens mask) finns i bilden.
+export function PictureFront({ figure, mood, lively }: { figure: BlobFigure; mood: Mood; lively: boolean }) {
+  if (figure.id === 'spionen') return <Sunglasses />
+  if (figure.id === 'plugghasten') return <BigGlasses lively={lively} />
+  if (figure.id === 'klumpen' && mood === 'vantar') return <GumBubble lively={lively} />
+  return null
+}
+
+// Kontaktskuggan under en figur som bild, och de rosiga kinderna i ansiktets koordinater.
+export function PictureShadow({ uid }: { uid: string }) {
+  return (
+    <>
+      <defs>
+        <radialGradient id={`${uid}-kontakt`}>
+          <stop offset="0%" style={{ stopColor: 'var(--foreground)', stopOpacity: 0.4 }} />
+          <stop offset="60%" style={{ stopColor: 'var(--foreground)', stopOpacity: 0.16 }} />
+          <stop offset="100%" style={{ stopColor: 'var(--foreground)', stopOpacity: 0 }} />
+        </radialGradient>
+      </defs>
+      <ellipse cx="100" cy="186" rx="70" ry="9" fill={`url(#${uid}-kontakt)`} />
+    </>
+  )
+}
+
+export function PictureCheeks({ figure, uid }: { figure: BlobFigure; uid: string }) {
+  return (
+    <>
+      <defs>
+        <radialGradient id={`${uid}-kind`}>
+          <stop offset="0%" style={{ stopColor: 'var(--figur-kind)', stopOpacity: 0.85 }} />
+          <stop offset="60%" style={{ stopColor: 'var(--figur-kind)', stopOpacity: 0.45 }} />
+          <stop offset="100%" style={{ stopColor: 'var(--figur-kind)', stopOpacity: 0 }} />
+        </radialGradient>
+      </defs>
+      <Cheeks figure={figure} uid={uid} />
+    </>
+  )
+}
+
 // Främre lagret: prylar över minen. mood behövs för det som sitter i munnen, asleep för Sjusovarens mask.
 export function DrawnFront({ figure, mood = 'vantar', lively = false, asleep = false }: { figure: BlobFigure; mood?: Mood; lively?: boolean; asleep?: boolean }) {
   switch (figure.id) {
