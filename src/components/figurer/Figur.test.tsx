@@ -56,6 +56,53 @@ describe('Figur', () => {
   })
 })
 
+describe('armar och prylar', () => {
+  const arms = (blob: BlobFigure, mood: (typeof MOODS)[number]) => layer(renderToStaticMarkup(<Figur figure={blob} mood={mood} />), 'armar')
+
+  it('ger alla tolv armar som följer minen', () => {
+    for (const blob of BLOBS) {
+      const poses = new Set(MOODS.map((mood) => arms(blob, mood)))
+      expect(poses.size, blob.name).toBe(MOODS.length)
+      for (const mood of MOODS) expect(arms(blob, mood), `${blob.name} ${mood}`).toMatch(/<path/)
+    }
+  })
+
+  it('låter en kropp som bild ha egna armar', () => {
+    const png: BlobFigure = { ...BLOBS[0], body: { kind: 'png', src: '/figurer/klump.png' } }
+    expect(arms(png, 'vann')).not.toMatch(/<path|<circle/)
+  })
+
+  it('ritar inga filter och rör prylarna bara i väntrummet', () => {
+    for (const blob of BLOBS) {
+      for (const mood of MOODS) {
+        const html = renderToStaticMarkup(<Figur figure={blob} mood={mood} />)
+        expect(html, blob.name).not.toMatch(/<filter|filter=/)
+        expect(html, blob.name).not.toContain('animate-blob')
+      }
+    }
+    const lively = (id: string) => renderToStaticMarkup(<Figur figure={BLOBS.find((blob) => blob.id === id)!} animated lively />)
+    expect(lively('klumpen')).toContain('motion-safe:animate-blob-bubble')
+    expect(lively('brakis')).toContain('motion-safe:animate-blob-smoke')
+    expect(lively('plugghasten')).toContain('motion-safe:animate-blob-propeller')
+  })
+
+  it('drar ned Sjusovarens sovmask över ögonen när den sover', () => {
+    const sova = BLOBS.find((blob) => blob.id === 'sjusovaren')!
+    expect(layer(renderToStaticMarkup(<Figur figure={sova} animated lively asleep />), 'fram')).toContain('pryl-sovmask')
+    expect(layer(renderToStaticMarkup(<Figur figure={sova} animated lively />), 'fram')).not.toContain('pryl-sovmask')
+  })
+
+  it('har kvar tantklänningen och vinnarkronan, under och över armarna', () => {
+    for (const blob of BLOBS) {
+      const html = renderToStaticMarkup(<Figur figure={blob} mood="vann" dress crown />)
+      const armsAt = html.indexOf('data-lager="armar"')
+      expect(html.indexOf('var(--klanning)'), blob.name).toBeGreaterThan(-1)
+      expect(html.indexOf('var(--klanning)'), blob.name).toBeLessThan(armsAt)
+      expect(html.lastIndexOf('var(--tant-guld)'), blob.name).toBeGreaterThan(armsAt)
+    }
+  })
+})
+
 describe('Emoji med blobbar', () => {
   it('ritar en blobb stilla för blobbens värde, även med variantväljare', () => {
     for (const blob of BLOBS) {
@@ -83,7 +130,8 @@ describe('de nya minerna och personligheterna', () => {
       expect(html).toContain('motion-safe:animate-blob-sulk')
     }
     const ogat = BLOBS.find((blob) => blob.id === 'ogat')!
-    expect((layer(renderToStaticMarkup(<Figur figure={ogat} mood="sur" />), 'min').match(/<circle/g) ?? []).length).toBe(2)
+    // En pupill (ljuspunkterna i ögat räknas inte).
+    expect((layer(renderToStaticMarkup(<Figur figure={ogat} mood="sur" />), 'min').match(/<circle[^>]*fill-foreground/g) ?? []).length).toBe(1)
   })
 
   it('smälter vid utröstad', () => {

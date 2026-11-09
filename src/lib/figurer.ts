@@ -91,7 +91,8 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('klump'),
     body: SVG,
     traits: { crossEyed: true },
-    line: 'Jag fattar inte reglerna, men jag är taggad.',
+    // Keps bak och fram och en tuggummibubbla som blåses upp och spricker i väntrummet.
+    line: 'Lugn, jag kör på känsla.',
     idle: 'motion-safe:animate-blob-bounce',
   },
   {
@@ -105,7 +106,8 @@ export const BLOBS: readonly BlobFigure[] = [
       anklagad: { rotate: 14, x: 14, y: 8 },
       traffad: { rotate: -30, x: -24, y: 6 },
     },
-    line: 'Du såg mig inte.',
+    // Solglasögon, uppfälld rockkrage och hörsnäcka.
+    line: 'Jag var aldrig här.',
     idle: 'motion-safe:animate-blob-glance',
   },
   {
@@ -115,8 +117,9 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('sova'),
     body: SVG,
     traits: { sleepy: true },
+    // Sovmask i pannan (över ögonen när den sover) och kudd-märke på kinden. Nickar till och rycker upp sig.
     line: 'Väck mig när det är min tur.',
-    idle: 'motion-safe:animate-blob-idle',
+    idle: 'motion-safe:animate-blob-nod',
   },
   {
     id: 'droppan',
@@ -125,12 +128,22 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('droppe'),
     shape: 'droppe',
     body: SVG,
-    line: 'Det här slutar med tårar.',
+    // Badmössa och simglasögon. Fryser och darrar.
+    line: 'Vattnet var iskallt, men jag kör ändå.',
     idle: 'motion-safe:animate-blob-tremble',
   },
-  { id: 'festis', emoji: '🥳', name: 'Festis', palette: colors('fest'), body: SVG, line: 'Är det här förfesten?', idle: 'motion-safe:animate-blob-dance' },
-  // Kungen står still och dömer: ingen rörelse, bara blicken.
-  { id: 'kungen', emoji: '🤴', name: 'Kungen', palette: colors('kung'), body: SVG, traits: { haughty: true }, line: 'Ni får gärna buga.', idle: '' },
+  // Solglasögon på huvudet, blomsterkrans och en drink med paraply. Dansar.
+  {
+    id: 'festis',
+    emoji: '🥳',
+    name: 'Festis',
+    palette: colors('fest'),
+    body: SVG,
+    line: 'Vem har lagt på den här låten? Snyggt.',
+    idle: 'motion-safe:animate-blob-dance',
+  },
+  // Sned krona, guldkedja och vinpokal. Står still och dömer: ingen rörelse, bara blicken.
+  { id: 'kungen', emoji: '🤴', name: 'Kungen', palette: colors('kung'), body: SVG, traits: { haughty: true }, line: 'Jag har sett bättre gissningar.', idle: '' },
   {
     id: 'ogat',
     emoji: '🧿',
@@ -138,12 +151,17 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('oga'),
     body: SVG,
     traits: { cyclops: true },
-    line: 'Jag såg det där.',
+    // Monokel och hög hatt. Monokeln åker snett när den träffas.
+    frontTilt: { traffad: { rotate: 22, x: 14, y: 14 } },
+    line: 'Jag ser allt. Bokstavligen.',
     idle: 'motion-safe:animate-blob-idle',
   },
-  { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG, line: 'Jag har inte sovit på tre dagar.', idle: 'motion-safe:animate-blob-idle' },
-  { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG, line: 'Vem kastade den där?', idle: 'motion-safe:animate-blob-stomp' },
-  { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG, line: 'Titta inte på mig.', idle: 'motion-safe:animate-blob-peek' },
+  // Svettband och armband i 80-talsstil. Kör aerobics.
+  { id: 'burret', emoji: '🦔', name: 'Burret', palette: colors('burr'), body: SVG, line: 'Ni andra är för stela.', idle: 'motion-safe:animate-blob-aerobic' },
+  // Mössa, cigarett i mungipan, plåster på näsan och rökringar i väntrummet. Stampar.
+  { id: 'brakis', emoji: '😈', name: 'Bråkis', palette: colors('brak'), body: SVG, line: 'Vad glor du på?', idle: 'motion-safe:animate-blob-stomp' },
+  // Luvtröja med huvan uppe, hörlurar och mobilen i handen. Duckar och kikar fram.
+  { id: 'blygis', emoji: '😳', name: 'Blygis', palette: colors('blyg'), outline: true, body: SVG, line: 'Jag är bara här för snacksen.', idle: 'motion-safe:animate-blob-peek' },
   {
     id: 'smaltis',
     emoji: '🧊',
@@ -151,7 +169,8 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('smalt'),
     shape: 'smalt',
     body: SVG,
-    line: 'Ingen stress, jag rinner.',
+    // Glasstrut som droppar och solkräm på näsan.
+    line: 'Det är för varmt här inne.',
     idle: 'motion-safe:animate-blob-idle',
   },
   {
@@ -162,7 +181,8 @@ export const BLOBS: readonly BlobFigure[] = [
     body: SVG,
     // De stora glasögonen åker snett när den träffas.
     frontTilt: { traffad: { rotate: -14, x: -6, y: 10 } },
-    line: 'Rent statistiskt är det du.',
+    // Propellerkeps (propellern snurrar i väntrummet), glasögonen och pennor i fickan.
+    line: 'Statistiskt sett vinner jag.',
     idle: 'motion-safe:animate-blob-idle',
   },
 ]

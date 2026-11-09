@@ -154,6 +154,13 @@
     --animate-blob-glasses: blob-glasses 5s ease-in-out infinite;
     --animate-blob-scan: blob-scan 6s ease-in-out infinite;
     --animate-blob-zzz: blob-zzz 2.6s ease-out infinite;
+    /* Blobbarnas prylar och de nya personligheterna (Kroppar.tsx, figurer.ts): tuggummit blåses upp och spricker, röken
+       stiger, propellern snurrar en stund i taget, Burret kör aerobics och Sjusovaren nickar till. */
+    --animate-blob-bubble: blob-bubble 4s ease-in infinite;
+    --animate-blob-smoke: blob-smoke 3.2s ease-out infinite;
+    --animate-blob-propeller: blob-propeller 3s linear infinite;
+    --animate-blob-aerobic: blob-aerobic 1.8s ease-in-out infinite;
+    --animate-blob-nod: blob-nod 6s ease-in-out infinite;
     /* Väntrummet: figurerna gungar lätt och spelets ikon i rubrikraden rör sig sakta. Undantag från regeln om att
        inget pågår hela tiden. Bara med motion-safe:, så att de står still med "minska rörelse". */
     --animate-sway: sway 3.2s ease-in-out infinite;
@@ -429,6 +436,39 @@
         0% { transform: translate(0, 0) scale(0.7); opacity: 0; }
         20% { opacity: 1; }
         100% { transform: translate(14px, -30px) scale(1.2); opacity: 0; }
+    }
+
+    @keyframes blob-bubble {
+        0%, 10% { transform: scale(0.35); opacity: 1; }
+        72% { transform: scale(1.2); opacity: 1; }
+        76% { transform: scale(1.45); opacity: 0; }
+        100% { transform: scale(0.35); opacity: 0; }
+    }
+
+    @keyframes blob-smoke {
+        0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+        15% { opacity: 0.8; }
+        100% { transform: translate(10px, -44px) scale(1.7); opacity: 0; }
+    }
+
+    @keyframes blob-propeller {
+        0%, 40%, 100% { transform: scaleX(1); }
+        5%, 15%, 25%, 35% { transform: scaleX(-1); }
+        10%, 20%, 30% { transform: scaleX(1); }
+    }
+
+    @keyframes blob-aerobic {
+        0%, 100% { transform: translateX(0) rotate(0deg); }
+        25% { transform: translateX(-6px) rotate(-7deg); }
+        50% { transform: translateY(-8px) scale(0.97, 1.04); }
+        75% { transform: translateX(6px) rotate(7deg); }
+    }
+
+    @keyframes blob-nod {
+        0%, 55%, 100% { transform: rotate(0deg) translateY(0); }
+        70% { transform: rotate(-9deg) translateY(4px); }
+        74% { transform: rotate(2deg) translateY(-3px); }
+        80% { transform: rotate(0deg) translateY(0); }
     }
 
     @keyframes blob-sink {
@@ -915,6 +955,34 @@
     --figur-spion: oklch(0.66 0.012 260);
     --figur-spion-mork: oklch(0.46 0.014 260);
     --figur-svart: oklch(0.22 0.012 260);
+    /* Kinderna på alla blobbar, och prylarnas färger (Kroppar.tsx, Armar.tsx). */
+    --figur-kind: oklch(0.72 0.17 18);
+    --pryl-keps: oklch(0.6 0.15 250);
+    --pryl-keps-mork: oklch(0.46 0.14 254);
+    --pryl-tuggummi: oklch(0.84 0.12 345);
+    --pryl-tuggummi-mork: oklch(0.7 0.16 345);
+    --pryl-rock: oklch(0.74 0.07 78);
+    --pryl-rock-mork: oklch(0.6 0.07 70);
+    --pryl-sovmask: oklch(0.85 0.08 350);
+    --pryl-sovmask-mork: oklch(0.62 0.12 350);
+    --pryl-badmossa: oklch(0.82 0.12 20);
+    --pryl-badmossa-mork: oklch(0.66 0.14 20);
+    --pryl-simglas: oklch(0.7 0.15 160);
+    --pryl-vin: oklch(0.42 0.16 15);
+    --pryl-neon: oklch(0.66 0.26 350);
+    --pryl-turkos: oklch(0.78 0.13 190);
+    --pryl-plaster: oklch(0.86 0.06 70);
+    --pryl-plaster-mork: oklch(0.78 0.06 65);
+    --pryl-mossa: oklch(0.3 0.02 260);
+    --pryl-mossa-ljus: oklch(0.38 0.025 260);
+    --pryl-luren: oklch(0.3 0.02 260);
+    --pryl-luva: oklch(0.58 0.13 5);
+    --pryl-luva-ljus: oklch(0.72 0.12 8);
+    --pryl-luva-kant: oklch(0.45 0.11 5);
+    --pryl-strut: oklch(0.74 0.11 68);
+    --pryl-strut-mork: oklch(0.56 0.1 60);
+    --pryl-glass: oklch(0.84 0.1 350);
+    --pryl-penna: oklch(0.85 0.14 90);
     --wood: oklch(0.74 0.085 65);
     --felt: oklch(0.9 0.06 165);
     --tant-vin: oklch(0.34 0.1 12);

@@ -48,6 +48,20 @@ function OpenEyes({
           <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
           <g className={pupilClass}>
             <circle cx={x + (look[i] ?? 0) * eyes.scale} cy={EYE_Y + 1} r={pupil * eyes.scale} className="fill-foreground" />
+            {/* Glansen i ögat: en stor och en liten ljuspunkt, som följer pupillen. */}
+            <circle
+              cx={x + ((look[i] ?? 0) + pupil * 0.42) * eyes.scale}
+              cy={EYE_Y + 1 - pupil * 0.45 * eyes.scale}
+              r={Math.max(1.6, pupil * 0.42 * eyes.scale)}
+              className="fill-card"
+            />
+            <circle
+              cx={x + ((look[i] ?? 0) - pupil * 0.35) * eyes.scale}
+              cy={EYE_Y + 1 + pupil * 0.4 * eyes.scale}
+              r={Math.max(0.9, pupil * 0.2 * eyes.scale)}
+              className="fill-card"
+              opacity="0.75"
+            />
           </g>
           {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
         </g>
