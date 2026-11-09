@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addPlayers, initialState, resolveRound, startGame, type GameState } from '@/lib/match'
+import { addPlayers, initialState, resolveRound, setRounds, startGame, type GameState } from '@/lib/match'
 import { pickSuccessor, shouldYieldHost, takeOverState } from '@/lib/vardbyte'
 
 const player = (id: string, joinedAt: number, host = false) => ({ id, host, joinedAt })
@@ -81,5 +81,16 @@ describe('tillståndet när en ny värd tar över', () => {
     expect(next.scores).toEqual({ a: 0, b: 0, c: 0 })
     expect(next.notice).toContain('avbröts')
     expect(Object.keys(next.players)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('ger väntrummet tillbaka det valda antalet omgångar när matchen skulle avslutas tidigare', () => {
+    // Imposterjakten: värden valde 5 omgångar och tryckte Avsluta efter den här omgången i omgång 2.
+    const playing: GameState = { ...inRound('gissa-priset', ['a', 'b', 'c']), game: 'imposterjakten', phase: 'playing', round: 2, rounds: 2, savedRounds: 5 }
+    const next = takeOverState(playing, 0)
+    expect(next.rounds).toBe(5)
+    expect(next.savedRounds).toBeNull()
+    // Den nya värdens val gäller i nästa match.
+    const started = startGame(setRounds({ ...next, game: 'gissa-priset' }, 3), ['a', 'b', 'c'], 5000)
+    expect(started.rounds).toBe(3)
   })
 })
