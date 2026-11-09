@@ -13,8 +13,8 @@ const DOT = 1.25
 // Prickarnas vanliga täckning (lite tydligare än förut).
 const ALPHA = 0.24
 // Muspekaren: hur långt bort prickarna påverkas (px) och hur långt de knuffas som mest.
-const REACH = 190
-const PUSH = 44
+const REACH = 250
+const PUSH = 36
 // Ringarna: hur ofta (s), hur länge de växer (s), hur stora de blir (px), hur breda och hur mycket mörkare de är.
 const RING_PERIOD = 10
 const RING_GROW = 8
