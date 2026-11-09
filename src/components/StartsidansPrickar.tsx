@@ -12,9 +12,10 @@ const GRID = 22
 const DOT = 1.25
 // Prickarnas vanliga täckning (lite tydligare än förut).
 const ALPHA = 0.24
-// Muspekaren: hur långt bort prickarna påverkas (px) och hur långt de knuffas som mest.
+// Muspekaren: hur långt bort prickarna påverkas (px) och hur långt de knuffas som mest. Knuffen avtar brant (near ** 3),
+// så att det blir ett tydligt tomrum runt muspekaren medan prickarna längre bort bara rör sig lite.
 const REACH = 250
-const PUSH = 36
+const PUSH = 64
 // Ringarna: hur ofta (s), hur länge de växer (s), hur stora de blir (px), hur breda och hur mycket mörkare de är.
 const RING_PERIOD = 10
 const RING_GROW = 8
@@ -97,7 +98,7 @@ export function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement |
             const distance = Math.hypot(dx, dy)
             if (distance < REACH && distance > 0.1) {
               const near = 1 - distance / REACH
-              const push = PUSH * near * near * pointer.strength
+              const push = PUSH * near ** 3 * pointer.strength
               px += (dx / distance) * push
               py += (dy / distance) * push
             }
