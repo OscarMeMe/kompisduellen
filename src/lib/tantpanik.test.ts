@@ -1230,6 +1230,17 @@ describe('värden i bakgrunden och frånkopplade spelare', () => {
   })
 })
 
+describe('högens antal', () => {
+  it('står still medan någon ordnar de översta korten med Ändra framtiden', () => {
+    let host = setup({ a: ['mobblera'], b: ['fika'] }, ['blanda', 'regnbage', 'kupong', 'tant'])
+    host = settle(play(host, 'a', ['mobblera']))
+    expect(table(host).step).toBe('arrange')
+    expect(table(host).deckCount).toBe(4)
+    host = move(host, 'a', { type: 'tArrange', order: [2, 1, 0] })
+    expect(table(host).deckCount).toBe(4)
+  })
+})
+
 describe('ett drag i taget', () => {
   it('ett Nope! som skickas igen träffar aldrig ett kort som spelats senare', () => {
     let host = setup({ a: ['tjuvkika', 'dubbelpass'], b: ['nadu', 'fika'] }, ['blanda', 'blanda', 'blanda', 'blanda'])

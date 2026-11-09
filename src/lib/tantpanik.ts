@@ -391,7 +391,8 @@ export function sync(host: TantHost): TantHost {
   for (const id of table.order) handCounts[id] = secrets.hands[id]?.length ?? 0
   const next: TantTable = {
     ...table,
-    deckCount: secrets.deck.length,
+    // Korten som ordnas med Ändra framtiden hör till högen, så att antalet står still medan de ordnas.
+    deckCount: secrets.deck.length + secrets.arranging.length,
     discardTop: secrets.discard.slice(-3).map((card) => card.type),
     discardCount: secrets.discard.length,
     handCounts,
