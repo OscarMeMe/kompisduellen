@@ -1,14 +1,22 @@
+import type { ReactNode } from 'react'
 import type { BlobFigure, Mood } from '@/lib/figurer'
 
-// De sju minerna. De är samma för alla figurer och ritas i kroppens koordinater (200 × 200). Ögonen sitter på samma
-// plats i alla miner, så att prylar som glasögon alltid passar. Ögat (cyclops) har ett enda stort öga mitt i ansiktet,
-// och då ritas varje min med det ögat och ett ögonbryn i stället för två.
-const EYE_Y = 108
+// De sju minerna. De är samma för alla figurer och ritas i kroppens koordinater (200 × 200). Ögonen är stora, blanka
+// och sitter på samma plats i alla miner (EYE_X, EYE_Y), så att prylar som glasögon alltid passar. Munnen sitter under
+// ögonen (runt MOUTH_Y). Ögat (cyclops) har ett enda stort öga mitt i ansiktet, och då ritas varje min med det ögat och
+// ett ögonbryn i stället för två, och munnen lite längre ned.
+const EYE_Y = 106
+const EYE_X = [70, 130] as const
+const EYE_R = 25
+// Ögats enda öga är så här mycket större än ett vanligt.
+const CYCLOPS_SCALE = 1.6
+// Hur mycket längre ned munnen sitter hos Ögat.
+const CYCLOPS_MOUTH = 10
 
 type Eyes = { xs: readonly number[]; scale: number; cyclops: boolean }
 
 function eyesFor(figure: BlobFigure): Eyes {
-  return figure.traits?.cyclops ? { xs: [100], scale: 1.7, cyclops: true } : { xs: [78, 122], scale: 1, cyclops: false }
+  return figure.traits?.cyclops ? { xs: [100], scale: CYCLOPS_SCALE, cyclops: true } : { xs: EYE_X, scale: 1, cyclops: false }
 }
 
 const LINE = { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' } as const
@@ -17,12 +25,18 @@ function Stroke({ d, width = 7 }: { d: string; width?: number }) {
   return <path d={d} {...LINE} strokeWidth={width} className="stroke-foreground" />
 }
 
-// Öppna ögon. look flyttar pupillerna åt sidan och lid är ögonlockets färg när ögonen är halvstängda.
-// pupilClass = en rörelse för pupillerna (Ögat som sveper med blicken i väntrummet).
+// Munnen och det som hör till den. Hos Ögat flyttas den ned, under det stora ögat.
+function Mouth({ eyes, children }: { eyes: Eyes; children: ReactNode }) {
+  return eyes.cyclops ? <g transform={`translate(0 ${CYCLOPS_MOUTH})`}>{children}</g> : <>{children}</>
+}
+
+// Öppna ögon: vitt, en stor pupill och två ljuspunkter (en stor och en liten) som följer pupillen. look flyttar
+// pupillerna åt sidan och lid är ögonlockets färg när ögonen är halvstängda. pupilClass = en rörelse för pupillerna
+// (Ögat som sveper med blicken i väntrummet).
 function OpenEyes({
   eyes,
-  r = 14,
-  pupil = 7,
+  r = EYE_R,
+  pupil = 12,
   look = [0, 0],
   lid,
   blink = false,
@@ -37,35 +51,31 @@ function OpenEyes({
   pupilClass?: string
 }) {
   const size = r * eyes.scale
+  const p = pupil * eyes.scale
   return (
     // --blink-delay låter figurer som står bredvid varandra blinka i otakt.
     <g
       className={blink ? 'origin-center [transform-box:fill-box] motion-safe:animate-blob-blink' : undefined}
       style={blink ? { animationDelay: 'var(--blink-delay, 0s)' } : undefined}
     >
-      {eyes.xs.map((x, i) => (
-        <g key={x}>
-          <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
-          <g className={pupilClass}>
-            <circle cx={x + (look[i] ?? 0) * eyes.scale} cy={EYE_Y + 1} r={pupil * eyes.scale} className="fill-foreground" />
-            {/* Glansen i ögat: en stor och en liten ljuspunkt, som följer pupillen. */}
-            <circle
-              cx={x + ((look[i] ?? 0) + pupil * 0.42) * eyes.scale}
-              cy={EYE_Y + 1 - pupil * 0.45 * eyes.scale}
-              r={Math.max(1.6, pupil * 0.42 * eyes.scale)}
-              className="fill-card"
-            />
-            <circle
-              cx={x + ((look[i] ?? 0) - pupil * 0.35) * eyes.scale}
-              cy={EYE_Y + 1 + pupil * 0.4 * eyes.scale}
-              r={Math.max(0.9, pupil * 0.2 * eyes.scale)}
-              className="fill-card"
-              opacity="0.75"
-            />
+      {eyes.xs.map((x, i) => {
+        const px = x + (look[i] ?? 0) * eyes.scale
+        const py = EYE_Y + 2
+        return (
+          <g key={x}>
+            <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
+            {/* En svag skugga nedtill i ögonvitan, så att ögat ser runt ut. */}
+            <path d={`M${x - size * 0.86} ${EYE_Y + size * 0.42}A${size} ${size} 0 0 0 ${x + size * 0.86} ${EYE_Y + size * 0.42}`} className="fill-foreground" opacity="0.08" />
+            <g className={pupilClass}>
+              <circle cx={px} cy={py} r={p} className="fill-foreground" />
+              {/* Glansen: en stor och en liten ljuspunkt. */}
+              <circle cx={px + p * 0.38} cy={py - p * 0.42} r={Math.max(2, p * 0.4)} className="fill-card" />
+              <circle cx={px - p * 0.4} cy={py + p * 0.38} r={Math.max(1, p * 0.18)} className="fill-card" opacity="0.85" />
+            </g>
+            {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
           </g>
-          {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
-        </g>
-      ))}
+        )
+      })}
     </g>
   )
 }
@@ -99,7 +109,7 @@ function Brows({ eyes, left, right, single }: { eyes: Eyes; left: string; right:
 export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1; gaze?: boolean }
 
 // Pupillerna flyttas med CSS-variabler, så att React inte behöver rita om figuren när blicken ändras.
-const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*6px)_calc(var(--gaze-y,0)*4px)]'
+const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*9px)_calc(var(--gaze-y,0)*6px)]'
 
 function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
   const eyes = eyesFor(figure)
@@ -109,15 +119,17 @@ function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: {
   if (lively && haughty) {
     return (
       <>
-        <OpenEyes eyes={eyes} look={[3, 3]} lid={figure.palette.base} pupilClass={gaze ? GAZE_CLASS : undefined} />
-        <Brows eyes={eyes} left="M60 90L92 90" right="M108 82Q124 70 142 80" single="M68 76Q100 66 132 72" />
-        <Stroke d={eyes.cyclops ? 'M88 148L114 146' : 'M88 140L114 137'} />
+        <OpenEyes eyes={eyes} look={[6, 6]} lid={figure.palette.base} pupilClass={gaze ? GAZE_CLASS : undefined} />
+        <Brows eyes={eyes} left="M46 80L94 80" right="M106 72Q130 56 154 68" single="M60 58Q100 46 140 52" />
+        <Mouth eyes={eyes}>
+          <Stroke d="M88 152L114 148" />
+        </Mouth>
       </>
     )
   }
   // Ögat sveper med blicken, eller tittar dit något nyss hände.
   const scan = lively && eyes.cyclops
-  const lookAt = scan && look !== 0 ? [look * 8] : crossEyed ? [5, -5] : [0, 0]
+  const lookAt = scan && look !== 0 ? [look * 12] : crossEyed ? [8, -8] : [0, 0]
   return (
     <>
       <OpenEyes
@@ -127,7 +139,9 @@ function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: {
         blink={animated}
         pupilClass={gaze ? GAZE_CLASS : scan && look === 0 ? 'motion-safe:animate-blob-scan' : undefined}
       />
-      <Stroke d={crossEyed ? 'M78 136Q100 158 122 136' : eyes.cyclops ? 'M84 146Q100 156 116 146' : 'M84 138Q100 150 116 138'} />
+      <Mouth eyes={eyes}>
+        <Stroke d={crossEyed ? 'M80 144Q100 166 120 144' : 'M86 146Q100 158 114 146'} />
+      </Mouth>
     </>
   )
 }
@@ -137,8 +151,10 @@ function Sleeping({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
   return (
     <>
-      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 14 * s} ${EYE_Y}Q${x} ${EYE_Y + 8 * s} ${x + 14 * s} ${EYE_Y}`} width={6} />
-      <ellipse cx="100" cy={eyes.cyclops ? 150 : 142} rx="6" ry="7" className="fill-foreground" />
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 2}Q${x} ${EYE_Y + 14 * s} ${x + 20 * s} ${EYE_Y + 2}`} width={6} />
+      <Mouth eyes={eyes}>
+        <ellipse cx="100" cy="150" rx="6" ry="7" className="fill-foreground" />
+      </Mouth>
     </>
   )
 }
@@ -147,9 +163,11 @@ function Suspicious({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
   return (
     <>
-      <OpenEyes eyes={eyes} look={[6, 6]} lid={figure.palette.base} />
-      <Brows eyes={eyes} left="M58 86L92 92" right="M108 84Q124 72 142 84" single="M66 76L134 68" />
-      <Stroke d={eyes.cyclops ? 'M84 150Q102 144 118 148' : 'M84 142Q102 134 118 140'} />
+      <OpenEyes eyes={eyes} look={[10, 10]} lid={figure.palette.base} />
+      <Brows eyes={eyes} left="M44 78L96 88" right="M104 86Q128 64 156 76" single="M56 56L144 46" />
+      <Mouth eyes={eyes}>
+        <Stroke d="M86 152Q102 144 118 150" />
+      </Mouth>
     </>
   )
 }
@@ -158,10 +176,12 @@ function Accused({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
   return (
     <>
-      <OpenEyes eyes={eyes} r={16} pupil={4} />
-      <Brows eyes={eyes} left="M58 84Q74 72 92 82" right="M108 82Q126 72 142 84" single="M66 72Q100 56 134 72" />
-      <ellipse cx="100" cy={eyes.cyclops ? 154 : 146} rx="10" ry="13" className="fill-foreground" />
-      <path d="M152 74Q160 88 152 94Q144 88 152 74Z" className="fill-sky" />
+      <OpenEyes eyes={eyes} r={27} pupil={7} />
+      <Brows eyes={eyes} left="M44 74Q70 58 96 70" right="M104 70Q130 58 156 74" single="M58 50Q100 32 142 50" />
+      <Mouth eyes={eyes}>
+        <ellipse cx="100" cy="154" rx="11" ry="13" className="fill-foreground" />
+      </Mouth>
+      <path d="M164 62Q174 80 164 88Q154 80 164 62Z" className="fill-sky" />
     </>
   )
 }
@@ -173,30 +193,29 @@ function Hit({ figure }: { figure: BlobFigure }) {
       <EyeStrokes
         eyes={eyes}
         draw={(x, s) => {
-          const d = 11 * s
+          const d = 15 * s
           return `M${x - d} ${EYE_Y - d}L${x + d} ${EYE_Y + d}M${x + d} ${EYE_Y - d}L${x - d} ${EYE_Y + d}`
         }}
+        width={9}
       />
-      <Stroke d={eyes.cyclops ? 'M76 154Q84 142 92 154T108 154T124 154' : 'M76 146Q84 134 92 146T108 146T124 146'} />
-      <path d="M38 74l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z" className="fill-sun" />
-      <path d="M160 66l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" className="fill-sun" />
+      <Mouth eyes={eyes}>
+        <Stroke d="M78 152Q86 140 94 152T110 152T126 152" />
+      </Mouth>
+      <path d="M30 66l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z" className="fill-sun" />
+      <path d="M166 58l3 7 8 1-6 5 2 8-7-4-7 4 2-8-6-5 8-1z" className="fill-sun" />
     </>
   )
 }
 
 function Won({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
-  const mouthY = eyes.cyclops ? 8 : 0
   return (
     <>
-      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 16 * s} ${EYE_Y + 4 * s}Q${x} ${EYE_Y - 16 * s} ${x + 16 * s} ${EYE_Y + 4 * s}`} />
-      <path
-        d={`M72 ${130 + mouthY}Q100 ${136 + mouthY} 128 ${130 + mouthY}Q124 ${166 + mouthY} 100 ${166 + mouthY}Q76 ${166 + mouthY} 72 ${130 + mouthY}Z`}
-        className="fill-foreground"
-      />
-      <ellipse cx="100" cy={156 + mouthY} rx="14" ry="8" className="fill-coral-soft" />
-      <ellipse cx="54" cy="130" rx="11" ry="7" className="fill-coral-soft opacity-70" />
-      <ellipse cx="146" cy="130" rx="11" ry="7" className="fill-coral-soft opacity-70" />
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y + 6 * s}Q${x} ${EYE_Y - 20 * s} ${x + 20 * s} ${EYE_Y + 6 * s}`} width={9} />
+      <Mouth eyes={eyes}>
+        <path d="M76 136Q100 142 124 136Q120 166 100 166Q80 166 76 136Z" className="fill-foreground" />
+        <ellipse cx="100" cy="158" rx="13" ry="6.5" className="fill-coral-soft" />
+      </Mouth>
     </>
   )
 }
@@ -205,10 +224,12 @@ function VotedOut({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
   return (
     <>
-      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 16 * s} ${EYE_Y}Q${x} ${EYE_Y + 12 * s} ${x + 16 * s} ${EYE_Y}`} />
-      <Brows eyes={eyes} left="M60 92L88 82" right="M112 82L140 92" single="M70 82Q100 70 130 82" />
-      <Stroke d={eyes.cyclops ? 'M80 158Q100 140 120 158' : 'M80 152Q100 132 120 152'} />
-      <path d={eyes.cyclops ? 'M82 128Q92 144 82 150Q72 144 82 128Z' : 'M78 122Q88 138 78 144Q68 138 78 122Z'} className="fill-sky" />
+      <EyeStrokes eyes={eyes} draw={(x, s) => `M${x - 20 * s} ${EYE_Y}Q${x} ${EYE_Y + 16 * s} ${x + 20 * s} ${EYE_Y}`} />
+      <Brows eyes={eyes} left="M46 88L88 74" right="M112 74L154 88" single="M60 62Q100 46 140 62" />
+      <Mouth eyes={eyes}>
+        <Stroke d="M80 160Q100 140 120 160" />
+      </Mouth>
+      <path d={eyes.cyclops ? 'M74 136Q84 152 74 158Q64 152 74 136Z' : 'M62 124Q72 140 62 146Q52 140 62 124Z'} className="fill-sky" />
     </>
   )
 }
@@ -218,10 +239,12 @@ function Sulky({ figure }: { figure: BlobFigure }) {
   const eyes = eyesFor(figure)
   return (
     <>
-      <OpenEyes eyes={eyes} look={[-6, -6]} lid={figure.palette.base} />
-      <Brows eyes={eyes} left="M58 82L92 94" right="M108 94L142 82" single="M64 68L100 80L136 68" />
-      <Stroke d={eyes.cyclops ? 'M86 156Q100 146 114 156' : 'M86 148Q100 138 114 148'} />
-      <ellipse cx={eyes.cyclops ? 122 : 120} cy={eyes.cyclops ? 154 : 146} rx="4" ry="3" className="fill-foreground" />
+      <OpenEyes eyes={eyes} look={[-10, -10]} lid={figure.palette.base} />
+      <Brows eyes={eyes} left="M44 74L96 90" right="M104 90L156 74" single="M54 52L100 68L146 52" />
+      <Mouth eyes={eyes}>
+        <Stroke d="M88 156Q100 146 112 156" />
+        <ellipse cx="119" cy="154" rx="4" ry="3" className="fill-foreground" />
+      </Mouth>
     </>
   )
 }
