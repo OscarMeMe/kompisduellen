@@ -50,6 +50,8 @@ export function HomePage() {
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Knappen Välj spel, där ringarna i prickarna sprider sig ifrån.
   const chooseButton = useRef<HTMLButtonElement>(null)
+  // Området med Välj spel och kodfältet: där jublar hero-figurerna.
+  const entryArea = useRef<HTMLDivElement>(null)
   function pointAtGames() {
     const games = document.getElementById('spel')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -73,17 +75,17 @@ export function HomePage() {
       {/* Hero: texten och vägarna in, centrerat på alla skärmar. Figurerna står i en rad ovanför rubriken, och från
           lg två på var sida om den. Luften är så liten att vågen och spelkortens överkant syns direkt på 1366 × 768. */}
       <section className="flex flex-col items-center gap-3 pb-10 sm:pb-12 lg:gap-4 lg:pb-10">
-        <HeroFigurer target={chooseButton} className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:hidden" />
+        <HeroFigurer target={entryArea} className="justify-center -space-x-4 text-[4.4rem] sm:-space-x-5 sm:text-[6rem] lg:hidden" />
         <div className="space-y-4 text-center lg:space-y-5">
           {/* Från lg står två figurer på var sida om rubriken, utanför textens flöde, så att de inte krockar med något. */}
           <div className="relative mx-auto space-y-2 lg:w-[42rem]">
             <HeroFigurer
-              target={chooseButton}
+              target={entryArea}
               only={[0, 1]}
               className="absolute top-1/2 right-full mr-3 hidden -translate-y-1/2 -space-x-4 text-[4.5rem] lg:flex xl:mr-5 xl:-space-x-8 xl:text-[8rem] min-[1360px]:text-[9rem]"
             />
             <HeroFigurer
-              target={chooseButton}
+              target={entryArea}
               only={[2, 3]}
               className="absolute top-1/2 left-full ml-3 hidden -translate-y-1/2 -space-x-4 text-[4.5rem] lg:flex xl:ml-5 xl:-space-x-8 xl:text-[8rem] min-[1360px]:text-[9rem]"
             />
@@ -111,7 +113,7 @@ export function HomePage() {
             Välj ett spel, dela koden och spela på varsin mobil eller dator.
           </p>
           {/* De två vägarna in, under varandra. */}
-          <div data-hero-knappar className="mx-auto flex max-w-sm flex-col gap-4">
+          <div ref={entryArea} className="mx-auto flex max-w-sm flex-col gap-4">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
             {/* Byter färg när musen är över, som alla knappar utanför spelen (index.css, data-knappar i Layout). */}
