@@ -227,10 +227,10 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
-          <p className="text-sm font-semibold opacity-80">
+          <p className="text-base font-semibold opacity-80">
             {[playersLabel(game), page?.time].filter(Boolean).join(' · ')}
           </p>
-          <h3 className="text-xl leading-tight">
+          <h3 className="text-2xl leading-tight">
             {/* Namnet leder till spelets egen sida med mer om spelet. */}
             {page ? (
               <Link to={`/spel/${page.slug}`} className="underline-offset-4 hover:underline">
@@ -241,8 +241,8 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
             )}
           </h3>
         </div>
-        <p className="leading-snug opacity-90">{game.tagline}</p>
-        {note && <p className="text-sm font-bold">{note}</p>}
+        <p className="text-lg leading-snug opacity-90">{game.tagline}</p>
+        {note && <p className="text-base font-bold">{note}</p>}
         <div className="mt-auto flex flex-col gap-1 pt-1">
           <Button variant="link" className="h-11 w-fit px-0 text-spel-text" onClick={onShowRules}>
             <Info aria-hidden />
