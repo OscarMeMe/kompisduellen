@@ -13,10 +13,23 @@ const CYCLOPS_SCALE = 1.6
 // Hur mycket längre ned munnen sitter hos Ögat.
 const CYCLOPS_MOUTH = 10
 
-type Eyes = { xs: readonly number[]; scale: number; cyclops: boolean }
+// sx och sy = ögonens form (bredd och höjd, 1 = runt), pupil = pupillens storlek. Varje figur har sin egen form efter
+// sin personlighet (eyeShape i figurer.ts): höga oroliga ögon på Droppan, breda tokiga på Klumpen och Burret, små blyga
+// på Blygis.
+type Eyes = { xs: readonly number[]; scale: number; cyclops: boolean; sx: number; sy: number; pupil: number }
+
+const EYE_SHAPES = {
+  round: { sx: 1, sy: 1, pupil: 12 },
+  tall: { sx: 0.84, sy: 1.12, pupil: 11 },
+  wide: { sx: 1.1, sy: 0.92, pupil: 9 },
+  small: { sx: 0.78, sy: 0.82, pupil: 10 },
+} as const
 
 function eyesFor(figure: BlobFigure): Eyes {
-  return figure.traits?.cyclops ? { xs: [100], scale: CYCLOPS_SCALE, cyclops: true } : { xs: EYE_X, scale: 1, cyclops: false }
+  const shape = EYE_SHAPES[figure.traits?.eyeShape ?? 'round']
+  return figure.traits?.cyclops
+    ? { xs: [100], scale: CYCLOPS_SCALE, cyclops: true, ...shape }
+    : { xs: EYE_X, scale: 1, cyclops: false, ...shape }
 }
 
 const LINE = { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' } as const
@@ -36,8 +49,9 @@ function Mouth({ eyes, children }: { eyes: Eyes; children: ReactNode }) {
 function OpenEyes({
   eyes,
   r = EYE_R,
-  pupil = 12,
+  pupil,
   look = [0, 0],
+  lookY = 0,
   lid,
   blink = false,
   pupilClass,
@@ -46,12 +60,16 @@ function OpenEyes({
   r?: number
   pupil?: number
   look?: readonly number[]
+  // Blicken uppåt (negativ) eller nedåt (positiv).
+  lookY?: number
   lid?: string
   blink?: boolean
   pupilClass?: string
 }) {
   const size = r * eyes.scale
-  const p = pupil * eyes.scale
+  const rx = size * eyes.sx
+  const ry = size * eyes.sy
+  const p = (pupil ?? eyes.pupil) * eyes.scale
   return (
     // --blink-delay låter figurer som står bredvid varandra blinka i otakt.
     <g
@@ -60,19 +78,19 @@ function OpenEyes({
     >
       {eyes.xs.map((x, i) => {
         const px = x + (look[i] ?? 0) * eyes.scale
-        const py = EYE_Y + 2
+        const py = EYE_Y + 2 + lookY * eyes.scale
         return (
           <g key={x}>
-            <circle cx={x} cy={EYE_Y} r={size} className="fill-card" />
+            <ellipse cx={x} cy={EYE_Y} rx={rx} ry={ry} className="fill-card" />
             {/* En svag skugga nedtill i ögonvitan, så att ögat ser runt ut. */}
-            <path d={`M${x - size * 0.86} ${EYE_Y + size * 0.42}A${size} ${size} 0 0 0 ${x + size * 0.86} ${EYE_Y + size * 0.42}`} className="fill-foreground" opacity="0.08" />
+            <path d={`M${x - rx * 0.86} ${EYE_Y + ry * 0.42}A${rx} ${ry} 0 0 0 ${x + rx * 0.86} ${EYE_Y + ry * 0.42}`} className="fill-foreground" opacity="0.08" />
             <g className={pupilClass}>
               <circle cx={px} cy={py} r={p} className="fill-foreground" />
               {/* Glansen: en stor och en liten ljuspunkt. */}
               <circle cx={px + p * 0.38} cy={py - p * 0.42} r={Math.max(2, p * 0.4)} className="fill-card" />
               <circle cx={px - p * 0.4} cy={py + p * 0.38} r={Math.max(1, p * 0.18)} className="fill-card" opacity="0.85" />
             </g>
-            {lid && <path d={`M${x - size - 1} ${EYE_Y - 1}A${size + 1} ${size + 1} 0 0 1 ${x + size + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
+            {lid && <path d={`M${x - rx - 1} ${EYE_Y - 1}A${rx + 1} ${ry + 1} 0 0 1 ${x + rx + 1} ${EYE_Y - 1}Z`} style={{ fill: lid }} />}
           </g>
         )
       })}
@@ -127,23 +145,75 @@ function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: {
       </>
     )
   }
-  // Ögat sveper med blicken, eller tittar dit något nyss hände.
+  // Ögat sveper med blicken, eller tittar dit något nyss hände. Blygis tittar ned och åt sidan.
+  const { shy, droopy, brows } = figure.traits ?? {}
   const scan = lively && eyes.cyclops
-  const lookAt = scan && look !== 0 ? [look * 12] : crossEyed ? [8, -8] : [0, 0]
+  const lookAt = scan && look !== 0 ? [look * 12] : crossEyed ? [8, -8] : shy ? [-5, -5] : [0, 0]
   return (
     <>
       <OpenEyes
         eyes={eyes}
         look={lookAt}
-        lid={sleepy ? figure.palette.base : undefined}
+        lookY={shy ? 5 : 0}
+        lid={sleepy || droopy ? figure.palette.base : undefined}
         blink={animated}
         pupilClass={gaze ? GAZE_CLASS : scan && look === 0 ? 'motion-safe:animate-blob-scan' : undefined}
       />
+      {/* Bryn som visar personligheten: oroliga (Droppan) eller arga (Bråkis). */}
+      {brows === 'worried' && <Brows eyes={eyes} left="M48 82Q70 74 92 70" right="M108 70Q130 74 152 82" single="M62 62Q100 46 138 62" />}
+      {brows === 'angry' && <Brows eyes={eyes} left="M46 72L94 86" right="M106 86L154 72" single="M56 50L100 64L144 50" />}
       <Mouth eyes={eyes}>
-        <Stroke d={crossEyed ? 'M80 144Q100 166 120 144' : 'M86 146Q100 158 114 146'} />
+        <WaitingMouth kind={figure.traits?.mouth ?? 'smile'} />
       </Mouth>
     </>
   )
+}
+
+// Munnen när figuren väntar, efter personligheten (mouth i figurer.ts).
+export type MouthKind = 'smile' | 'goofy' | 'grin' | 'smirk' | 'wobbly' | 'cat' | 'tiny' | 'flat' | 'buck' | 'snarl'
+
+function WaitingMouth({ kind }: { kind: MouthKind }) {
+  switch (kind) {
+    case 'goofy':
+      return <Stroke d="M80 144Q100 166 120 144" />
+    case 'grin':
+      // Ett brett leende med öppen mun och tänder.
+      return (
+        <>
+          <path d="M78 140Q100 146 122 140Q118 168 100 168Q82 168 78 140Z" className="fill-current" />
+          <path d="M82 142Q100 147 118 142L117 149Q100 153 83 149Z" className="fill-card" />
+        </>
+      )
+    case 'smirk':
+      return <Stroke d="M86 152Q104 154 118 142" />
+    case 'wobbly':
+      return <Stroke d="M84 152Q90 145 96 152T108 152T120 152" width={6} />
+    case 'cat':
+      return <Stroke d="M84 146Q92 156 100 146Q108 156 116 146" width={6} />
+    case 'tiny':
+      return <Stroke d="M93 150Q100 155 107 150" width={6} />
+    case 'flat':
+      return <Stroke d="M89 151Q100 153 111 150" />
+    case 'buck':
+      // Ett leende med två framtänder.
+      return (
+        <>
+          <Stroke d="M84 144Q100 158 116 144" />
+          <path d="M94 151h12v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2Z" className="fill-card stroke-current" strokeWidth="2" />
+          <path d="M100 151v10" className="stroke-current" strokeWidth="2" />
+        </>
+      )
+    case 'snarl':
+      // Ett snett flin med en huggtand.
+      return (
+        <>
+          <Stroke d="M84 150Q100 144 118 148" />
+          <path d="M104 147L108 155L112 147Z" className="fill-card" />
+        </>
+      )
+    default:
+      return <Stroke d="M86 146Q100 158 114 146" />
+  }
 }
 
 // Sjusovaren har somnat: slutna ögon och en liten öppen mun.

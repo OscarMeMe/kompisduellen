@@ -4,6 +4,7 @@
 // Värdet som sparas och skickas som avatar är en vanlig emoji som ingen annan figur använder. Då ser en flik med en
 // äldre version av sajten en emoji, och findBlob gör om den till blobben i den nya koden.
 
+import type { MouthKind } from '@/components/figurer/Miner'
 import type { ImposterTable } from '@/lib/imposterjakten'
 
 export const MOODS = ['vantar', 'misstankt', 'anklagad', 'traffad', 'vann', 'utrostad', 'sur'] as const
@@ -76,7 +77,20 @@ export type BlobFigure = {
   // Små drag i minen. crossEyed och sleepy gäller bara öppna ögon. cyclops = ett enda stort öga i alla miner.
   // haughty = dömande blick när figuren väntar i väntrummet (Kungen). lightFace = mun och linjer i en ljus färg, så att
   // de syns på en mörk figur (Spionen, Bråkis).
-  traits?: { crossEyed?: boolean; sleepy?: boolean; cyclops?: boolean; haughty?: boolean; lightFace?: boolean }
+  // eyeShape, mouth, brows, droopy och shy ger varje figur sitt eget ansikte när den väntar (Miner.tsx): ögonens form,
+  // munnen, oroliga eller arga bryn, halvstängda ögon (droopy) och en blick som tittar ned och åt sidan (shy).
+  traits?: {
+    crossEyed?: boolean
+    sleepy?: boolean
+    cyclops?: boolean
+    haughty?: boolean
+    lightFace?: boolean
+    eyeShape?: 'round' | 'tall' | 'wide' | 'small'
+    mouth?: MouthKind
+    brows?: 'worried' | 'angry'
+    droopy?: boolean
+    shy?: boolean
+  }
   // Repliken när man väljer figuren, och figurens egen rörelse i väntrummet (tom = står still). Rörelserna ligger i
   // index.css och använder bara transform och opacity, så att tio figurer inte blir tunga på en mobil.
   line: string
@@ -100,7 +114,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('klump'),
     body: picture('klumpen'),
     face: { x: 100, y: 134, scale: 0.8 },
-    traits: { crossEyed: true },
+    traits: { crossEyed: true, eyeShape: 'wide', mouth: 'goofy' },
     // Keps bak och fram och en tuggummibubbla som blåses upp och spricker i väntrummet.
     line: 'Lugn, jag kör på känsla.',
     idle: 'motion-safe:animate-blob-bounce',
@@ -112,7 +126,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('spion'),
     body: picture('spionen'),
     face: { x: 100, y: 96, scale: 0.72 },
-    traits: { lightFace: true },
+    traits: { lightFace: true, mouth: 'smirk' },
     // Glasögonen döljer ögonen. När något händer hamnar de snett, så att reaktionen syns.
     frontTilt: {
       anklagad: { rotate: 14, x: 14, y: 8 },
@@ -129,7 +143,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('sova'),
     body: picture('sjusovaren'),
     face: { x: 100, y: 125, scale: 0.85 },
-    traits: { sleepy: true },
+    traits: { sleepy: true, mouth: 'flat' },
     // Sovmask i pannan (över ögonen när den sover) och kudd-märke på kinden. Nickar till och rycker upp sig.
     line: 'Väck mig när det är min tur.',
     idle: 'motion-safe:animate-blob-nod',
@@ -142,6 +156,7 @@ export const BLOBS: readonly BlobFigure[] = [
     shape: 'droppe',
     body: picture('droppan'),
     face: { x: 100, y: 130, scale: 0.82 },
+    traits: { eyeShape: 'tall', brows: 'worried', mouth: 'wobbly' },
     // Badmössa och simglasögon. Fryser och darrar.
     line: 'Vattnet var iskallt, men jag kör ändå.',
     idle: 'motion-safe:animate-blob-tremble',
@@ -154,6 +169,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('fest'),
     body: picture('festis'),
     face: { x: 100, y: 110, scale: 0.75 },
+    traits: { mouth: 'grin' },
     line: 'Vem har lagt på den här låten? Snyggt.',
     idle: 'motion-safe:animate-blob-dance',
   },
@@ -190,6 +206,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('burr'),
     body: picture('burret'),
     face: { x: 100, y: 130, scale: 0.8 },
+    traits: { eyeShape: 'wide', mouth: 'grin' },
     line: 'Ni andra är för stela.',
     idle: 'motion-safe:animate-blob-aerobic',
   },
@@ -201,7 +218,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('brak'),
     body: picture('brakis'),
     face: { x: 98, y: 138, scale: 0.75 },
-    traits: { lightFace: true },
+    traits: { lightFace: true, brows: 'angry', mouth: 'snarl' },
     line: 'Vad glor du på?',
     idle: 'motion-safe:animate-blob-stomp',
   },
@@ -214,6 +231,7 @@ export const BLOBS: readonly BlobFigure[] = [
     outline: true,
     body: picture('blygis'),
     face: { x: 100, y: 104, scale: 0.64 },
+    traits: { eyeShape: 'small', shy: true, mouth: 'tiny' },
     line: 'Jag är bara här för snacksen.',
     idle: 'motion-safe:animate-blob-peek',
   },
@@ -225,6 +243,7 @@ export const BLOBS: readonly BlobFigure[] = [
     shape: 'smalt',
     body: picture('smaltis'),
     face: { x: 98, y: 118, scale: 0.82 },
+    traits: { droopy: true, mouth: 'cat' },
     // Glasstrut som droppar och solkräm på näsan.
     line: 'Det är för varmt här inne.',
     idle: 'motion-safe:animate-blob-idle',
@@ -236,6 +255,7 @@ export const BLOBS: readonly BlobFigure[] = [
     palette: colors('plugg'),
     body: picture('plugghasten'),
     face: { x: 100, y: 135, scale: 0.8 },
+    traits: { mouth: 'buck' },
     // De stora glasögonen åker snett när den träffas.
     frontTilt: { traffad: { rotate: -14, x: -6, y: 10 } },
     // Propellerkeps (propellern snurrar i väntrummet), glasögonen och pennor i fickan.
