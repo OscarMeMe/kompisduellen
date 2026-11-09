@@ -9,12 +9,12 @@ import { useEffect, useRef, type RefObject } from 'react'
 // ritat och står kvar som de är med "minska rörelse". Bara raderna som syns i hero ritas, och inget ritas när hero inte
 // syns. Sektionerna under hero täcker canvasen.
 const GRID = 22
-const DOT = 1.1
+const DOT = 1.25
 // Prickarnas vanliga täckning (lite tydligare än förut).
-const ALPHA = 0.18
+const ALPHA = 0.24
 // Muspekaren: hur långt bort prickarna påverkas (px) och hur långt de knuffas som mest.
-const REACH = 150
-const PUSH = 28
+const REACH = 190
+const PUSH = 44
 // Ringarna: hur ofta (s), hur länge de växer (s), hur stora de blir (px), hur breda och hur mycket mörkare de är.
 const RING_PERIOD = 10
 const RING_GROW = 8

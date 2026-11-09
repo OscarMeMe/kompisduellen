@@ -1068,7 +1068,7 @@
   .startsida-prickar {
     z-index: -10;
     background-color: var(--background);
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 18%, transparent) 1.1px, transparent 1.1px);
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 24%, transparent) 1.25px, transparent 1.25px);
     background-size: 22px 22px;
     }
   .startsida-prickar[data-canvas] {
