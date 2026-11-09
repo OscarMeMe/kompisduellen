@@ -20,7 +20,7 @@ const POSES = [
 // Figurerna i startsidans hero. De andas, blinkar och guppar lite, var och en i sin egen takt, och med mus följer de
 // muspekaren med blicken. Bara dekoration, så de göms för skärmläsare. Med "minska rörelse" står de still och tittar
 // rakt fram. only = vilka av de fyra (index i HERO_FIGURES), t.ex. två på var sida om rubriken på bred skärm.
-// target = knappen Välj spel: med mus blir figurerna gladare ju närmare den muspekaren är, och surare ju längre bort.
+// target = knappen Välj spel: med mus jublar figurerna när muspekaren är vid den.
 export function HeroFigurer({
   className,
   only = [0, 1, 2, 3],
@@ -32,7 +32,7 @@ export function HeroFigurer({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useGazeFollow(ref)
-  const mood = useMoodByDistance(target)
+  const mood = useCheerNearButton(target)
   return (
     // En figur är 1.2em hög. Rutorna är bredare än kropparna, så negativ space-x ger bara lite luft mellan figurerna.
     <div ref={ref} aria-hidden className={cn('flex items-end', className)}>
@@ -65,20 +65,15 @@ function HeroFigur({ index, mood }: { index: number; mood: Mood }) {
   )
 }
 
-// Minen efter hur långt muspekaren är från knappen (px från knappens kant): jublar vid knappen, sitt eget glada uttryck
-// nära, misstänksam längre bort och sur långt bort. Utan mus, och när muspekaren lämnar fönstret, har de sitt eget
-// uttryck. Bara när steget byts ritas figurerna om.
-const MOOD_STEPS: readonly [number, Mood][] = [
-  [40, 'vann'],
-  [260, 'vantar'],
-  [560, 'misstankt'],
-]
+// Hur nära knappen muspekaren ska vara för att figurerna ska jubla (px från knappens kant). Annars har de sitt eget
+// uttryck, även utan mus och när muspekaren lämnar fönstret. Bara när minen byts ritas figurerna om.
+const CHEER_PX = 40
 
 function moodAt(distance: number): Mood {
-  return MOOD_STEPS.find(([limit]) => distance <= limit)?.[1] ?? 'sur'
+  return distance <= CHEER_PX ? 'vann' : 'vantar'
 }
 
-function useMoodByDistance(target?: RefObject<HTMLElement | null>): Mood {
+function useCheerNearButton(target?: RefObject<HTMLElement | null>): Mood {
   const [mood, setMood] = useState<Mood>('vantar')
   useEffect(() => {
     if (!target || !hasFinePointer()) return
