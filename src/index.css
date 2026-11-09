@@ -1007,12 +1007,11 @@
     --sun-soft: oklch(0.97 0.05 90);
     --sky-soft: oklch(0.955 0.03 235);
     /* Startsidans sektioner (HomePage, VagSektion i Vag.tsx): spelen på krämvitt, de kommande spelen på ljus persika, Så
-       fungerar det på ljusblått, tipsen på ljusgult och sidfoten på en mörkare sandton. Hero ligger på --background med
-       prickarna. */
+       fungerar det på ljusblått, och tipsen och sidfoten tillsammans på en mörkare sandton. Hero ligger på --background
+       med prickarna. */
     --startsida-spel: oklch(0.985 0.01 85);
     --startsida-kommande: oklch(0.955 0.035 60);
     --startsida-steg: oklch(0.955 0.025 235);
-    --startsida-tips: oklch(0.97 0.045 92);
     --startsida-fot: oklch(0.91 0.028 72);
     /* Guld för kronan. Mörk nog att synas (minst 3:1) mot korten och pastellerna */
     --crown: oklch(0.62 0.13 68);

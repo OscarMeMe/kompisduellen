@@ -61,15 +61,15 @@ export function HomePage() {
   }
 
   // Startsidan är sektioner som avlöser varandra med mjuka vågor (VagSektion): hero på sanden med prickarna, spelen på
-  // krämvitt, de kommande spelen och önskelådan på ljus persika, Så fungerar det på ljusblått och tipsen på ljusgult.
-  // Sidfoten ligger sist på en mörkare sandton (Layout). Färgerna är --startsida-* i index.css.
+  // krämvitt, de kommande spelen och önskelådan på ljus persika, Så fungerar det på ljusblått, och sist tipsen på en
+  // mörkare sandton som sidfoten fortsätter på (Layout). Färgerna är --startsida-* i index.css.
   return (
     <div className="flex flex-col pt-2 sm:pt-6">
       <StartsidansPrickar />
-      {/* Hero: texten och vägarna in, och blobbarna. På dator står blobbarna stora till höger. */}
-      <section className="grid gap-6 pb-14 sm:pb-20 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:gap-8 lg:pb-24">
-        <HeroFigurer className="justify-center text-[2.75rem] sm:text-[3.5rem] lg:order-2 lg:justify-center lg:-space-x-6 lg:text-[7rem]" />
-        <div className="space-y-6 text-center lg:space-y-7 lg:text-left">
+      {/* Hero: blobbarna överst och under dem texten och vägarna in, centrerat på alla skärmar. */}
+      <section className="flex flex-col items-center gap-6 pb-14 sm:pb-20 lg:gap-7 lg:pb-24">
+        <HeroFigurer className="justify-center text-[2.75rem] sm:text-[4rem] lg:-space-x-5 lg:text-[5.5rem]" />
+        <div className="space-y-6 text-center lg:space-y-7">
           <div className="space-y-3">
             {/* Två rader på smal skärm, med brytningen efter "Sällskapsspel online". */}
             <p className="text-base font-bold text-muted-foreground sm:text-lg">
@@ -91,14 +91,14 @@ export function HomePage() {
               </span>
             </h1>
           </div>
-          <p className="mx-auto max-w-lg text-lg text-muted-foreground sm:text-xl lg:mx-0">
+          <p className="mx-auto max-w-lg text-lg text-muted-foreground sm:text-xl">
             Välj ett spel, dela koden och spela på varsin mobil eller dator. På förfesten, i soffan eller på Discord.
           </p>
           {/* De två vägarna in, under varandra. */}
-          <div className="mx-auto flex max-w-sm flex-col gap-5 lg:mx-0">
+          <div className="mx-auto flex max-w-sm flex-col gap-5">
             {/* Till spelkorten, utan att något spel är förvalt. Korten lyser upp, så att knappen märks
                 även när allt redan syns på skärmen. */}
-            <Button size="lg" onClick={pointAtGames} className="text-lg lg:self-start">
+            <Button size="lg" onClick={pointAtGames} className="text-lg">
               Välj spel
               <ArrowDown aria-hidden />
             </Button>
@@ -217,8 +217,8 @@ export function HomePage() {
         </ol>
       </VagSektion>
 
-      {/* Guiderna på ljusgult, för den som vill läsa mer. */}
-      <VagSektion color="var(--startsida-tips)" flip aria-labelledby="tips-rubrik" innerClassName="space-y-4">
+      {/* Guiderna, för den som vill läsa mer, på sidfotens sandton så att de och sidfoten blir en sektion. */}
+      <VagSektion color="var(--startsida-fot)" flip aria-labelledby="tips-rubrik" className="pb-6 sm:pb-8 lg:pb-10" innerClassName="space-y-4">
         <h2 id="tips-rubrik" className="text-3xl text-balance sm:text-4xl">
           Tips inför kvällen
         </h2>

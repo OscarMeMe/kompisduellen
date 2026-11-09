@@ -6,7 +6,6 @@ import type { LayoutContext } from '@/hooks/useLayout'
 import { usePageMeta } from '@/hooks/usePageMeta'
 import { loadPlayer } from '@/lib/player'
 import { cn } from '@/lib/utils'
-import { Vag } from '@/components/Vag'
 
 export function Layout() {
   const [inMatch, setInMatch] = useState(false)
@@ -99,12 +98,13 @@ export function Layout() {
         <Outlet context={{ setInMatch, setLeaveInMatch, setLeaveGuard, setVersionNotice, setLobbyPlayer, headerSlot } satisfies LayoutContext} />
       </main>
       {/* En diskret sidfot längst ner på alla sidor, men inte under en pågående match. */}
-      {/* På startsidan ligger den på en mörkare sandton med en våg överst, som sista sektionen. */}
+      {/* På startsidan fortsätter den på samma mörkare sandton som den sista sektionen (tipsen). */}
       {!inMatch &&
         (home ? (
-          <footer className="relative" style={{ backgroundColor: 'var(--startsida-fot)' }}>
-            <Vag color="var(--startsida-fot)" />
-            <p className="px-4 pt-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground">Skapad av vänner, för vänner.</p>
+          <footer style={{ backgroundColor: 'var(--startsida-fot)' }}>
+            <p className="mx-auto max-w-5xl border-t border-foreground/10 px-4 pt-5 pb-[max(1.75rem,env(safe-area-inset-bottom))] text-center text-sm text-muted-foreground sm:px-6">
+              Skapad av vänner, för vänner.
+            </p>
           </footer>
         ) : (
           <footer className="mx-auto w-full max-w-5xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">
