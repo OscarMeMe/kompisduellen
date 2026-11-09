@@ -1,12 +1,11 @@
 import { useRef, type CSSProperties } from 'react'
 import { Figur } from '@/components/figurer/Figur'
 import { useGazeFollow } from '@/hooks/useGazeFollow'
-import { BLOBS, type BlobId } from '@/lib/figurer'
+import { HERO_FIGURES } from '@/lib/figurer'
 import { cn } from '@/lib/utils'
 
-// Figurerna på startsidan, i den här ordningen. Ögat har ett stort öga, så att blicken syns tydligt.
-const HERO_IDS: readonly BlobId[] = ['festis', 'klumpen', 'ogat', 'blygis']
-const HERO_FIGURES = HERO_IDS.map((id) => BLOBS.find((blob) => blob.id === id)).filter((blob) => blob !== undefined)
+// Figurerna på startsidan: fyra egna figurer som bara finns här (HERO_FIGURES i figurer.ts), inte spelarfigurerna.
+// Hörlurarna, mobilen, partyhatten och flugan i den här ordningen.
 
 // Var och en står lite olika högt och lutar åt sitt håll, så att de ser ut som ett gäng och inte som en rad. I em, så
 // att det följer storleken.
