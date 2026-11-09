@@ -1055,93 +1055,31 @@
   h1, h2, h3 {
     @apply font-heading font-bold tracking-[-0.015em];
     }
-  /* Startsidans prickmönster (StartsidansPrickar i HomePage). Prickarna ligger i ett eget lager som står still i fönstret,
-     och ovanpå ligger lager med samma prickrutnät, som bara syns genom en mask:
-     - startsida-ringar: två ringar av lite mörkare prickar sprider sig sakta från knappen Välj spel, som ringar på
-       vattnet, var tionde sekund. Mitten (--ring-x, --ring-y) följer knappen när sidan skrollas, och ringarna står still
-       när hero inte syns (data-paused).
-     - startsida-ficklampa: med mus blir prickarna närmast muspekaren lite större och svagt korallröda (--mx, --my), och
-       tonas bort när musen lämnar fönstret.
-     - startsida-tryck: på mobil sprider sig en liten ring från fingret vid ett tryck (--tap-x, --tap-y, klassen spela).
-     Bara masker och opacity, inget per prick. Sektionerna under hero täcker lagren. Med "minska rörelse" finns bara de
-     stilla prickarna. */
+  /* Startsidans prickmönster (StartsidansPrickar.tsx). Prickarna ritas på en canvas bakom hero, där de viker undan för
+     muspekaren, ringar sprider sig från Välj spel och en liten ring kommer vid ett tryck på mobil. CSS-prickarna här har
+     samma rutnät och syns innan canvasen ritat, och står kvar som de är med "minska rörelse" (data-canvas sätts bara när
+     canvasen ritar). Sektionerna under hero täcker båda. */
   .startsida-prickar,
-  .startsida-ringar,
-  .startsida-ficklampa,
-  .startsida-tryck {
+  .startsida-prickar-canvas {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-size: 22px 22px;
     }
   .startsida-prickar {
     z-index: -10;
     background-color: var(--background);
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
+    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 18%, transparent) 1.1px, transparent 1.1px);
+    background-size: 22px 22px;
     }
-  .startsida-ringar,
-  .startsida-tryck {
-    background-image: radial-gradient(color-mix(in oklab, var(--foreground) 34%, transparent) 1.6px, transparent 1.8px);
+  .startsida-prickar[data-canvas] {
+    background-image: none;
     }
-  .startsida-ringar {
+  .startsida-prickar-canvas {
     z-index: -9;
-    -webkit-mask-image: radial-gradient(circle at var(--ring-x, 50%) var(--ring-y, 25%), transparent calc(var(--ring-r) - 230px), #000 calc(var(--ring-r) - 204px), #000 calc(var(--ring-r) - 180px), transparent calc(var(--ring-r) - 154px), transparent calc(var(--ring-r) - 56px), #000 calc(var(--ring-r) - 30px), #000 var(--ring-r), transparent calc(var(--ring-r) + 26px));
-    mask-image: radial-gradient(circle at var(--ring-x, 50%) var(--ring-y, 25%), transparent calc(var(--ring-r) - 230px), #000 calc(var(--ring-r) - 204px), #000 calc(var(--ring-r) - 180px), transparent calc(var(--ring-r) - 154px), transparent calc(var(--ring-r) - 56px), #000 calc(var(--ring-r) - 30px), #000 var(--ring-r), transparent calc(var(--ring-r) + 26px));
-    animation: startsida-ringar 10s cubic-bezier(0.3, 0.5, 0.5, 1) infinite;
+    width: 100%;
+    height: 100%;
     }
-  .startsida-ringar[data-paused="true"] {
-    animation-play-state: paused;
-    }
-  .startsida-ficklampa {
-    z-index: -8;
-    background-image: radial-gradient(color-mix(in oklab, var(--primary) 55%, transparent) 1.8px, transparent 2px);
-    -webkit-mask-image: radial-gradient(circle at var(--mx, -999px) var(--my, -999px), #000 0, transparent 110px);
-    mask-image: radial-gradient(circle at var(--mx, -999px) var(--my, -999px), #000 0, transparent 110px);
-    opacity: 0;
-    transition: opacity 0.35s ease-out;
-    }
-  .startsida-ficklampa[data-on="true"] {
-    opacity: 0.7;
-    }
-  .startsida-tryck {
-    z-index: -8;
-    opacity: 0;
-    -webkit-mask-image: radial-gradient(circle at var(--tap-x, 50%) var(--tap-y, 50%), transparent calc(var(--tap-r) - 34px), #000 calc(var(--tap-r) - 16px), #000 var(--tap-r), transparent calc(var(--tap-r) + 18px));
-    mask-image: radial-gradient(circle at var(--tap-x, 50%) var(--tap-y, 50%), transparent calc(var(--tap-r) - 34px), #000 calc(var(--tap-r) - 16px), #000 var(--tap-r), transparent calc(var(--tap-r) + 18px));
-    }
-  .startsida-tryck.spela {
-    animation: startsida-tryck 0.9s ease-out forwards;
-    }
-  @keyframes startsida-ringar {
-    0% { --ring-r: 0px; opacity: 0.9; }
-    40% { opacity: 0.7; }
-    80%, 100% { --ring-r: 1000px; opacity: 0; }
-  }
-  @keyframes startsida-tryck {
-    0% { --tap-r: 0px; opacity: 1; }
-    100% { --tap-r: 220px; opacity: 0; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .startsida-ringar,
-    .startsida-ficklampa,
-    .startsida-tryck {
-      display: none;
-      }
-  }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
-}
-
-/* Ringarnas och tryckets storlek på startsidan (startsida-ringar, startsida-tryck), registrerade så att de går att
-   animera i en mask. */
-@property --ring-r {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 0px;
-}
-@property --tap-r {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 0px;
 }

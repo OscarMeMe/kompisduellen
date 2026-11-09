@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { ArrowDown } from 'lucide-react'
 import { GaMedKod } from '@/components/GaMedKod'
@@ -6,6 +6,7 @@ import { SpelKort } from '@/components/SpelKort'
 import { DRINK_RULES, gamesForTillfalle, SHOW_TILLFALLEN, TILLFALLEN, type TillfalleId } from '@/lib/tillfallen'
 import { GAME_SORTS, loadGameSort, saveGameSort, sortGames, type GameSort } from '@/lib/sortering'
 import { HeroFigurer } from '@/components/HeroFigurer'
+import { StartsidansPrickar } from '@/components/StartsidansPrickar'
 import { VagSektion } from '@/components/Vag'
 import { GameIntroDialog } from '@/components/GameIntroDialog'
 import { KommandeSpel, Onskelada } from '@/components/KommandeSpel'
@@ -235,87 +236,6 @@ export function HomePage() {
         </ul>
       </VagSektion>
     </div>
-  )
-}
-
-// Prickmönstret på startsidan (se .startsida-prickar och lagren efter i index.css): ringar som sprider sig från knappen
-// Välj spel (origin), prickar som blir större där muspekaren är, och en liten ring från fingret vid ett tryck på mobil. Bara på
-// startsidan. Lagren ligger bakom allt och tar inga tryck. Positionerna sätts som CSS-variabler, högst en gång per
-// bildruta, så att React aldrig ritar om. Med "minska rörelse" finns bara de stilla prickarna.
-function StartsidansPrickar({ origin }: { origin: RefObject<HTMLElement | null> }) {
-  const ringRef = useRef<HTMLDivElement>(null)
-  const lampRef = useRef<HTMLDivElement>(null)
-  const tapRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const ring = ringRef.current
-    const lamp = lampRef.current
-    const tap = tapRef.current
-    if (!ring || !lamp || !tap) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
-    // Ringarnas mitt följer knappen, och ringarna står still när hero inte syns.
-    let ringFrame = 0
-    const place = () => {
-      ringFrame = 0
-      const box = origin.current?.getBoundingClientRect()
-      if (!box) return
-      ring.style.setProperty('--ring-x', `${box.left + box.width / 2}px`)
-      ring.style.setProperty('--ring-y', `${box.top + box.height / 2}px`)
-      ring.dataset.paused = String(box.bottom < -400 || box.top > window.innerHeight)
-    }
-    const placeSoon = () => {
-      if (!ringFrame) ringFrame = requestAnimationFrame(place)
-    }
-    place()
-    // Med mus: prickarna närmast muspekaren.
-    let lampFrame = 0
-    let x = 0
-    let y = 0
-    const move = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse' || reduce.matches) return
-      x = event.clientX
-      y = event.clientY
-      if (lampFrame) return
-      lampFrame = requestAnimationFrame(() => {
-        lampFrame = 0
-        lamp.style.setProperty('--mx', `${x}px`)
-        lamp.style.setProperty('--my', `${y}px`)
-        lamp.dataset.on = 'true'
-      })
-    }
-    const leave = () => {
-      lamp.dataset.on = 'false'
-    }
-    // På mobil: en liten ring från fingret. Klassen tas bort och läggs till igen, så att ringen börjar om.
-    const press = (event: PointerEvent) => {
-      if (event.pointerType === 'mouse' || reduce.matches) return
-      tap.style.setProperty('--tap-x', `${event.clientX}px`)
-      tap.style.setProperty('--tap-y', `${event.clientY}px`)
-      tap.classList.remove('spela')
-      void tap.offsetWidth
-      tap.classList.add('spela')
-    }
-    window.addEventListener('scroll', placeSoon, { passive: true })
-    window.addEventListener('resize', placeSoon)
-    window.addEventListener('pointermove', move, { passive: true })
-    window.addEventListener('pointerdown', press, { passive: true })
-    document.documentElement.addEventListener('mouseleave', leave)
-    return () => {
-      cancelAnimationFrame(ringFrame)
-      cancelAnimationFrame(lampFrame)
-      window.removeEventListener('scroll', placeSoon)
-      window.removeEventListener('resize', placeSoon)
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerdown', press)
-      document.documentElement.removeEventListener('mouseleave', leave)
-    }
-  }, [origin])
-  return (
-    <>
-      <div aria-hidden className="startsida-prickar" />
-      <div ref={ringRef} aria-hidden className="startsida-ringar" />
-      <div ref={lampRef} aria-hidden className="startsida-ficklampa" data-on="false" />
-      <div ref={tapRef} aria-hidden className="startsida-tryck" />
-    </>
   )
 }
 
