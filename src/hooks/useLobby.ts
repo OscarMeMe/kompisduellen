@@ -47,6 +47,7 @@ import {
   parseImposterCard,
   parseTantView,
   parseMove,
+  parsePresence,
   parseRematchWish,
   parseStateMessage,
   parseThrow,
@@ -88,7 +89,7 @@ import {
   backToWaiting,
   changeGame,
   cancelRematch,
-  everyoneHasGuessed,
+  everyonePresentHasGuessed,
   hostAdvance,
   hostDeadline,
   hostImposterNewWord,
@@ -403,17 +404,14 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return [...ids]
   }, [])
 
-  // Värden: avsluta rundan direkt om alla som är online har gissat.
+  // Värden: avsluta rundan direkt om alla som är online har gissat (och värden själv syns i närvarolistan, se
+  // everyonePresentHasGuessed).
   const resolveIfEveryoneGuessed = useCallback(
     (current: GameState) => {
-      // Botarna räknas med, så att rundan inte slutar innan de har gissat.
-      const ids = [...onlineRef.current.map((p) => p.id), ...botIds(current)]
-      if (current.phase === 'guessing' && everyoneHasGuessed(current, ids)) {
-        return resolveRound(current, Date.now())
-      }
-      return current
+      const ids = onlineRef.current.map((p) => p.id)
+      return meId !== null && everyonePresentHasGuessed(current, ids, meId) ? resolveRound(current, Date.now()) : current
     },
-    [],
+    [meId],
   )
 
   useEffect(() => {
@@ -446,20 +444,13 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       const hosts = () => onlineRef.current.filter((p) => p.host).map((p) => ({ id: p.id, sendsFrom: p.sendsFrom === true }))
 
       channel.on('presence', { event: 'sync' }, () => {
-        const raw = channel.presenceState<OnlinePlayer>()
+        const raw = channel.presenceState()
+        // Närvaron kontrolleras som allt annat i kanalen (parsePresence): en trasig post slängs.
         const players: OnlinePlayer[] = Object.values(raw)
-          .map((metas) => metas[0])
-          .filter((meta) => Boolean(meta?.id))
-          .map(({ id, name, avatar, host, joinedAt, sendsFrom, noThrows }) => ({
-            id,
-            name,
-            // En flik med en äldre version av sajten skickar sin gamla emoji-figur.
-            avatar: upgradeAvatar(avatar),
-            host,
-            joinedAt,
-            sendsFrom,
-            noThrows: noThrows === true,
-          }))
+          .map((metas) => parsePresence(metas[0]))
+          .filter((meta) => meta !== null)
+          // En flik med en äldre version av sajten skickar sin gamla emoji-figur.
+          .map((meta) => ({ ...meta, avatar: upgradeAvatar(meta.avatar) }))
           .sort((a, b) => a.joinedAt - b.joinedAt)
         const now = Date.now()
         for (const p of onlineRef.current) {

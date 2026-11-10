@@ -31,5 +31,7 @@ const EMOJI: Record<string, EmojiInfo> = {
 
 // Tecknet utan variantväljare (U+FE0F), så att t.ex. "🏷️" och "🏷" ger samma bild.
 export function findEmoji(emoji: string): EmojiInfo | undefined {
-  return EMOJI[emoji.replace(/️/g, '')]
+  // Bara listans egna nycklar, så att ett värde som "constructor" inte ger något som alla objekt har inbyggt.
+  const key = emoji.replace(/️/g, '')
+  return Object.prototype.hasOwnProperty.call(EMOJI, key) ? EMOJI[key] : undefined
 }

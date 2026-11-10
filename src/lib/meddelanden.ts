@@ -208,6 +208,25 @@ const isGameState = shape({
   dressId: orNull(isString),
 })
 
+// En spelare i närvarolistan. Närvaron skickas av varje flik själv, så den kontrolleras som allt annat i kanalen: ett
+// trasigt namn eller id får inte krascha värden (som bestämmer namnen i lobbyn) eller skärmen hos de andra.
+export type PresenceInfo = { id: string; name: string; avatar: string; host: boolean; joinedAt: number; sendsFrom: boolean; noThrows: boolean }
+
+// Längsta namnet (samma som i PlayerSetup och savePlayer) och längsta id:t och figuren som godtas.
+const NAME_MAX = 20
+const ID_MAX = 100
+
+// null om något har fel typ eller saknas. Namnet kortas till den längd sajten själv tillåter.
+export function parsePresence(meta: unknown): PresenceInfo | null {
+  if (!isObject(meta)) return null
+  const { id, name, avatar, host, joinedAt, sendsFrom, noThrows } = meta
+  if (!isString(id) || id === '' || id.length > ID_MAX) return null
+  if (!isString(name) || !isString(avatar) || avatar.length > ID_MAX) return null
+  const trimmed = name.trim().slice(0, NAME_MAX)
+  if (trimmed === '') return null
+  return { id, name: trimmed, avatar, host: host === true, joinedAt: isNumber(joinedAt) ? joinedAt : 0, sendsFrom: sendsFrom === true, noThrows: noThrows === true }
+}
+
 // version = värdens version av sajten. Saknas hos en värd med en äldre version.
 export type StateMessage = { state: GameState; sentAt: number; from: string | null; hands: Record<string, number>; version: number | null }
 

@@ -528,6 +528,15 @@ export function everyoneHasGuessed(state: GameState, onlineIds: string[]): boole
   return active.length > 0 && active.every((id) => state.guesses[id] !== undefined)
 }
 
+// Ska rundan avslutas i förtid för att alla som är med har gissat? onlineIds = spelarna i närvarolistan, hostId = värden
+// själv. Värden måste själv synas i närvarolistan: precis efter att värden laddat om sidan (eller anslutit på nytt) syns
+// bara de andra där en kort stund, och har de redan gissat såg det förut ut som att alla var klara, så att rundan tog
+// slut innan värden hunnit gissa. Botarna räknas med, så att rundan inte slutar innan de har gissat.
+export function everyonePresentHasGuessed(state: GameState, onlineIds: readonly string[], hostId: string): boolean {
+  if (state.phase !== 'guessing' || !onlineIds.includes(hostId)) return false
+  return everyoneHasGuessed(state, [...onlineIds, ...botIds(state)])
+}
+
 // Avslutar rundan och delar ut poäng enligt spelets regler.
 // Den eller de som fick flest poäng (över noll) vinner rundan.
 export function resolveRound(state: GameState, now: number, target?: number): GameState {

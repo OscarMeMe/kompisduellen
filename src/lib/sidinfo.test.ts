@@ -36,6 +36,16 @@ describe('sökresultaten och ikonen', () => {
 describe('sidinfo', () => {
   it('ger startsidan och spelsidorna en egen kanonisk adress', () => {
     expect(pageMeta('/').path).toBe('/')
+  })
+
+  it('ger sajtens allmänna taggar för adresser som heter som inbyggda egenskaper', () => {
+    // Förut gav /constructor en funktion i stället för taggar, och sidan kraschade när taggarna skulle skrivas.
+    for (const path of ['/constructor', '/toString', '/hasOwnProperty', '/__proto__', '/valueOf']) {
+      const meta = pageMeta(path)
+      expect(meta.title, path).toBe('Kompisduellen')
+      expect(meta.path, path).toBeNull()
+      expect(renderHeadTags(meta), path).toContain('<title>Kompisduellen</title>')
+    }
     expect(pageMeta('/spel/gissa-priset').path).toBe('/spel/gissa-priset')
     expect(pageMeta('/spel/gissa-priset/').path).toBe('/spel/gissa-priset')
   })

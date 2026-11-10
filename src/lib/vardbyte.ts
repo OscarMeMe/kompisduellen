@@ -43,6 +43,10 @@ export function takeOverState(state: GameState, offset: number): GameState {
       players,
       benchBots: {},
       phase: 'waiting',
+      // Antalet omgångar som värden valt kommer tillbaka (Imposterjaktens Avsluta efter den här omgången sparar det i
+      // savedRounds). Annars visar väntrummet det avkortade antalet, och nästa match struntar i ett nytt val.
+      rounds: state.savedRounds ?? state.rounds,
+      savedRounds: null,
       round: 0,
       deadline: null,
       pause: null,
@@ -54,6 +58,7 @@ export function takeOverState(state: GameState, offset: number): GameState {
       itemId: null,
       practice: false,
       rematchAt: null,
+      rematchWishes: [],
       choosingGame: false,
       cards: null,
       imposter: null,

@@ -142,7 +142,9 @@ const PAGES: Record<string, PageMeta> = {
 
 export function pageMeta(pathname: string): PageMeta {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
-  return PAGES[path] ?? DEFAULT
+  // Bara sidans egna nycklar: en adress som /constructor ska ge sajtens allmänna taggar, inte något som alla objekt
+  // har inbyggt. (hasOwnProperty och inte Object.hasOwn, som saknas i äldre Safari.)
+  return Object.prototype.hasOwnProperty.call(PAGES, path) ? PAGES[path] : DEFAULT
 }
 
 // Sidorna som förrenderas till färdig HTML i bygget. Övriga sökvägar får appskalet (app.html).

@@ -70,6 +70,17 @@ describe('gamla emoji-figurer', () => {
     expect(upgradeAvatar('🤖️')).toBe('🤓')
   })
 
+  it('lämnar värden som heter som inbyggda egenskaper orörda, utan att krascha', () => {
+    for (const value of ['constructor', 'toString', 'hasOwnProperty', '__proto__', 'valueOf']) {
+      expect(upgradeAvatar(value), value).toBe(value)
+      expect(findEmoji(value), value).toBeUndefined()
+      expect(findBlob(value), value).toBeUndefined()
+    }
+    // Ett läge från värden med en sådan figur går att ta emot.
+    const state = addPlayers(initialState('gissa-priset'), { a: { name: 'A', avatar: 'constructor' } })
+    expect(upgradeAvatars(state)).toBe(state)
+  })
+
   it('lämnar blobbar och okända värden som de är', () => {
     for (const value of BLOB_AVATARS) expect(upgradeAvatar(value)).toBe(value)
     expect(upgradeAvatar('🙂')).toBe('🙂')
