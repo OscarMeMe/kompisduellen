@@ -12,7 +12,7 @@ const EMOJI: Record<string, EmojiInfo> = {
   '🗳': { file: 'ballot-box', label: 'Valurna' },
   '🃏': { file: 'joker', label: 'Jokerkort' },
   '🔍': { file: 'magnifying-glass', label: 'Förstoringsglas' },
-  // Kommande spel: Ordflykt och Agentduellen
+  // Kommande spel: Ordflykt och Agentduellen. Ritspelets 🎨 har ingen bild än, så där visas tecknet.
   '💬': { file: 'speech-balloon', label: 'Pratbubbla' },
   '🕶': { file: 'sunglasses', label: 'Solglasögon' },
   // Bilderna i spelförklaringarna (intro i games.ts)
