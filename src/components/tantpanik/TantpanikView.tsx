@@ -382,8 +382,9 @@ export function TantpanikView({
         />
         {/* Värden: en spelare har varit borta länge. En bot kan ta över handen tills spelaren kommer tillbaka. */}
         {standInFor && !nopeOpen && (
-          // Under turkoppen, som står under platsen när det är spelarens tur.
-          <div className="absolute inset-x-0 top-full z-10 mt-9 flex justify-center px-3">
+          // En egen rad under motspelarna, så att knappen aldrig täcker högarna (bordet under krymper lite). Har spelaren
+          // tur står turkoppen under platsen, och då börjar raden under koppen.
+          <div data-tant-botknapp className={cn('flex justify-center px-3 pb-1', table.current === standInFor && 'pt-7')}>
             <Button className="max-w-full rounded-full shadow-soft-sm motion-safe:animate-pop" onClick={() => onStandIn?.(standInFor)}>
               <Bot aria-hidden />
               <span className="truncate">Låt en bot spela åt {state.players[standInFor]?.name ?? 'spelaren'}</span>
@@ -1346,6 +1347,8 @@ const PILES_WIDE = 1 + PILE_GAP + DISCARD_SCALE + 0.1
 // växa och fylla höjden i stället för att begränsas av bredden.
 const PILE_TUCK = 0.12
 const PILES_WIDE_TIGHT = 1 + DISCARD_SCALE - PILE_TUCK + 0.1
+// Kortbildernas hörnrundning som andel av kortets bredd (25 px på en 360 px bred bild).
+const CARD_CORNER = 25 / 360
 // De översta korten i slänghögen ligger åt lite olika håll, som om de slängts dit (grader, översta sist).
 const DISCARD_TILT = [-7, 4, 11]
 
@@ -1376,6 +1379,8 @@ function Piles({
   const layers = Math.min(6, Math.ceil(table.deckCount / 5))
   const shown = table.discardTop.slice(-3)
   const thickness = layers * Math.max(2, Math.round(size / 80))
+  // Kortbildernas hörn är rundade med så här stor andel av kortets bredd.
+  const radius = Math.round(size * CARD_CORNER)
   return (
     <div className="flex items-end justify-center" style={{ gap: tight ? 0 : Math.round(size * PILE_GAP) }}>
       {/* Draghögen studsar till när det blir min tur. Den ligger överst när slänghögen ligger en bit bakom. */}
@@ -1385,20 +1390,10 @@ function Piles({
           disabled={!canDraw}
           onClick={onDraw}
           aria-label={canDraw ? `Dra ett kort. ${table.deckCount} kort i högen` : `Draghögen, ${table.deckCount} kort`}
-          className={cn(
-            'relative block w-full rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default',
-            canDraw && 'ring-4 ring-primary motion-safe:animate-turn-pulse',
-          )}
-          style={{ marginBottom: thickness }}
+          className="relative block w-full outline-none focus-visible:ring-4 focus-visible:ring-ring/50 disabled:cursor-default"
+          style={{ marginBottom: thickness, borderRadius: radius }}
           data-tant-pile
         >
-          {/* Min tur: ett sken runt högen som pulserar (står still med "minska rörelse"). */}
-          {canDraw && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -inset-3 rounded-[1.4rem] bg-primary/25 shadow-[0_0_40px_14px] shadow-primary/50 motion-safe:animate-light-pulse"
-            />
-          )}
           {/* Kortleken: baksidor förskjutna några pixlar, så att den ser tjock ut. När någon gömmer tanten fläktas den isär. */}
           {Array.from({ length: layers }, (_, i) => {
             const offset = ((layers - i) * thickness) / layers
@@ -1412,10 +1407,20 @@ function Piles({
               />
             )
           })}
+          {/* Min tur: en ring och ett sken som pulserar (står still med "minska rörelse"). De ligger precis runt det översta
+              kortet, med kortets egen rundning, ovanpå kortleken under det, så att inget sticker ut snett. */}
+          {canDraw && (
+            <span
+              aria-hidden
+              data-tant-sken
+              className="pointer-events-none absolute inset-0 shadow-[0_0_28px_8px] shadow-primary/45 ring-4 ring-primary motion-safe:animate-light-pulse"
+              style={{ borderRadius: radius }}
+            />
+          )}
           {table.deckCount > 0 ? (
             <TantBaksida sizes={sizes} className="relative w-full drop-shadow-md" />
           ) : (
-            <span className="block aspect-[107/147] w-full rounded-lg border-2 border-dashed border-foreground/30" />
+            <span className="block aspect-[107/147] w-full border-2 border-dashed border-foreground/30" style={{ borderRadius: radius }} />
           )}
           {/* Antalet kort och tanter i högen. */}
           <span data-tant-etikett className="absolute -top-2.5 -left-2 z-10 rounded-full bg-foreground px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-background tabular-nums shadow-soft-sm md:text-sm">
