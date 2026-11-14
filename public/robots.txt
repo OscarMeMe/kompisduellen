@@ -4,6 +4,7 @@ Allow: /spel/gissa-priset
 Allow: /spel/narmast-vinner
 Allow: /spel/kortkaos
 Allow: /spel/imposterjakten
+Allow: /spel/exploderande-tanter
 Allow: /forfestlekar
 Allow: /spel-pa-discord
 Allow: /gissningslekar

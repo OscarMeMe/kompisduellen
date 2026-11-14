@@ -9,6 +9,15 @@ import { rulesFor } from '@/lib/spelregler'
 import { GAME_PAGES, type GamePageInfo } from '@/lib/spelsidor'
 import { cn } from '@/lib/utils'
 
+// Exploderande Tanters sida: väntrummets mönster svagt bakom loggan (ett krämvitt lager över mönstret), och vinröda
+// knappar som blir mörkare när musen är över dem.
+const TANT_BAND = {
+  backgroundImage:
+    'linear-gradient(color-mix(in oklch, var(--tant-kram-2) 82%, transparent), color-mix(in oklch, var(--tant-kram-2) 82%, transparent)), url(/images/tantpanik/vantrum-monster.webp)',
+  backgroundSize: 'auto, 260px 260px',
+}
+const TANT_BUTTON = 'bg-tant-vinrod text-tant-kram-2 shadow-soft-sm hover:bg-[var(--tant-vinrod-mork)]'
+
 // En sida per spel (/spel/gissa-priset …) som berättar vad spelet är, hur man spelar och svarar på vanliga frågor.
 // Sidan förrenderas i bygget, så att sökmotorerna får all text direkt. Ingår i första laddningen (inte lazy),
 // så att den förrenderade sidan inte byts mot en snurra när appen startar.
@@ -19,11 +28,14 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
     window.scrollTo(0, 0)
   }, [page.slug])
   if (!game) return null
+  // Exploderande Tanter har spelets egen stil på sin sida: loggan, krämvitt och vinrött, och mönstret svagt bakom.
+  // Upplägget är detsamma som på de andra spelsidorna.
+  const tant = game.id === 'tantpanik'
   const others = GAME_PAGES.filter((other) => other.slug !== page.slug)
   // Spel som går att prova på egen hand får två vägar in, och då säger huvudknappen vad skillnaden är.
   const canTestAlone = rulesFor(game.id).soloPractice === true
   const startButton = (
-    <Button asChild size="lg" className="w-full sm:w-auto">
+    <Button asChild size="lg" className={cn('w-full sm:w-auto', tant && TANT_BUTTON)} data-egen-farg={tant ? '' : undefined}>
       <Link to={`/skapa?spel=${game.id}`}>
         {canTestAlone ? 'Spela med kompisar' : 'Starta en lobby'}
         <ArrowRight aria-hidden />
@@ -41,12 +53,19 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
         Alla spel
       </Link>
 
-      <section className="overflow-hidden rounded-lg border bg-card shadow-soft">
-        <div className={cn('flex h-24 items-center justify-center sm:h-28', game.color)}>
-          <Emoji emoji={game.emoji} className="text-5xl sm:text-6xl" />
-        </div>
+      <section className={cn('overflow-hidden rounded-lg border bg-card shadow-soft', tant && 'border-tant-vinrod/50 bg-tant-kram-2')}>
+        {tant ? (
+          <div className="flex h-36 items-center justify-center border-b border-tant-vinrod/30 sm:h-44" style={TANT_BAND}>
+            {/* Loggan är dekoration: spelets namn står i rubriken under. */}
+            <img src="/images/tantpanik/logga-800.webp" alt="" width={800} height={468} className="h-28 w-auto sm:h-36" />
+          </div>
+        ) : (
+          <div className={cn('flex h-24 items-center justify-center sm:h-28', game.color)}>
+            <Emoji emoji={game.emoji} className="text-5xl sm:text-6xl" />
+          </div>
+        )}
         <div className="space-y-5 p-5 sm:p-8">
-          <h1 className="text-3xl leading-tight sm:text-4xl">{page.heading}</h1>
+          <h1 className={cn('text-3xl leading-tight sm:text-4xl', tant && 'text-tant-vin')}>{page.heading}</h1>
           <ul className="flex flex-wrap gap-2 text-sm font-semibold">
             <li className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5">
               <Users aria-hidden className="size-4" />
@@ -90,7 +109,7 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
               <span
                 className={cn(
                   'flex size-10 shrink-0 items-center justify-center rounded-full font-heading text-lg font-bold',
-                  game.color,
+                  tant ? 'bg-tant-vinrod text-tant-kram-2' : game.color,
                 )}
               >
                 {index + 1}

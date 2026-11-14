@@ -1,6 +1,8 @@
 // Texterna på guiderna (/forfestlekar …). Guiderna förrenderas som spelsidorna, så att sökmotorerna får all text direkt.
 // Spelarantal och speltid hämtas från games.ts och spelsidor.ts i GuidePage, så att de inte kan bli fel här.
 
+import { findGame } from '@/lib/games'
+
 export type GuideFaq = { question: string; answer: string }
 
 export type GuideGame = {
@@ -25,6 +27,18 @@ export type GuidePageInfo = {
   faq: GuideFaq[]
 }
 
+// Spelens namn i löpande text ("Gissa priset, Närmast vinner och Kortkaos"), från games.ts, så att texterna följer med
+// när ett spel läggs till i en guide eller byter namn. Inga antal står i texterna, av samma skäl.
+export function gameNames(ids: readonly string[]): string {
+  const names = ids.map((id) => findGame(id)?.name ?? id)
+  if (names.length <= 1) return names.join('')
+  return `${names.slice(0, -1).join(', ')} och ${names.at(-1)}`
+}
+
+// Spelen i varje guide, i den ordning de står på sidan.
+const PARTY_GAMES = ['gissa-priset', 'narmast', 'kortkaos', 'imposterjakten', 'tantpanik']
+const DISCORD_GAMES = ['gissa-priset', 'narmast', 'kortkaos', 'imposterjakten', 'tantpanik']
+
 const FREE: GuideFaq = {
   question: 'Kostar det något?',
   answer: 'Nej, alla spelen är helt gratis. Det finns inga köp i spelen.',
@@ -38,12 +52,11 @@ const NO_ACCOUNT: GuideFaq = {
 export const GUIDE_PAGES: GuidePageInfo[] = [
   {
     slug: 'forfestlekar',
-    title: 'Förfestlekar på mobilen: 4 gratis spel | Kompisduellen',
-    description:
-      'Fyra gratis förfestlekar som ni spelar på varsin mobil: Gissa priset, Närmast vinner, Kortkaos och Imposterjakten. Ingen app och inget konto.',
-    heading: 'Fyra förfestlekar som ni spelar på mobilen',
+    title: 'Förfestlekar på mobilen: gratis spel utan app | Kompisduellen',
+    description: `Gratis förfestlekar som ni spelar på varsin mobil: ${gameNames(PARTY_GAMES)}. Ingen app och inget konto.`,
+    heading: 'Förfestlekar som ni spelar på mobilen',
     answer:
-      'Vill ni ha en lek till förfesten utan att plocka fram en kortlek och utan förberedelser? Här är fyra som är gratis och som ni spelar på varsin mobil. En skapar en lobby, resten går med med en kod på fyra bokstäver.',
+      'Vill ni ha en lek till förfesten utan att plocka fram en kortlek och utan förberedelser? Här är lekar som är gratis och som ni spelar på varsin mobil. En skapar en lobby, resten går med med en kod på fyra bokstäver.',
     games: [
       {
         gameId: 'gissa-priset',
@@ -61,13 +74,18 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
         gameId: 'imposterjakten',
         text: 'Alla utom en får samma hemliga ord. Ni säger ett ord var, två eller tre varv runt bordet, och röstar sedan om vem som bluffar. Sitter ni tillsammans säger ni orden högt. Värden väljer 1 till 10 omgångar, med nytt ord och ny lottning av impostern varje gång.',
       },
+      {
+        gameId: 'tantpanik',
+        text: 'Alla turas om att spela kort och dra ur högen. Den som drar en exploderande tant utan Desarmera åker ut, och sist kvar vinner. Det blir nervigt för varje kort som dras, och det går att spela redan när ni är två.',
+      },
     ],
     faq: [
       FREE,
       NO_ACCOUNT,
       {
         question: 'Vilket spel ska vi börja med?',
-        answer: 'Närmast vinner går snabbast och kräver ingen förklaring. Är ni minst tre passar Kortkaos eller Imposterjakten när stämningen är på väg upp.',
+        answer:
+          'Närmast vinner går snabbast och kräver ingen förklaring. Är ni minst tre passar Kortkaos eller Imposterjakten när stämningen är på väg upp. Vill ni ha något nervigare tar ni Exploderande Tanter.',
       },
     ],
   },
@@ -75,10 +93,9 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
     slug: 'spel-pa-discord',
     title: 'Spel att spela på Discord med kompisar | Kompisduellen',
     description:
-      'Fyra gratis spel att köra medan ni pratar på Discord. Dela koden i chatten, och alla spelar på sin egen skärm i webbläsaren.',
-    heading: 'Fyra spel att spela tillsammans på Discord',
-    answer:
-      'Ni kan spela Gissa priset, Närmast vinner, Kortkaos och Imposterjakten medan ni pratar på Discord. Spelen körs i webbläsaren, så ingen behöver installera något och alla spelar på sin egen skärm.',
+      'Gratis spel att köra medan ni pratar på Discord. Dela koden i chatten, och alla spelar på sin egen skärm i webbläsaren.',
+    heading: 'Spel att spela tillsammans på Discord',
+    answer: `Ni kan spela ${gameNames(DISCORD_GAMES)} medan ni pratar på Discord. Spelen körs i webbläsaren, så ingen behöver installera något och alla spelar på sin egen skärm.`,
     howTo: {
       heading: 'Så gör ni',
       steps: [
@@ -91,11 +108,11 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
     sections: [
       {
         heading: 'Så använder ni röstsamtalet',
-        text: 'I Gissa priset och Närmast vinner är samtalet till för att skratta åt varandras gissningar. I Kortkaos kan domaren läsa upp korten. I Imposterjakten diskuterar ni vem som bluffar innan ni röstar, och väljer Nej, vi spelar på distans, så skriver ni orden i spelet.',
+        text: 'I Gissa priset och Närmast vinner är samtalet till för att skratta åt varandras gissningar. I Kortkaos kan domaren läsa upp korten. I Imposterjakten diskuterar ni vem som bluffar innan ni röstar, och väljer Nej, vi spelar på distans, så skriver ni orden i spelet. I Exploderande Tanter hör ni direkt när någon drar tanten.',
       },
       {
         heading: 'Dela inte skärmen när ni har hemliga kort',
-        text: 'I Kortkaos ska handen och i Imposterjakten det hemliga ordet stanna på din egen skärm. Delar du skärmen ser alla vad du har.',
+        text: 'I Kortkaos och Exploderande Tanter ska handen stanna på din egen skärm, och i Imposterjakten det hemliga ordet. Delar du skärmen ser alla vad du har.',
       },
     ],
     games: [
@@ -103,6 +120,7 @@ export const GUIDE_PAGES: GuidePageInfo[] = [
       { gameId: 'narmast', text: 'Välj ett tal mellan 1 och 100 och se vem som kommer närmast det slumpade talet.' },
       { gameId: 'kortkaos', text: 'Fyll luckan med ditt roligaste kort. Domaren väljer sin favorit.' },
       { gameId: 'imposterjakten', text: 'Alla utom en får ett hemligt ord. Ge ledtrådar och avslöja den som bluffar.' },
+      { gameId: 'tantpanik', text: 'Spela kort och dra ur högen. Den som drar en exploderande tant utan Desarmera åker ut.' },
     ],
     faq: [
       FREE,
