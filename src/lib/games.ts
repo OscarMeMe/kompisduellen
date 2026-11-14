@@ -226,6 +226,27 @@ export const GAMES: GameInfo[] = [
       ],
     },
   },
+  {
+    // Arbetsnamn. Ett ritspel där en ritar och de andra gissar. Idén står i docs/kommande-spel.md.
+    id: 'ritspel',
+    name: 'Klotterkampen',
+    tagline: 'En ritar, resten gissar. Ju snabbare du gissar, desto fler poäng.',
+    emoji: '🎨',
+    color: 'bg-sun-soft',
+    minPlayers: 3,
+    maxPlayers: 10,
+    playable: false,
+    intro: {
+      emoji: '🎨',
+      pitch: 'En ritar ett hemligt ord. Resten gissar medan teckningen växer fram.',
+      steps: [
+        'En spelare i taget får ett hemligt ord och ritar det på en duk.',
+        'De andra ser teckningen växa fram och skriver sina gissningar.',
+        'Bokstäver i ordet visas efter hand, om det går trögt.',
+        'Snabb gissning ger flest poäng, och den som ritar får poäng när andra gissar rätt.',
+      ],
+    },
+  },
 ]
 
 export function findGame(id: string | null | undefined): GameInfo | undefined {

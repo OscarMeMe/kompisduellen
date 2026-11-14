@@ -12,9 +12,10 @@ const EMOJI: Record<string, EmojiInfo> = {
   '🗳': { file: 'ballot-box', label: 'Valurna' },
   '🃏': { file: 'joker', label: 'Jokerkort' },
   '🔍': { file: 'magnifying-glass', label: 'Förstoringsglas' },
-  // Kommande spel: Ordflykt och Agentduellen
+  // Kommande spel: Ordflykt, Agentduellen och ritspelet Klotterkampen
   '💬': { file: 'speech-balloon', label: 'Pratbubbla' },
   '🕶': { file: 'sunglasses', label: 'Solglasögon' },
+  '🎨': { file: 'artist-palette', label: 'Målarpalett' },
   // Bilderna i spelförklaringarna (intro i games.ts)
   '💸': { file: 'money-with-wings', label: 'Sedlar med vingar' },
   '🍀': { file: 'four-leaf-clover', label: 'Fyrklöver' },
