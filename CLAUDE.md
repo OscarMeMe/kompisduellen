@@ -298,6 +298,7 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 | `/resultat/:code` | Skickar vidare till `/lobby/:code` |
 | `/profil` | Profil (ändra namn och figur, sparas i webbläsaren, och Spara leder tillbaka till startsidan) |
 | `/granska` | Granskning av frågorna i Gissa priset. Bara i utvecklingsläge (`npm run dev`), byggs aldrig in i sajten |
+| `/granska-ord` | Granskning av orden i Imposterjakten. Bara i utvecklingsläge (`npm run dev`), byggs aldrig in i sajten |
 | `/figurer` | Alla blobbar med alla miner och alla figurer i emoji-storlek. Bara i utvecklingsläge (`npm run dev`), byggs aldrig in i sajten |
 
 ## Granskning av Gissa priset
@@ -306,3 +307,12 @@ Svensk sajt med roliga småspel och gissningslekar att köra med kompisar, på f
 - Nya frågor läggs i `inkorg.json` i projektroten (en lista med samma fält som `PriceItem`). "Godkänd" flyttar en inkorgsfråga till slutet av `src/lib/prisdata.json`, och "Ta bort" tar bort frågan ur filen där den ligger.
 - Bilder till inkorgsfrågor ligger i `public/prisbilder-inkorg/` (sökvägen `/prisbilder-inkorg/x.webp`). Vid "Godkänd" flyttas bilden till `public/prisbilder/` och sökvägen skrivs om, och "Ta bort" tar bort bilden.
 - Omdömen och kommentarer sparas i `granskning.json`. `inkorg.json`, `granskning.json` och `public/prisbilder-inkorg/` står i `.gitignore` och får aldrig committas.
+
+## Granskning av orden i Imposterjakten
+
+- `/granska-ord` (`OrdGranskningPage`) finns bara med `npm run dev`, som `/granska`. Den visar varje ord i `src/lib/imposterjakten.json` som ett kort där allt går att ändra (ordet, kategorin, ledtråden till impostern i Normal, nära-ordet för Lurig, godkända former med komma emellan, och svårigheten). Ordets id ändras aldrig. Byggd för dator.
+- `vite-plugin-granska-ord.ts` körs bara av dev-servern och skriver ändringarna: Spara skriver ordet till `imposterjakten.json` (ett ord per rad och samma radbrytningar som förut, `serializeWords`), Godkänn sparar omdömet i `granskning-ord.json` och ger kortet en Godkänd-stämpel (`Stamp`), och Kasta tar bort ordet ur `imposterjakten.json`. När sidan själv har skrivit ordlistan laddar dev-servern inte om sidan (`handleHotUpdate`), så att ett beslut går att ångra tills sidan laddas om. Ett kastat ord läggs då tillbaka på samma plats.
+- Reglerna ligger i `ordgranskning.ts` (rena funktioner, testade i `ordgranskning.test.ts`, som också kollar att hela ordlistan skrivs tillbaka exakt som filen ser ut). Ett ord går bara att spara om det klarar det spelet och testerna kräver (`wordError`): inga tomma fält, godkända former med små bokstäver där ordet självt finns med, och ett nära-ord som inte är ordet självt och inte används av ett annat ord.
+- Överst finns filter på kategori och status (Ej granskad är förvalt, Godkänd, Alla), räknaren "38 av 240 granskade" och antalet ord per kategori. Ord som fått ett beslut sedan sidan laddades står kvar i listan oavsett filter. Sidan varnar tydligt om en kategori har färre än 15 ord (`MIN_PER_CATEGORY`, samma gräns som testerna i `imposterjakten.test.ts`), och frågar en gång till innan den kastar ett ord som skulle ge en kategori färre än 15.
+- Lägg till ord (överst, och med en kategori vald "Lägg till ord i Platser") öppnar ett tomt kort med kategorin förvald. Spara lägger ordet sist i `imposterjakten.json` med ett nytt id i samma format som de andra (`newWordId`: små bokstäver utan å, ä och ö och bindestreck mellan orden, med en siffra efter om id:t är upptaget), och ordet räknas som godkänt direkt (`addWord`). Samma regler och felmeddelanden gäller som när ett ord ändras, så ett ord som redan finns stoppas utan hänsyn till stora och små bokstäver.
+- `granskning-ord.json` står i `.gitignore` och får aldrig committas.

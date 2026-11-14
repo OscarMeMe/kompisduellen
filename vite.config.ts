@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { forrenderaPlugin } from './vite-plugin-forrendera.ts'
 import { granskaPlugin } from './vite-plugin-granska.ts'
+import { granskaOrdPlugin } from './vite-plugin-granska-ord.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ isSsrBuild }) => ({
@@ -15,6 +16,8 @@ export default defineConfig(({ isSsrBuild }) => ({
     tailwindcss(),
     // Granskningssidan för Gissa priset. Bara i utvecklingsläge.
     granskaPlugin(),
+    // Granskningssidan för orden i Imposterjakten. Bara i utvecklingsläge.
+    granskaOrdPlugin(),
     // Startsidan och spelsidorna blir färdig HTML i bygget. Bara i produktionsbygget.
     forrenderaPlugin(),
     // Serverdelen som förrenderingen använder (dist-ssr) behöver ingen service worker.

@@ -158,6 +158,9 @@ granskning.json
 inkorg.json
 public/prisbilder-inkorg/
 
+# Granskningen av orden i Imposterjakten (/granska-ord). Omdömena är bara lokala och får aldrig laddas upp.
+granskning-ord.json
+
 # Claude Codes lokala inställningar (behörigheter på den här datorn)
 .claude/settings.local.json
 

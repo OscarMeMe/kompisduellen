@@ -41,6 +41,10 @@ const FigurerPage = import.meta.env.DEV
 const ReviewPage = import.meta.env.DEV
   ? lazy(() => import('@/pages/ReviewPage').then((m) => ({ default: m.ReviewPage })))
   : null
+// Granskningen av orden i Imposterjakten, också bara i utvecklingsläge.
+const OrdGranskningPage = import.meta.env.DEV
+  ? lazy(() => import('@/pages/OrdGranskningPage').then((m) => ({ default: m.OrdGranskningPage })))
+  : null
 
 export default function App() {
   return (
@@ -76,6 +80,16 @@ export default function App() {
             element={
               <Suspense>
                 <ReviewPage />
+              </Suspense>
+            }
+          />
+        )}
+        {OrdGranskningPage && (
+          <Route
+            path="granska-ord"
+            element={
+              <Suspense>
+                <OrdGranskningPage />
               </Suspense>
             }
           />
