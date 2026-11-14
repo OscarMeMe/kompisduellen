@@ -24,7 +24,7 @@ describe('musiken i Exploderande Tanter', () => {
 })
 
 describe('musiken i Imposterjakten', () => {
-  it('har ett spår för väntrummet som finns, och matchens spår är tyst tills filen finns', () => {
+  it('har ett spår för väntrummet som finns, och matchen är tyst och har inget eget spår', () => {
     expect(MUSIC_SETS.imposter.lobby).toBe('/musik/imposter-vantrum.mp3')
     expect(files).toContain(MUSIC_SETS.imposter.lobby)
     const match = MUSIC_SETS.imposter.match
