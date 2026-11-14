@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useLayout } from '@/hooks/useLayout'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
+import { IMPOSTER_GAME } from '@/lib/imposterjakten'
 import { useReactions } from '@/hooks/useReactions'
 import { loadEffectsVolume, loadSoundOn, playPop, saveSoundOn, setEffectsVolume } from '@/lib/ljud'
 import { TANT_GAME } from '@/lib/tantpanik'
@@ -25,7 +26,7 @@ export function LobbySound({ game }: { game: string }) {
     <SoundControl
       soundOn={soundOn}
       onSoundOn={(on) => (reactions ? reactions.setSoundOn(on) : saveSoundOn(on))}
-      music={game === TANT_GAME}
+      music={game === TANT_GAME || game === IMPOSTER_GAME}
     />,
     headerSlot,
   )

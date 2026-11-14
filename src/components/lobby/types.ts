@@ -58,6 +58,9 @@ export type ImposterViewProps = {
   // Värdens knappar: Starta ändå, Nästa (när någon glömt Klar), Nytt ord, Nästa omgång och Avbryt omgången.
   onStartAnyway: () => void
   onSkipTurn: () => void
+  // Spelplanen tar hela skärmen, så värdens Tillbaka till väntrummet och Lämna lobbyn ligger i spelplanens meny.
+  onAbort?: () => void
+  onLeave?: () => void
   onNewWord: () => void
   onNextRound: () => void
   onAbortRound: () => void

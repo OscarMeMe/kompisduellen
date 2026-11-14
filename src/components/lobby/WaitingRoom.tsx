@@ -1,19 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { Check } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { Choice, NextQuestionChoice } from '@/components/lobby/Choice'
 import { LobbyHeader } from '@/components/lobby/LobbyHeader'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { LobbyPlayers } from '@/components/lobby/LobbyPlayers'
-import { ImposterSettingsChoices } from '@/components/imposterjakten/ImposterSettingsChoices'
+import { BytSpel, HowToPlay, RematchCountdown, ValtSpel } from '@/components/lobby/VantrumDelar'
+import { ImposterVantrum } from '@/components/imposterjakten/ImposterVantrum'
 import { AcceptThrowsChoice, ThrowBar, ThrowCounter } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { Button } from '@/components/ui/button'
-import { useCountdown } from '@/hooks/useCountdown'
 import type { OnlinePlayer } from '@/hooks/useLobby'
-import { GAMES, playersLabel, roundWords, type GameInfo } from '@/lib/games'
+import { roundWords, type GameInfo } from '@/lib/games'
 import {
   canStart,
   gameHasBots,
@@ -21,12 +18,10 @@ import {
   guessSecondsFor,
   hasTempoSettings,
   rankLeaderboard,
-  REMATCH_SECONDS,
   roundOptionsFor,
-  type CountdownKind,
   type GameState,
 } from '@/lib/match'
-import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, type ImposterSettings } from '@/lib/imposterjakten'
+import { IMPOSTER_GAME, type ImposterSettings } from '@/lib/imposterjakten'
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
 import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
 import { TantVantrum } from '@/components/tantpanik/TantVantrum'
@@ -38,10 +33,9 @@ import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vant
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
 import { totalThrows } from '@/lib/kast'
-import { loadSoundOn, playCountdownTick } from '@/lib/ljud'
 import { cn } from '@/lib/utils'
 
-type WaitingRoomProps = {
+export type WaitingRoomProps = {
   code: string
   game: GameInfo
   state: GameState
@@ -67,7 +61,12 @@ type WaitingRoomProps = {
   onStartCountdown: () => void
 }
 
-export function WaitingRoom({
+// Imposterjakten har sitt eget väntrum i spelets stil. De andra spelen delar det vanliga.
+export function WaitingRoom(props: WaitingRoomProps) {
+  return props.state.game === IMPOSTER_GAME ? <ImposterVantrum {...props} /> : <StandardWaitingRoom {...props} />
+}
+
+function StandardWaitingRoom({
   code,
   game,
   state,
@@ -81,31 +80,14 @@ export function WaitingRoom({
   onSetGame,
   onSetTempo,
   onSetThrowsAllowed,
-  onSetImposterSettings,
   onSetTantSettings,
   botActions,
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
-  // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
-  const settingsRef = useRef<HTMLElement>(null)
-  // Ett dubbeltryck på Byt spel ska inte också välja ett spel: det andra trycket landar på spelvalet i väntrummet.
-  const [canChoose, setCanChoose] = useState(false)
-  useEffect(() => {
-    const timer = setTimeout(() => setCanChoose(true), 700)
-    return () => clearTimeout(timer)
-  }, [])
-  function chooseGame(id: string) {
-    if (state.choosingGame && !canChoose) return
-    onSetGame(id)
-  }
-  useEffect(() => {
-    if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
-  }, [scrollToGames, isHost])
   const rules = rulesFor(state.game)
-  // Kortspelen och Imposterjakten har egen beskrivning och poängförklaring, och Imposterjakten har egna val.
+  // Kortspelen har egen beskrivning och poängförklaring.
   const cardRules = cardRulesFor(state.game)
-  const imposter = state.game === IMPOSTER_GAME
   const tant = state.game === TANT_GAME
   // Botar spelar bara i spel med stöd för botar. Annars tittar de på och räknas inte som spelare.
   const hasBots = gameHasBots(state.game)
@@ -113,8 +95,8 @@ export function WaitingRoom({
   const watchingBots = online.length - playing.length
   const dressWearer = online.find((p) => p.id === state.dressId)
   const theme = lobbyThemeFor(game)
-  const howTo = tant ? TANT_HOW_TO : imposter ? IMPOSTER_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
-  const scoringDetails = tant ? TANT_SCORING : imposter ? IMPOSTER_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
+  const howTo = tant ? TANT_HOW_TO : cardRules ? cardRules.howTo : rules.howTo(guessSecondsFor(state))
+  const scoringDetails = tant ? TANT_SCORING : cardRules ? cardRules.scoringDetails : rules.scoringDetails
   const roundsLabel = `Antal ${roundWords(state.game).many}`
   // Starta kräver spelets minsta antal spelare. Provomgången (Testa själv) går med en spelare, om spelet tillåter det.
   const enoughPlayers = playing.length >= game.minPlayers
@@ -126,11 +108,9 @@ export function WaitingRoom({
   // Namnen från läget, där den som heter likadant som någon annan har fått en siffra.
   const lobbyName = (player: OnlinePlayer) => state.players[player.id]?.name ?? player.name
   const hostPlayer = online.find((p) => p.host)
-  // Exploderande Tanter: raden när man är för få, om en bot får plats, och om spellistan är utfälld (Byt spel).
+  // Exploderande Tanter: raden när man är för få, och om en bot får plats.
   const tantWaiting = tant ? waitingText(playing.length, game.minPlayers) : null
   const canAddBot = hasBots && online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, playing.length + 1)
-  const [showGames, setShowGames] = useState(false)
-  const gamesOpen = showGames || state.choosingGame || scrollToGames === true
   const status = lobbyStatus({
     count: playing.length,
     game,
@@ -274,60 +254,18 @@ export function WaitingRoom({
 
       {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. */}
       <section
-        ref={settingsRef}
-        className="scroll-mt-4 space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
+        className="space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
         aria-label="Inställningar"
       >
         <h2 className="text-xl">Inställningar</h2>
         {isHost ? (
           <>
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-bold">Spel</p>
-                {/* Exploderande Tanter: bara det valda spelet, och de andra bakom Byt spel. */}
-                {tant && !gamesOpen && (
-                  <Button variant="outline" size="sm" className="h-9" onClick={() => setShowGames(true)}>
-                    Byt spel
-                  </Button>
-                )}
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {/* Det valda spelet först, de andra under i vanlig ordning. */}
-                {GAMES.filter((g) => g.playable && (!tant || gamesOpen || g.id === game.id))
-                  .sort((a, b) => Number(b.id === game.id) - Number(a.id === game.id))
-                  .map((option) => {
-                  const selected = option.id === game.id
-                  // Spelet kräver fler spelare än de som är med nu. Det går att välja, men startknappen väntar.
-                  const tooFew = online.length < option.minPlayers
-                  const tooManyHere = tooManyPlayers(option.id, online.length)
-                  return (
-                    <Button
-                      key={option.id}
-                      variant="outline"
-                      aria-pressed={selected}
-                      onClick={() => chooseGame(option.id)}
-                      className={cn(
-                        'h-auto justify-start gap-3 rounded-lg border-2 p-4 text-left whitespace-normal',
-                        selected ? 'border-primary bg-coral-soft' : 'bg-card',
-                      )}
-                    >
-                      <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-md text-2xl', option.color)}>
-                        <Emoji emoji={option.emoji} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-heading text-base font-bold">{option.name}</span>
-                        <span className="block text-sm font-normal text-muted-foreground">{option.tagline}</span>
-                        <span className={cn('mt-1 block text-xs font-semibold', tooFew || tooManyHere ? 'text-primary' : 'text-muted-foreground')}>
-                          👥 {playersLabel(option)}
-                          {tooFew && (online.length === 1 ? ' · Du är själv här just nu' : ` · ni är ${online.length} just nu`)}
-                          {tooManyHere && ` · ni är ${online.length} just nu`}
-                        </span>
-                      </span>
-                      {selected && <Check className="size-5 shrink-0 text-primary" aria-label="Valt" />}
-                    </Button>
-                  )
-                })}
-              </div>
+              <p className="font-bold">Spel</p>
+              {/* Det valda spelet. De andra finns bakom Byt spel, som öppnar spelvalet mitt på skärmen. */}
+              <ValtSpel game={game}>
+                <BytSpel game={game} players={online.length} choosingGame={state.choosingGame} openAtStart={scrollToGames} onSetGame={onSetGame} />
+              </ValtSpel>
             </div>
 
             {/* Exploderande Tanter har inga rundor: sist kvar vinner. */}
@@ -335,7 +273,6 @@ export function WaitingRoom({
               <Choice
                 label={roundsLabel}
                 compact
-                hint={imposter ? (wordsRunningOutText(state.imposterSettings, state.rounds, state.usedWordIds) ?? undefined) : undefined}
                 options={roundOptionsFor(state.game).map((n) => ({ value: n, label: String(n) }))}
                 selected={state.rounds}
                 onSelect={onSetRounds}
@@ -368,8 +305,6 @@ export function WaitingRoom({
                 onLevel={botActions.setBotLevel}
               />
             )}
-
-            {imposter && <ImposterSettingsChoices settings={state.imposterSettings} onChange={onSetImposterSettings} />}
 
             {tant && (
               // Spelets egna val i en egen ruta.
@@ -419,79 +354,4 @@ export function WaitingRoom({
       {isHost && <HowToPlay howTo={howTo} scoringDetails={scoringDetails} />}
     </Wide>
   )
-}
-
-// Så spelas det: hur spelet går till och hur poängen räknas, för spelet som är valt just nu. Hopfällt för alla.
-function HowToPlay({ howTo, scoringDetails }: { howTo: string; scoringDetails: string[] }) {
-  return (
-    <details className="rounded-lg border bg-card px-4 text-sm shadow-soft-sm">
-      {/* Hela raden är tryckbar, minst 44 px hög. */}
-      <summary className="-mx-4 cursor-pointer px-4 py-3 font-semibold">Så spelas det</summary>
-      <div className="space-y-2 pb-3 text-muted-foreground">
-        <p>{howTo}</p>
-        <ul className="list-disc space-y-1 pl-5">
-          {scoringDetails.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </div>
-    </details>
-  )
-}
-
-// Nedräkning före en match (första starten eller revansch): alla ser samma tal, och matchen startar av sig själv.
-// Värden kan avbryta. En revansch tar över hela skärmen och hörs (följer ljudknappen), så att ingen missar den.
-function RematchCountdown({
-  at,
-  kind,
-  rule,
-  clockOffset,
-  isHost,
-  onCancel,
-}: {
-  at: number
-  kind: CountdownKind
-  rule: string
-  clockOffset: number
-  isHost: boolean
-  onCancel: () => void
-}) {
-  const { secondsLeft } = useCountdown(at, clockOffset, REMATCH_SECONDS)
-  const rematch = kind !== 'first'
-  const shown = Math.max(1, secondsLeft)
-  useEffect(() => {
-    if (rematch && loadSoundOn()) playCountdownTick(shown)
-  }, [rematch, shown])
-  const box = (
-    <section
-      className={cn(
-        'space-y-2 rounded-lg border-2 border-primary bg-coral-soft p-5 text-center shadow-soft animate-pop',
-        rematch && 'w-full max-w-md space-y-3 p-8',
-      )}
-      aria-live="polite"
-    >
-      <p className={cn('font-heading font-bold', rematch ? 'text-4xl sm:text-5xl' : 'text-lg')}>
-        {kind === 'first' ? 'Nu kör vi!' : 'Revansch!'}
-      </p>
-      <p
-        className={cn('font-heading font-bold text-primary tabular-nums', rematch ? 'text-8xl sm:text-9xl' : 'text-6xl')}
-        aria-label={`Startar om ${secondsLeft} sekunder`}
-      >
-        {/* Varje siffra poppar in för sig. */}
-        <span key={shown} className="inline-block motion-safe:animate-pop">
-          {shown}
-        </span>
-      </p>
-      <p className="text-sm text-muted-foreground">
-        {kind === 'first' ? rule : 'Samma spel och samma inställningar. Gör er redo!'}
-      </p>
-      {isHost && (
-        <Button variant="outline" onClick={onCancel}>
-          Avbryt
-        </Button>
-      )}
-    </section>
-  )
-  if (!rematch) return box
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">{box}</div>
 }

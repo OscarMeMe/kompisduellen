@@ -1222,7 +1222,7 @@ describe('Imposterjakten: hur långt spelet blir', () => {
       () => 0.5,
     )
     const again = hostStart({ state: backToWaiting(finished.state), secrets: null }, ABC, NOW, () => 0)
-    expect(again.state.imposterMatch).toEqual({ wordIds: [], imposterCounts: {} })
+    expect(again.state.imposterMatch).toEqual({ wordIds: [], imposterCounts: {}, history: [] })
   })
 
   it('avslutar efter den pågående omgången, med poängen kvar, och väntrummet får tillbaka antalet', () => {

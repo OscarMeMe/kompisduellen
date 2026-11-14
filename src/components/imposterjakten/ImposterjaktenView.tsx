@@ -1,22 +1,23 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Flag, Undo2, Check, CircleStop, RefreshCw, Send } from 'lucide-react'
-import { Bord } from '@/components/imposterjakten/Bord'
+import { ImposterRegler } from '@/components/imposterjakten/ImposterRegler'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
+import { ChevronDown, Flag, Undo2, Check, CircleHelp, CircleStop, List, LogOut, Menu, RefreshCw, Send } from 'lucide-react'
+import { AllaOrd, Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
 import { AccusationStep, DiscussionStep, FacitStep, GuessStep, VotingStep, TableCenter } from '@/components/imposterjakten/VoteSteps'
-import { AnswerDock } from '@/components/lobby/AnswerDock'
-import { RoundTimer, Wide } from '@/components/lobby/LobbyLayout'
+import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { TimeWarningFrame } from '@/components/lobby/TimeWarningFrame'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { useCountdown } from '@/hooks/useCountdown'
+import { useGameMusic } from '@/hooks/useGameMusic'
+import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import { useReactions } from '@/hooks/useReactions'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import {
   canChangeWord,
-  clueRound,
-  clueRoundsFor,
   endsAfterThisRound,
   ACCUSE_SECONDS,
   canAccuse,
@@ -32,16 +33,37 @@ import {
 import type { GameState } from '@/lib/match'
 import { latestClue } from '@/lib/bord'
 import { hasFinePointer } from '@/lib/device'
-import { playTurn } from '@/lib/ljud'
+import { loadSoundOn, playTurn, saveSoundOn } from '@/lib/ljud'
+import { fitWordSize } from '@/lib/ordstorlek'
+import { SPLAT_SHIELD } from '@/lib/splatt'
 import { cn } from '@/lib/utils'
 
-// Imposterjakten: hela omgången i en vy. Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två
-// eller tre varv. Efter näst sista varvet kan vem som helst anklaga någon. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist visas facit med
-// poängen. Kortet går att visa och dölja hela tiden. Värden kan avbryta omgången (inga poäng, den räknas inte) och
-// avsluta efter den här omgången.
+const PATTERN = '/images/imposterjakten/monster-mork.webp'
+const LOGO = '/images/imposterjakten/logga-800.webp'
+
+// Imposterjakten: hela omgången i en vy, i stilen Nattspanarna. Under matchen tar spelplanen hela skärmen, på det mörka
+// mönstret: en rad överst med reglerna, vad jag ska göra just nu, ljudet och menyn, bordet under lampans sken i mitten,
+// och svarsdelen på krämvitt papper i nederkant (på bred skärm i en egen kolumn till höger, med allas ord som en lista).
+// Först läser alla sitt kort, sedan ger alla ett ord var i turordning, två eller tre varv. Efter näst sista varvet kan
+// vem som helst anklaga någon. Sedan diskuterar gruppen och röstar. Fångas impostern får den gissa ordet, och till sist
+// visas facit med poängen. Kortet går att visa och dölja hela tiden. Värdens val (Nytt ord, avsluta efter omgången,
+// avbryta omgången och tillbaka till väntrummet) ligger i menyn.
 export function ImposterjaktenView(props: ImposterViewProps) {
   const { state, me, isHost, imposterCard, clockOffset, onNewWord, onAbortRound, onEndAfterRound } = props
   const [confirmAbort, setConfirmAbort] = useState(false)
+  const [rules, setRules] = useState(false)
+  const [menu, setMenu] = useState(false)
+  const [words, setWords] = useState(false)
+  useLockPageScroll()
+  // Matchens musik, lågt så att den inte stör när man pratar. Tonas över från väntrummets spår.
+  useGameMusic('imposter', 'match')
+  const keyboard = useKeyboardInset()
+  // Svarsdelen skrollar för sig när innehållet inte får plats (t.ex. facit med tio spelare på en liten telefon). Då
+  // visas en liten etikett, så att det syns att det finns mer nedanför.
+  const dockRef = useRef<HTMLElement>(null)
+  const moreBelow = useMoreBelow(dockRef)
+  const reactions = useReactions()
+  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   const table = state.imposter
   // Vem jag tänker rösta på. Valet gäller bara den omröstning det gjordes i.
   const voteRound = `${table?.step}-${table?.tied?.join() ?? ''}-${state.round}`
@@ -51,44 +73,82 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const accusing = table?.accusation != null
   const totalSeconds = accusing ? ACCUSE_SECONDS : COUNTDOWN_SECONDS
   const countdown = useTimeWarning(state.deadline, clockOffset, totalSeconds, false)
+  const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds)
   if (!table) return null
   const inRound = table.order.includes(me.id)
   const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
+  const counting = state.deadline !== null && (accusing || (table.countdownStarted && table.step === 'diskussion'))
+  const instruction = imposterInstruction(table, {
+    id: me.id,
+    name: (id) => state.players[id]?.name ?? 'Någon',
+    ready: imposterCard?.ready ?? false,
+    vote: imposterCard?.vote ?? null,
+    accuseVote: imposterCard?.accuseVote ?? null,
+    typing: props.typing,
+    secondsLeft: countdown.secondsLeft,
+  })
 
   return (
-    // På bred, låg skärm (t.ex. en bärbar dator på 1366 × 768) ligger svarsdelen bredvid bordet, så att den aldrig täcker det.
-    <Wide tight className="lg:short:max-w-6xl">
-      {(accusing || (table.countdownStarted && table.step === 'diskussion')) && (
-        <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />
-      )}
-      <RoundTimer
-        state={state}
-        clockOffset={clockOffset}
-        hideLabel
-        totalSeconds={totalSeconds}
-        warning={accusing || table.step === 'diskussion' ? countdown.warning : 'normal'}
-        keepBarSpace
-      />
-      {/* Nytt kort är dolt igen, även om det förra visades (en avbruten omgång har samma nummer, men ett ord till är använt). */}
-      <MyCard key={`${state.round}-${state.usedWordIds.length}`} mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />
-      <Instruction
-        round={state.round}
-        rounds={state.rounds}
-        {...imposterInstruction(table, {
-          id: me.id,
-          name: (id) => state.players[id]?.name ?? 'Någon',
-          ready: imposterCard?.ready ?? false,
-          vote: imposterCard?.vote ?? null,
-          accuseVote: imposterCard?.accuseVote ?? null,
-          typing: props.typing,
-          secondsLeft: countdown.secondsLeft,
-        })}
-      />
+    <div
+      data-tema="nattspanarna"
+      data-spel="imposterjakten"
+      // h-dvh: spelplanen följer skärmens höjd även när Safaris verktygsfält döljs eller visas. inset-0 är reserven för
+      // webbläsare som inte förstår dvh. Med tangentbordet uppe krymper spelplanen, så att svarsdelen ligger ovanför det.
+      className="fixed inset-0 z-10 flex h-dvh flex-col overflow-hidden overscroll-none bg-background bg-repeat pt-[env(safe-area-inset-top)] text-foreground"
+      style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: '256px 256px', paddingBottom: keyboard }}
+    >
+      {counting && <TimeWarningFrame warning={countdown.warning} secondsLeft={countdown.secondsLeft} />}
 
-      <div className="flex flex-col gap-1.5 sm:gap-3 lg:short:grid lg:short:grid-cols-[minmax(0,1fr)_22rem] lg:short:items-start lg:short:gap-5">
-      {/* Samma bord genom alla faser, så att det står still när de byts. Bara svarsdelen under tonas om. */}
-      {table.step !== 'kort' && (
-        <div className="motion-safe:animate-fade">
+      {/* Raden överst: reglerna, vad JAG ska göra just nu (lampgul när det är något jag ska göra), ljudet och menyn. */}
+      <div className="relative z-30 flex shrink-0 items-center gap-1.5 px-2 pt-1.5 pb-1 sm:gap-2 sm:px-3 sm:pt-2.5">
+        <RoundButton label="Så spelas det" onClick={() => setRules(true)}>
+          <CircleHelp aria-hidden className="size-5" />
+        </RoundButton>
+        <p
+          role="status"
+          className={cn(
+            'flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-3xl px-3 py-1 text-center font-heading text-[13px] leading-tight font-bold text-balance text-[var(--natt)] sm:min-h-12 sm:text-xl',
+            instruction.act ? 'bg-[var(--natt-lampa)] shadow-[0_0_22px_color-mix(in_oklch,var(--natt-lampa)_55%,transparent)]' : 'bg-[var(--natt-kram)]',
+          )}
+        >
+          {instruction.text}
+        </p>
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 backdrop-blur-sm">
+          <SoundControl soundOn={soundOn} onSoundOn={(on) => (reactions ? reactions.setSoundOn(on) : saveSoundOn(on))} music />
+        </span>
+        <RoundButton label="Meny" onClick={() => setMenu(true)}>
+          <Menu aria-hidden className="size-5" />
+        </RoundButton>
+      </div>
+
+      {/* Under raden: loggan, omgången och varvet, och på smal skärm knappen till listan med allas ord. */}
+      <div className="relative z-30 flex shrink-0 items-center justify-center gap-2 px-3 text-xs font-bold text-muted-foreground sm:text-sm">
+        <img src={LOGO} alt="Imposterjakten" width={800} height={245} className="h-5 w-auto sm:h-7" />
+        <span className="truncate">
+          Omgång {state.round} av {state.rounds}
+          {instruction.lap && ` · ${instruction.lap}`}
+          {endsAfterThisRound(state) && ' · Sista omgången'}
+        </span>
+        {table.clues.length > 0 && (
+          <button type="button" className="flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card/80 px-2.5 text-foreground lg:hidden" onClick={() => setWords(true)}>
+            <List aria-hidden className="size-3.5" />
+            Allas ord
+          </button>
+        )}
+      </div>
+      {/* Tidsstapeln för nedräkningen till omröstningen och för en anklagelse. Platsen finns alltid, så att bordet inte hoppar. */}
+      <div className="relative z-30 mx-3 mt-1 h-1.5 shrink-0 overflow-hidden rounded-full sm:mx-4" aria-hidden>
+        {counting && (
+          <div
+            className={cn('h-full origin-left rounded-full', countdown.warning === 'kritisk' ? 'bg-destructive' : 'bg-primary')}
+            style={{ transform: `scaleX(${Math.max(0, Math.min(1, progress))})` }}
+          />
+        )}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        {/* Samma bord genom alla faser, så att det står still när de byts. Bara svarsdelen byts. */}
+        <div className="relative min-h-0 flex-1">
           <Bord
             state={state}
             table={table}
@@ -104,65 +164,170 @@ export function ImposterjaktenView(props: ImposterViewProps) {
             }
           />
         </div>
-      )}
-      
-      {/* Svarsdelen: under bordet, eller i en egen kolumn bredvid det på bred, låg skärm. */}
-      <div className="flex min-w-0 flex-col gap-1.5 sm:gap-3 lg:short:sticky lg:short:top-2">
-      {table.failedAccusation && !accusing && (
-        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
-          Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.
-        </p>
-      )}
-      {/* Värden hoppade över någon som dröjde. Alla ser det, så att det inte ser ut som ett fel. */}
-      {table.skipNote && !accusing && (
-        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
-          {table.skipNote}
-        </p>
-      )}
-      {accusing && <AccusationStep {...stepProps} />}
-      {!accusing && table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
-      {!accusing && table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
-      {!accusing && table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
-      {table.step === 'rostning' && !accusing && <VotingStep {...stepProps} choice={choice} />}
-      {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
-      {table.step === 'facit' && <FacitStep {...stepProps} />}
-      {isHost && <HostSkipButton state={state} table={table} meId={me.id} onSkip={props.onSkipTurn} />}
-      </div>
+
+        {/* Svarsdelen på krämvitt papper: i nederkant, eller i en egen kolumn till höger på bred skärm. Den skrollar för
+            sig om innehållet inte får plats, så att bordet alltid syns. Kast landar aldrig här. */}
+        <aside
+          ref={dockRef}
+          data-yta="papper"
+          {...SPLAT_SHIELD}
+          // Medan korten läses får svarsdelen ta mer av höjden, så att hela kortet och knappen syns utan att skrolla.
+          data-steg={table.step}
+          // På bred skärm slutar kolumnen där innehållet slutar (lg:self-start), och skrollar först om den inte får plats.
+          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[23.5rem] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
+        >
+          {table.failedAccusation && !accusing && (
+            <Note>Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.</Note>
+          )}
+          {/* Värden hoppade över någon som dröjde. Alla ser det, så att det inte ser ut som ett fel. */}
+          {table.skipNote && !accusing && <Note>{table.skipNote}</Note>}
+          {/* Nytt kort är dolt igen, även om det förra visades (en avbruten omgång har samma nummer, men ett ord till är använt). */}
+          {table.step !== 'facit' && <MyCard key={`${state.round}-${state.usedWordIds.length}`} mine={imposterCard} inRound={inRound} compact={table.step !== 'kort'} />}
+          {accusing && <AccusationStep {...stepProps} />}
+          {!accusing && table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
+          {!accusing && table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
+          {!accusing && table.step === 'diskussion' && <DiscussionStep {...stepProps} />}
+          {table.step === 'rostning' && !accusing && <VotingStep {...stepProps} choice={choice} />}
+          {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
+          {table.step === 'facit' && <FacitStep {...stepProps} />}
+          {isHost && <HostSkipButton state={state} table={table} meId={me.id} onSkip={props.onSkipTurn} />}
+          {/* Allas ord som en lista. På smal skärm ligger den bakom knappen Allas ord i stället. */}
+          {/* I facit med få spelare står alla ord redan vid platserna, så där behövs inte listan. */}
+          {table.clues.length > 0 && !(table.step === 'facit' && table.order.length < 7) && (
+            <div className="hidden space-y-1.5 border-t border-border pt-3 lg:block">
+              <h3 className="text-lg">Allas ord</h3>
+              <AllaOrd state={state} table={table} meId={me.id} />
+            </div>
+          )}
+          {moreBelow && (
+            <span aria-hidden className="pointer-events-none sticky bottom-0 z-10 -mt-7 flex justify-center">
+              <span className="flex items-center gap-1 rounded-full bg-foreground px-3 py-1 text-xs font-bold text-background shadow-soft-sm motion-safe:animate-hop">
+                <ChevronDown className="size-3.5" />
+                Skrolla för mer
+              </span>
+            </span>
+          )}
+        </aside>
       </div>
 
-      {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
-      {isHost && canChangeWord(table) && (
-        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={onNewWord}>
-          <RefreshCw aria-hidden />
-          Nytt ord
-        </Button>
-      )}
-      {/* Värden har valt att avsluta efter den här omgången. Alla ser det. */}
-      {endsAfterThisRound(state) && (
-        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
-          Sista omgången. {isHost ? 'Du avslutar' : `${hostName(state, props.online)} avslutar`} efter den här.
-        </p>
-      )}
-      {/* Värden kan korta matchen. Spelet går till prispallen efter den pågående omgången, med poängen kvar. */}
-      {isHost && endsAfterThisRound(state) && (
-        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => onEndAfterRound(false)}>
-          <Undo2 aria-hidden />
-          Kör alla omgångar
-        </Button>
-      )}
-      {isHost && !endsAfterThisRound(state) && state.round < state.rounds && (
-        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => onEndAfterRound(true)}>
-          <Flag aria-hidden />
-          Avsluta efter den här omgången
-        </Button>
-      )}
-      {/* Om någon dröjer eller ordet avslöjas av misstag. Omgången ger inga poäng och räknas inte. */}
-      {isHost && table.step !== 'facit' && (
-        <Button variant="ghost" className="mx-auto text-muted-foreground" onClick={() => setConfirmAbort(true)}>
-          <CircleStop aria-hidden />
-          Avbryt omgången
-        </Button>
-      )}
+      <Dialog open={words} onOpenChange={setWords}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Allas ord</DialogTitle>
+            <DialogDescription>Varje spelares ord i den ordning de gavs.</DialogDescription>
+          </DialogHeader>
+          <AllaOrd state={state} table={table} meId={me.id} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rules} onOpenChange={setRules}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Så spelas det</DialogTitle>
+            <DialogDescription>Alla vet ordet. Utom en.</DialogDescription>
+          </DialogHeader>
+          <ImposterRegler className="text-sm" />
+          {/* Väntrummets musik är CC BY 3.0, så den har en kredit. Matchens (CC0) behöver ingen. */}
+          <p className="text-xs text-muted-foreground">
+            Musik:{' '}
+            <a href="https://opengameart.org/content/trouble-makers-coolriff-jazz" target="_blank" rel="noreferrer" className="underline">
+              Trouble Makers
+            </a>{' '}
+            av{' '}
+            <a href="https://www.matthewpablo.com" target="_blank" rel="noreferrer" className="underline">
+              Matthew Pablo
+            </a>{' '}
+            (OpenGameArt,{' '}
+            <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">
+              CC BY 3.0
+            </a>
+            )
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Menyn: reaktionerna, värdens val och vägen ut. */}
+      <Dialog open={menu} onOpenChange={setMenu}>
+        <DialogContent className="max-h-[85dvh] gap-4 overflow-x-hidden overflow-y-auto sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Meny</DialogTitle>
+            <DialogDescription>Tryck på en spelare vid bordet för att kasta något.</DialogDescription>
+          </DialogHeader>
+          <ReactionBar />
+          <div className="grid gap-2">
+            {/* Värden kan byta ord om någon inte förstår det, men bara innan första associationen. */}
+            {isHost && canChangeWord(table) && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  onNewWord()
+                }}
+              >
+                <RefreshCw aria-hidden />
+                Nytt ord
+              </MenuButton>
+            )}
+            {/* Värden kan korta matchen. Spelet går till prispallen efter den pågående omgången, med poängen kvar. */}
+            {isHost && endsAfterThisRound(state) && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  onEndAfterRound(false)
+                }}
+              >
+                <Undo2 aria-hidden />
+                Kör alla omgångar
+              </MenuButton>
+            )}
+            {isHost && !endsAfterThisRound(state) && state.round < state.rounds && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  onEndAfterRound(true)
+                }}
+              >
+                <Flag aria-hidden />
+                Avsluta efter den här omgången
+              </MenuButton>
+            )}
+            {/* Om någon dröjer eller ordet avslöjas av misstag. Omgången ger inga poäng och räknas inte. */}
+            {isHost && table.step !== 'facit' && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  setConfirmAbort(true)
+                }}
+              >
+                <CircleStop aria-hidden />
+                Avbryt omgången
+              </MenuButton>
+            )}
+            {isHost && props.onAbort && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  props.onAbort?.()
+                }}
+              >
+                <Undo2 aria-hidden />
+                Tillbaka till väntrummet
+              </MenuButton>
+            )}
+            {props.onLeave && (
+              <MenuButton
+                onClick={() => {
+                  setMenu(false)
+                  props.onLeave?.()
+                }}
+              >
+                <LogOut aria-hidden />
+                Lämna lobbyn
+              </MenuButton>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AbortRoundDialog
         open={confirmAbort}
         onStay={() => setConfirmAbort(false)}
@@ -171,36 +336,70 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           onAbortRound()
         }}
       />
-
-      {/* Kasta något: tryck på en spelare vid bordet. */}
-      <ReactionBar />
-    </Wide>
+    </div>
   )
 }
 
-// Den stora raden ovanför bordet: omgång, varv och vad jag ska göra just nu. På mobil två rader, med omgång och varv
-// först. Fast höjd, så att bordet inte hoppar när texten byts.
-function Instruction({ round, rounds, lap, text, act }: { round: number; rounds: number; lap?: string; text: string; act: boolean }) {
+// En rund knapp i raden överst.
+function RoundButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
-    <p
-      role="status"
-      className={cn(
-        'flex min-h-13 items-center justify-center text-center font-heading text-lg leading-tight font-bold text-balance tiny:min-h-11 tiny:text-base sm:min-h-10 sm:text-xl',
-        act && 'text-primary-button',
-      )}
-    >
-      <span>
-        <span className="block text-sm sm:inline sm:text-xl">
-          Omgång {round} av {rounds}
-          {lap && ` · ${lap}`}
-        </span>
-        <span className="hidden sm:inline" aria-hidden>
-          {' · '}
-        </span>
-        <span className="block sm:inline">{text}</span>
-      </span>
+    <button type="button" aria-label={label} onClick={onClick} className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 text-foreground backdrop-blur-sm">
+      {children}
+    </button>
+  )
+}
+
+function MenuButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <Button variant="outline" size="lg" className="w-full" onClick={onClick}>
+      {children}
+    </Button>
+  )
+}
+
+// En gul rad i svarsdelen med något alla ska veta.
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-md bg-sun-soft px-3 py-2 text-center text-sm font-semibold sm:text-base" role="status">
+      {children}
     </p>
   )
+}
+
+// Finns det mer att skrolla fram nedanför i rutan? Mäts när rutan skrollas eller ändrar storlek.
+function useMoreBelow(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [more, setMore] = useState(false)
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const measure = () => setMore(element.scrollHeight - element.scrollTop - element.clientHeight > 12)
+    const frame = requestAnimationFrame(measure)
+    element.addEventListener('scroll', measure, { passive: true })
+    const resize = new ResizeObserver(measure)
+    resize.observe(element)
+    for (const child of element.children) resize.observe(child)
+    const changes = new MutationObserver(measure)
+    changes.observe(element, { childList: true, subtree: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      element.removeEventListener('scroll', measure)
+      resize.disconnect()
+      changes.disconnect()
+    }
+  }, [ref])
+  return more
+}
+
+// Sidan bakom spelplanen skrollar inte medan den visas.
+function useLockPageScroll() {
+  useEffect(() => {
+    const root = document.documentElement
+    const before = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => {
+      root.style.overflow = before
+    }
+  }, [])
 }
 
 type StepProps = ImposterViewProps & { table: ImposterTable }
@@ -238,42 +437,37 @@ function CardStep({ table, me, isHost, inRound, onMove, onStartAnyway }: StepPro
 function CluesCenter({ table, state, meId }: { table: ImposterTable; state: ImposterViewProps['state']; meId: string }) {
   const latest = latestClue(table.clues)
   if (!latest) {
-    return <span className="px-2 font-heading text-sm leading-tight font-bold text-balance sm:text-lg">Första ordet kommer snart</span>
+    return <span className="px-2 font-heading text-base leading-tight font-bold text-balance sm:text-2xl">Första ordet kommer snart</span>
   }
   return (
     <span key={table.turn} className="flex max-w-full flex-col items-center motion-safe:animate-pop">
-      <span className={cn('max-w-full font-heading leading-tight font-bold break-words', latest.text.length > 11 ? 'text-base sm:text-xl' : 'text-xl sm:text-3xl')}>{latest.text}</span>
-      <span className="max-w-full truncate text-xs font-semibold sm:text-sm">{latest.player === meId ? 'Ditt ord' : (state.players[latest.player]?.name ?? 'Någon')}</span>
+      <span
+        className="max-w-full font-heading text-[length:min(1.25rem,var(--fit))] leading-tight font-bold [overflow-wrap:normal] sm:text-[length:min(2.25rem,var(--fit))]"
+        style={{ '--fit': fitWordSize(latest.text, 0.82) } as CSSProperties}
+      >
+        {latest.text}
+      </span>
+      <span className="max-w-full truncate text-xs font-semibold text-muted-foreground sm:text-base">{latest.player === meId ? 'Ditt ord' : (state.players[latest.player]?.name ?? 'Någon')}</span>
     </span>
   )
 }
 
 // Ett ord var i turordning, två eller tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
-function CluesStep({ state, table, me, online, imposterCard, onMove, onTyping }: StepProps) {
+function CluesStep({ table, me, imposterCard, onMove, onTyping }: StepProps) {
   const myTurn = currentTurn(table) === me.id
   useYourTurn(myTurn)
 
-  const line = (
-    <p className="text-center text-sm font-semibold text-muted-foreground">
-      Varv {clueRound(table)} av {clueRoundsFor(table)}
-    </p>
-  )
-
   return (
     <>
-      {myTurn ? (
-        <AnswerDock state={state} online={online} clockOffset={0} meId={me.id} locked={null} line={<span className="sr-only">{line}</span>}>
-          {/* Ny ruta för varje tur, så att texten börjar om. */}
-          {table.aloud ? (
-            <SaidTurn key={table.turn} onDone={(word) => onMove(word ? { type: 'said', word } : { type: 'said' })} />
-          ) : (
-            <WriteTurn key={table.turn} onMove={onMove} onTyping={onTyping} rejectedAt={imposterCard?.rejectedAt ?? null} />
-          )}
-        </AnswerDock>
-      ) : (
-        <div className="sr-only">{line}</div>
-      )}
+      {/* Ny ruta för varje tur, så att texten börjar om. */}
+      {myTurn &&
+        (table.aloud ? (
+          <SaidTurn key={table.turn} onDone={(word) => onMove(word ? { type: 'said', word } : { type: 'said' })} />
+        ) : (
+          <WriteTurn key={table.turn} onMove={onMove} onTyping={onTyping} rejectedAt={imposterCard?.rejectedAt ?? null} />
+        ))}
+      {!myTurn && !canAccuse(table, me.id) && <p className="text-center text-sm font-semibold text-muted-foreground">Vänta på din tur.</p>}
       {canAccuse(table, me.id) && (
         <p className="text-center text-sm font-semibold text-muted-foreground">Misstänker du någon? Tryck på spelaren och välj Anklaga!</p>
       )}
@@ -438,12 +632,6 @@ function WriteTurn({
 }
 
 // Frågan innan värden avbryter omgången.
-// Värdens namn, från läget där namnen är unika.
-function hostName(state: ImposterViewProps['state'], online: ImposterViewProps['online']): string {
-  const host = online.find((player) => player.host)
-  return (host && state.players[host.id]?.name) ?? 'Värden'
-}
-
 function AbortRoundDialog({ open, onStay, onAbort }: { open: boolean; onStay: () => void; onAbort: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onStay()}>

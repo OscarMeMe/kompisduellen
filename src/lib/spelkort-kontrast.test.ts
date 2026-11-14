@@ -60,16 +60,20 @@ const CARDS: Record<string, string> = {
   kortkaos: 'lilac',
   // Exploderande Tanters spelkort har egen stil (data-spelkort): krämvitt.
   tantpanik: 'tant-kram-2',
-  imposterjakten: 'mint',
+  // Imposterjaktens spelkort har också egen stil (data-spelkort): krämvitt, med marinblå text.
+  imposterjakten: 'natt-kram',
 }
 
 describe('spelkortens kontrast (WCAG AA)', () => {
-  const foreground = oklchVar('foreground')
+  const pageForeground = oklchVar('foreground')
+  const foreground = pageForeground
   const card = oklchVar('card')
 
   for (const [game, color] of Object.entries(CARDS)) {
     it(game, () => {
       const surface = oklchVar(color)
+      // Imposterjaktens kort har marinblå text i stället för sajtens vanliga textfärg.
+      const foreground = game === 'imposterjakten' ? oklchVar('natt') : pageForeground
       // Rubriken och spelets namn (stor, fet text, men vi kräver ändå 4,5).
       expect(contrast(foreground, surface)).toBeGreaterThanOrEqual(4.5)
       // Raden med antal spelare och tid (liten text med 80 % opacitet).
@@ -85,6 +89,10 @@ describe('spelkortens kontrast (WCAG AA)', () => {
     expect(contrast(oklchVar('primary-foreground'), oklchVar('primary-button'))).toBeGreaterThanOrEqual(4.5)
     // Etiketten (t.ex. "Bluffigt"): mörk text på krämvitt.
     expect(contrast(foreground, card)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('Imposterjaktens marinblå etikett med krämvit text', () => {
+    expect(contrast(oklchVar('natt-kram'), oklchVar('natt'))).toBeGreaterThanOrEqual(4.5)
   })
 
   it('Exploderande Tanters vinröda etikett (knappen är samma som på de andra korten)', () => {

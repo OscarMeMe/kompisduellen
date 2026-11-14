@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { findGame, GAMES, type GameInfo } from '@/lib/games'
 import { initialState } from '@/lib/match'
-import { emptySeats, LOBBY_THEMES, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
+import { emptySeats, gameChoiceNote, LOBBY_THEMES, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 
 const game = (id: string) => findGame(id)!
 const imposter = game('imposterjakten')
@@ -103,5 +103,21 @@ describe('inställningarna på en rad', () => {
     expect(settingsLine({ ...state, rounds: 3, imposterSettings: { hard: false, tricky: true, category: null, aloud: false } })).toBe(
       '3 omgångar · 3 varv · Lurig · Blandat · Vi skriver orden',
     )
+  })
+})
+
+describe('raden överst i spelvalet', () => {
+  const games = [
+    { name: 'Gissa priset', minPlayers: 2 },
+    { name: 'Kortkaos', minPlayers: 3 },
+    { name: 'Imposterjakten', minPlayers: 3 },
+  ]
+  it('säger en gång att man är själv', () => {
+    expect(gameChoiceNote(1, games)).toBe('Du är själv här just nu. Bjud in fler för att starta.')
+  })
+  it('nämner bara spelen ni är för få eller för många för', () => {
+    expect(gameChoiceNote(2, games)).toBe('Ni är 2. För få för Kortkaos och Imposterjakten.')
+    expect(gameChoiceNote(3, games)).toBeNull()
+    expect(gameChoiceNote(11, games, ['Kortkaos'])).toBe('Ni är 11. För många för Kortkaos.')
   })
 })

@@ -34,10 +34,8 @@ export function findWord(id: string): ImposterWord | undefined {
   return WORDS.find((word) => word.id === id)
 }
 
-// Förklaringen i väntrummet ("Så spelas det") och hur poängen räknas.
-export const IMPOSTER_HOW_TO =
-  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går två eller tre varv runt bordet. Efter näst sista varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter sista varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
-
+// Hur poängen räknas, som en kort lista (ImposterRegler). Stegen i spelet står i games.ts (intro.steps), så att reglerna
+// bara finns på ett ställe. Den sista raden handlar om svårigheterna.
 export const IMPOSTER_SCORING: string[] = [
   'Röstar du på impostern får du 2 poäng, även om impostern kommer undan.',
   'Fångas impostern får alla oskyldiga 1 poäng till.',
@@ -74,10 +72,16 @@ export const DEFAULT_SETTINGS: ImposterSettings = { hard: false, category: null,
 
 // Det som gäller hela matchen: orden som visats och hur många gånger var och en varit imposter. Uppdateras först när en
 // omgång är slut, så att inget hemligt syns i tillståndet. Nollställs när en match startar.
-export type ImposterMatch = { wordIds: string[]; imposterCounts: Record<string, number> }
-export const EMPTY_IMPOSTER_MATCH: ImposterMatch = { wordIds: [], imposterCounts: {} }
+// history: en rad per spelad omgång, för slutskärmen (imposterslut.ts). Den läggs till först i facit, när allt redan är
+// offentligt, aldrig för en avbruten omgång, och nollställs när en match startar. Saknas hos en värd med en äldre version.
+export type ImposterMatch = { wordIds: string[]; imposterCounts: Record<string, number>; history?: ImposterRound[] }
+export const EMPTY_IMPOSTER_MATCH: ImposterMatch = { wordIds: [], imposterCounts: {}, history: [] }
 
-function difficultyName(settings: ImposterSettings): string {
+// En spelad omgång: ordet, impostern, hur det slutade och rösterna som räknades (den sista omröstningen, eller
+// ja-rösterna när en anklagelse gick igenom).
+export type ImposterRound = { word: string; imposter: string; kind: Exclude<OutcomeKind, 'avbruten'>; guess: string | null; votes: Record<string, string> }
+
+export function difficultyName(settings: ImposterSettings): string {
   return settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'
 }
 
@@ -1016,8 +1020,14 @@ function finishRound(
   }
   const used = markUsed(state, secrets)
   const counts = used.imposterMatch.imposterCounts
-  const imposterMatch =
-    kind === 'avbruten' ? used.imposterMatch : { ...used.imposterMatch, imposterCounts: { ...counts, [secrets.imposter]: (counts[secrets.imposter] ?? 0) + 1 } }
+  const imposterMatch: ImposterMatch =
+    kind === 'avbruten'
+      ? used.imposterMatch
+      : {
+          ...used.imposterMatch,
+          imposterCounts: { ...counts, [secrets.imposter]: (counts[secrets.imposter] ?? 0) + 1 },
+          history: [...(used.imposterMatch.history ?? []), { word: outcome.word, imposter: secrets.imposter, kind, guess, votes: table.votes ?? {} }],
+        }
   return {
     ...host,
     state: { ...used, imposterMatch, scores, deadline: null, imposter: { ...table, step: 'facit', outcome, accusation: null } },

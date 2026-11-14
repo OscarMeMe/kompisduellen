@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Emoji } from '@/components/Emoji'
+import { SpelIkon } from '@/components/SpelIkon'
 import { LOBBY_LINE_MS, type LobbyTheme } from '@/lib/vantrum'
 import { cn } from '@/lib/utils'
 
@@ -34,7 +34,7 @@ export function LobbyHeader({ gameId, name, theme }: { gameId: string; name: str
         )}
       </div>
       <span aria-hidden className="shrink-0 pr-1 text-4xl leading-none motion-safe:animate-drift">
-        <Emoji emoji={theme.icon} />
+        <SpelIkon game={{ emoji: theme.icon, icon: theme.image }} />
       </span>
     </div>
   )

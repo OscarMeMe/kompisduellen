@@ -28,6 +28,9 @@ import {
   roundOptionsFor,
 } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
+import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
+import { ImposterSlutKnapp, ImposterSlutskarm } from '@/components/imposterjakten/ImposterSlutskarm'
+import { IMPOSTER_GAME } from '@/lib/imposterjakten'
 import { cn } from '@/lib/utils'
 
 type FinishedViewProps = {
@@ -102,16 +105,9 @@ export function FinishedView({
     />
   )
 
-  // Exploderande Tanter har en egen slutskärm i spelets stil (TantSlutskarm), med samma val som de andra spelen.
-  const tantTable = state.game === TANT_GAME && !state.practice ? state.tantpanik : null
-  if (tantTable?.winner) {
-    return (
-      <TantSlutskarm
-        state={state}
-        table={tantTable}
-        meId={meId}
-        leaderboard={leaderboard}
-        actions={
+  // Knapparna längst ner på slutskärmarna i spelens egen stil (Exploderande Tanter och Imposterjakten): samma val som
+  // de andra spelen, med spelets egen knapp.
+  const themedActions = (Knapp: typeof TantSlutKnapp, leaveColor: string) => (
           <>
             {isHost ? (
               <>
@@ -119,10 +115,10 @@ export function FinishedView({
                   <p className="text-center font-heading font-bold text-balance motion-safe:animate-pop">{wishes.wanting} vill försöka igen. Kör vi?</p>
                 )}
                 <div className="flex w-full gap-2.5">
-                  <TantSlutKnapp primary onClick={rematch} disabled={!canRematch}>
+                  <Knapp primary onClick={rematch} disabled={!canRematch}>
                     Revansch
-                  </TantSlutKnapp>
-                  <TantSlutKnapp onClick={onChangeGame}>Byt spel</TantSlutKnapp>
+                  </Knapp>
+                  <Knapp onClick={onChangeGame}>Byt spel</Knapp>
                 </div>
                 {!canRematch && (
                   <p className="text-center text-xs font-semibold text-balance">
@@ -135,26 +131,44 @@ export function FinishedView({
             ) : (
               <>
                 {canWish && (
-                  <TantSlutKnapp primary={!iWish} aria-pressed={iWish} onClick={() => onWishRematch(!iWish)} className="w-full flex-none">
+                  <Knapp primary={!iWish} aria-pressed={iWish} onClick={() => onWishRematch(!iWish)} className="w-full flex-none">
                     {iWish ? 'Ångra önskemålet' : 'Jag vill ha revansch'}
-                  </TantSlutKnapp>
+                  </Knapp>
                 )}
                 <p className="text-center text-sm font-bold text-balance">
                   {wishes.wanting > 0 ? `${wishes.wanting} av ${wishes.of} vill ha revansch. ` : ''}Värden väljer nästa steg.
                 </p>
               </>
             )}
-            <button type="button" onClick={onLeave} className="min-h-11 px-3 text-[15px] font-extrabold text-tant-vin underline-offset-4 hover:underline short:min-h-8">
+            <button type="button" onClick={onLeave} className={cn('min-h-11 px-3 text-[15px] font-extrabold underline-offset-4 hover:underline short:min-h-8', leaveColor)}>
               Lämna lobby
             </button>
           </>
-        }
+  )
+
+  // Exploderande Tanter har en egen slutskärm i spelets stil (TantSlutskarm), med samma val som de andra spelen.
+  const tantTable = state.game === TANT_GAME && !state.practice ? state.tantpanik : null
+  if (tantTable?.winner) {
+    return (
+      <TantSlutskarm
+        state={state}
+        table={tantTable}
+        meId={meId}
+        leaderboard={leaderboard}
+        actions={themedActions(TantSlutKnapp, 'text-tant-vin')}
       />
     )
   }
 
+  // Imposterjakten har också en egen slutskärm, "Fallet avslutat" (ImposterSlutskarm), när minst en omgång spelats klart.
+  if (state.game === IMPOSTER_GAME && !state.practice && (state.imposterMatch.history?.length ?? 0) > 0) {
+    return <ImposterSlutskarm state={state} meId={meId} leaderboard={leaderboard} actions={themedActions(ImposterSlutKnapp, 'text-[var(--natt-kram)]')} />
+  }
+
   return (
     <Wide>
+      {/* Imposterjakten: väntrummets musik fortsätter på slutskärmen. */}
+      {state.game === IMPOSTER_GAME && <ImposterMusik level="lobby" />}
       <div className="text-center">
         <h1 className="text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
