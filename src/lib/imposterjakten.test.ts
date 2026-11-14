@@ -1476,7 +1476,8 @@ describe('Imposterjakten: värden hoppar över den som dröjer', () => {
   it('hoppar inte över något under en anklagelse, och raden nollställs i nästa omgång', () => {
     let host = playClues(readAll(start(ABCD), ABCD), ABCD)
     expect(table(host).step).toBe('diskussion')
-    expect(hostSkipKind(table(host))).toBeNull()
+    // Under diskussionen kan värden öppna omröstningen efter en minut (se imposterjakten.genomgang.test.ts).
+    expect(hostSkipKind(table(host))).toBe('diskussion')
     const [accuser, accused] = ABCD
     host = hostMove(host, accuser, { type: 'accuse', target: accused }, ABCD, NOW)
     expect(table(host).accusation).not.toBeNull()

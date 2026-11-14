@@ -481,7 +481,8 @@ function CluesStep({ table, me, imposterCard, onMove, onTyping }: StepProps) {
 
 // Värdens knapp för att gå vidare när någon dröjer. När ni säger orden högt heter den Nästa och finns direkt (någon har
 // glömt att trycka Klar). Annars heter den Hoppa över och kommer först när spelet väntat i HOST_SKIP_SECONDS: på den som
-// har tur, på dem som inte röstat eller på imposterns sista gissning. Aldrig på värdens egen tur.
+// har tur, på dem som inte röstat eller på imposterns sista gissning. Aldrig på värdens egen tur. Under diskussionen
+// heter den Öppna omröstningen och kommer efter DISCUSSION_SKIP_SECONDS, om för få trycker Redo.
 function HostSkipButton({ state, table, meId, onSkip }: { state: GameState; table: ImposterTable; meId: string; onSkip: () => void }) {
   const kind = hostSkipKind(table)
   const at = hostSkipAt(table)
@@ -496,9 +497,11 @@ function HostSkipButton({ state, table, meId, onSkip }: { state: GameState; tabl
       ? table.aloud
         ? 'Nästa'
         : `Hoppa över ${name(turn)}`
-      : kind === 'rostning'
-        ? 'Hoppa över: räkna rösterna nu'
-        : `Hoppa över ${name(table.caught)}`
+      : kind === 'diskussion'
+        ? 'Öppna omröstningen'
+        : kind === 'rostning'
+          ? 'Hoppa över: räkna rösterna nu'
+          : `Hoppa över ${name(table.caught)}`
   return (
     <Button variant="outline" className="mx-auto h-11 max-w-full motion-safe:animate-fade" onClick={onSkip}>
       <span className="truncate">{text}</span>

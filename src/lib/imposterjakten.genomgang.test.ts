@@ -4,7 +4,10 @@ import {
   checkClue,
   currentTurn,
   findWord,
+  DISCUSSION_SKIP_SECONDS,
   guessKey,
+  hostSkipAt,
+  hostSkipKind,
   isCorrectGuess,
   myImposterCard,
   normalizeWord,
@@ -17,6 +20,7 @@ import {
   addPlayers,
   hostDeadline,
   hostImposterNextRound,
+  hostImposterSkipTurn,
   hostMove,
   hostPresence,
   hostStart,
@@ -347,6 +351,79 @@ describe('fynd 6 och 7: ledtrådskontrollen', () => {
     // De här spärrades förut utan att likna ordet.
     expect(checkClue('djurpark', WORDS.find((w) => w.ord === 'DJ')!, []).ok).toBe(true)
     expect(checkClue('polisstation', WORDS.find((w) => w.ord === 'PlayStation')!, []).ok).toBe(true)
+  })
+})
+
+describe('fynd 4: värden kan öppna omröstningen när diskussionen står still', () => {
+  it('får knappen först efter en minut, och då öppnas omröstningen även om ingen är redo', () => {
+    const discussion = playClues(readAll(start()))
+    const since = table(discussion).waitSince!
+    expect(hostSkipKind(table(discussion))).toBe('diskussion')
+    expect(hostSkipAt(table(discussion))).toBe(since + DISCUSSION_SKIP_SECONDS * 1000)
+    expect(hostImposterSkipTurn(discussion, ABCD, since + 59_000)).toBe(discussion)
+    const open = hostImposterSkipTurn(discussion, ABCD, since + 60_000)
+    expect(table(open).step).toBe('rostning')
+    expect(open.state.deadline).toBeNull()
+    expect(table(open).skipNote).toBe('Värden öppnade omröstningen.')
+    // Omröstningen går sedan som vanligt.
+    const imposter = secretsOf(open).imposter
+    const other = ABCD.find((id) => id !== imposter)!
+    const voted = ABCD.reduce((next, id) => hostMove(next, id, { type: 'vote', target: id === imposter ? other : imposter }, ABCD, NOW), open)
+    expect(table(voted).step).toBe('gissning')
+  })
+
+  it('gäller också diskussionen efter lika röster, med en ny minut, men inte under en anklagelse', () => {
+    const voting = toVoting(start())
+    // Två röster var på två spelare.
+    const tied = [['a', 'b'], ['b', 'a'], ['c', 'a'], ['d', 'b']].reduce((next, [id, target]) => hostMove(next, id, { type: 'vote', target }, ABCD, NOW + 500_000), voting)
+    expect(table(tied).tied).toEqual(['b', 'a'])
+    expect(hostSkipAt(table(tied))).toBe(NOW + 500_000 + DISCUSSION_SKIP_SECONDS * 1000)
+    const discussion = playClues(readAll(start()))
+    const accusing = hostMove(discussion, 'a', { type: 'accuse', target: 'b' }, ABCD, NOW)
+    expect(hostSkipKind(table(accusing))).toBeNull()
+  })
+})
+
+describe('fynd 14: lika en gång till', () => {
+  it('låter impostern komma undan när det blir lika igen, även om en av de lika placerade har lämnat', () => {
+    const six = ['a', 'b', 'c', 'd', 'e', 'f']
+    const voting = toVoting(start(six), six)
+    const imposter = secretsOf(voting).imposter
+    const others = six.filter((id) => id !== imposter)
+    // Tre röster på impostern och tre på en oskyldig.
+    const first: Record<string, string> = { [imposter]: others[0], [others[0]]: imposter, [others[1]]: imposter, [others[2]]: imposter, [others[3]]: others[0], [others[4]]: others[0] }
+    let host = six.reduce((next, id) => hostMove(next, id, { type: 'vote', target: first[id] }, six, NOW), voting)
+    expect(table(host).tied).toHaveLength(2)
+    // Den oskyldiga av de lika lämnar: bara en är kvar, så omröstningen blir vanlig igen.
+    const left = six.filter((id) => id !== others[0])
+    host = hostPresence(host, left, NOW)
+    expect(table(host).tied).toBeNull()
+    expect(table(host).tiedOnce).toBe(true)
+    host = left.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, left, NOW), host)
+    host = hostDeadline(host, host.state.deadline!, host.state.deadline!, left)
+    expect(table(host).step).toBe('rostning')
+    // Lika igen: två på impostern, två på en oskyldig och en på en tredje.
+    const second: Record<string, string> = { [imposter]: others[1], [others[1]]: imposter, [others[2]]: imposter, [others[3]]: others[1], [others[4]]: others[2] }
+    host = left.reduce((next, id) => hostMove(next, id, { type: 'vote', target: second[id] }, left, NOW), host)
+    expect(table(host).step).toBe('facit')
+    expect(table(host).outcome?.kind).toBe('undan')
+    expect(host.state.scores[imposter]).toBe(3)
+  })
+
+  it('börjar nästa omgång utan något kvar från den förra', () => {
+    const three = ['a', 'b', 'c']
+    const vote = (host: HostState) => three.reduce((next, id, i) => hostMove(next, id, { type: 'vote', target: three[(i + 1) % 3] }, three, NOW), host)
+    const again = (host: HostState) => {
+      const ready = three.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, three, NOW), host)
+      return hostDeadline(ready, ready.state.deadline!, ready.state.deadline!, three)
+    }
+    const tied = vote(toVoting(start(three), three))
+    expect(table(tied).tiedOnce).toBe(true)
+    const done = vote(again(tied))
+    expect(table(done).outcome?.kind).toBe('undan')
+    const next = hostImposterNextRound(done, three, () => 0)
+    expect(table(next).tiedOnce).toBe(false)
+    expect(table(next).tied).toBeNull()
   })
 })
 

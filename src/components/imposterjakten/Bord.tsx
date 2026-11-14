@@ -1,5 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from 'react'
-import { Crosshair, Pointer, X } from 'lucide-react'
+import { Crosshair, Pointer, Vote as VoteIcon, X } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { MoodFigur } from '@/components/figurer/MoodFigur'
 import { seatMood } from '@/lib/figurer'
@@ -43,8 +43,11 @@ const STAMP_PAUSE_MS = 450
 const SPOT_AFTER_MS = 450
 // Så mycket senare kommer stämpeln än utan släckningen.
 const LIGHTS_OUT_MS = 500
-// Så många små figurer visas vid den som fick rösterna. Antalet står alltid bredvid.
+// Så många små figurer visas vid den som fick rösterna. Antalet står alltid bredvid. Från sju spelare sitter platserna
+// tätt, så då visas färre. På mobil visas inga figurer alls, bara antalet, så att de aldrig täcker ordet mitt på bordet
+// eller platserna bredvid.
 const MAX_VOTER_FIGURES = 5
+const MAX_VOTER_FIGURES_SMALL = 3
 
 export function Bord({ state, table, meId, online, typing, center, onMove, vote = null }: BordProps) {
   const seats = seatLayout(table.order, meId)
@@ -353,10 +356,11 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
             aria-label={`${votes} ${votes === 1 ? 'röst' : 'röster'}`}
           >
             {/* Högst fem figurer. Är de fler står bara antalet för resten. */}
-            {voters.slice(0, MAX_VOTER_FIGURES).map((voter) => (
+            <VoteIcon aria-hidden className="size-3.5 sm:hidden" />
+            {voters.slice(0, small ? MAX_VOTER_FIGURES_SMALL : MAX_VOTER_FIGURES).map((voter) => (
               <span
                 key={voter.from}
-                className="flex text-lg leading-none motion-safe:animate-pop motion-safe:[animation-delay:var(--d)] sm:text-2xl"
+                className="flex text-lg leading-none max-sm:hidden motion-safe:animate-pop motion-safe:[animation-delay:var(--d)] sm:text-2xl"
                 style={{ '--d': `${voter.delay}ms` } as CSSProperties}
               >
                 <Emoji emoji={state.players[voter.from]?.avatar ?? '🙂'} />
@@ -373,7 +377,7 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
             className={cn('pointer-events-none absolute top-[34%] z-10 flex w-max', seat.x < 45 && seat.y > 15 && seat.y < 85 ? 'left-[72%]' : 'right-[72%]')}
             style={{ '--d': `${stamp}ms` } as CSSProperties}
           >
-            <Stamp className="border-[3px] bg-[color-mix(in_oklch,var(--natt)_85%,transparent)] px-1.5 py-0 text-xs tracking-wide motion-safe:[animation-delay:var(--d)] sm:border-4 sm:text-lg">Imposter</Stamp>
+            <Stamp className="border-[3px] bg-[color-mix(in_oklch,var(--natt)_85%,transparent)] px-1.5 py-0 text-xs tracking-wide max-sm:border-2 max-sm:px-1 max-sm:text-[10px] motion-safe:[animation-delay:var(--d)] sm:border-4 sm:text-lg">Imposter</Stamp>
           </span>
         )}
       </span>

@@ -89,6 +89,7 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     votes: orNull(recordOf(isString)),
     tied: orNull(listOf(isString)),
     tieVotes: orNull(recordOf(isString)),
+    tiedOnce: (once: unknown) => once === undefined || isBoolean(once),
     pointers: recordOf(isString),
     accusation: orNull(shape({ accuser: isString, accused: isString, answered: isNumber, voters: isNumber })),
     accusers: listOf(isString),

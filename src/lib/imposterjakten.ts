@@ -145,6 +145,9 @@ export type ImposterTable = {
   // Rösterna från den första omröstningen när det blev lika, så att bordet kan visa dem innan den nya diskussionen.
   // Försvinner när den extra omröstningen öppnas.
   tieVotes: Record<string, string> | null
+  // Det har redan blivit lika en gång i omgången. Blir det lika igen kommer impostern undan, även om de lika placerade
+  // inte längre är utpekade (en av dem har lämnat). Saknas hos en värd med en äldre version.
+  tiedOnce?: boolean
   // Peka ut (vem → på vem) under diskussionen. Offentligt och skilt från den hemliga omröstningen. Försvinner när
   // omröstningen öppnas.
   pointers: Record<string, string>
@@ -307,6 +310,7 @@ export function dealRound(
       countdownStarted: false,
       votes: null,
       tied: null,
+      tiedOnce: false,
       tieVotes: null,
       pointers: {},
       accusation: null,
@@ -626,12 +630,17 @@ function applyMove(
 // Så länge ska spelet ha väntat innan värden får hoppa över den som dröjer.
 export const HOST_SKIP_SECONDS = 20
 
-// Det värden kan hoppa över: turen i ledtrådsvarven, omröstningen när någon inte röstat, eller sista gissningen.
-export type HostSkip = 'tur' | 'rostning' | 'gissning'
+// Det värden kan hoppa över: turen i ledtrådsvarven, diskussionen när för få trycker Redo, omröstningen när någon inte
+// röstat, eller sista gissningen.
+export type HostSkip = 'tur' | 'diskussion' | 'rostning' | 'gissning'
+
+// Så länge ska diskussionen ha pågått innan värden får öppna omröstningen själv.
+export const DISCUSSION_SKIP_SECONDS = 60
 
 export function hostSkipKind(table: ImposterTable): HostSkip | null {
   if (table.accusation) return null
   if (table.step === 'ledtradar' && currentTurn(table) !== null) return 'tur'
+  if (table.step === 'diskussion') return 'diskussion'
   if (table.step === 'rostning') return 'rostning'
   if (table.step === 'gissning') return 'gissning'
   return null
@@ -643,7 +652,7 @@ export function hostSkipAt(table: ImposterTable): number | null {
   const kind = hostSkipKind(table)
   if (!kind) return null
   if (kind === 'tur' && table.aloud) return 0
-  return (table.waitSince ?? 0) + HOST_SKIP_SECONDS * 1000
+  return (table.waitSince ?? 0) + (kind === 'diskussion' ? DISCUSSION_SKIP_SECONDS : HOST_SKIP_SECONDS) * 1000
 }
 
 function possessive(name: string): string {
@@ -652,6 +661,7 @@ function possessive(name: string): string {
 
 // Värden hoppar över den som dröjer (Hoppa över, eller Nästa när ni säger orden högt). Tidigast vid hostSkipAt.
 // - Turen i ledtrådsvarven: räknas som pass (eller som sagt, när ni säger orden högt).
+// - Diskussionen: omröstningen öppnas, även om för få har tryckt Redo. Tidigast efter DISCUSSION_SKIP_SECONDS.
 // - Omröstningen: rösterna räknas som de är. Den som inte röstat har ingen röst.
 // - Sista gissningen: räknas som att impostern gav upp.
 export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
@@ -670,6 +680,7 @@ function hostSkip(host: ImposterHost, activeIds: readonly string[], now: number)
     const name = host.state.players[turn]?.name ?? 'Spelaren'
     return addClue(host, { player: turn, kind: 'pass', word: null }, activeIds, now, `Värden hoppade över ${possessive(name)} tur.`)
   }
+  if (kind === 'diskussion') return openVoting(withTable(host, { ...table, skipNote: 'Värden öppnade omröstningen.' }))
   const players = present(table, activeIds)
   if (kind === 'rostning') {
     const voted = players.filter((id) => host.secrets.votes[id] !== undefined)
@@ -965,7 +976,7 @@ function settleVotes(host: ImposterHost, voted: readonly string[], players: read
     if (top[0] === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: top[0] })
     return finishRound(revealed, 'undan', null, null, players)
   }
-  if (top.length > 1 && table.tied === null) {
+  if (top.length > 1 && table.tied === null && !table.tiedOnce) {
     return {
       state: {
         ...host.state,
@@ -974,6 +985,7 @@ function settleVotes(host: ImposterHost, voted: readonly string[], players: read
           ...table,
           step: 'diskussion',
           tied: top,
+          tiedOnce: true,
           tieVotes: votes,
           readyCount: 0,
           votedCount: 0,
