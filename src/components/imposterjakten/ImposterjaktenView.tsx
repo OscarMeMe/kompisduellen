@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { ChevronDown, Flag, Undo2, Check, CircleHelp, CircleStop, List, LogOut, Menu, RefreshCw, Send } from 'lucide-react'
 import { AllaOrd, Bord } from '@/components/imposterjakten/Bord'
 import { MyCard } from '@/components/imposterjakten/MyCard'
@@ -34,6 +34,7 @@ import type { GameState } from '@/lib/match'
 import { latestClue } from '@/lib/bord'
 import { hasFinePointer } from '@/lib/device'
 import { loadSoundOn, playTurn, saveSoundOn } from '@/lib/ljud'
+import { fitWordSize } from '@/lib/ordstorlek'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { cn } from '@/lib/utils'
 
@@ -168,7 +169,10 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           ref={dockRef}
           data-yta="papper"
           {...SPLAT_SHIELD}
-          className="relative z-30 flex max-h-[58%] shrink-0 flex-col gap-2 overflow-x-hidden tiny:max-h-[52%] overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 lg:my-2 lg:mb-4 lg:max-h-none lg:w-[23.5rem] lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
+          // Medan korten läses får svarsdelen ta mer av höjden, så att hela kortet och knappen syns utan att skrolla.
+          data-steg={table.step}
+          // På bred skärm slutar kolumnen där innehållet slutar (lg:self-start), och skrollar först om den inte får plats.
+          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[23.5rem] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
         >
           {table.failedAccusation && !accusing && (
             <Note>Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.</Note>
@@ -185,20 +189,21 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
           {table.step === 'facit' && <FacitStep {...stepProps} />}
           {isHost && <HostSkipButton state={state} table={table} meId={me.id} onSkip={props.onSkipTurn} />}
+          {/* Allas ord som en lista. På smal skärm ligger den bakom knappen Allas ord i stället. */}
+          {/* I facit med få spelare står alla ord redan vid platserna, så där behövs inte listan. */}
+          {table.clues.length > 0 && !(table.step === 'facit' && table.order.length < 7) && (
+            <div className="hidden space-y-1.5 border-t border-border pt-3 lg:block">
+              <h3 className="text-lg">Allas ord</h3>
+              <AllaOrd state={state} table={table} meId={me.id} />
+            </div>
+          )}
           {moreBelow && (
-            <span aria-hidden className="pointer-events-none sticky bottom-16 z-10 -mt-9 flex justify-center">
+            <span aria-hidden className="pointer-events-none sticky bottom-0 z-10 -mt-7 flex justify-center">
               <span className="flex items-center gap-1 rounded-full bg-foreground px-3 py-1 text-xs font-bold text-background shadow-soft-sm motion-safe:animate-hop">
                 <ChevronDown className="size-3.5" />
                 Skrolla för mer
               </span>
             </span>
-          )}
-          {/* Allas ord som en lista. På smal skärm ligger den bakom knappen Allas ord i stället. */}
-          {table.clues.length > 0 && (
-            <div className="hidden space-y-1.5 border-t border-border pt-3 lg:block">
-              <h3 className="text-lg">Allas ord</h3>
-              <AllaOrd state={state} table={table} meId={me.id} />
-            </div>
           )}
         </aside>
       </div>
@@ -422,7 +427,12 @@ function CluesCenter({ table, state, meId }: { table: ImposterTable; state: Impo
   }
   return (
     <span key={table.turn} className="flex max-w-full flex-col items-center motion-safe:animate-pop">
-      <span className={cn('max-w-full font-heading leading-tight font-bold break-words', latest.text.length > 11 ? 'text-base sm:text-2xl' : 'text-xl sm:text-4xl')}>{latest.text}</span>
+      <span
+        className="max-w-full font-heading text-[length:min(1.25rem,var(--fit))] leading-tight font-bold [overflow-wrap:normal] sm:text-[length:min(2.25rem,var(--fit))]"
+        style={{ '--fit': fitWordSize(latest.text, 0.82) } as CSSProperties}
+      >
+        {latest.text}
+      </span>
       <span className="max-w-full truncate text-xs font-semibold text-muted-foreground sm:text-base">{latest.player === meId ? 'Ditt ord' : (state.players[latest.player]?.name ?? 'Någon')}</span>
     </span>
   )

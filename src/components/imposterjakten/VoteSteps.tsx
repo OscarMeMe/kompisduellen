@@ -8,6 +8,7 @@ import { hasFinePointer } from '@/lib/device'
 import { MAX_CLUE_LENGTH, type ImposterOutcome, type ImposterTable } from '@/lib/imposterjakten'
 import type { GameState } from '@/lib/match'
 import { SPLAT_SHIELD } from '@/lib/splatt'
+import { fitWordSize } from '@/lib/ordstorlek'
 import { cn } from '@/lib/utils'
 
 type StepProps = ImposterViewProps & { table: ImposterTable; inRound: boolean; secondsLeft: number }
@@ -37,7 +38,13 @@ function presentIds(table: ImposterTable, online: StepProps['online']): string[]
 function Center({ title, line, tone }: { title: string; line?: string; tone?: string }) {
   return (
     <>
-      <span className={cn('font-heading text-lg leading-tight font-bold break-words sm:text-3xl sm:short:text-2xl', tone)}>{title}</span>
+      {/* Ett långt ord krymper i stället för att brytas mitt i (fitWordSize, mot bordsskivans bredd). */}
+      <span
+        className={cn('font-heading text-[length:min(1.125rem,var(--fit))] leading-tight font-bold [overflow-wrap:normal] sm:text-[length:min(1.875rem,var(--fit))] sm:short:text-[length:min(1.5rem,var(--fit))]', tone)}
+        style={{ '--fit': fitWordSize(title, 0.82) } as React.CSSProperties}
+      >
+        {title}
+      </span>
       {line && <span className="text-xs font-semibold text-muted-foreground tabular-nums sm:text-base sm:short:text-sm">{line}</span>}
     </>
   )
@@ -304,16 +311,14 @@ export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) 
         {outcome.imposterWord && <span className="text-muted-foreground"> Imposterns ord: {outcome.imposterWord}.</span>}
       </p>
 
-      <PointsList state={state} table={table} outcome={outcome} meId={me.id} />
-
+      {/* Värdens knapp står före poänglistan, så att den alltid syns utan att skrolla, även med många spelare. */}
       {isHost && (
-        // Fast längst ner i svarsdelen, så att knappen alltid syns även när listan är lång och måste skrollas.
-        <div className="sticky bottom-0 -mb-1 bg-background pt-1 pb-1">
-          <Button size="lg" className="w-full" onClick={onNextRound}>
-            {last ? 'Visa resultatet' : 'Nästa omgång'}
-          </Button>
-        </div>
+        <Button size="lg" className="w-full shrink-0" onClick={onNextRound}>
+          {last ? 'Visa resultatet' : 'Nästa omgång'}
+        </Button>
       )}
+
+      <PointsList state={state} table={table} outcome={outcome} meId={me.id} />
     </section>
   )
 }

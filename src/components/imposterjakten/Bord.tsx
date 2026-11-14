@@ -8,7 +8,7 @@ import type { OnlinePlayer } from '@/hooks/useLobby'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useReactions, useThrows } from '@/hooks/useReactions'
 import { useThrowWait } from '@/hooks/useThrowWait'
-import { clueLabels, clueLine, curvedArrow, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, stampSide, type Seat } from '@/lib/bord'
+import { clueLabels, clueLine, curvedArrow, noWordsAtSeatsOnMobile, pointingHand, seatLayout, smallSeats, type Seat } from '@/lib/bord'
 import { canAccuse, currentTurn, tallyVotes, type Clue, type ImposterMove, type ImposterTable } from '@/lib/imposterjakten'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -85,24 +85,21 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           style={{ '--d': `${votesDrawnMs}ms` } as CSSProperties}
         />
       )}
-      {/* Platsernas ruta: ringen fyller höjden som finns, med luft överst för reaktioner och nederst för min egen lapp.
-          Platserna ligger i procent av rutan, så de följer med när den ändras. */}
+      {/* Platsernas ruta: ringen fyller platsen som finns, men är aldrig mycket bredare eller högre än den andra ledden, så
+          att spelarna sitter tätt runt bordet i alla fönster. Luft överst för reaktioner och rösterna ovanför figurerna,
+          och nederst för namnen och lapparna. Platserna ligger i procent av rutan, så de följer med när den ändras. */}
+      <div className={cn('absolute inset-x-3 [container-type:size] sm:inset-x-1', small ? 'top-9 bottom-16 sm:top-12 sm:bottom-12' : 'top-10 bottom-16 sm:top-12 sm:bottom-14')}>
       <div
-        className={cn(
-          'absolute left-1/2 w-[calc(100%-0.5rem)] max-w-[46rem] -translate-x-1/2 [container-type:inline-size]',
-          small ? 'top-8 bottom-12 sm:top-12 sm:bottom-[6.5rem]' : 'top-11 bottom-[5.5rem] tiny:top-9 tiny:bottom-[4.75rem] sm:top-16 sm:bottom-[9.75rem] sm:short:top-12 sm:short:bottom-[8rem]',
-        )}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [container-type:inline-size]"
+        style={{ width: 'min(100cqw, 46rem, 150cqh)', height: 'min(100cqh, 100cqw, 36rem)' }}
       >
         {/* Bordet: en ljus skiva med träkant, under lampans sken. Det som händer står mitt på det, och inget annat ligger där. */}
         <div
           aria-hidden
           data-yta="papper"
           className={cn(
-            'absolute flex flex-col items-center justify-center overflow-hidden rounded-[50%] border-wood-edge bg-[radial-gradient(ellipse_at_50%_36%,#fff3d2_0%,#f1dcae_48%,#d9bd86_100%)] px-3 text-center text-foreground shadow-[0_0_0_3px_var(--chair),0_14px_30px_rgb(0_0_0/0.5)]',
-            // Mitt i ringen. Bredden följer rutan och höjden bredden, men aldrig högre än ringen tål, så att bordet inte blir
-            // en stående oval i ett högt fönster.
-            'top-1/2 left-1/2 aspect-[5/4] -translate-x-1/2 -translate-y-1/2',
-            small ? 'max-h-[40%] w-[38%] border-4 sm:max-h-[42%] sm:w-[42%] sm:border-[6px]' : 'max-h-[38%] w-[42%] border-[5px] sm:max-h-[46%] sm:w-[46%] sm:border-[7px]',
+            'absolute flex flex-col items-center justify-center overflow-hidden rounded-[50%] border-wood-edge bg-[radial-gradient(ellipse_at_50%_36%,#fff3d2_0%,#f1dcae_48%,#d9bd86_100%)] px-[9%] text-center text-foreground shadow-[0_0_0_3px_var(--chair),0_14px_30px_rgb(0_0_0/0.5)] [container-type:inline-size]',
+            small ? 'inset-x-[26%] inset-y-[27%] border-4 sm:border-[6px]' : 'inset-x-[23%] inset-y-[25%] border-[5px] sm:border-[7px]',
           )}
         >
           {center}
@@ -163,18 +160,25 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
         })}
 
         {/* Orden som lappar under namnet på varje plats. */}
-        {seats.map((seat) => (
+        {seats.flatMap((seat) =>
+          // Nederst står lapparna till höger om figuren på bred skärm, så att platsen sitter nära bordet. På mobil står den
+          // enda lappen under namnet, där den inte krockar med grannens.
+          (seat.y > 85 ? (['beside', 'under'] as const) : ([seat.y < 15 ? 'beside' : 'under'] as const)).map((place) => (
           <SeatWords
-            key={seat.id}
+            key={`${seat.id}-${place}`}
             seat={seat}
+            place={place}
+            only={seat.y > 85 ? (place === 'beside' ? 'max-sm:hidden' : 'sm:hidden') : ''}
             clues={table.clues.filter((clue) => clue.player === seat.id)}
             small={small}
             mine={seat.id === meId}
             outward={seats.length === 5}
             // Med 9 och 10 spelare sitter de för tätt på mobil för lappar vid platserna. Orden står i listan Allas ord.
-            hiddenOnMobile={noWordsAtSeatsOnMobile(seats.length)}
+            // I facit på mobil är bordet litet, så där visas inga lappar med många spelare eller på låga telefoner.
+            hide={cn(noWordsAtSeatsOnMobile(seats.length) && 'max-sm:hidden', outcome && (small ? 'max-sm:hidden' : 'max-sm:tiny:hidden'))}
           />
-        ))}
+          )),
+        )}
 
         {/* Platserna, som egna knappar så att de går att trycka på. */}
         {seats.map((seat) => (
@@ -196,6 +200,7 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
             vote={vote}
           />
         ))}
+      </div>
       </div>
 
       <TableForScreenReaders state={state} table={table} meId={meId} turn={turn} typing={typing} shownVotes={shownVotes ?? null} />
@@ -222,29 +227,26 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
   )
 }
 
-// Halva figurens höjd (--f) och namnets höjd (--n) för en plats, så att lapparna börjar där namnet slutar. Min egen
-// figur är större. Samma mått som figurens storlek i SeatSpot.
-function seatMetrics(small: boolean, mine: boolean): string {
-  if (small) return mine ? '[--f:1.6rem] [--n:1.25rem] sm:[--f:2.3rem] sm:[--n:1.5rem]' : '[--f:1.25rem] [--n:1.2rem] sm:[--f:1.9rem] sm:[--n:1.5rem]'
+// Figurens storlek på en plats: --fig är den största storleken och --cap ett tak i procent av ringens bredd (cqw), så att
+// figurerna krymper med ringen när den får lite plats (t.ex. facit med många spelare på en liten telefon). Min egen är
+// större, och med många spelare är alla mindre. --n är namnets höjd. Lapparna använder samma mått (--f, halva figuren),
+// så att de börjar där namnet slutar.
+function seatVars(small: boolean, mine: boolean): string {
+  if (small) return mine ? '[--fig:3.2rem] [--cap:14cqw] [--n:1.25rem] sm:[--fig:4.6rem] sm:[--n:1.5rem]' : '[--fig:2.5rem] [--cap:11cqw] [--n:1.2rem] sm:[--fig:3.8rem] sm:[--n:1.5rem]'
   return mine
-    ? '[--f:2.25rem] [--n:1.4rem] tiny:[--f:1.9rem] sm:[--f:3rem] sm:[--n:1.75rem] sm:short:[--f:2.5rem]'
-    : '[--f:1.75rem] [--n:1.4rem] tiny:[--f:1.5rem] sm:[--f:2.6rem] sm:[--n:1.75rem] sm:short:[--f:2.1rem]'
-}
-
-// Figurens storlek på en plats (teckenstorleken, figuren är 1em). Min egen är större, och med många spelare är alla mindre.
-function seatSize(small: boolean, mine: boolean): string {
-  if (small) return mine ? 'text-[3.2rem] sm:text-[4.6rem]' : 'text-[2.5rem] sm:text-[3.8rem]'
-  return mine ? 'text-[4.5rem] tiny:text-[3.8rem] sm:text-[6rem] sm:short:text-[5rem]' : 'text-[3.5rem] tiny:text-[3rem] sm:text-[5.2rem] sm:short:text-[4.2rem]'
+    ? '[--fig:4.5rem] [--cap:19cqw] [--n:1.4rem] sm:[--fig:6rem] sm:[--n:1.75rem] sm:short:[--fig:5rem]'
+    : '[--fig:3.5rem] [--cap:15cqw] [--n:1.4rem] sm:[--fig:5.2rem] sm:[--n:1.75rem] sm:short:[--fig:4.2rem]'
 }
 
 // Spelarens ord som lappar centrerade under namnet, ett per rad och aldrig brutna. Det senaste är gult och tydligast. På
 // mobil visas bara det senaste, och på dator högst tre (med många spelare bara det senaste). Alla ord finns i listan Allas
 // ord. Längst upp finns ingen plats under namnet, för där står bordet, så där står lapparna bredvid figuren.
-function SeatWords({ seat, clues, small, mine, outward, hiddenOnMobile }: { seat: Seat; clues: Clue[]; small: boolean; mine: boolean; outward: boolean; hiddenOnMobile: boolean }) {
+function SeatWords({ seat, clues, small, mine, outward, hide, place, only }: { seat: Seat; clues: Clue[]; small: boolean; mine: boolean; outward: boolean; hide: string; place: 'beside' | 'under'; only: string }) {
   const labels = clueLabels(clues)
   const shown = small ? labels.slice(-1) : labels
   if (shown.length === 0) return null
-  const atTop = seat.y < 15
+  // Bredvid figuren i stället för under namnet (överst i ringen, där bordet ligger under namnet, och nederst på bred skärm).
+  const atTop = place === 'beside'
   // Centrerat under figuren. Vid sidorna flyttas lapparna inåt bara om ett långt ord annars skulle hamna utanför rutan
   // (cqw = procent av platsernas ruta).
   // Med 5 spelare står de övre platserna rakt ovanför bordet, så där går lapparna utåt från figuren i stället.
@@ -254,7 +256,7 @@ function SeatWords({ seat, clues, small, mine, outward, hiddenOnMobile }: { seat
     ? { left: `calc(${seat.x}% + var(--f) + 0.25rem)`, top: `calc(${seat.y}% - var(--f))` }
     : { left: `${seat.x}%`, top: `calc(${seat.y}% + var(--f) + var(--n))`, translate: shift }
   return (
-    <div aria-hidden data-ord className={cn('pointer-events-none absolute z-10 flex w-max flex-col gap-0.5', hiddenOnMobile && 'max-sm:hidden', seatMetrics(small, mine), atTop ? 'items-start' : 'items-center')} style={style}>
+    <div aria-hidden data-ord className={cn('pointer-events-none absolute z-10 flex w-max flex-col gap-0.5', hide, only, seatVars(small, mine), '[--f:calc(min(var(--fig),var(--cap))/2)]', atTop ? 'items-start' : 'items-center')} style={style}>
       {shown.map((label, i) => {
         const latest = i === shown.length - 1
         return (
@@ -293,8 +295,6 @@ export function AllaOrd({ state, table, meId, className }: { state: GameState; t
     </dl>
   )
 }
-
-const STAMP_SIDE = { start: 'justify-start', center: 'justify-center', end: 'justify-end' } as const
 
 type SeatProps = {
   seat: Seat
@@ -335,8 +335,6 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
           away && 'opacity-40',
         )}
       >
-        {/* Stolen bakom figuren. */}
-        <span aria-hidden className="absolute inset-x-[6%] top-[22%] -bottom-[2%] -z-10 rounded-[32%] border border-black/40 bg-chair" />
         {/* Minen följer omgången (seatMood): misstänksam under diskussionen, svettig när man är anklagad och smälter när
             man är utröstad. Den byts bara när det redan är offentligt. */}
         <MoodFigur avatar={player?.avatar ?? '🙂'} mood={seatMood(table, seat.id)} className="drop-shadow-[0_3px_4px_rgb(0_0_0/0.5)]" />
@@ -346,9 +344,11 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
             className={cn(
               'absolute z-10 flex items-center gap-0.5 rounded-full border border-[var(--natt)] bg-[var(--natt-kram)] py-0.5 pr-1.5 pl-1 text-[var(--natt)] shadow-soft-sm',
               // Nära kanterna börjar raden vid figurens kant och går inåt, så att den aldrig sticker ut ur bild.
-              seat.x < 22 ? 'left-0' : seat.x > 78 ? 'right-0' : 'left-1/2 -translate-x-1/2',
-              // Överst i ringen finns ingen plats ovanför figuren, så där står rösterna under namnet.
-              seat.y < 20 ? 'top-[calc(100%+1.4rem)]' : 'bottom-[calc(100%-0.35rem)]',
+              // Överst i ringen finns ingen plats ovanför figuren, och lapparna står till höger, så där står rösterna till
+              // vänster om figuren.
+              seat.y < 12
+                ? 'top-1/4 right-[calc(100%+0.2rem)]'
+                : cn('bottom-[calc(100%-0.35rem)]', seat.x < 22 ? 'left-0' : seat.x > 78 ? 'right-0' : 'left-1/2 -translate-x-1/2'),
             )}
             aria-label={`${votes} ${votes === 1 ? 'röst' : 'röster'}`}
           >
@@ -365,12 +365,12 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
             <span className="pl-0.5 font-heading text-sm font-bold tabular-nums sm:text-base">{votes}</span>
           </span>
         )}
-        {/* Stämpeln ligger på figuren, aldrig på namnet eller utanför bordet. Den är bredare än figuren, så nära kanterna
-            börjar den vid figurens kant och går inåt (stampSide), i stället för att sticka ut. */}
+        {/* Stämpeln ligger snett nedanför figuren, så att figuren syns: vid figurens nedre hörn, inåt mot bordet. Överst
+            och nederst står lapparna till höger om figuren, så där går stämpeln åt vänster. */}
         {stamp !== null && (
           <span
             aria-hidden
-            className={cn('pointer-events-none absolute inset-0 z-10 flex items-center', STAMP_SIDE[stampSide(seat.x)])}
+            className={cn('pointer-events-none absolute top-[34%] z-10 flex w-max', seat.x < 45 && seat.y > 15 && seat.y < 85 ? 'left-[72%]' : 'right-[72%]')}
             style={{ '--d': `${stamp}ms` } as CSSProperties}
           >
             <Stamp className="border-[3px] bg-[color-mix(in_oklch,var(--natt)_85%,transparent)] px-1.5 py-0 text-xs tracking-wide motion-safe:[animation-delay:var(--d)] sm:border-4 sm:text-lg">Imposter</Stamp>
@@ -405,7 +405,8 @@ function SeatSpot({ seat, state, table, meId, small, away, turn, dim, lit, voter
   const position = cn(
     // Figuren står mitt på platsen (den är 1em hög, så halva höjden dras av), och namnet under den.
     'absolute -mt-[0.5em] flex -translate-x-1/2 flex-col items-center rounded-lg leading-none outline-none focus-visible:ring-4 focus-visible:ring-primary/40',
-    seatSize(small, mine),
+    seatVars(small, mine),
+    'text-[length:min(var(--fig),var(--cap))]',
     dim && 'opacity-45',
     stamp !== null && 'z-30',
   )
