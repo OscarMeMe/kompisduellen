@@ -186,7 +186,8 @@ export const GAME_PAGES: GamePageInfo[] = [
       'Drar du en exploderande tant räddar Desarmera dig, och du får gömma tanten var du vill i högen. Har du inget Desarmera är du ute.',
       'Den som är sist kvar vinner matchen. Sen är det dags för revansch.',
     ],
-    time: '10–20 minuter',
+    time: '5–20 minuter',
+    image: { path: '/og/exploderande-tanter.png', alt: 'Exploderande Tanter: spelets logga med en arg tant som pekar, på en krämvit ruta med vinröd kant. Kortspel online för 2–10 spelare' },
     faq: [
       ...commonFaq('Exploderande Tanter', 2),
       {
