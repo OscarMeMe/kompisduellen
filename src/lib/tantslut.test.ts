@@ -19,12 +19,24 @@ describe('Exploderande Tanters slutskärm', () => {
     const order = ['a', 'b', 'c']
     expect(tantAwards({ order, stats: EMPTY_TANT_STATS })).toEqual([])
     expect(tantAwards({ order })).toEqual([])
-    const awards = tantAwards({ order, stats: { ...EMPTY_TANT_STATS, nopes: { a: 4, b: 1 }, steals: { b: 1 }, defuses: { a: 2, c: 2 } } })
+    const awards = tantAwards({ order, stats: { ...EMPTY_TANT_STATS, nopes: { a: 4, b: 1 }, steals: { b: 3 }, defuses: { a: 2, c: 2 } } })
     expect(awards).toEqual([
       { id: 'nope', title: 'Nope-drottningen', ids: ['a'], what: '4 Nope!' },
-      { id: 'tjuv', title: 'Tjuven', ids: ['b'], what: '1 stulet kort' },
+      { id: 'tjuv', title: 'Tjuven', ids: ['b'], what: '3 stulna kort' },
       { id: 'overlevare', title: 'Överlevaren', ids: ['a', 'c'], what: 'Desarmerade 2' },
     ])
+  })
+
+  it('ger ingen utmärkelse när alla delar den med samma siffra, och kräver minst 2 för Tjuven och Överlevaren', () => {
+    const order = ['a', 'b', 'c']
+    // Alla desarmerade en gång, och alla sa Nope! två gånger: ingen har fler än de andra.
+    expect(tantAwards({ order, stats: { ...EMPTY_TANT_STATS, nopes: { a: 2, b: 2, c: 2 }, defuses: { a: 1, b: 1, c: 1 } } })).toEqual([])
+    // Ett stulet kort och en Desarmera räcker inte.
+    expect(tantAwards({ order, stats: { ...EMPTY_TANT_STATS, steals: { b: 1 }, defuses: { a: 1 } } })).toEqual([])
+    // Ett Nope! räcker, när bara en sa det.
+    expect(tantAwards({ order, stats: { ...EMPTY_TANT_STATS, nopes: { c: 1 } } }).map((award) => award.id)).toEqual(['nope'])
+    // Alla desarmerade två gånger: fortfarande ingen.
+    expect(tantAwards({ order, stats: { ...EMPTY_TANT_STATS, defuses: { a: 2, b: 2, c: 2 } } })).toEqual([])
   })
 
   it('siffrorna på en rad, med rätt ental', () => {

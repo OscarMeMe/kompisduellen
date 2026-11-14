@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
+import { useButtonsBelowContent } from '@/hooks/useButtonsBelowContent'
+import { useEffect, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { TantKonfetti } from '@/components/tantpanik/TantKonfetti'
@@ -59,18 +60,8 @@ export function TantSlutskarm({
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])
   useEffect(() => () => tantMusic.setWanted(false), [])
-  // Knapparnas höjd, så att innehållet får lika mycket luft nedtill.
-  const buttonsRef = useRef<HTMLDivElement>(null)
-  const [buttonsHeight, setButtonsHeight] = useState(160)
-  useLayoutEffect(() => {
-    const element = buttonsRef.current
-    if (!element) return
-    const measure = () => setButtonsHeight(element.offsetHeight)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+  // Knapparna ligger direkt under innehållet när allt får plats på skärmen, annars fast längst ned.
+  const { mainRef, buttonsRef, buttonsHeight, inline } = useButtonsBelowContent()
   const reduced = typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const still = skipped || reduced
   // Konfettin låter när den börjar falla: en gång per vinst (inte efter en omladdning), och bara när konfettin visas.
@@ -105,11 +96,12 @@ export function TantSlutskarm({
       style={PATTERN_STYLE}
       onClick={() => setSkipped(true)}
     >
-      {/* Luft nedtill lika hög som knapparna som ligger fast längst ner, så att Kvällens ställning går att skrolla fram helt. */}
+      {/* Ligger knapparna fast längst ner får sidan lika mycket luft nedtill, så att Kvällens ställning går att skrolla fram helt. */}
       <div
-        className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))] pb-40"
-        style={{ paddingBottom: buttonsHeight + 16 }}
+        className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))]"
+        style={{ paddingBottom: inline ? 24 : buttonsHeight + 16 }}
       >
+       <div ref={mainRef} className="flex w-full flex-col items-center">
 
         <img src={LOGO} alt="Exploderande Tanter" width={800} height={468} style={enter('motion-safe:animate-slut-fade', 0).style} className={cn('h-auto w-42 short:w-24', enter('motion-safe:animate-slut-fade', 0).className)} />
 
@@ -168,9 +160,9 @@ export function TantSlutskarm({
           ))}
         </ul>
 
-        {/* Utmärkelserna, bara de som någon fått, som tre kompakta brickor bredvid varandra. */}
+        {/* Utmärkelserna, bara de som någon fått, som kompakta brickor bredvid varandra. En eller två står i mitten. */}
         {awards.length > 0 && (
-          <ul className="mt-3 grid w-full grid-cols-3 gap-2 short:mt-2" aria-label="Utmärkelser">
+          <ul className="mt-3 flex w-full justify-center gap-2 short:mt-2 [&>li]:w-[calc((100%-1rem)/3)]" aria-label="Utmärkelser">
             {awards.map((award, i) => (
               <AwardTile
                 key={award.id}
@@ -187,24 +179,44 @@ export function TantSlutskarm({
           {tantStatsLine(still ? stats : { moves, stolen, hidden })}
         </p>
 
-        <div className="mt-8 w-full" onClick={(event) => event.stopPropagation()}>
+       </div>
+
+        {/* Får allt plats på skärmen ligger knapparna direkt under innehållet. */}
+        {inline && (
+          <div
+            ref={buttonsRef}
+            style={enter('motion-safe:animate-slut-fade', AT.buttons).style}
+            onClick={(event) => event.stopPropagation()}
+            className={cn('mt-5 flex w-full flex-col items-center gap-1.5', enter('motion-safe:animate-slut-fade', AT.buttons).className)}
+          >
+            {actions}
+          </div>
+        )}
+
+        {/* Kvällens ställning i spelets stil: vinröd kant. */}
+        <div
+          className="mt-8 w-full [&>section]:border-[3px] [&>section]:border-tant-vinrod [&>section]:bg-tant-kram-2 [&>section]:shadow-[0_4px_0_var(--tant-vinrod-mork)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           {leaderboard}
         </div>
       </div>
 
-      {/* Revansch och Byt spel ligger alltid fast längst ner, och tonas in sist. Raden har samma mönster som sidan, så att
+      {/* Annars ligger Revansch och Byt spel fast längst ner, och tonas in sist. Raden har samma mönster som sidan, så att
           mönstret går ända ned, och det som skrollas (Kvällens ställning) tonas bort under radens överkant. */}
-      <div
-        ref={buttonsRef}
-        style={{ ...PATTERN_STYLE, ...enter('motion-safe:animate-slut-fade', AT.buttons).style }}
-        onClick={(event) => event.stopPropagation()}
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-20 bg-tant-kram bg-repeat [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-4 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
-          enter('motion-safe:animate-slut-fade', AT.buttons).className,
-        )}
-      >
-        <div className="mx-auto flex max-w-md flex-col items-center gap-1.5">{actions}</div>
-      </div>
+      {!inline && (
+        <div
+          ref={buttonsRef}
+          style={{ ...PATTERN_STYLE, ...enter('motion-safe:animate-slut-fade', AT.buttons).style }}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            'fixed inset-x-0 bottom-0 z-20 bg-tant-kram bg-repeat [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-4 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
+            enter('motion-safe:animate-slut-fade', AT.buttons).className,
+          )}
+        >
+          <div className="mx-auto flex max-w-md flex-col items-center gap-1.5">{actions}</div>
+        </div>
+      )}
 
       {/* Konfettin faller över hela skärmen, även över knapparna. */}
       {!still && <TantKonfetti delay={AT.confetti} />}

@@ -28,23 +28,28 @@ export function tantOutRows(table: Pick<TantTable, 'out'>): { id: string; label:
     .reverse()
 }
 
-// De med flest (minst 1), eller inga om ingen gjort det.
-function leaders(counts: Record<string, number>, players: readonly string[]): { ids: string[]; count: number } | null {
+// Överlevaren och Tjuven kräver minst så här många, så att ingen får en tunn utmärkelse ("Desarmerade 1").
+export const MIN_FOR_TANT_AWARD = 2
+
+// De med flest (minst min), men bara om någon har fler än de andra: delar alla på samma siffra får ingen utmärkelsen.
+function leaders(counts: Record<string, number>, players: readonly string[], min = 1): { ids: string[]; count: number } | null {
   const best = Math.max(0, ...players.map((id) => counts[id] ?? 0))
-  if (best === 0) return null
-  return { ids: players.filter((id) => (counts[id] ?? 0) === best), count: best }
+  if (best < min) return null
+  const ids = players.filter((id) => (counts[id] ?? 0) === best)
+  if (players.length > 1 && ids.length === players.length) return null
+  return { ids, count: best }
 }
 
-// Utmärkelserna, bara de som någon faktiskt fått: Nope-drottningen (flest Nope!), Tjuven (flest stulna kort) och
-// Överlevaren (flest Desarmera).
+// Utmärkelserna, bara de som någon faktiskt fått: Nope-drottningen (flest Nope!), Tjuven (flest stulna kort, minst 2) och
+// Överlevaren (flest Desarmera, minst 2). Flera kan dela en utmärkelse, men inte alla.
 export function tantAwards(table: Pick<TantTable, 'order' | 'stats'>): TantAward[] {
   const stats = table.stats ?? EMPTY_TANT_STATS
   const awards: TantAward[] = []
   const nope = leaders(stats.nopes, table.order)
   if (nope) awards.push({ id: 'nope', title: 'Nope-drottningen', ids: nope.ids, what: `${nope.count} Nope!` })
-  const thief = leaders(stats.steals, table.order)
-  if (thief) awards.push({ id: 'tjuv', title: 'Tjuven', ids: thief.ids, what: `${thief.count} ${thief.count === 1 ? 'stulet kort' : 'stulna kort'}` })
-  const survivor = leaders(stats.defuses, table.order)
+  const thief = leaders(stats.steals, table.order, MIN_FOR_TANT_AWARD)
+  if (thief) awards.push({ id: 'tjuv', title: 'Tjuven', ids: thief.ids, what: `${thief.count} stulna kort` })
+  const survivor = leaders(stats.defuses, table.order, MIN_FOR_TANT_AWARD)
   if (survivor) awards.push({ id: 'overlevare', title: 'Överlevaren', ids: survivor.ids, what: `Desarmerade ${survivor.count}` })
   return awards
 }
