@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
 import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
-import { isTantSecrets, myTantView, setTantSettings, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
+import { isTantSecrets, myTantView, setTantSettings, standInIds, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
 import { workerTimeout } from '@/lib/arbetstimer'
 import { botGuess, botGuessDelay } from '@/lib/botgissning'
 import { BOT_STUCK_MS, botDelay, botFallbackMove, botSight, decideBotMove, fastForwardBots, newBotMemory, observe, onlyBotsLeft, remember, type BotLevel, type BotMemory } from '@/lib/tantbot'
@@ -80,6 +80,7 @@ import type { FloatingReaction } from '@/hooks/useReactions'
 import {
   abortMatch,
   addBot,
+  hostTantStandIn,
   addGuess,
   botIds,
   gameHasBots,
@@ -1002,10 +1003,12 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     if (!isTantSecrets(host.secrets)) return
     // Botarnas tänketid går i workern (arbetstimer.ts), så att de spelar som vanligt även när värdens flik är dold.
     const timers: (() => void)[] = []
-    for (const id of botIds(host.state)) {
+    // Botarna, och de spelare som lämnat och som en bot spelar åt (standIns, alltid Normal).
+    for (const id of [...botIds(host.state), ...standInIds(host.state.tantpanik)]) {
       const sight = botSight(host as TantHost, id)
-      const level = host.state.players[id]?.bot
-      if (!sight || !level) continue
+      const isBot = host.state.players[id]?.bot !== undefined
+      const level = host.state.players[id]?.bot ?? 'normal'
+      if (!sight) continue
       const memory = observe(botMemoryRef.current[id] ?? newBotMemory(sight.table), sight.table)
       botMemoryRef.current[id] = memory
       const move = decideBotMove(sight, level, Math.random, memory)
@@ -1026,8 +1029,8 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
           if (unchanged(next)) return
           if (next.state.tantpanik) botMemoryRef.current[id] = remember(memory, move, sight, next.state.tantpanik)
           commit(next)
-          // Ibland en reaktion, så att det känns som en riktig spelare.
-          if (Math.random() < 0.1) {
+          // Ibland en reaktion, så att det känns som en riktig spelare. Aldrig i en riktig spelares namn.
+          if (isBot && Math.random() < 0.1) {
             const reaction = REACTIONS[Math.floor(Math.random() * REACTIONS.length)]
             void channelRef.current?.send({ type: 'broadcast', event: 'reaction', payload: { id, reaction: reaction.id } })
           }
@@ -1046,7 +1049,7 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
     return workerTimeout(() => {
       const before = current()
       if (before.state !== watched || !isTantSecrets(before.secrets)) return
-      for (const id of botIds(before.state)) {
+      for (const id of [...botIds(before.state), ...standInIds(before.state.tantpanik)]) {
         const sight = botSight(before as TantHost, id)
         const move = sight ? botFallbackMove(sight) : null
         if (!move) continue
@@ -1062,6 +1065,20 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
       }
     }, BOT_STUCK_MS)
   }, [isHost, state, current, activeIds, commit])
+
+  // En spelare som en bot spelat åt är tillbaka (syns i närvarolistan igen): spelaren tar över direkt, och botens minne
+  // glöms. Handen kommer som vanligt när spelaren säger hello.
+  useEffect(() => {
+    if (!isHost || state.game !== TANT_GAME || state.phase !== 'playing') return
+    const back = standInIds(state.tantpanik).filter((id) => online.some((player) => player.id === id))
+    if (back.length === 0) return
+    let next = current()
+    for (const id of back) {
+      next = hostTantStandIn(next, id, false)
+      delete botMemoryRef.current[id]
+    }
+    commit(next)
+  }, [isHost, state, online, current, commit])
 
   // Värden gissar åt botarna i gissningsspelen (botgissning.ts): en gång per runda, en stund efter att rundan startat,
   // genom samma kontroll som spelarnas gissningar. Tiden för varje bots gissning bestäms en gång, så att andras
@@ -1273,6 +1290,11 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
         }
         const ids = [...onlineRef.current.map((p) => p.id), ...botIds(host.state)]
         commit(hostCountdownStart({ state: { ...abortMatch(host.state), notice: null }, secrets: null }, ids, Date.now()))
+      },
+      // Exploderande Tanter: värden låter en bot spela åt en spelare som lämnat. Bara för den som inte är ansluten.
+      tantStandIn: (id: string) => {
+        if (!isHost || onlineRef.current.some((player) => player.id === id)) return
+        commit(hostTantStandIn(current(), id, true))
       },
       // Värden avbryter en pågående match: alla tillbaka till väntrummet, och matchen räknas inte.
       abortMatch: () => {

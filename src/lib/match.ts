@@ -54,6 +54,7 @@ import {
   isTantMove,
   isTantSecrets,
   MAX_PLAYERS as TANT_MAX_PLAYERS,
+  setStandIn,
   startTantMatch,
   TANT_GAME,
   tantDeadline,
@@ -970,6 +971,11 @@ export function hostMove(
   if (isTantMove(move)) return withTant(host, (game) => tantMove(game, playerId, move, nr, now, random))
   if (isImposterMove(move)) return withImposter(host, (game) => imposterMove(game, playerId, move, activeIds, now))
   return withCards(host, (cards, rules) => cardMove(cards, rules, playerId, move, activeIds, now, random))
+}
+
+// Exploderande Tanter: värden låter en bot spela åt en spelare som lämnat (on), eller spelaren är tillbaka (se setStandIn).
+export function hostTantStandIn(host: HostState, playerId: string, on: boolean): HostState {
+  return withTant(host, (game) => setStandIn(game, playerId, on))
 }
 
 // Exploderande Tanter: den som tappar nätet behåller sin plats, hand och tur, och matchen väntar (se tantpanik.ts).

@@ -151,6 +151,8 @@ const isTantTable = (value: unknown): value is TantTable =>
     winner: orNull(isString),
     error: orNull(isString),
     // Saknas hos en värd med en äldre version.
+    standIns: (ids: unknown) => ids === undefined || listOf(isString)(ids),
+    // Saknas hos en värd med en äldre version.
     lastAction: (action: unknown) =>
       action === undefined ||
       orNull(

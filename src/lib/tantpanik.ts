@@ -154,6 +154,9 @@ export type TantTable = {
   lastAction: TantAction | null
   // Matchens siffror (slutskärmen). Saknas hos en värd med en äldre version.
   stats?: TantStats
+  // Riktiga spelare som lämnat och som en bot spelar åt tills de kommer tillbaka (setStandIn). Värden väljer det.
+  // Saknas hos en värd med en äldre version.
+  standIns?: string[]
 }
 
 // Bara värden har det här.
@@ -1063,7 +1066,39 @@ export function hostSeemsAway(
   if ((table.step === 'window' || table.winner) && deadline !== null) return hostNow > deadline + HOST_LATE_MS
   if (table.winner) return false
   const waiting = waitingFor(table)
-  return waiting !== null && players[waiting]?.bot !== undefined && sinceChange > HOST_AWAY_MS
+  // Värden spelar också åt den som en bot tagit över för.
+  const hostPlays = waiting !== null && (players[waiting]?.bot !== undefined || standInIds(table).includes(waiting))
+  return hostPlays && sinceChange > HOST_AWAY_MS
+}
+
+// En bot spelar åt en spelare som lämnat (värdens val, "Låt en bot spela åt Lisa"), så att matchen inte står still på
+// den spelarens tur. Boten tar över samma plats, hand och turer, och spelaren är fortfarande en riktig spelare överallt
+// annars: placeringen, kvällens ställning och statistiken gäller spelaren, inte en bot. Kommer spelaren tillbaka tar
+// den över igen (useLobby). Knappen kommer när spelaren varit frånkopplad i STAND_IN_AFTER_MS.
+export const STAND_IN_AFTER_MS = 20_000
+
+export function standInIds(table: Pick<TantTable, 'standIns'> | null | undefined): string[] {
+  return table?.standIns ?? []
+}
+
+// Går det att låta en bot spela åt spelaren? Bara en riktig spelare som är kvar i matchen och inte redan har en bot.
+export function canStandIn(table: TantTable, players: GameState['players'], id: string): boolean {
+  if (table.winner || table.error || !table.order.includes(id) || table.out.includes(id)) return false
+  return players[id] !== undefined && players[id].bot === undefined && !standInIds(table).includes(id)
+}
+
+// Värden: en bot börjar spela åt spelaren (on), eller spelaren är tillbaka och tar över igen. Alla ser en rad om det.
+export function setStandIn(host: TantHost, id: string, on: boolean): TantHost {
+  const table = host.state.tantpanik
+  if (!table || host.state.phase !== 'playing') return host
+  const ids = standInIds(table)
+  if (on ? !canStandIn(table, host.state.players, id) : !ids.includes(id)) return host
+  const d = draft(host, Math.random)
+  d.table.standIns = on ? [...ids, id] : ids.filter((other) => other !== id)
+  // Efter vinsten och för den som redan är ute behövs ingen rad.
+  if (on) log(d, `En bot spelar åt ${name(d, id)}.`)
+  else if (!table.winner && !table.out.includes(id)) log(d, `${name(d, id)} är tillbaka.`)
+  return sync({ state: { ...d.state, tantpanik: d.table }, secrets: d.secrets })
 }
 
 // Riktiga spelare i matchen som tappat anslutningen (inte med i närvarolistan). Botar och de som är ute räknas inte.
