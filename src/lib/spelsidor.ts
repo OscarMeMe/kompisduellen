@@ -136,7 +136,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       'Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.',
     ],
     time: '5–40 minuter',
-    image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: en rad figurer där en röd figur med glasögon står i spotlighten. Imposter-spel online på svenska för 3–10 spelare' },
+    image: { path: '/og/imposterjakten.png', alt: 'Imposterjakten: spelets logga med en detektiv i hatt, på en krämvit ruta med lampgul kant. Imposter-spel online på svenska för 3–10 spelare' },
     faq: [
       // Distansfrågan står med egna ord här, så den gemensamma hoppas över.
       ...commonFaq('Imposterjakten', 3).filter((item) => !item.question.includes('Discord')),

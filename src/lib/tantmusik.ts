@@ -20,13 +20,14 @@ export const MUSIC_FILES: Record<MusicLevel, string> = {
   match: '/musik/kafferep.mp3',
 }
 
-// Spelens spår. file null = spåret finns inte än, och då är det tyst. matchShare är hur stor del av musikens högsta
-// volym matchens spår får (Imposterjaktens ska ligga lågt, så att det inte stör när man pratar). trim = tystnaden som
+// Spelens spår. null = inget spår, och då är det tyst. matchShare är hur stor del av musikens högsta volym matchens
+// spår får (ett spel där man pratar ska ligga lågt). trim = tystnaden som
 // mp3-formatet lägger i början och slutet av filen klipps bort, så att loopen blir sömlös. synth = saknas en fil spelas
 // reservslingan (bara Exploderande Tanter, där den är skriven för spelet).
 //
 // Imposterjaktens väntrum och slutskärm: "Trouble Makers (Cool/Riff-Jazz)" av Matthew Pablo från OpenGameArt, CC BY 3.0
-// (krediten står i regelvyn). Matchen: "Investigation" av Umplix (CC0) läggs in när filen finns.
+// (krediten står i regelvyn). Matchen är tyst med flit och har inget eget spår, eftersom man pratar och lyssnar på varandra:
+// väntrummets spår tonas ut när matchen startar och tonas in igen på slutskärmen och i väntrummet.
 type TrackSet = { lobby: string | null; match: string | null; matchShare: number; trim: boolean; synth: boolean }
 export const MUSIC_SETS: Record<MusicSet, TrackSet> = {
   tant: { ...MUSIC_FILES, matchShare: 1, trim: false, synth: true },
