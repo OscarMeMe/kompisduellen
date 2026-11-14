@@ -19,7 +19,7 @@ import {
   pickImposter,
   wordsRunningOutText,
   COUNTDOWN_SECONDS,
-  MIN_DISCUSSION_SECONDS,
+  ALL_READY_SECONDS,
   IMPOSTER_CAUGHT,
   IMPOSTER_SCORING,
   VOTED_RIGHT,
@@ -96,9 +96,11 @@ function readAll(host: HostState, ids = ABC): HostState {
   return ids.reduce((next, id) => hostMove(next, id, { type: 'read' }, ids, NOW), host)
 }
 
-// Alla blir redo att rösta, när diskussionen har pågått länge nog.
+// Alla blir redo att rösta, och den korta nedräkningen går ut, så att omröstningen öppnas.
 function readyAll(host: HostState, ids = ABC): HostState {
-  return ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW + MIN_DISCUSSION_SECONDS * 1000), host)
+  const ready = ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW + 20_000), host)
+  if (ready.state.imposter?.step !== 'diskussion' || ready.state.deadline === null) return ready
+  return hostDeadline(ready, ready.state.deadline, ready.state.deadline, ids)
 }
 
 // Alla röstar på target, och target röstar på någon annan. target får då ensamt flest röster.
@@ -414,14 +416,32 @@ describe('Imposterjakten: en omgång', () => {
     expect(table(three).step).toBe('diskussion')
   })
 
-  it('hoppar inte över diskussionen även om alla blir redo direkt', () => {
+  it('räknar alltid ned 5 sekunder när alla är redo, hur länge diskussionen än har pågått', () => {
     const discussion = playClues(readAll(start(ABCD), ABCD), ABCD)
-    const quick = ABCD.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW + 500), discussion)
-    expect(table(quick).step).toBe('diskussion')
-    expect(table(quick).countdownStarted).toBe(true)
-    expect(quick.state.deadline).toBe(NOW + MIN_DISCUSSION_SECONDS * 1000)
-    const opened = hostDeadline(quick, NOW + MIN_DISCUSSION_SECONDS * 1000, quick.state.deadline!, ABCD)
-    expect(table(opened).step).toBe('rostning')
+    for (const at of [NOW + 500, NOW + 12_000, NOW + 90_000]) {
+      const all = ABCD.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, at), discussion)
+      expect(table(all).step).toBe('diskussion')
+      expect(table(all).countdownStarted).toBe(true)
+      expect(all.state.deadline).toBe(at + ALL_READY_SECONDS * 1000)
+      // Närvaron under nedräkningen flyttar den inte.
+      expect(hostPresence(all, ABCD, at + 2000).state.deadline).toBe(at + ALL_READY_SECONDS * 1000)
+      const opened = hostDeadline(all, all.state.deadline!, all.state.deadline!, ABCD)
+      expect(table(opened).step).toBe('rostning')
+    }
+  })
+
+  it('kortar nedräkningen på 30 sekunder till 5 när alla blir redo, men låter den vara om den har mindre kvar', () => {
+    const discussion = playClues(readAll(start(ABCD), ABCD), ABCD)
+    const three = ['a', 'b', 'c'].reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW + 1000), discussion)
+    const long = NOW + 1000 + COUNTDOWN_SECONDS * 1000
+    expect(three.state.deadline).toBe(long)
+    // Alla redo med 20 sekunder kvar: 5 sekunder.
+    const early = hostMove(three, 'd', { type: 'ready', on: true }, ABCD, long - 20_000)
+    expect(early.state.deadline).toBe(long - 20_000 + ALL_READY_SECONDS * 1000)
+    // Alla redo med 3 sekunder kvar: nedräkningen fortsätter som den är.
+    const late = hostMove(three, 'd', { type: 'ready', on: true }, ABCD, long - 3000)
+    expect(late.state.deadline).toBe(long)
+    expect(table(hostDeadline(late, long, long, ABCD)).step).toBe('rostning')
   })
 
   it('låter värden byta ord bara innan första associationen', () => {

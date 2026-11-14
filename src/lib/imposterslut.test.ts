@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentTurn, imposterMove, imposterNextRound, startImposterMatch, type ImposterHost, type ImposterMove, type ImposterRound } from '@/lib/imposterjakten'
+import { currentTurn, imposterDeadline, imposterMove, imposterNextRound, startImposterMatch, type ImposterHost, type ImposterMove, type ImposterRound } from '@/lib/imposterjakten'
 import { imposterAwards, imposterStats, imposterStatsLine, outcomeText, winnerLine } from '@/lib/imposterslut'
 import { initialState } from '@/lib/match'
 import { parseStateMessage } from '@/lib/meddelanden'
@@ -112,6 +112,9 @@ describe('historiken i spelmotorn', () => {
     while (host.state.imposter!.step === 'ledtradar') move(currentTurn(host.state.imposter!)!, { type: 'pass' })
     now += 60_000
     for (const id of ids) move(id, { type: 'ready', on: true })
+    // Alla är redo: den korta nedräkningen går ut och omröstningen öppnas.
+    if (host.state.deadline !== null) host = imposterDeadline(host, host.state.deadline, host.state.deadline, ids)
+    now = Math.max(now, host.state.deadline ?? now) + 10_000
     const imposter = host.secrets.imposter
     const target = voteFor(imposter)
     for (const id of ids) move(id, { type: 'vote', target: id === target ? ids.find((other) => other !== id && other !== imposter)! : target })
