@@ -245,7 +245,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
   // Kasten: på om värden inte stängt av dem och fler än en är med. Målen är de andra som tar emot kast.
   // Imposterjakten: de som sitter vid bordet (efter att alla läst sitt kort). Deras reaktioner visas vid platsen.
   const table = state.phase === 'playing' ? state.imposter : null
-  const seatedIds = useMemo(() => (table && table.step !== 'kort' ? table.order : []), [table])
+  // Bordet visas i alla lägen, även medan korten läses, så reaktionerna visas alltid vid platserna.
+  const seatedIds = useMemo(() => (table ? table.order : []), [table])
   const throws = useMemo<Throws>(
     () => ({
       allowed: state.throwsAllowed && othersPresent,
@@ -369,7 +370,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
     <ReactionsProvider enabled={online.length > 1} floating={floating} send={actions.react} throws={throws} seatedIds={seatedIds}>
       {phaseView()}
       {/* Värden kan avbryta en pågående match. Alla går tillbaka till väntrummet, och matchen räknas inte. */}
-      {inMatch && isHost && !(state.phase === 'playing' && 'Tant' in views) && (
+      {inMatch && isHost && !(state.phase === 'playing' && ('Tant' in views || 'Imposter' in views)) && (
         <Button variant="ghost" className="mx-auto mt-2 text-muted-foreground" onClick={() => setAborting(true)}>
           <Undo2 aria-hidden />
           Tillbaka till väntrummet
@@ -472,6 +473,8 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             onMove={actions.move}
             onStartAnyway={actions.imposterStartAnyway}
             onSkipTurn={actions.imposterSkipTurn}
+            onAbort={() => setAborting(true)}
+            onLeave={() => requestLeave('/')}
             onNewWord={actions.imposterNewWord}
             onNextRound={actions.imposterNextRound}
             onAbortRound={actions.imposterAbortRound}

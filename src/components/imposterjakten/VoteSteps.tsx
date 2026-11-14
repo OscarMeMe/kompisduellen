@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Check, Flag, Send, Vote, X } from 'lucide-react'
+import { Check, Flag, Send, Vote } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
@@ -37,8 +37,8 @@ function presentIds(table: ImposterTable, online: StepProps['online']): string[]
 function Center({ title, line, tone }: { title: string; line?: string; tone?: string }) {
   return (
     <>
-      <span className={cn('font-heading text-base leading-tight font-bold break-words sm:text-2xl sm:short:text-lg', tone)}>{title}</span>
-      {line && <span className="text-xs font-semibold text-muted-foreground tabular-nums sm:text-base sm:short:text-xs">{line}</span>}
+      <span className={cn('font-heading text-lg leading-tight font-bold break-words sm:text-3xl sm:short:text-2xl', tone)}>{title}</span>
+      {line && <span className="text-xs font-semibold text-muted-foreground tabular-nums sm:text-base sm:short:text-sm">{line}</span>}
     </>
   )
 }
@@ -46,6 +46,7 @@ function Center({ title, line, tone }: { title: string; line?: string; tone?: st
 // Det som står mitt på bordet, för faserna efter ledtrådsvarven.
 export function TableCenter({ state, table, me, online, secondsLeft }: Omit<StepProps, 'inRound'>) {
   const players = presentIds(table, online).length
+  if (table.step === 'kort' && !table.accusation) return <Center title="Läs ditt kort" line={`${table.read.length} av ${table.order.length} har läst`} />
   if (table.accusation) {
     const name = state.players[table.accusation.accused]?.name ?? 'Spelaren'
     return <Center title={`Är ${name} impostern?`} line={`${table.accusation.answered} av ${table.accusation.voters} har svarat`} tone="text-primary-button" />
@@ -77,7 +78,7 @@ export function AccusationStep({ state, table, me, inRound, imposterCard, second
   const accusedIsMe = accusation.accused === me.id
   return (
     <>
-      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
+      <section {...SPLAT_SHIELD} className="space-y-2.5 text-center motion-safe:animate-fade sm:space-y-3">
         <p className="rounded-md bg-coral-soft px-4 py-3 font-semibold">
           {accuser} anklagar {accusedIsMe ? 'dig' : name}! {secondsLeft} s kvar.
         </p>
@@ -121,7 +122,7 @@ export function DiscussionStep({ state, table, inRound, imposterCard, online, on
   const tiedNames = (table.tied ?? []).map((id) => state.players[id]?.name ?? 'någon')
   return (
     <>
-      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
+      <section {...SPLAT_SHIELD} className="space-y-2.5 text-center motion-safe:animate-fade sm:space-y-3">
         {table.countdownStarted ? (
           <p className="rounded-md bg-sun-soft px-4 py-3 font-semibold">Sista chansen att försvara dig!</p>
         ) : table.tied ? (
@@ -172,7 +173,7 @@ export function VotingStep({ state, table, online, inRound, imposterCard, choice
 
   return (
     <>
-      <section {...SPLAT_SHIELD} className="sticky bottom-0 z-10 -mx-4 space-y-3 bg-background/95 px-4 py-2 text-center backdrop-blur-sm motion-safe:animate-fade sm:mx-0 sm:px-0">
+      <section {...SPLAT_SHIELD} className="space-y-2.5 text-center motion-safe:animate-fade sm:space-y-3">
         {inRound &&
           (myVote ? (
             <p className="flex flex-wrap items-center justify-center gap-2 rounded-md bg-mint-soft px-4 py-3 font-semibold">
@@ -206,11 +207,7 @@ export function GuessStep({ table, me, onMove }: StepProps) {
       <p className="text-center text-sm text-muted-foreground">
         {mine ? 'Gissar du rätt får du en poäng.' : 'Ni får era poäng ändå, och gissar impostern rätt får den en poäng.'}
       </p>
-      {mine && (
-        <div className="rounded-lg border bg-card p-4 shadow-soft">
-          <FinalGuess onMove={onMove} />
-        </div>
-      )}
+      {mine && <FinalGuess onMove={onMove} />}
     </>
   )
 }
@@ -238,10 +235,10 @@ function FinalGuess({ onMove }: { onMove: StepProps['onMove'] }) {
         autoFocus={hasFinePointer()}
         disabled={sent}
       />
-      <div className="grid grid-cols-[1fr_auto] gap-2">
-        <Button type="submit" size="lg" disabled={!word.trim() || sent}>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="lg" className="min-w-0 flex-1" disabled={!word.trim() || sent}>
           <Send aria-hidden />
-          Bekräfta gissning
+          Gissa
         </Button>
         <Button
           type="button"
@@ -269,7 +266,9 @@ const HEADLINES: Record<ImposterOutcome['kind'], { emoji: string; text: string; 
   avbruten: { emoji: '⏸️', text: 'Omgången avbröts', tone: 'bg-muted' },
 }
 
-// Facit: vem som vann omgången, ordet, impostern, ledtråden (i Normal), gissningen, allas röster och poängen.
+// Facit i svarsdelen: vem som vann omgången, ordet och impostern på en rad, och poängen för alla i omgången med
+// varför man fick dem (rösten räknas). Rösterna syns vid bordet. Kompakt, så att alla spelare får plats på en telefon:
+// med fler än fyra spelare står raderna i två kolumner, och knappen ligger fast längst ner om listan måste skrollas.
 export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) {
   const outcome = table.outcome
   if (!outcome) return null
@@ -278,85 +277,93 @@ export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) 
   const completed = outcome.kind === 'avbruten' ? state.round - 1 : state.round
   const last = completed >= state.rounds
   const guessed = outcome.kind === 'gissade-ratt' || outcome.kind === 'gissade-fel'
+  const imposterName = outcome.imposter === me.id ? 'Du' : (state.players[outcome.imposter]?.name ?? 'Någon')
 
   return (
-    <section className="space-y-4 motion-safe:animate-fade">
-      <div className={cn('rounded-lg border p-5 text-center shadow-soft motion-safe:animate-pop', headline.tone)}>
-        <p className="font-heading text-3xl font-bold">
-          <Emoji emoji={headline.emoji} className="mr-2 text-3xl" />
+    <section className="flex flex-col gap-2 motion-safe:animate-fade sm:gap-3">
+      <div className={cn('rounded-lg border-2 border-foreground px-3 py-1.5 text-center motion-safe:animate-pop sm:py-2.5', headline.tone)}>
+        <p className="font-heading text-lg leading-tight font-bold sm:text-2xl">
+          <Emoji emoji={headline.emoji} className="mr-1.5" />
           {headline.text}
         </p>
-        {outcome.reason && <p className="mt-2 font-semibold">{outcome.reason} Ingen fick poäng.</p>}
+        {outcome.reason && <p className="text-sm font-semibold">{outcome.reason} Ingen fick poäng.</p>}
         {/* Lurig: impostern har inte vetat om det förrän nu. */}
-        {outcome.imposterWord && outcome.kind === 'undan' && outcome.imposter === me.id && <p className="mt-2 font-semibold">Det var du hela tiden!</p>}
+        {outcome.imposterWord && outcome.kind === 'undan' && outcome.imposter === me.id && <p className="text-sm font-semibold">Det var du hela tiden!</p>}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border bg-card p-4 text-center shadow-soft-sm">
-          <p className="text-sm font-semibold text-muted-foreground">Det hemliga ordet</p>
-          <p className="font-heading text-2xl font-bold">{outcome.word}</p>
-          {outcome.hint && <p className="mt-1 text-sm text-muted-foreground">Imposterns ledtråd: {outcome.hint}</p>}
-          {outcome.imposterWord && <p className="mt-1 text-sm text-muted-foreground">Imposterns ord: {outcome.imposterWord}</p>}
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-center shadow-soft-sm">
-          <p className="text-sm font-semibold text-muted-foreground">Impostern var</p>
-          <p className="mt-1 flex justify-center">
-            <PlayerTag state={state} id={outcome.imposter} />
-          </p>
-          {guessed && (
-            <p className="mt-1 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold">
-              Gissade "{outcome.guess}"
-              {outcome.kind === 'gissade-ratt' ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-mint-soft px-2 py-0.5">
-                  <Check className="size-4" aria-hidden />
-                  Rätt
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-coral-soft px-2 py-0.5">
-                  <X className="size-4" aria-hidden />
-                  Fel
-                </span>
-              )}
-            </p>
-          )}
-          {outcome.kind === 'gav-upp' && <p className="mt-1 text-sm font-semibold">Gav upp</p>}
-        </div>
-      </div>
+      <p className="text-center text-sm leading-snug sm:text-base">
+        Ordet var <strong className="font-heading">{outcome.word}</strong>. {imposterName} var impostern
+        {guessed && (
+          <>
+            {' '}
+            och gissade "{outcome.guess}" ({outcome.kind === 'gissade-ratt' ? 'rätt' : 'fel'})
+          </>
+        )}
+        {outcome.kind === 'gav-upp' && ' och gav upp'}.
+        {outcome.hint && <span className="text-muted-foreground"> Ledtråd: {outcome.hint}.</span>}
+        {outcome.imposterWord && <span className="text-muted-foreground"> Imposterns ord: {outcome.imposterWord}.</span>}
+      </p>
 
-      <PointsList state={state} table={table} outcome={outcome} />
+      <PointsList state={state} table={table} outcome={outcome} meId={me.id} />
 
       {isHost && (
-        <Button size="lg" className="w-full" onClick={onNextRound}>
-          {last ? 'Visa resultatet' : 'Nästa omgång'}
-        </Button>
+        // Fast längst ner i svarsdelen, så att knappen alltid syns även när listan är lång och måste skrollas.
+        <div className="sticky bottom-0 -mb-1 bg-background pt-1 pb-1">
+          <Button size="lg" className="w-full" onClick={onNextRound}>
+            {last ? 'Visa resultatet' : 'Nästa omgång'}
+          </Button>
+        </div>
       )}
     </section>
   )
 }
 
-// Poängen för omgången ("+2" som stiger) och totalen, för alla i omgången.
-function PointsList({ state, table, outcome }: { state: GameState; table: ImposterTable; outcome: ImposterOutcome }) {
-  const ids = [...table.order].sort((a, b) => (state.scores[b] ?? 0) - (state.scores[a] ?? 0))
+// Varför spelaren fick sina poäng i omgången, i ett par ord.
+function pointsReason(table: ImposterTable, outcome: ImposterOutcome, id: string): string {
+  if (outcome.kind === 'avbruten') return ''
+  if (id === outcome.imposter) {
+    if (outcome.kind === 'undan') return 'kom undan'
+    if (outcome.kind === 'gissade-ratt') return 'gissade rätt'
+    if (outcome.kind === 'gissade-fel') return 'gissade fel'
+    return 'gav upp'
+  }
+  const vote = table.votes?.[id]
+  if (!vote) return 'röstade inte'
+  return vote === outcome.imposter ? 'röstade rätt' : 'röstade fel'
+}
+
+// Poängen för omgången ("+3" som stiger), varför man fick dem och totalen, för alla i omgången. Impostern är markerad.
+function PointsList({ state, table, outcome, meId }: { state: GameState; table: ImposterTable; outcome: ImposterOutcome; meId: string }) {
+  const ids = [...table.order].sort((a, b) => (outcome.points[b] ?? 0) - (outcome.points[a] ?? 0) || (state.scores[b] ?? 0) - (state.scores[a] ?? 0))
   return (
-    <ul className="space-y-2" aria-label="Poäng">
+    <ul className={cn('grid gap-1.5', ids.length > 6 ? 'grid-cols-2' : ids.length > 4 && 'grid-cols-2 lg:grid-cols-1')} aria-label="Poäng">
       {ids.map((id) => {
         const gained = outcome.points[id] ?? 0
+        const player = state.players[id]
         return (
-          <li key={id} className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-soft-sm">
-            <PlayerTag state={state} id={id} className="flex-1" />
-            <span className={cn('relative font-heading font-bold tabular-nums', gained > 0 ? 'text-primary' : 'text-muted-foreground')}>
+          <li
+            key={id}
+            className={cn(
+              'flex min-w-0 items-center gap-1.5 rounded-md border bg-card px-2 py-1 sm:gap-2 sm:px-3 sm:py-1.5',
+              id === outcome.imposter && outcome.kind !== 'avbruten' && 'border-primary bg-coral-soft',
+            )}
+          >
+            {player && <Emoji emoji={player.avatar} className="shrink-0 text-xl sm:text-2xl" />}
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm font-bold sm:text-base">{id === meId ? 'Du' : (player?.name ?? 'Någon')}</span>
+              <span className="block truncate text-[11px] text-muted-foreground sm:text-xs">
+                {pointsReason(table, outcome, id)}
+                {pointsReason(table, outcome, id) && ' · '}
+                {state.scores[id] ?? 0} totalt
+              </span>
+            </span>
+            <span className={cn('relative shrink-0 font-heading text-base font-bold tabular-nums sm:text-lg', gained === 0 && 'text-muted-foreground')}>
               {gained > 0 && (
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute -top-4 right-0 opacity-0 motion-safe:animate-rise motion-reduce:hidden"
-                >
+                <span aria-hidden className="pointer-events-none absolute -top-4 right-0 opacity-0 motion-safe:animate-rise motion-reduce:hidden">
                   +{gained}
                 </span>
               )}
               {gained > 0 ? `+${gained}` : '0'}
-            </span>
-            <span className="w-20 text-right text-sm font-semibold text-muted-foreground tabular-nums">
-              {state.scores[id] ?? 0} totalt
             </span>
           </li>
         )

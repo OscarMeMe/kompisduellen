@@ -36,6 +36,73 @@
 [data-spel='imposterjakten'] {
   --spel-yta: var(--mint);
 }
+/* Imposterjaktens spelplan i stilen Nattspanarna (data-tema på ImposterjaktenView): marinblått rum, krämvitt papper,
+   lampgult ljus, korall för impostern och dimblått för dämpad text. Sajtens vanliga färgvariabler byts i hela spelvyn,
+   så att knappar, fält och rutor följer med utan egna klasser. */
+[data-tema='nattspanarna'] {
+  --natt: #14232e;
+  --natt-2: #1f3545;
+  --natt-kram: #f5e9cf;
+  --natt-lampa: #f2c14e;
+  --natt-korall: #f08070;
+  --natt-dim: #9bb3c2;
+  --background: var(--natt);
+  --foreground: var(--natt-kram);
+  --card: var(--natt-2);
+  --card-foreground: var(--natt-kram);
+  --popover: var(--natt-2);
+  --popover-foreground: var(--natt-kram);
+  --muted: #26404f;
+  --muted-foreground: var(--natt-dim);
+  --border: color-mix(in oklch, var(--natt-dim) 38%, transparent);
+  --input: color-mix(in oklch, var(--natt-dim) 45%, transparent);
+  --ring: var(--natt-lampa);
+  --primary: var(--natt-lampa);
+  --primary-button: var(--natt-lampa);
+  --primary-foreground: var(--natt);
+  --accent: #7fd4b0;
+  --destructive: var(--natt-korall);
+  --sun: var(--natt-lampa);
+  --sun-soft: color-mix(in oklch, var(--natt-lampa) 24%, var(--natt));
+  --mint-soft: color-mix(in oklch, #7fd4b0 22%, var(--natt));
+  --coral-soft: color-mix(in oklch, var(--natt-korall) 28%, var(--natt));
+  --wood-edge: #6b4a33;
+  --chair: #4a3323;
+  color: var(--foreground);
+}
+/* Krämvita ytor i spelvyn (data-yta="papper"): svarsdelen och bordsskivan. Mörk text på ljus botten. Korallen är mörkare
+   här, så att text och ramar i den klarar kontrasten mot det krämvita. */
+[data-tema='nattspanarna'] [data-yta='papper'] {
+  --background: var(--natt-kram);
+  --foreground: var(--natt);
+  --card: #fffaf0;
+  --card-foreground: var(--natt);
+  --muted: #eadbb8;
+  --muted-foreground: #4b5f6d;
+  --border: color-mix(in oklch, var(--natt) 30%, transparent);
+  --input: color-mix(in oklch, var(--natt) 55%, transparent);
+  --ring: var(--natt);
+  --primary: #a83a26;
+  --primary-button: #a83a26;
+  --primary-foreground: #fffaf0;
+  --accent: #1f7a57;
+  --destructive: #a83a26;
+  --sun-soft: #fbe6a8;
+  --mint-soft: #cdebd9;
+  --coral-soft: #fbd6cc;
+  color: var(--foreground);
+}
+/* Huvudknapparna på papperet: lampgula med mörk text och en mörk kant, som i skissen. */
+[data-tema='nattspanarna'] [data-yta='papper'] [data-slot='button'][data-variant='default'] {
+  background-color: var(--natt-lampa);
+  color: var(--natt);
+  border: 2px solid var(--natt);
+  box-shadow: 0 3px 0 var(--natt);
+}
+[data-tema='nattspanarna'] [data-yta='papper'] [data-slot='button'][data-variant='default']:disabled {
+  opacity: 0.55;
+}
+
 /* Exploderande Tanters spelkort på startsidan har spelets egen stil: krämvitt med vinröd kant och etikett. Skapa lobby
    är samma som på de andra spelkorten. Bara kortet (data-spelkort), så att spelets färg i lobbyn är densamma. */
 [data-spel][data-spelkort='tantpanik'] {
@@ -213,6 +280,9 @@
     /* animate-arrow-draw: en pil ritas från den ena spelaren till den andra (Imposterjaktens bord). Linjen behöver
        pathLength="1" och stroke-dasharray 1. Med fördröjning (--d) ritas rösterna en i taget. */
     --animate-arrow-draw: arrow-draw 0.35s ease-out both;
+    /* animate-arrow-flash: en röstpil ritas och tonas sedan bort (Imposterjaktens bord, när rösterna avslöjas). Kvar står
+       figurerna vid den som fick rösterna. */
+    --animate-arrow-flash: arrow-flash 1.5s ease-out both;
     --animate-lock-snap: lock-snap 0.35s cubic-bezier(0.3, 0.7, 0.4, 1.4);
     --animate-crown-drop: crown-drop 0.5s cubic-bezier(0.3, 0.8, 0.4, 1.3) both;
     /* animate-frame-pulse: ramen runt spelvyn lyser upp en gång när tiden nästan är ute (TimeWarningFrame).
@@ -743,6 +813,14 @@
         0% { stroke-dashoffset: 1; opacity: 0; }
         20% { opacity: 1; }
         100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+
+    @keyframes arrow-flash {
+        0% { stroke-dashoffset: 1; opacity: 0; }
+        8% { opacity: 1; }
+        28% { stroke-dashoffset: 0; opacity: 1; }
+        70% { stroke-dashoffset: 0; opacity: 1; }
+        100% { stroke-dashoffset: 0; opacity: 0; }
     }
 
     /* Ljuset på den som har tur pulserar svagt så länge turen varar. */
