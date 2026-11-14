@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Plus, Save, Trash2, TriangleAlert, Undo2 } from 'lucide-react'
 import { Stamp } from '@/components/Stamp'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,10 @@ const STATUSES: { value: Status; label: string }[] = [
   { value: 'alla', label: 'Alla' },
 ]
 
+// Så länge står ett ord kvar i listan efter ett beslut (ms), så att det går att ångra direkt. Sedan flyttar det till sin
+// flik: ett godkänt ord till Godkänd, och ett ord vars godkännande ångrats tillbaka till Ej granskad.
+const STAY_MS = 5000
+
 // Ett kastat ord som går att lägga tillbaka: ordet, platsen det stod på och om det var godkänt.
 type Thrown = { word: ReviewWord; index: number; approved: boolean }
 
@@ -48,8 +52,14 @@ export function OrdGranskningPage() {
   const [error, setError] = useState<string | null>(null)
   const [category, setCategory] = useState('alla')
   const [status, setStatus] = useState<Status>('ej')
-  // Ord som fått ett beslut sedan sidan laddades står kvar i listan, så att beslutet går att ångra.
+  // Ord som nyss fått ett beslut står kvar i listan i STAY_MS, så att beslutet går att ångra direkt. Sedan syns de i
+  // sin egen flik (Godkänd eller Ej granskad), där beslutet också går att ångra.
   const [decided, setDecided] = useState<string[]>([])
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  useEffect(() => {
+    const running = timers.current
+    return () => running.forEach((timer) => clearTimeout(timer))
+  }, [])
   const [thrown, setThrown] = useState<Thrown[]>([])
   // Frågan en gång till innan ett ord kastas ur en kategori som då får för få ord.
   const [confirm, setConfirm] = useState<{ word: ReviewWord; category: string; count: number } | null>(null)
@@ -81,7 +91,18 @@ export function OrdGranskningPage() {
       setError((reason as Error).message)
     }
   }
-  const remember = (id: string) => setDecided((ids) => (ids.includes(id) ? ids : [...ids, id]))
+  function remember(id: string) {
+    setDecided((ids) => (ids.includes(id) ? ids : [...ids, id]))
+    // Ett nytt beslut om samma ord börjar om tiden.
+    clearTimeout(timers.current.get(id))
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        timers.current.delete(id)
+        setDecided((ids) => ids.filter((other) => other !== id))
+      }, STAY_MS),
+    )
+  }
 
   const approve = (id: string, on: boolean) => run(() => call('/godkann', { id, approved: on }), () => remember(id))
   const save = (word: ReviewWord) => run(() => call('/spara', { word }))
@@ -183,7 +204,7 @@ export function OrdGranskningPage() {
             ))}
           </div>
           <p className="text-sm text-muted-foreground">
-            Visar {shown.length} ord{shownThrown.length > 0 ? ` och ${shownThrown.length} kastade` : ''}. Ord du nyss bestämt dig om står kvar tills sidan laddas om.
+            Visar {shown.length} ord{shownThrown.length > 0 ? ` och ${shownThrown.length} kastade` : ''}. Ett ord du nyss bestämt dig om står kvar i 5 sekunder och flyttar sedan till sin flik.
           </p>
         </div>
 
