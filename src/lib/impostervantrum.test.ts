@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { clueRoundsOf } from '@/lib/imposterjakten'
+import { initialState } from '@/lib/match'
 import { caseSummary, IMPOSTER_LOBBY_LINES, playersShortText, seatCount, seatPlaces, startBlockedText } from '@/lib/impostervantrum'
 
 describe('Imposterjaktens väntrum', () => {
@@ -27,6 +29,12 @@ describe('Imposterjaktens väntrum', () => {
     // Jag sitter längst ned i mitten.
     expect(Math.round(places[0].x)).toBe(50)
     expect(places[0].y).toBeGreaterThan(80)
+  })
+
+  it('en ny lobby börjar med 3 varv per omgång', () => {
+    const state = initialState('imposterjakten')
+    expect(clueRoundsOf(state.imposterSettings)).toBe(3)
+    expect(caseSummary(state.imposterSettings, state.rounds)).toBe('Normal · 3 omgångar · 3 varv · Blandat')
   })
 
   it('replikerna har inga tankstreck', () => {

@@ -1,3 +1,4 @@
+import { ImposterRegler } from '@/components/imposterjakten/ImposterRegler'
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { ChevronDown, Flag, Undo2, Check, CircleHelp, CircleStop, List, LogOut, Menu, RefreshCw, Send } from 'lucide-react'
 import { AllaOrd, Bord } from '@/components/imposterjakten/Bord'
@@ -27,8 +28,6 @@ import {
   MAX_CLUE_LENGTH,
   hostSkipAt,
   hostSkipKind,
-  IMPOSTER_HOW_TO,
-  IMPOSTER_SCORING,
   type ImposterTable,
 } from '@/lib/imposterjakten'
 import type { GameState } from '@/lib/match'
@@ -225,13 +224,9 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Så spelas det</DialogTitle>
-            <DialogDescription>{IMPOSTER_HOW_TO}</DialogDescription>
+            <DialogDescription>Alla vet ordet. Utom en.</DialogDescription>
           </DialogHeader>
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {IMPOSTER_SCORING.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          <ImposterRegler className="text-sm" />
           {/* Väntrummets musik är CC BY 3.0, så den har en kredit. Matchens (CC0) behöver ingen. */}
           <p className="text-xs text-muted-foreground">
             Musik:{' '}

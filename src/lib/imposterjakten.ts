@@ -34,10 +34,8 @@ export function findWord(id: string): ImposterWord | undefined {
   return WORDS.find((word) => word.id === id)
 }
 
-// Förklaringen i väntrummet ("Så spelas det") och hur poängen räknas.
-export const IMPOSTER_HOW_TO =
-  'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går två eller tre varv runt bordet. Efter näst sista varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter sista varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
-
+// Hur poängen räknas, som en kort lista (ImposterRegler). Stegen i spelet står i games.ts (intro.steps), så att reglerna
+// bara finns på ett ställe. Den sista raden handlar om svårigheterna.
 export const IMPOSTER_SCORING: string[] = [
   'Röstar du på impostern får du 2 poäng, även om impostern kommer undan.',
   'Fångas impostern får alla oskyldiga 1 poäng till.',

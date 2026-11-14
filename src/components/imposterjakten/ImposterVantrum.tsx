@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Bot, Crown, Plus } from 'lucide-react'
+import { ArrowRight, Bot, ChevronDown, Crown, Plus } from 'lucide-react'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { ForberedFallet } from '@/components/imposterjakten/ForberedFallet'
 import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
+import { ImposterRegler } from '@/components/imposterjakten/ImposterRegler'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { AcceptThrowsChoice, ThrowBar, ThrowCounter } from '@/components/lobby/Kast'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { VannSenast } from '@/components/lobby/VannSenast'
-import { HowToPlay, RematchCountdown, SpelVal } from '@/components/lobby/VantrumDelar'
+import { RematchCountdown, SpelVal } from '@/components/lobby/VantrumDelar'
 import type { WaitingRoomProps } from '@/components/lobby/WaitingRoom'
 import { SpelIkon } from '@/components/SpelIkon'
 import { TantBotar } from '@/components/tantpanik/TantBotar'
@@ -20,7 +21,7 @@ import { useReactions } from '@/hooks/useReactions'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
 import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 import { playersLabel } from '@/lib/games'
-import { IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText } from '@/lib/imposterjakten'
+import { wordsRunningOutText } from '@/lib/imposterjakten'
 import { caseSummary, IMPOSTER_LINE_MS, IMPOSTER_LOBBY_LINES, playersShortText, seatCount, seatPlaces, startBlockedText } from '@/lib/impostervantrum'
 import { totalThrows } from '@/lib/kast'
 import { loadSoundOn, playPop } from '@/lib/ljud'
@@ -250,7 +251,17 @@ export function ImposterVantrum({
         <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
       </div>
 
-      <HowToPlay howTo={IMPOSTER_HOW_TO} scoringDetails={IMPOSTER_SCORING} />
+      {/* Så spelas det: samma steg som i rutan "Så spelar man" på startsidan, på ett krämvitt papper. Hopfällt för alla. */}
+      <details data-yta="papper" className="group rounded-lg border-2 border-[var(--natt)] bg-background px-4 text-foreground shadow-[0_8px_22px_rgb(0_0_0/0.4)] sm:px-6">
+        <summary className="-mx-4 flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 font-heading text-xl font-bold sm:-mx-6 sm:px-6 [&::-webkit-details-marker]:hidden">
+          Så spelas det
+          <ChevronDown aria-hidden className="size-5 shrink-0 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="pb-5">
+          {game.intro && <p className="mb-4 text-lg leading-snug font-semibold text-balance">{game.intro.pitch}</p>}
+          <ImposterRegler />
+        </div>
+      </details>
 
       {/* På mobil ligger mappen långt ned. När den inte syns har värden en liten startknapp fast längst ned på skärmen,
           med samma sammanfattning och samma spärr som i mappen. Raden tar plats i sidan, så att den aldrig täcker
