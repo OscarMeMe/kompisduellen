@@ -9,7 +9,7 @@ const publicFiles = import.meta.glob(['/public/sitemap.xml', '/public/robots.txt
   import: 'default',
   eager: true,
 }) as Record<string, string>
-const ogImages = Object.keys(import.meta.glob('/public/og/*.png'))
+const ogImages = Object.keys(import.meta.glob('/public/og/*.{png,jpg}'))
 const sitemap = publicFiles['/public/sitemap.xml']
 const robots = publicFiles['/public/robots.txt']
 

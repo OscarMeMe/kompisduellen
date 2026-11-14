@@ -2,7 +2,7 @@
 
 Bakgrunden är väntrummets mönster (public/images/tantpanik/vantrum-monster.webp) upprepat över hela bilden. I mitten
 ligger en krämvit ruta med vinröd kant, som spelkortet på startsidan, med spelets logga (logga.webp) stort på.
-Bilden sparas som public/og/exploderande-tanter.png och används av spelsidan (image i spelsidor.ts).
+Bilden sparas som public/og/exploderande-tanter.jpg och används av spelsidan (image i spelsidor.ts).
 
 Kör: python scripts/ogbild.py (kräver Pillow).
 """
@@ -12,7 +12,9 @@ from PIL import Image, ImageDraw, ImageFilter
 
 PATTERN = Path('public/images/tantpanik/vantrum-monster.webp')
 LOGO = Path('public/images/tantpanik/logga.webp')
-TARGET = Path('public/og/exploderande-tanter.png')
+TARGET = Path('public/og/exploderande-tanter.jpg')
+# JPEG med kvalitet 85 ger en liten fil (cirka 100 kB) utan synlig skillnad mot PNG, som blev nästan fyra gånger större.
+QUALITY = 85
 
 SIZE = (1200, 630)
 # Mönstrets ruta i bilden (px). Originalet är 1024 px, och i väntrummet visas det i ungefär den här storleken.
@@ -66,7 +68,7 @@ def main() -> None:
     image.alpha_composite(logo, ((SIZE[0] - width) // 2, (SIZE[1] - LOGO_HEIGHT) // 2))
 
     TARGET.parent.mkdir(parents=True, exist_ok=True)
-    image.convert('RGB').save(TARGET, optimize=True)
+    image.convert('RGB').save(TARGET, 'JPEG', quality=QUALITY, optimize=True, progressive=True)
     print(f'{TARGET}: {SIZE[0]} × {SIZE[1]}, {TARGET.stat().st_size // 1024} kB')
 
 

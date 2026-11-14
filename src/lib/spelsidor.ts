@@ -16,7 +16,7 @@ export type GamePageInfo = {
   steps: string[]
   time: string
   faq: Faq[]
-  // Egen bild när sidan delas (1200 × 630 i public/og). Saknas den visas loggan.
+  // Egen bild när sidan delas (1200 × 630 i public/og, png eller jpg). Saknas den visas loggan.
   image?: { path: string; alt: string }
 }
 
@@ -187,7 +187,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       'Den som är sist kvar vinner matchen. Sen är det dags för revansch.',
     ],
     time: '5–20 minuter',
-    image: { path: '/og/exploderande-tanter.png', alt: 'Exploderande Tanter: spelets logga med en arg tant som pekar, på en krämvit ruta med vinröd kant. Kortspel online för 2–10 spelare' },
+    image: { path: '/og/exploderande-tanter.jpg', alt: 'Exploderande Tanter: spelets logga med en arg tant som pekar, på en krämvit ruta med vinröd kant. Kortspel online för 2–10 spelare' },
     faq: [
       ...commonFaq('Exploderande Tanter', 2),
       {
