@@ -9,7 +9,8 @@
 
 export type MusicLevel = 'lobby' | 'match'
 
-// Väntrummet: från Pixabay. Matchen: "Happy" av Rezoner (krediten står i regelvyn).
+// Väntrummet: "Upbeat - Upbeat Music" av lNPLUSMUSIC från Pixabay (ingen kredit krävs). Matchen: "Happy Arcade Tune" av
+// rezoner från OpenGameArt, CC BY 3.0 (krediten står i regelvyn).
 export const MUSIC_FILES: Record<MusicLevel, string> = {
   lobby: '/musik/vantrum.mp3',
   match: '/musik/kafferep.mp3',

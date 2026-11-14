@@ -43,10 +43,16 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         </ul>
         {/* Krediterna för musiken, trombonen och applåden (se docs/ljud-licenser.md). */}
         <p className="border-t pt-3 text-xs text-muted-foreground">
-          Musik: ”Happy” av{' '}
-          <a href="https://soundcloud.com/rezoner" target="_blank" rel="noreferrer" className="underline">
-            Rezoner
+          {/* Matchens musik är CC BY 3.0. Väntrummets musik (Pixabay) kräver ingen kredit. */}
+          Musik:{' '}
+          <a href="https://opengameart.org/content/happy-arcade-tune" target="_blank" rel="noreferrer" className="underline">
+            Happy Arcade Tune
+          </a>{' '}
+          av rezoner (OpenGameArt,{' '}
+          <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">
+            CC BY 3.0
           </a>
+          )
           <br />
           {/* Namnen länkar till ljuden (titeln står i länkens title), och licenserna till sin version: trombonen är
               CC BY 4.0 och applåden CC BY 3.0. */}
