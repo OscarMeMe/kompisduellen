@@ -9,7 +9,7 @@ describe('sorteringen av spelen på startsidan', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('Populärast följer ordningen i games.ts', () => {
-    expect(names('populart')).toEqual(['Exploderande Tanter', 'Gissa priset', 'Kortkaos', 'Imposterjakten', 'Närmast vinner'])
+    expect(names('populart')).toEqual(['Exploderande Tanter', 'Imposterjakten', 'Gissa priset', 'Kortkaos', 'Närmast vinner'])
   })
 
   it('Nyheter visar det senast tillagda först', () => {
