@@ -3,11 +3,12 @@
 // gäller. Ett ljud som inte hunnit laddas spelas inte. Har ett ögonblick flera varianter slumpas en av dem, aldrig
 // samma två gånger i rad. Källor och licenser står i docs/ljud-licenser.md.
 // Explosionen (playBoom), Nope! (playPop), nedräkningen och turkoppen görs fortfarande i kod (ljud.ts).
-// Alla filer är CC0 utom trombonen (utslagen), som är CC BY 4.0 och har sin kredit i regelvyn (TantMenyer).
+// Alla filer är CC0 utom trombonen (utslagen, CC BY 4.0) och applåden i konfettiljudet (CC BY 3.0), som har sina
+// krediter i regelvyn (TantMenyer).
 
 import { loadSoundFiles, playSoundFile } from '@/lib/ljud'
 
-export type TantSound = 'dra' | 'lagga' | 'vanda' | 'blanda' | 'stjala' | 'desarmera' | 'utslagen' | 'vinst'
+export type TantSound = 'dra' | 'lagga' | 'vanda' | 'blanda' | 'stjala' | 'desarmera' | 'utslagen' | 'vinst' | 'konfetti'
 
 const DIR = '/ljud/tantpanik'
 
@@ -29,6 +30,8 @@ export const TANT_SOUNDS: Record<TantSound, { files: readonly string[]; volume: 
   utslagen: { files: [`${DIR}/utslagen.mp3`], volume: 0.7 },
   // Någon är sist kvar och vinner.
   vinst: { files: [`${DIR}/vinst.mp3`], volume: 0.7 },
+  // Konfettin börjar falla på slutskärmen: en smäll och en applåd (applåden är CC BY 3.0, krediten står i regelvyn).
+  konfetti: { files: [`${DIR}/konfetti.mp3`], volume: 0.7 },
 }
 
 export const TANT_SOUND_FILES: readonly string[] = Object.values(TANT_SOUNDS).flatMap((sound) => sound.files)
@@ -54,23 +57,29 @@ export function playTantSound(sound: TantSound, random: () => number = Math.rand
   return playSoundFile(file, volume)
 }
 
-// Vinstjublet spelas en gång per vinst: inte igen när vinnarens ögonblick visas på nytt (det blinkar till före den sista
-// explosionen), inte efter en omladdning och inte på slutskärmen. key = matchens vinst (winSoundKey). Den senaste
-// vinsten som låtit sparas i fliken. Ger true första gången, och då ska ljudet spelas.
-const WIN_HEARD_KEY = 'kd-tant-vinst'
+// Vinstjublet (vid bordet) och konfettin (på slutskärmen) spelas en gång per vinst: inte igen när vyn visas på nytt
+// (vinnarens ögonblick blinkar till före den sista explosionen), inte efter en omladdning och aldrig två gånger för samma
+// match. key = matchens vinst (winSoundKey). Den senaste vinsten som låtit sparas i fliken, för varje ljud för sig. Ger
+// true första gången, och då ska ljudet spelas.
+export type OnceSound = 'vinst' | 'konfetti'
+const HEARD_KEYS: Record<OnceSound, string> = { vinst: 'kd-tant-vinst', konfetti: 'kd-tant-konfetti' }
 
 export function winSoundKey(table: { order: readonly string[]; winner: string | null; log: readonly { n: number }[] }): string {
   return `${table.order.join()}|${table.winner ?? ''}|${table.log.at(-1)?.n ?? 0}`
 }
 
-export function markWinHeard(key: string, storage: Pick<Storage, 'getItem' | 'setItem'> | null = safeSessionStorage()): boolean {
+export function markHeardOnce(sound: OnceSound, key: string, storage: Pick<Storage, 'getItem' | 'setItem'> | null = safeSessionStorage()): boolean {
   try {
-    if (storage?.getItem(WIN_HEARD_KEY) === key) return false
-    storage?.setItem(WIN_HEARD_KEY, key)
+    if (storage?.getItem(HEARD_KEYS[sound]) === key) return false
+    storage?.setItem(HEARD_KEYS[sound], key)
   } catch {
     // Går det inte att spara spelas ljudet ändå.
   }
   return true
+}
+
+export function markWinHeard(key: string, storage?: Pick<Storage, 'getItem' | 'setItem'> | null): boolean {
+  return markHeardOnce('vinst', key, storage)
 }
 
 function safeSessionStorage(): Storage | null {
