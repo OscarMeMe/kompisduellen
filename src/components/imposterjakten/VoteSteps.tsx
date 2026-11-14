@@ -89,6 +89,8 @@ export function AccusationStep({ state, table, me, inRound, imposterCard, second
             <Button size="lg" variant="outline" onClick={() => onMove({ type: 'accuseVote', yes: false })}>
               Nej
             </Button>
+            {/* Svaren är hemliga så länge anklagelsen pågår, men går den igenom visas ja-rösterna som vid en omröstning. */}
+            <p className="col-span-2 text-sm font-semibold text-muted-foreground">Går anklagelsen igenom visas vilka som svarade ja.</p>
           </div>
         )}
         {inRound && !accusedIsMe && answer !== null && (

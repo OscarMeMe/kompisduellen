@@ -13,8 +13,8 @@ import words from '@/lib/imposterjakten.json'
 export const IMPOSTER_GAME = 'imposterjakten'
 
 // Ett ord i ordlistan. ledtrad = imposterns hjälpledtråd i Normal. godkanda = former som räknas som ordet (i
-// kontrollen av ledtrådar och i sista gissningen). nara (ett närliggande ord) och svarighet (latt, mellan eller klurig)
-// används inte än.
+// kontrollen av ledtrådar och i sista gissningen). nara = ett närliggande ord, som impostern får i Lurig. svarighet
+// (latt, mellan eller klurig) används inte än.
 export type ImposterWord = {
   id: string
   ord: string
@@ -39,9 +39,10 @@ export const IMPOSTER_HOW_TO =
   'Alla utom en får samma hemliga ord. Impostern får inte ordet och måste smälta in. Ni ger ett ord var som hör ihop med det hemliga ordet, och det går två eller tre varv runt bordet. Efter näst sista varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt. Annars diskuterar ni efter sista varvet och röstar fram vem ni tror är impostern. Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.'
 
 export const IMPOSTER_SCORING: string[] = [
-  'Kommer impostern undan får den 2 poäng.',
-  'Fångas impostern får alla oskyldiga 2 poäng.',
-  'Gissar impostern sedan ordet rätt får den 1 poäng.',
+  'Röstar du på impostern får du 2 poäng, även om impostern kommer undan.',
+  'Fångas impostern får alla oskyldiga 1 poäng till.',
+  'Kommer impostern undan får den 3 poäng.',
+  'Fångas impostern men gissar ordet rätt får den 1 poäng.',
   'I Normal får impostern en vag ledtråd. I Svår får den ingenting. I Lurig får den ett närliggande ord och vet inte om att den är impostern.',
 ]
 
@@ -152,6 +153,11 @@ export type ImposterTable = {
   // Impostern som fick flest röster och nu gissar ordet. null innan dess.
   caught: string | null
   outcome: ImposterOutcome | null
+  // När spelet började vänta på den som ska göra något nu (en tur, omröstningen eller sista gissningen), på värdens
+  // klocka. Värden får Hoppa över när det gått HOST_SKIP_SECONDS (hostSkipAt). Saknas hos en värd med en äldre version.
+  waitSince?: number | null
+  // Värden hoppade över något: en rad som alla ser, så att det inte ser ut som ett fel. Saknas hos en äldre version.
+  skipNote?: string | null
 }
 
 // Det bara värden vet. rejected = när varje spelares senaste ord avvisades, så att bara den spelaren får beskedet.
@@ -304,6 +310,8 @@ export function dealRound(
       failedAccusation: null,
       caught: null,
       outcome: null,
+      waitSince: null,
+      skipNote: null,
     },
     secrets: { kind: 'imposter', wordId: picked.wordId, imposter, rejected: {}, ready: [], votes: {}, discussionAt: null, accuseVotes: {}, resumeMs: null },
     usedWordIds: picked.usedWordIds,
@@ -471,11 +479,27 @@ function toClues(host: ImposterHost): ImposterHost {
 }
 
 // En tur är gjord. Efter sista turen i sista varvet börjar diskussionen. Turer för spelare som lämnat hoppas över.
-function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[], now: number): ImposterHost {
+// note = raden som alla ser när värden hoppade över turen. Den försvinner vid nästa tur.
+function addClue(host: ImposterHost, clue: Clue, activeIds: readonly string[], now: number, note: string | null = null): ImposterHost {
   const table = host.state.imposter!
   const turn = table.turn + 1
   const step: ImposterStep = turn >= totalTurns(table) ? 'diskussion' : 'ledtradar'
-  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue], failedAccusation: null }), activeIds, now)
+  return skipAway(withTable(host, { ...table, turn, step, clues: [...table.clues, clue], failedAccusation: null, skipNote: note }), activeIds, now)
+}
+
+// Det spelet väntar på just nu. Byts det börjar tiden till värdens Hoppa över om (stampWait).
+function waitKey(table: ImposterTable): string {
+  return `${table.step}:${table.turn}:${table.tied ? 1 : 0}:${table.accusation ? 1 : 0}`
+}
+
+// Efter varje steg i spelet: väntar spelet nu på något nytt sparas tiden (waitSince), så att värden kan hoppa över den
+// som dröjer först efter en stund.
+function stampWait(before: ImposterHost, after: ImposterHost, now: number): ImposterHost {
+  const table = after.state.imposter
+  if (after === before || !table) return after
+  const old = before.state.imposter
+  if (old && waitKey(old) === waitKey(table) && table.waitSince != null) return after
+  return withTable(after, { ...table, waitSince: now })
 }
 
 // Diskussionen har börjat: tiden sparas, så att omröstningen inte kan öppnas förrän ni hunnit prata (MIN_DISCUSSION_SECONDS).
@@ -498,6 +522,16 @@ function skipAway(host: ImposterHost, activeIds: readonly string[], now: number)
 
 // Ett drag från en spelare. Fel drag vid fel tillfälle ignoreras.
 export function imposterMove(
+  host: ImposterHost,
+  playerId: string,
+  move: ImposterMove,
+  activeIds: readonly string[],
+  now: number,
+): ImposterHost {
+  return stampWait(host, applyMove(host, playerId, move, activeIds, now), now)
+}
+
+function applyMove(
   host: ImposterHost,
   playerId: string,
   move: ImposterMove,
@@ -549,19 +583,66 @@ export function imposterMove(
   return addClue(host, { player: playerId, kind: 'ord', word: checked.word }, activeIds, now)
 }
 
-// Värden, när ni säger orden högt: den som har tur har glömt att trycka Klar, så turen går vidare.
+// Så länge ska spelet ha väntat innan värden får hoppa över den som dröjer.
+export const HOST_SKIP_SECONDS = 20
+
+// Det värden kan hoppa över: turen i ledtrådsvarven, omröstningen när någon inte röstat, eller sista gissningen.
+export type HostSkip = 'tur' | 'rostning' | 'gissning'
+
+export function hostSkipKind(table: ImposterTable): HostSkip | null {
+  if (table.accusation) return null
+  if (table.step === 'ledtradar' && currentTurn(table) !== null) return 'tur'
+  if (table.step === 'rostning') return 'rostning'
+  if (table.step === 'gissning') return 'gissning'
+  return null
+}
+
+// När värden tidigast får hoppa över (värdens klocka), eller null om det inte finns något att hoppa över. När ni säger
+// orden högt får värden gå vidare direkt (Nästa), eftersom ordet redan är sagt och någon bara glömt att trycka Klar.
+export function hostSkipAt(table: ImposterTable): number | null {
+  const kind = hostSkipKind(table)
+  if (!kind) return null
+  if (kind === 'tur' && table.aloud) return 0
+  return (table.waitSince ?? 0) + HOST_SKIP_SECONDS * 1000
+}
+
+function possessive(name: string): string {
+  return `${name}${name.endsWith('s') ? '' : /\d$/.test(name) ? ':s' : 's'}`
+}
+
+// Värden hoppar över den som dröjer (Hoppa över, eller Nästa när ni säger orden högt). Tidigast vid hostSkipAt.
+// - Turen i ledtrådsvarven: räknas som pass (eller som sagt, när ni säger orden högt).
+// - Omröstningen: rösterna räknas som de är. Den som inte röstat har ingen röst.
+// - Sista gissningen: räknas som att impostern gav upp.
 export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  return stampWait(host, hostSkip(host, activeIds, now), now)
+}
+
+function hostSkip(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter
-  const turn = table ? currentTurn(table) : null
-  if (!table || !table.aloud || !turn || table.accusation) return host
-  return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds, now)
+  if (host.state.phase !== 'playing' || !table) return host
+  const kind = hostSkipKind(table)
+  const at = hostSkipAt(table)
+  if (!kind || at === null || now < at) return host
+  if (kind === 'tur') {
+    const turn = currentTurn(table)!
+    if (table.aloud) return addClue(host, { player: turn, kind: 'sagt', word: null }, activeIds, now)
+    const name = host.state.players[turn]?.name ?? 'Spelaren'
+    return addClue(host, { player: turn, kind: 'pass', word: null }, activeIds, now, `Värden hoppade över ${possessive(name)} tur.`)
+  }
+  const players = present(table, activeIds)
+  if (kind === 'rostning') {
+    const voted = players.filter((id) => host.secrets.votes[id] !== undefined)
+    return settleVotes(withTable(host, { ...table, skipNote: 'Värden räknade rösterna innan alla hade röstat.' }), voted, players)
+  }
+  return finishRound(withTable(host, { ...table, skipNote: 'Värden hoppade över gissningen.' }), 'gav-upp', null, null, players)
 }
 
 // Värden: alla har inte tryckt Jag har läst, men omgången går vidare ändå.
-export function imposterStartAnyway(host: ImposterHost): ImposterHost {
+export function imposterStartAnyway(host: ImposterHost, now: number = Date.now()): ImposterHost {
   const table = host.state.imposter
   if (host.state.phase !== 'playing' || table?.step !== 'kort') return host
-  return toClues(host)
+  return stampWait(host, toClues(host), now)
 }
 
 // Kan värden dela ut ett nytt ord? Bara innan första associationen.
@@ -825,7 +906,12 @@ function checkVotes(host: ImposterHost, activeIds: readonly string[]): ImposterH
   const players = present(table, activeIds)
   const voted = players.filter((id) => host.secrets.votes[id] !== undefined)
   if (players.length === 0 || voted.length < players.length) return withTable(host, { ...table, votedCount: voted.length })
+  return settleVotes(host, voted, players)
+}
 
+// Rösterna räknas och visas. voted = de som har röstat, players = spelarna i omgången som är kvar.
+function settleVotes(host: ImposterHost, voted: readonly string[], players: readonly string[]): ImposterHost {
+  const table = host.state.imposter!
   const votes = Object.fromEntries(voted.map((id) => [id, host.secrets.votes[id]]))
   const { top } = tallyVotes(votes)
   const revealed = withTable(host, { ...table, votedCount: voted.length, votes })
@@ -870,19 +956,37 @@ export function isCorrectGuess(guess: string, word: ImposterWord): boolean {
   return normalized.length > 0 && [word.ord, ...word.godkanda].map(normalizeWord).includes(normalized)
 }
 
-// Poängen för en omgång. Kommer impostern undan får den 2. Fångas den får alla oskyldiga som är kvar i omgången 2, och
-// gissar impostern sedan rätt får den dessutom 1. En avbruten omgång ger inga poäng.
-export const IMPOSTER_ESCAPES = 2
+// Poängen för en omgång:
+// - En oskyldig som röstade på impostern får VOTED_RIGHT, även om impostern kommer undan. Rösten som räknas är den
+//   sista (den extra omröstningen efter lika röster, eller ja-rösterna när en anklagelse gick igenom).
+// - Fångas impostern får varje oskyldig som är kvar i omgången IMPOSTER_CAUGHT till.
+// - Kommer impostern undan får den IMPOSTER_ESCAPES.
+// - Fångas impostern men gissar ordet rätt får den IMPOSTER_GUESSES_RIGHT.
+// En avbruten omgång ger inga poäng. order = spelarna i omgången som är kvar, så att den som lämnat inte får poäng.
+export const VOTED_RIGHT = 2
+export const IMPOSTER_CAUGHT = 1
+export const IMPOSTER_ESCAPES = 3
 export const IMPOSTER_GUESSES_RIGHT = 1
-export const INNOCENTS_WIN = 2
 
-export function roundPoints(kind: OutcomeKind, imposter: string, order: readonly string[]): Record<string, number> {
-  if (kind === 'undan') return { [imposter]: IMPOSTER_ESCAPES }
-  if (kind === 'gissade-ratt' || kind === 'gissade-fel' || kind === 'gav-upp') {
-    const innocents = order.filter((id) => id !== imposter).map((id) => [id, INNOCENTS_WIN])
-    return { ...Object.fromEntries(innocents), ...(kind === 'gissade-ratt' ? { [imposter]: IMPOSTER_GUESSES_RIGHT } : {}) }
+export function roundPoints(
+  kind: OutcomeKind,
+  imposter: string,
+  order: readonly string[],
+  votes: Readonly<Record<string, string>> = {},
+): Record<string, number> {
+  if (kind === 'avbruten') return {}
+  const points: Record<string, number> = {}
+  const add = (id: string, gained: number) => {
+    points[id] = (points[id] ?? 0) + gained
   }
-  return {}
+  const innocents = order.filter((id) => id !== imposter)
+  for (const id of innocents) if (votes[id] === imposter) add(id, VOTED_RIGHT)
+  if (kind === 'undan') add(imposter, IMPOSTER_ESCAPES)
+  else {
+    for (const id of innocents) add(id, IMPOSTER_CAUGHT)
+    if (kind === 'gissade-ratt') add(imposter, IMPOSTER_GUESSES_RIGHT)
+  }
+  return points
 }
 
 // Omgången är slut: poängen läggs till och facit visas. Ordet räknas som använt. scorers = spelarna i omgången som
@@ -897,7 +1001,7 @@ function finishRound(
   const { state, secrets } = host
   const table = state.imposter!
   const word = findWord(secrets.wordId)
-  const points = roundPoints(kind, secrets.imposter, scorers)
+  const points = roundPoints(kind, secrets.imposter, scorers, table.votes ?? {})
   const scores = { ...state.scores }
   for (const [id, gained] of Object.entries(points)) scores[id] = (scores[id] ?? 0) + gained
   const outcome: ImposterOutcome = {
@@ -930,6 +1034,10 @@ export function imposterAbortRound(host: ImposterHost, reason = 'Värden avbröt
 // Värdens timer: nedräkningen är slut och omröstningen öppnas. Gör bara något om klockan som löpte ut fortfarande är
 // den som gäller.
 export function imposterDeadline(host: ImposterHost, now: number, deadline: number, activeIds: readonly string[]): ImposterHost {
+  return stampWait(host, deadlinePassed(host, now, deadline, activeIds), now)
+}
+
+function deadlinePassed(host: ImposterHost, now: number, deadline: number, activeIds: readonly string[]): ImposterHost {
   const { state } = host
   const table = state.imposter
   if (state.phase === 'playing' && table?.accusation && state.deadline === deadline && now >= deadline) {
@@ -973,6 +1081,10 @@ function keepTied(table: ImposterTable, activeIds: readonly string[]): ImposterT
 // Annars fortsätter den utan spelaren: turer hoppas över, trösklarna räknas om, spelarens röst stryks och den som röstat
 // på spelaren får rösta om.
 export function imposterPresence(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
+  return stampWait(host, presenceChanged(host, activeIds, now), now)
+}
+
+function presenceChanged(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter
   if (host.state.phase !== 'playing' || !table || table.step === 'facit') return host
   if (!activeIds.includes(host.secrets.imposter)) {

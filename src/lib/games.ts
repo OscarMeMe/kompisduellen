@@ -114,7 +114,7 @@ export const GAMES: GameInfo[] = [
         'Ni ger ett ord var som hör ihop med det hemliga ordet, och det går två eller tre varv runt bordet.',
         'Efter näst sista varvet kan vem som helst anklaga någon, och då röstar de andra ja eller nej direkt.',
         'Annars diskuterar ni efter sista varvet och röstar fram vem ni tror är impostern.',
-        'Fångar ni impostern får ni poäng, och impostern kan ta en poäng genom att gissa ordet. Kommer den undan får den poäng.',
+        'Den som röstar på impostern får poäng, och fångar ni impostern får alla oskyldiga poäng. Impostern kan ta en poäng genom att gissa ordet, och får flest poäng om den kommer undan.',
         'Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.',
       ],
     },

@@ -93,6 +93,9 @@ const isImposterTable = (value: unknown): value is ImposterTable =>
     accusation: orNull(shape({ accuser: isString, accused: isString, answered: isNumber, voters: isNumber })),
     accusers: listOf(isString),
     failedAccusation: orNull(isString),
+    // Saknas hos en värd med en äldre version.
+    waitSince: (at: unknown) => at === undefined || at === null || isNumber(at),
+    skipNote: (note: unknown) => note === undefined || note === null || isString(note),
     caught: orNull(isString),
     outcome: orNull(
       shape({
