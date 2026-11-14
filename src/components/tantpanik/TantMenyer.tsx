@@ -48,23 +48,25 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             Rezoner
           </a>
           <br />
+          {/* Namnen länkar till ljuden (titeln står i länkens title), och licenserna till sin version: trombonen är
+              CC BY 4.0 och applåden CC BY 3.0. */}
           Ljud:{' '}
-          <a href="https://freesound.org/people/Benboncan/sounds/73581/" target="_blank" rel="noreferrer" className="underline">
-            ”Sad Trombone”
+          <a href="https://freesound.org/people/Benboncan/sounds/73581/" title="Sad Trombone" target="_blank" rel="noreferrer" className="underline">
+            Benboncan
+          </a>
+          ,{' '}
+          <a href="https://freesound.org/people/kwahmah_02/sounds/324323/" title="Huge Applause" target="_blank" rel="noreferrer" className="underline">
+            kwahmah_02
           </a>{' '}
-          av Benboncan (
+          (Freesound, CC BY{' '}
           <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline">
-            CC BY 4.0
-          </a>
-          ) och{' '}
-          <a href="https://freesound.org/people/kwahmah_02/sounds/324323/" target="_blank" rel="noreferrer" className="underline">
-            ”Huge Applause”
+            4.0
           </a>{' '}
-          av kwahmah_02 (
+          och{' '}
           <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">
-            CC BY 3.0
+            3.0
           </a>
-          ), Freesound. Ljuden är bearbetade.
+          , bearbetade)
         </p>
       </DialogContent>
     </Dialog>
