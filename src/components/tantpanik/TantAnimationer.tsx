@@ -4,7 +4,8 @@ import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { useReactions } from '@/hooks/useReactions'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { Stamp } from '@/components/Stamp'
-import { loadSoundOn, playBoom, playTurn } from '@/lib/ljud'
+import { loadSoundOn, playBoom } from '@/lib/ljud'
+import { playTantSound } from '@/lib/tantljud'
 import { tantMusic } from '@/lib/tantmusik'
 import { cn } from '@/lib/utils'
 import type { GameState } from '@/lib/match'
@@ -418,8 +419,9 @@ function BombShow({
             requestAnimationFrame(() => requestAnimationFrame(() => setDefuse('landed')))
             if (soundOn)
               setTimeout(() => {
-                tantMusic.duck()
-                playTurn()
+                // Lättnaden är drygt 2 s lång.
+                tantMusic.duck(2000)
+                playTantSound('desarmera')
               }, 350)
           }
         },

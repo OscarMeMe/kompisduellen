@@ -168,3 +168,6 @@ skisser/
 docs/
 skarmdumpar/
 .vercel
+
+# Kandidater till ljud (ljudtestet). Bara lokalt.
+ljud-test/

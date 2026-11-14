@@ -60,62 +60,50 @@ function effectsOut(ctx: AudioContext): GainNode {
   return effectsGain
 }
 
-// Ljudeffekter från filer (public/ljud). Källor och licenser står i docs/ljud-licenser.md. Filen hämtas i förväg
-// (preloadSound) och avkodas först när den spelas, så att inget ljud startas före ett tryck.
-export const TANT_WIN_SOUND = '/ljud/tant-vinst.mp3'
-const TANT_WIN_VOLUME = 0.7
-const fileData = new Map<string, Promise<ArrayBuffer | null>>()
+// Ljudeffekter från filer (public/ljud, t.ex. Exploderande Tanters ljud i tantljud.ts). Filerna hämtas och avkodas i
+// förväg (loadSoundFiles) och spelas genom samma volym som alla andra ljudeffekter (effectsOut). En fil som inte hunnit
+// laddas spelas inte, och det är inget fel.
 const fileBuffers = new Map<string, AudioBuffer>()
+const fileLoads = new Map<string, Promise<void>>()
 
-function fetchSound(url: string): Promise<ArrayBuffer | null> {
-  if (!fileData.has(url)) {
-    fileData.set(
-      url,
-      fetch(url)
-        .then((response) => (response.ok && (response.headers.get('content-type') ?? '').startsWith('audio') ? response.arrayBuffer() : null))
-        .catch(() => null),
-    )
+async function loadSoundFile(url: string): Promise<void> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok || !(response.headers.get('content-type') ?? '').startsWith('audio')) return
+    const data = await response.arrayBuffer()
+    // Avkodas utan att sajtens ljud startas, så att det går före spelarens första tryck.
+    const decoder = context ?? new OfflineAudioContext(1, 1, 44100)
+    fileBuffers.set(url, await decoder.decodeAudioData(data))
+  } catch {
+    // Utan filen spelas inget ljud. Nästa laddning försöker igen.
+    fileLoads.delete(url)
   }
-  return fileData.get(url)!
 }
 
-// Hämtar en ljudfil i förväg, så att den spelas utan väntan när det är dags.
-export function preloadSound(url: string) {
-  void fetchSound(url)
+// Hämtar ljudfilerna i förväg, en gång per fil.
+export function loadSoundFiles(urls: readonly string[]) {
+  for (const url of urls) {
+    if (!fileLoads.has(url)) fileLoads.set(url, loadSoundFile(url))
+  }
 }
 
-// Spelar en ljudfil genom ljudeffekternas volym. Ger false om filen inte gick att spela.
-async function playFile(url: string, volume: number): Promise<boolean> {
+// Spelar en laddad ljudfil. Ger false om filen inte är laddad eller inte gick att spela.
+export function playSoundFile(url: string, volume: number): boolean {
+  const buffer = fileBuffers.get(url)
+  if (!buffer) return false
   try {
     context ??= new AudioContext()
     if (context.state === 'suspended') void context.resume()
-    const ctx = context
-    let buffer = fileBuffers.get(url)
-    if (!buffer) {
-      const data = await fetchSound(url)
-      if (!data) return false
-      // decodeAudioData tömmer sin indata, så den får en kopia.
-      buffer = await ctx.decodeAudioData(data.slice(0))
-      fileBuffers.set(url, buffer)
-    }
-    const source = ctx.createBufferSource()
-    const gain = ctx.createGain()
+    const source = context.createBufferSource()
+    const gain = context.createGain()
     gain.gain.value = volume
     source.buffer = buffer
-    source.connect(gain).connect(effectsOut(ctx))
+    source.connect(gain).connect(effectsOut(context))
     source.start()
     return true
   } catch {
     return false
   }
-}
-
-// Exploderande Tanter: någon är sist kvar och vinner. Ett jubel från en fil. Går filen inte att spela (t.ex. utan
-// nät) spelas fanfaren som görs i kod i stället.
-export function playTantWin() {
-  void playFile(TANT_WIN_SOUND, TANT_WIN_VOLUME).then((played) => {
-    if (!played) playBullseye()
-  })
 }
 
 // Turkoppen landar hos mig i Exploderande Tanter: ett litet klirr, som en kopp mot ett fat. Två korta höga toner med

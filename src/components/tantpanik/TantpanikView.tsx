@@ -18,7 +18,8 @@ import { Konfetti } from '@/components/Konfetti'
 import { tantMusic } from '@/lib/tantmusik'
 import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
-import { loadSoundOn, playTantWin, preloadSound, saveSoundOn, TANT_WIN_SOUND } from '@/lib/ljud'
+import { loadSoundOn, saveSoundOn } from '@/lib/ljud'
+import { loadTantSounds, playTantSound, type TantSound } from '@/lib/tantljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -49,6 +50,9 @@ const NOTICE_MS = 2500
 // högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
 // Prispallen efteråt är gemensam för alla spel.
 // onBotsOnly: värden spolar fram eller tar revansch direkt när bara botar är kvar (se fastForwardBots).
+// Så långt efter draget vänds kortet jag drog upp (ms), och då spelas ljudet.
+const CARD_FLIP_SOUND_MS = 250
+
 export function TantpanikView({
   state,
   me,
@@ -179,8 +183,31 @@ export function TantpanikView({
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])
   useEffect(() => () => tantMusic.setWanted(false), [])
-  // Vinstjublet hämtas i förväg, så att det spelas direkt när någon vinner.
-  useEffect(() => preloadSound(TANT_WIN_SOUND), [])
+  // Spelets ljud från filer (tantljud.ts) hämtas när bordet visas, och spelas när något händer vid bordet: ett kort dras
+  // (och mitt eget vänds upp), ett kort läggs, ett kort byter hand och högen blandas. Det som redan hänt när bordet
+  // visas (t.ex. efter en omladdning) låter inte. Desarmera och vinsten spelas där de visas (BombShow,
+  // WinnerCelebration).
+  useEffect(() => loadTantSounds(), [])
+  const heardRef = useRef<{ action: number; event: number } | null>(null)
+  useEffect(() => {
+    if (!table) return
+    const action = table.lastAction
+    const heard = heardRef.current
+    heardRef.current = { action: action?.n ?? 0, event: table.log.at(-1)?.n ?? 0 }
+    if (!heard || !soundOn) return
+    const play = (sound: TantSound, after = 0) =>
+      setTimeout(() => {
+        if (playTantSound(sound)) tantMusic.duck(400)
+      }, after)
+    if (action && action.n !== heard.action) {
+      if (action.kind === 'draw' || action.kind === 'bomb') play('dra')
+      // Kortet jag drog lyfts och vänds upp.
+      if (action.kind === 'draw' && action.player === me.id) play('vanda', CARD_FLIP_SOUND_MS)
+      if (action.kind === 'play') play('lagga')
+      if (action.kind === 'take') play('stjala')
+    }
+    if (table.log.some((event) => event.n > heard.event && event.deck === 'shuffle')) play('blanda')
+  }, [table, soundOn, me.id])
   // Lite snabbare när det är få kort kvar i högen, eller bara två kvar av fler.
   const tense = !!table && (table.deckCount <= 8 || (table.order.length > 2 && table.order.length - table.out.length === 2))
   useEffect(() => tantMusic.setFast(tense), [tense])
@@ -549,7 +576,7 @@ function WinnerCelebration({
     if (soundOn) {
       // Jublet är cirka 2 s långt.
       tantMusic.duck(2500)
-      playTantWin()
+      playTantSound('vinst')
     }
     // Bara en gång.
     // eslint-disable-next-line react-hooks/exhaustive-deps
