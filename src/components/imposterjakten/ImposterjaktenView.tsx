@@ -18,6 +18,8 @@ import { useReactions } from '@/hooks/useReactions'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
 import {
   canChangeWord,
+  clueRound,
+  clueRoundsFor,
   endsAfterThisRound,
   ACCUSE_SECONDS,
   canAccuse,
@@ -121,16 +123,17 @@ export function ImposterjaktenView(props: ImposterViewProps) {
         </RoundButton>
       </div>
 
-      {/* Under raden: loggan, omgången och varvet, och på smal skärm knappen till listan med allas ord. */}
-      <div className="relative z-30 flex shrink-0 items-center justify-center gap-2 px-3 text-xs font-bold text-muted-foreground sm:text-sm">
-        <img src={LOGO} alt="Imposterjakten" width={800} height={245} className="h-5 w-auto sm:h-7" />
-        <span className="truncate">
-          Omgång {state.round} av {state.rounds}
-          {instruction.lap && ` · ${instruction.lap}`}
-          {endsAfterThisRound(state) && ' · Sista omgången'}
-        </span>
+      {/* Under raden: loggan (inte på mobil, där platsen behövs), omgången och varvet som tydliga brickor, och på smal
+          skärm knappen till listan med allas ord. Raden bryts aldrig, så att bordet inte hoppar. */}
+      <div className="relative z-30 flex shrink-0 items-center justify-center gap-1.5 px-2 pt-0.5 sm:gap-2.5 sm:px-3 sm:pt-1">
+        <img src={LOGO} alt="Imposterjakten" width={800} height={245} className="h-7 w-auto max-sm:hidden lg:h-8" />
+        <RoundBadges state={state} table={table} />
         {table.clues.length > 0 && (
-          <button type="button" className="flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card/80 px-2.5 text-foreground lg:hidden" onClick={() => setWords(true)}>
+          <button
+            type="button"
+            className="flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card/80 px-2.5 text-xs font-bold text-foreground sm:text-sm lg:hidden"
+            onClick={() => setWords(true)}
+          >
             <List aria-hidden className="size-3.5" />
             Allas ord
           </button>
@@ -148,7 +151,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Samma bord genom alla faser, så att det står still när de byts. Bara svarsdelen byts. */}
-        <div className="relative min-h-0 flex-1">
+        {/* min-w-0: bordet får aldrig trycka svarsdelen utanför fönstret, vad som än står vid platserna. */}
+        <div className="relative min-h-0 min-w-0 flex-1">
           <Bord
             state={state}
             table={table}
@@ -174,7 +178,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           // Medan korten läses får svarsdelen ta mer av höjden, så att hela kortet och knappen syns utan att skrolla.
           data-steg={table.step}
           // På bred skärm slutar kolumnen där innehållet slutar (lg:self-start), och skrollar först om den inte får plats.
-          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[23.5rem] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
+          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[min(23.5rem,36vw)] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
         >
           {table.failedAccusation && !accusing && (
             <Note>Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.</Note>
@@ -652,5 +656,32 @@ function AbortRoundDialog({ open, onStay, onAbort }: { open: boolean; onStay: ()
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Omgången och varvet som brickor ovanför bordet, stora nog att läsa på armlängds avstånd. Omgången står på krämvitt
+// ("Sista omgången" på den sista när matchen har flera). Under ledtrådsvarven står varvet bredvid, med en prick per varv,
+// och på det sista varvet "Sista varvet!" i lampgult.
+function RoundBadges({ state, table }: { state: GameState; table: ImposterTable }) {
+  const lastRound = state.rounds > 1 && (state.round >= state.rounds || endsAfterThisRound(state))
+  const laps = clueRoundsFor(table)
+  const lap = Math.min(laps, clueRound(table))
+  const showLap = table.step === 'ledtradar' && !table.accusation
+  const lastLap = lap >= laps
+  const badge = 'flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border-2 border-[var(--natt)] px-2.5 font-heading text-[13px] leading-none font-bold whitespace-nowrap text-[var(--natt)] sm:min-h-9 sm:px-3.5 sm:text-base lg:text-lg'
+  return (
+    <>
+      <span className={cn(badge, 'bg-[var(--natt-kram)]')}>{lastRound ? 'Sista omgången' : `Omgång ${state.round} av ${state.rounds}`}</span>
+      {showLap && (
+        <span className={cn(badge, lastLap ? 'bg-[var(--natt-lampa)] shadow-[0_0_14px_color-mix(in_oklch,var(--natt-lampa)_50%,transparent)]' : 'bg-[var(--natt-kram)]')}>
+          {lastLap ? 'Sista varvet!' : `Varv ${lap} av ${laps}`}
+          <span aria-hidden className="flex items-center gap-1">
+            {Array.from({ length: laps }, (_, i) => (
+              <span key={i} className={cn('size-2 rounded-full border border-[var(--natt)] sm:size-2.5', i < lap ? 'bg-[var(--natt)]' : 'bg-transparent')} />
+            ))}
+          </span>
+        </span>
+      )}
+    </>
   )
 }

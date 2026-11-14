@@ -506,7 +506,7 @@ function stampWait(before: ImposterHost, after: ImposterHost, now: number): Impo
   return withTable(after, { ...table, waitSince: now })
 }
 
-// Diskussionen har börjat: tiden sparas, så att omröstningen inte kan öppnas förrän ni hunnit prata (MIN_DISCUSSION_SECONDS).
+// Diskussionen har börjat: tiden sparas (används inte längre till någon minsta tid, se ALL_READY_SECONDS).
 function markDiscussion(host: ImposterHost, now: number): ImposterHost {
   if (host.state.imposter?.step !== 'diskussion' || host.secrets.discussionAt) return host
   return { ...host, secrets: { ...host.secrets, discussionAt: now } }
@@ -818,24 +818,26 @@ function resumeAfterAccusation(host: ImposterHost, activeIds: readonly string[],
   return host
 }
 
-// Så länge pågår diskussionen minst, även om alla blir redo direkt. Annars kan ett par snabba tryck hoppa över den.
-export const MIN_DISCUSSION_SECONDS = 15
+// Så lång är nedräkningen till omröstningen när alla är redo. Alltid lika lång, så att alla hinner se att den öppnas.
+export const ALL_READY_SECONDS = 5
 
-// Diskussionen: räkna redo-markeringarna. Är alla redo öppnas omröstningen, men tidigast när diskussionen pågått
-// MIN_DISCUSSION_SECONDS (då går en kort nedräkning fram till dess). Är mer än hälften redo startar nedräkningen, en
-// gång per omgång.
+// Diskussionen: räkna redo-markeringarna. Är alla redo går en kort nedräkning (ALL_READY_SECONDS) och sedan öppnas
+// omröstningen. Pågår redan nedräkningen på 30 sekunder kortas den till den korta, men har den mindre kvar än så
+// fortsätter den som den är. Är mer än hälften redo startar nedräkningen på 30 sekunder, en gång per omgång.
 function checkReady(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
   const table = host.state.imposter!
   const players = present(table, activeIds)
   const ready = host.secrets.ready.filter((id) => players.includes(id))
   const counted = withTable(host, { ...table, readyCount: ready.length })
   if (players.length > 0 && ready.length === players.length) {
-    const earliest = (host.secrets.discussionAt ?? 0) + MIN_DISCUSSION_SECONDS * 1000
-    // Efter lika röster har ni redan diskuterat, så då gäller ingen minsta tid.
-    if (table.tied || !host.secrets.discussionAt || now >= earliest) return openVoting(counted)
+    const short = now + ALL_READY_SECONDS * 1000
+    // En nedräkning som redan går och slutar tidigare får fortsätta (även den korta, om närvaron uppdateras under tiden).
+    const running = table.countdownStarted ? counted.state.deadline : null
+    const deadline = running === null ? short : Math.min(running, short)
+    if (deadline === counted.state.deadline && table.countdownStarted) return counted
     return {
       ...counted,
-      state: { ...counted.state, deadline: earliest, imposter: { ...counted.state.imposter!, countdownStarted: true } },
+      state: { ...counted.state, deadline, imposter: { ...counted.state.imposter!, countdownStarted: true } },
     }
   }
   if (!table.countdownStarted && moreThanHalf(ready.length, players.length)) {
