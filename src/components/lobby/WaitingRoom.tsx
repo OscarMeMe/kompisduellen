@@ -23,11 +23,11 @@ import {
 } from '@/lib/match'
 import { IMPOSTER_GAME, type ImposterSettings } from '@/lib/imposterjakten'
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
-import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
+import { TantInstallningar } from '@/components/tantpanik/TantInstallningar'
 import { TantVantrum } from '@/components/tantpanik/TantVantrum'
 import { TantBotar } from '@/components/tantpanik/TantBotar'
 import { TantKafferep, TantKortFlakt, TantRubrik, TantVanta } from '@/components/tantpanik/TantVantrumVy'
-import { waitingText } from '@/lib/tantvantrum'
+import { tantStartBlocked, waitingText } from '@/lib/tantvantrum'
 import { MAX_BOTS, type BotLevel } from '@/lib/tantbot'
 import { emptySeats, lobbyStatus, lobbyThemeFor, settingsLine } from '@/lib/vantrum'
 import { cardRulesFor, rulesFor } from '@/lib/spelregler'
@@ -252,16 +252,18 @@ function StandardWaitingRoom({
 
       <InviteCard code={code} game={game} />
 
-      {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. */}
+      {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. Exploderande Tanter har sina
+          val i en egen ruta under (TantInstallningar), så här står bara spelet, och bara för värden. */}
+      {!(tant && !isHost) && (
       <section
         className="space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
-        aria-label="Inställningar"
+        aria-label={tant ? 'Spel' : 'Inställningar'}
       >
-        <h2 className="text-xl">Inställningar</h2>
+        <h2 className="text-xl">{tant ? 'Spel' : 'Inställningar'}</h2>
         {isHost ? (
           <>
             <div className="space-y-3">
-              <p className="font-bold">Spel</p>
+              {!tant && <p className="font-bold">Spel</p>}
               {/* Det valda spelet. De andra finns bakom Byt spel, som öppnar spelvalet mitt på skärmen. */}
               <ValtSpel game={game}>
                 <BytSpel game={game} players={online.length} choosingGame={state.choosingGame} openAtStart={scrollToGames} onSetGame={onSetGame} />
@@ -306,48 +308,45 @@ function StandardWaitingRoom({
               />
             )}
 
-            {tant && (
-              // Spelets egna val i en egen ruta.
-              <div className="space-y-5 rounded-lg border-2 border-tant-vin/25 bg-tant-kram/70 p-4">
-                <h3 className="text-lg text-tant-vin">Inställningar för Exploderande Tanter</h3>
-                <TantSvarighet settings={state.tantSettings} players={online.length} isHost onChange={onSetTantSettings} />
-                {botActions && (
-                  <TantBotar
-                    bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
-                    canAdd={canAddBot}
-                    onAdd={botActions.addBot}
-                    onRemove={botActions.removeBot}
-                    onLevel={botActions.setBotLevel}
-                  />
-                )}
-                <Choice
-                  label="Tantsnara"
-                  hint="En fälla i leken: stjäl någon den väljer ägaren två kort ur tjuvens hand"
-                  options={[
-                    { value: 1, label: 'På' },
-                    { value: 0, label: 'Av' },
-                  ]}
-                  selected={state.tantSettings.trap ? 1 : 0}
-                  onSelect={(value) => onSetTantSettings({ trap: value === 1 })}
-                />
-              </div>
+            {!tant && (
+              <Choice
+                label="Kasta saker"
+                hint="Tomater, pajer, ägg, toapapper och gurkor på varandra"
+                options={[
+                  { value: 1, label: 'På' },
+                  { value: 0, label: 'Av' },
+                ]}
+                selected={state.throwsAllowed ? 1 : 0}
+                onSelect={(value) => onSetThrowsAllowed(value === 1)}
+              />
             )}
-
-            <Choice
-              label="Kasta saker"
-              hint="Tomater, pajer, ägg, toapapper och gurkor på varandra"
-              options={[
-                { value: 1, label: 'På' },
-                { value: 0, label: 'Av' },
-              ]}
-              selected={state.throwsAllowed ? 1 : 0}
-              onSelect={(value) => onSetThrowsAllowed(value === 1)}
-            />
           </>
         ) : (
           <p className="text-muted-foreground">{settingsLine(state)}</p>
         )}
       </section>
+      )}
+
+      {/* Exploderande Tanters inställningar i spelets stil. Gästerna ser samma ruta, låst. */}
+      {tant && (
+        <TantInstallningar
+          isHost={isHost}
+          hostName={hostPlayer ? lobbyName(hostPlayer) : 'värden'}
+          settings={state.tantSettings}
+          players={online.length}
+          bots={online.flatMap((p) => (p.bot ? [{ id: p.id, name: p.name, avatar: p.avatar, level: p.bot }] : []))}
+          canAddBot={canAddBot}
+          throwsAllowed={state.throwsAllowed}
+          blockedText={tantStartBlocked(playing.length, game.minPlayers, tooMany)}
+          starting={rematching}
+          waitingText={state.choosingGame ? `${hostPlayer ? lobbyName(hostPlayer) : 'Värden'} väljer nästa spel…` : `Väntar på att ${hostPlayer ? lobbyName(hostPlayer) : 'värden'} startar`}
+          onSettings={onSetTantSettings}
+          onThrows={onSetThrowsAllowed}
+          onStart={onStartCountdown}
+          botActions={isHost ? botActions : undefined}
+        />
+      )}
+
 
       <Leaderboard entries={rankLeaderboard(state)} matchesPlayed={state.matchesPlayed} gamesPlayed={state.gamesPlayed} />
 
