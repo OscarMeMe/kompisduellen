@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, Bot, Crown, Plus } from 'lucide-react'
+import { ArrowRight, Bot, Crown, Plus } from 'lucide-react'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { ForberedFallet } from '@/components/imposterjakten/ForberedFallet'
 import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
@@ -18,9 +18,10 @@ import { useGazeFollow } from '@/hooks/useGazeFollow'
 import type { OnlinePlayer } from '@/hooks/useLobby'
 import { useReactions } from '@/hooks/useReactions'
 import { canKeepScreenOn, hasFinePointer } from '@/lib/device'
+import { findBlob, lookDirection, SLEEP_AFTER_MS } from '@/lib/figurer'
 import { playersLabel } from '@/lib/games'
 import { IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText } from '@/lib/imposterjakten'
-import { IMPOSTER_LINE_MS, IMPOSTER_LOBBY_LINES, playersShortText, seatCount, seatPlaces, startBlockedText } from '@/lib/impostervantrum'
+import { caseSummary, IMPOSTER_LINE_MS, IMPOSTER_LOBBY_LINES, playersShortText, seatCount, seatPlaces, startBlockedText } from '@/lib/impostervantrum'
 import { totalThrows } from '@/lib/kast'
 import { loadSoundOn, playPop } from '@/lib/ljud'
 import { rankLeaderboard, roundOptionsFor, tooManyPlayers } from '@/lib/match'
@@ -88,6 +89,15 @@ export function ImposterVantrum({
     if (scrollToGames && isHost) gamesRef.current?.scrollIntoView({ block: 'start' })
   }, [scrollToGames, isHost])
   const [showGames, setShowGames] = useState(false)
+  // Syns mappen med Starta jakten? När den inte gör det har värden en liten startknapp fast längst ned på mobil.
+  const [folderSeen, setFolderSeen] = useState(true)
+  useEffect(() => {
+    const folder = document.getElementById('forbered-fallet')
+    if (!folder || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setFolderSeen(entry.isIntersecting))
+    observer.observe(folder)
+    return () => observer.disconnect()
+  }, [])
   const gamesOpen = showGames || state.choosingGame || scrollToGames === true
 
   // Botar kan inte spela Imposterjakten. De tittar på och räknas inte som spelare.
@@ -145,15 +155,6 @@ export function ImposterVantrum({
           <p role="status" className="mt-1 text-center font-semibold text-muted-foreground">
             {tableStatus}
           </p>
-          {/* På mobil ligger mappen längre ned. Värden får en genväg dit. */}
-          {isHost && (
-            <Button asChild variant="outline" className="mx-auto mt-3 flex h-12 w-fit lg:hidden">
-              <a href="#forbered-fallet">
-                <ArrowDown aria-hidden />
-                Till Förbered fallet
-              </a>
-            </Button>
-          )}
           {dressWearer && (
             <p data-yta="papper" className="mt-3 rounded-lg border-2 border-tant-guld-mork bg-sun-soft px-3 py-2.5 text-center text-sm leading-snug font-bold text-foreground">
               {lobbyName(dressWearer)} bär tantklänningen tills någon annan vinner. Den följer med i alla spel i lobbyn.
@@ -250,6 +251,27 @@ export function ImposterVantrum({
       </div>
 
       <HowToPlay howTo={IMPOSTER_HOW_TO} scoringDetails={IMPOSTER_SCORING} />
+
+      {/* På mobil ligger mappen långt ned. När den inte syns har värden en liten startknapp fast längst ned på skärmen,
+          med samma sammanfattning och samma spärr som i mappen. Raden tar plats i sidan, så att den aldrig täcker
+          sidans sista rader. */}
+      {isHost && !folderSeen && (
+        <>
+          <div aria-hidden className="h-16 lg:hidden" />
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-[color-mix(in_oklch,var(--natt)_94%,transparent)] px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] backdrop-blur-sm motion-safe:animate-fade lg:hidden">
+            <div className="mx-auto flex max-w-md items-center gap-3">
+              <p className="min-w-0 flex-1 text-sm leading-tight font-semibold">
+                <span className="block truncate">{caseSummary(state.imposterSettings, state.rounds)}</span>
+                {blockedText && <span className="block truncate text-muted-foreground">{playersText}</span>}
+              </p>
+              <Button className="h-12 shrink-0 px-4" disabled={blockedText !== null || rematching} onClick={onStartCountdown}>
+                Starta jakten
+                <ArrowRight aria-hidden />
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </Wide>
   )
 }
@@ -295,6 +317,18 @@ function Spaningsbord({ guests: all, meId, code, playing, playersLabel: label, m
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   const rootRef = useRef<HTMLDivElement>(null)
   const gaze = useGazeFollow(rootRef)
+  // Som i de andra väntrummen (LobbyPlayers): Sjusovaren somnar när inget har hänt på SLEEP_AFTER_MS (ingen har gått med,
+  // lämnat, reagerat eller kastat) och vaknar så fort något händer, och Ögat tittar mot den som nyss reagerade eller kastade.
+  const latest = reactions?.floating.at(-1)
+  const hits = Object.entries(reactions?.throws.hits ?? {}).map(([id, n]) => `${id}:${n}`).join()
+  const happening = `${guests.map((guest) => guest.id).join()}|${latest?.key ?? ''}|${hits}`
+  const [quietSince, setQuietSince] = useState<string | null>(null)
+  const asleep = quietSince === happening
+  useEffect(() => {
+    const timer = setTimeout(() => setQuietSince(happening), SLEEP_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [happening])
+  const lookAt = latest?.from ? guests.findIndex((guest) => guest.id === latest.from) : -1
   // De som redan satt vid bordet när det visades hoppar inte in.
   const seen = useRef(new Set(guests.map((guest) => guest.id)))
   const [arrived, setArrived] = useState<string[]>([])
@@ -339,7 +373,7 @@ function Spaningsbord({ guests: all, meId, code, playing, playersLabel: label, m
             {guest ? (
               <>
                 <span
-                  data-gaze
+                  data-gaze={findBlob(guest.avatar) ? '' : undefined}
                   className={cn(
                     'relative block leading-none drop-shadow-[0_4px_5px_rgb(0_0_0/0.5)]',
                     figure,
@@ -347,7 +381,7 @@ function Spaningsbord({ guests: all, meId, code, playing, playersLabel: label, m
                     arrived.includes(guest.id) && 'motion-safe:animate-hop',
                   )}
                 >
-                  <LobbyFigur playerId={guest.id} avatar={guest.avatar} delay={i * 0.7} gaze={gaze} dress={guest.dress} className="block" />
+                  <LobbyFigur playerId={guest.id} avatar={guest.avatar} delay={i * 0.7} asleep={asleep} look={lookDirection(i, lookAt)} gaze={gaze} dress={guest.dress} className="block" />
                   {guest.host && (
                     <span className="absolute -top-[0.15em] -right-[0.2em] flex size-[0.42em] min-h-5 min-w-5 items-center justify-center rounded-full border border-border bg-card">
                       <Crown className="size-[62%] text-crown" aria-label="Värd" />
