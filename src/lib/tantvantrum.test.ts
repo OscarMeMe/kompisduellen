@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chairCount, chairPlaces, TANT_LOBBY_LINES, waitingText } from '@/lib/tantvantrum'
+import { chairCount, chairPlaces, TANT_LOBBY_LINES, tantBombsLine, tantExtrasLine, tantStartBlocked, tantSummary, waitingText } from '@/lib/tantvantrum'
 
 describe('Exploderande Tanters väntrum', () => {
   it('har stolar för alla och en ledig, minst fyra och högst tio', () => {
@@ -27,5 +27,33 @@ describe('Exploderande Tanters väntrum', () => {
   it('har roliga rader utan tankstreck', () => {
     expect(TANT_LOBBY_LINES.length).toBeGreaterThan(5)
     for (const line of TANT_LOBBY_LINES) expect(line).not.toMatch(/ [–—] /)
+  })
+})
+
+describe('texterna i inställningsrutan', () => {
+  it('säger hur många tanter det blir med så många spelare', () => {
+    expect(tantBombsLine('normal', 4)).toBe('Normal: 3 tanter med 4 spelare.')
+    expect(tantBombsLine('svar', 2)).toBe('Svår: 2 tanter med 2 spelare.')
+    expect(tantBombsLine('normal', 2)).toBe('Normal: 1 tant med 2 spelare.')
+    expect(tantBombsLine('kaos', 6)).toBe('Kaos: 7 tanter med 6 spelare.')
+    // Kaos med för få blir Svår, och det står då.
+    expect(tantBombsLine('kaos', 4)).toBe('Kaos kräver minst 5 spelare. Med 4 blir det Svår: 4 tanter.')
+    // Ensam i väntrummet: raden säger hur det blir när ni är två.
+    expect(tantBombsLine('normal', 1)).toBe('Normal: 1 tant när ni är 2.')
+    expect(tantBombsLine('svar', 1)).toBe('Svår: 2 tanter när ni är 2.')
+  })
+
+  it('sammanfattar valen', () => {
+    expect(tantSummary('normal', 4, 2)).toBe('Normal · 4 spelare · 2 botar')
+    expect(tantSummary('svar', 3, 1)).toBe('Svår · 3 spelare · 1 bot')
+    expect(tantSummary('kaos', 6, 0)).toBe('Kaos · 6 spelare')
+    expect(tantExtrasLine(true, false)).toBe('Tantsnaran på · Kasta saker av')
+    expect(tantExtrasLine(false, true)).toBe('Tantsnaran av · Kasta saker på')
+  })
+
+  it('förklarar kort varför det inte går att starta', () => {
+    expect(tantStartBlocked(1, 2, false)).toBe('Bjud in en kompis eller lägg till en bot för att starta.')
+    expect(tantStartBlocked(2, 2, false)).toBeNull()
+    expect(tantStartBlocked(11, 2, true)).toBe('Ni är för många. Byt spel eller vänta tills någon lämnat.')
   })
 })
