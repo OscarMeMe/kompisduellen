@@ -93,8 +93,9 @@ export function Bord({ state, table, meId, online, typing, center, onMove, vote 
           och nederst för namnen och lapparna. Platserna ligger i procent av rutan, så de följer med när den ändras. */}
       <div className={cn('absolute inset-x-3 [container-type:size] sm:inset-x-1', small ? 'top-9 bottom-16 sm:top-12 sm:bottom-12' : 'top-10 bottom-16 sm:top-12 sm:bottom-14')}>
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [container-type:inline-size]"
-        style={{ width: 'min(100cqw, 46rem, 150cqh)', height: 'min(100cqh, 100cqw, 36rem)' }}
+        // På riktigt stora skärmar får ringen bli större, så att bordet inte blir en liten ö mitt på skärmen.
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 [container-type:inline-size] [--ring-b:46rem] [--ring-h:36rem] min-[1700px]:[--ring-b:62rem] min-[1700px]:[--ring-h:48rem]"
+        style={{ width: 'min(100cqw, var(--ring-b), 150cqh)', height: 'min(100cqh, 100cqw, var(--ring-h))' }}
       >
         {/* Bordet: en ljus skiva med träkant, under lampans sken. Det som händer står mitt på det, och inget annat ligger där. */}
         <div
@@ -235,10 +236,10 @@ function TurnLight({ target, small, spotDelay }: { target: { x: number; y: numbe
 // större, och med många spelare är alla mindre. --n är namnets höjd. Lapparna använder samma mått (--f, halva figuren),
 // så att de börjar där namnet slutar.
 function seatVars(small: boolean, mine: boolean): string {
-  if (small) return mine ? '[--fig:3.2rem] [--cap:14cqw] [--n:1.25rem] sm:[--fig:4.6rem] sm:[--n:1.5rem]' : '[--fig:2.5rem] [--cap:11cqw] [--n:1.2rem] sm:[--fig:3.8rem] sm:[--n:1.5rem]'
+  if (small) return mine ? '[--fig:3.2rem] [--cap:14cqw] [--n:1.25rem] sm:[--fig:4.6rem] sm:[--n:1.5rem] min-[1700px]:[--fig:6rem]' : '[--fig:2.5rem] [--cap:11cqw] [--n:1.2rem] sm:[--fig:3.8rem] sm:[--n:1.5rem] min-[1700px]:[--fig:5rem]'
   return mine
-    ? '[--fig:4.5rem] [--cap:19cqw] [--n:1.4rem] sm:[--fig:6rem] sm:[--n:1.75rem] sm:short:[--fig:5rem]'
-    : '[--fig:3.5rem] [--cap:15cqw] [--n:1.4rem] sm:[--fig:5.2rem] sm:[--n:1.75rem] sm:short:[--fig:4.2rem]'
+    ? '[--fig:4.5rem] [--cap:19cqw] [--n:1.4rem] sm:[--fig:6rem] sm:[--n:1.75rem] sm:short:[--fig:5rem] min-[1700px]:[--fig:8rem]'
+    : '[--fig:3.5rem] [--cap:15cqw] [--n:1.4rem] sm:[--fig:5.2rem] sm:[--n:1.75rem] sm:short:[--fig:4.2rem] min-[1700px]:[--fig:7rem]'
 }
 
 // Spelarens ord som lappar centrerade under namnet, ett per rad och aldrig brutna. Det senaste är gult och tydligast. På

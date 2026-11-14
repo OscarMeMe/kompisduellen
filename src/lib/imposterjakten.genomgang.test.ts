@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ALL_READY_SECONDS,
   blockRules,
+  COUNTDOWN_SECONDS,
   checkClue,
   currentTurn,
   findWord,
@@ -11,6 +13,7 @@ import {
   isCorrectGuess,
   myImposterCard,
   normalizeWord,
+  pointsReason,
   takeOverSecrets,
   WORDS,
   type ImposterSecrets,
@@ -424,6 +427,78 @@ describe('fynd 14: lika en gång till', () => {
     const next = hostImposterNextRound(done, three, () => 0)
     expect(table(next).tiedOnce).toBe(false)
     expect(table(next).tied).toBeNull()
+  })
+})
+
+describe('småsakerna i del 3', () => {
+  it('fynd 9: den som anklagar har redan svarat ja, och facit säger "svarade nej" i stället för "röstade inte"', () => {
+    const five = ['a', 'b', 'c', 'd', 'e']
+    const discussion = playClues(readAll(start(five), five), five)
+    const imposter = secretsOf(discussion).imposter
+    const [accuser, yes, no, alsoNo] = five.filter((id) => id !== imposter)
+    let host = hostMove(discussion, accuser, { type: 'accuse', target: imposter }, five, NOW)
+    expect(table(host).accusation).toMatchObject({ answered: 1, voters: 4 })
+    expect(myImposterCard(secretsOf(host), table(host), accuser).accuseVote).toBe(true)
+    host = hostMove(host, yes, { type: 'accuseVote', yes: true }, five, NOW)
+    host = hostMove(host, no, { type: 'accuseVote', yes: false }, five, NOW)
+    host = hostMove(host, alsoNo, { type: 'accuseVote', yes: true }, five, NOW)
+    expect(table(host).step).toBe('gissning')
+    expect(table(host).byAccusation).toBe(true)
+    const done = hostMove(host, imposter, { type: 'giveUp' }, five, NOW)
+    const outcome = table(done).outcome!
+    expect(pointsReason(table(done), outcome, accuser)).toBe('röstade rätt')
+    expect(pointsReason(table(done), outcome, no)).toBe('svarade nej')
+    expect(pointsReason(table(done), outcome, imposter)).toBe('gav upp')
+    expect(done.state.scores[accuser]).toBe(3)
+    expect(done.state.scores[no]).toBe(1)
+  })
+
+  it('fynd 9: en anklagad oskyldig står som "anklagad", och efter en vanlig omröstning står "röstade inte" kvar', () => {
+    const five = ['a', 'b', 'c', 'd', 'e']
+    const discussion = playClues(readAll(start(five), five), five)
+    const imposter = secretsOf(discussion).imposter
+    const [accused, accuser, other, last] = five.filter((id) => id !== imposter)
+    let host = hostMove(discussion, accuser, { type: 'accuse', target: accused }, five, NOW)
+    for (const id of [other, imposter]) host = hostMove(host, id, { type: 'accuseVote', yes: true }, five, NOW)
+    host = hostMove(host, last, { type: 'accuseVote', yes: false }, five, NOW)
+    const outcome = table(host).outcome!
+    expect(outcome.kind).toBe('undan')
+    expect(pointsReason(table(host), outcome, accused)).toBe('anklagad')
+    expect(pointsReason(table(host), outcome, accuser)).toBe('röstade fel')
+    expect(pointsReason(table(host), outcome, last)).toBe('svarade nej')
+    expect(pointsReason(table(host), outcome, imposter)).toBe('kom undan')
+    // En vanlig omröstning där värden räknade rösterna innan alla röstat.
+    const voting = toVoting(start())
+    const voted = hostMove(voting, 'a', { type: 'vote', target: 'b' }, ABCD, NOW)
+    const counted = hostImposterSkipTurn(voted, ABCD, table(voted).waitSince! + 60_000)
+    const missing = ABCD.find((id) => id !== 'a' && id !== secretsOf(counted).imposter)!
+    expect(table(counted).byAccusation).toBeUndefined()
+    expect(pointsReason(table(counted), table(counted).outcome!, missing)).toBe('röstade inte')
+  })
+
+  it('fynd 12: läget säger hur lång nedräkningen är, så att tidsstapeln börjar full', () => {
+    const five = ['a', 'b', 'c', 'd', 'e']
+    let host = playClues(readAll(start(five), five), five)
+    expect(table(host).countdownSeconds).toBeUndefined()
+    for (const id of ['a', 'b', 'c']) host = hostMove(host, id, { type: 'ready', on: true }, five, NOW)
+    expect(table(host).countdownSeconds).toBe(COUNTDOWN_SECONDS)
+    for (const id of ['d', 'e']) host = hostMove(host, id, { type: 'ready', on: true }, five, NOW + 1000)
+    expect(table(host).countdownSeconds).toBe(ALL_READY_SECONDS)
+    expect(host.state.deadline).toBe(NOW + 1000 + ALL_READY_SECONDS * 1000)
+    // Alla blir redo direkt: bara den korta.
+    const quick = ABCD.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ABCD, NOW), playClues(readAll(start())))
+    expect(table(quick).countdownSeconds).toBe(ALL_READY_SECONDS)
+    // Har den långa mindre än fem sekunder kvar fortsätter den, och räknas fortfarande mot sin egen längd.
+    let late = playClues(readAll(start(five), five), five)
+    for (const id of ['a', 'b', 'c']) late = hostMove(late, id, { type: 'ready', on: true }, five, NOW)
+    const deadline = late.state.deadline!
+    for (const id of ['d', 'e']) late = hostMove(late, id, { type: 'ready', on: true }, five, deadline - 2000)
+    expect(late.state.deadline).toBe(deadline)
+    expect(table(late).countdownSeconds).toBe(COUNTDOWN_SECONDS)
+  })
+
+  it('fynd 16: alla ledtrådar börjar med stor bokstav', () => {
+    for (const item of WORDS) expect(item.ledtrad.charAt(0), item.ord).toBe(item.ledtrad.charAt(0).toLocaleUpperCase('sv'))
   })
 })
 

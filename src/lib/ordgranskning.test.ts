@@ -68,7 +68,8 @@ describe('granskningen av Imposterjaktens ord', () => {
     const words = [word('stol'), word('bord'), word('lampa')]
     const saved = updateWord(words, { ...word('bord'), id: 'bord', ord: '  Matbord ', godkanda: ['matbord', ' matbordet '], ledtrad: 'kök' })
     expect(saved.map((item) => item.id)).toEqual(['stol', 'bord', 'lampa'])
-    expect(saved[1]).toEqual({ id: 'bord', ord: 'Matbord', kategori: 'Saker', ledtrad: 'kök', nara: 'nära-bord', godkanda: ['matbord', 'matbordet'], svarighet: 'latt' })
+    // Ledtråden får stor första bokstav.
+    expect(saved[1]).toEqual({ id: 'bord', ord: 'Matbord', kategori: 'Saker', ledtrad: 'Kök', nara: 'nära-bord', godkanda: ['matbord', 'matbordet'], svarighet: 'latt' })
     expect(() => updateWord(words, word('finns-inte'))).toThrow('Ordet finns inte längre i listan.')
     expect(() => updateWord(words, word('bord', { nara: '' }))).toThrow('Nära-ordet får inte vara tomt.')
   })
@@ -89,7 +90,7 @@ describe('granskningen av Imposterjaktens ord', () => {
     const fields = { ord: ' Soffa ', kategori: 'Saker', ledtrad: 'vardagsrum', nara: 'Fåtölj', godkanda: ['soffa', 'soffan'], svarighet: 'mellan' }
     const { words: more, added } = addWord(words, fields)
     expect(more.map((item) => item.id)).toEqual(['stol', 'bord', 'soffa'])
-    expect(added).toEqual({ id: 'soffa', ord: 'Soffa', kategori: 'Saker', ledtrad: 'vardagsrum', nara: 'Fåtölj', godkanda: ['soffa', 'soffan'], svarighet: 'mellan' })
+    expect(added).toEqual({ id: 'soffa', ord: 'Soffa', kategori: 'Saker', ledtrad: 'Vardagsrum', nara: 'Fåtölj', godkanda: ['soffa', 'soffan'], svarighet: 'mellan' })
     // Ett ord som redan finns stoppas, utan hänsyn till stora och små bokstäver.
     expect(() => addWord(words, { ...fields, ord: 'STOL', godkanda: ['stol'] })).toThrow('Ordet finns redan i listan.')
     expect(() => addWord(words, { ...fields, nara: 'nära-bord' })).toThrow('Nära-ordet används redan av Bord.')

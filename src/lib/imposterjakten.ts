@@ -145,6 +145,12 @@ export type ImposterTable = {
   // Rösterna från den första omröstningen när det blev lika, så att bordet kan visa dem innan den nya diskussionen.
   // Försvinner när den extra omröstningen öppnas.
   tieVotes: Record<string, string> | null
+  // Rösterna som visas är ja-svaren på en anklagelse som gick igenom, inte en omröstning. Då står det "svarade nej" i
+  // facit för dem som inte höll med. Saknas hos en värd med en äldre version.
+  byAccusation?: boolean
+  // Så lång är nedräkningen till omröstningen som går nu (30 eller 5 sekunder), så att tidsstapeln börjar full. Saknas
+  // hos en värd med en äldre version.
+  countdownSeconds?: number
   // Det har redan blivit lika en gång i omgången. Blir det lika igen kommer impostern undan, även om de lika placerade
   // inte längre är utpekade (en av dem har lämnat). Saknas hos en värd med en äldre version.
   tiedOnce?: boolean
@@ -805,9 +811,10 @@ function accuse(host: ImposterHost, accuser: string, accused: string, activeIds:
     state: {
       ...host.state,
       deadline: now + ACCUSE_SECONDS * 1000,
-      imposter: { ...table, accusation: { accuser, accused, answered: 0, voters }, failedAccusation: null },
+      // Den som anklagar har redan sagt sitt: det räknas som ett ja.
+      imposter: { ...table, accusation: { accuser, accused, answered: 1, voters }, failedAccusation: null },
     },
-    secrets: { ...host.secrets, accuseVotes: {}, resumeMs: host.state.deadline === null ? null : Math.max(0, host.state.deadline - now) },
+    secrets: { ...host.secrets, accuseVotes: { [accuser]: true }, resumeMs: host.state.deadline === null ? null : Math.max(0, host.state.deadline - now) },
   }
 }
 
@@ -840,7 +847,7 @@ function settleAccusation(host: ImposterHost, activeIds: readonly string[], now:
   if (moreThanHalf(yes.length, voters.length)) {
     const votes = Object.fromEntries(yes.map((id) => [id, accused]))
     const revealed: ImposterHost = {
-      state: { ...host.state, deadline: null, imposter: { ...table, accusation: null, votes, votedCount: yes.length, pointers: {} } },
+      state: { ...host.state, deadline: null, imposter: { ...table, accusation: null, votes, votedCount: yes.length, pointers: {}, byAccusation: true } },
       secrets,
     }
     if (accused === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: accused })
@@ -888,7 +895,7 @@ function checkReady(host: ImposterHost, activeIds: readonly string[], now: numbe
     if (deadline === counted.state.deadline && table.countdownStarted) return counted
     return {
       ...counted,
-      state: { ...counted.state, deadline, imposter: { ...counted.state.imposter!, countdownStarted: true } },
+      state: { ...counted.state, deadline, imposter: { ...counted.state.imposter!, countdownStarted: true, countdownSeconds: deadline === short ? ALL_READY_SECONDS : (table.countdownSeconds ?? COUNTDOWN_SECONDS) } },
     }
   }
   if (!table.countdownStarted && moreThanHalf(ready.length, players.length)) {
@@ -897,7 +904,7 @@ function checkReady(host: ImposterHost, activeIds: readonly string[], now: numbe
       state: {
         ...counted.state,
         deadline: now + COUNTDOWN_SECONDS * 1000,
-        imposter: { ...counted.state.imposter!, countdownStarted: true },
+        imposter: { ...counted.state.imposter!, countdownStarted: true, countdownSeconds: COUNTDOWN_SECONDS },
       },
     }
   }
@@ -1055,6 +1062,25 @@ export function roundPoints(
     if (kind === 'gissade-ratt') add(imposter, IMPOSTER_GUESSES_RIGHT)
   }
   return points
+}
+
+// Varför spelaren fick sina poäng i omgången, i ett par ord, för poänglistan i facit. Efter en anklagelse som gick
+// igenom har ingen röstat: de som svarade ja räknas som att de röstade på den anklagade, de andra "svarade nej", och den
+// anklagade själv fick inte svara.
+export function pointsReason(table: Pick<ImposterTable, 'votes' | 'byAccusation'>, outcome: ImposterOutcome, id: string): string {
+  if (outcome.kind === 'avbruten') return ''
+  if (id === outcome.imposter) {
+    if (outcome.kind === 'undan') return 'kom undan'
+    if (outcome.kind === 'gissade-ratt') return 'gissade rätt'
+    if (outcome.kind === 'gissade-fel') return 'gissade fel'
+    return 'gav upp'
+  }
+  const vote = table.votes?.[id]
+  if (!vote) {
+    if (!table.byAccusation) return 'röstade inte'
+    return Object.values(table.votes ?? {}).includes(id) ? 'anklagad' : 'svarade nej'
+  }
+  return vote === outcome.imposter ? 'röstade rätt' : 'röstade fel'
 }
 
 // Omgången är slut: poängen läggs till och facit visas. Ordet räknas som använt. scorers = spelarna i omgången som

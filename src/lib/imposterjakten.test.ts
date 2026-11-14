@@ -749,15 +749,18 @@ describe('Imposterjakten: Anklaga', () => {
 
   it('startar en snabb omröstning för alla utom den anklagade, och allt annat står still', () => {
     const host = hostMove(toThirdRound(), 'b', { type: 'accuse', target: 'a' }, ABCD, NOW)
-    expect(table(host).accusation).toEqual({ accuser: 'b', accused: 'a', answered: 0, voters: 3 })
+    expect(table(host).accusation).toEqual({ accuser: 'b', accused: 'a', answered: 1, voters: 3 })
     expect(host.state.deadline).toBe(NOW + ACCUSE_SECONDS * 1000)
     const turn = currentTurn(table(host))!
     expect(hostMove(host, turn, { type: 'pass' }, ABCD, NOW)).toBe(host)
     expect(answer(host, 'a', true)).toBe(host)
-    const once = answer(host, 'b', true)
-    expect(table(once).accusation?.answered).toBe(1)
-    expect(answer(once, 'b', false)).toBe(once)
-    expect(myImposterCard(secretsOf(once), table(once), 'b').accuseVote).toBe(true)
+    // Den som anklagade har redan svarat ja, och kan inte ändra sig.
+    expect(answer(host, 'b', false)).toBe(host)
+    expect(myImposterCard(secretsOf(host), table(host), 'b').accuseVote).toBe(true)
+    const once = answer(host, 'c', true)
+    expect(table(once).accusation?.answered).toBe(2)
+    expect(answer(once, 'c', false)).toBe(once)
+    expect(myImposterCard(secretsOf(once), table(once), 'c').accuseVote).toBe(true)
     // Svaren är hemliga och finns inte i tillståndet.
     expect(JSON.stringify(once.state)).not.toContain('accuseVotes')
   })

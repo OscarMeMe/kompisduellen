@@ -5,7 +5,7 @@ import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { hasFinePointer } from '@/lib/device'
-import { MAX_CLUE_LENGTH, type ImposterOutcome, type ImposterTable } from '@/lib/imposterjakten'
+import { MAX_CLUE_LENGTH, pointsReason, type ImposterOutcome, type ImposterTable } from '@/lib/imposterjakten'
 import type { GameState } from '@/lib/match'
 import { SPLAT_SHIELD } from '@/lib/splatt'
 import { fitWordSize } from '@/lib/ordstorlek'
@@ -324,20 +324,6 @@ export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) 
   )
 }
 
-// Varför spelaren fick sina poäng i omgången, i ett par ord.
-function pointsReason(table: ImposterTable, outcome: ImposterOutcome, id: string): string {
-  if (outcome.kind === 'avbruten') return ''
-  if (id === outcome.imposter) {
-    if (outcome.kind === 'undan') return 'kom undan'
-    if (outcome.kind === 'gissade-ratt') return 'gissade rätt'
-    if (outcome.kind === 'gissade-fel') return 'gissade fel'
-    return 'gav upp'
-  }
-  const vote = table.votes?.[id]
-  if (!vote) return 'röstade inte'
-  return vote === outcome.imposter ? 'röstade rätt' : 'röstade fel'
-}
-
 // Poängen för omgången ("+3" som stiger), varför man fick dem och totalen, för alla i omgången. Impostern är markerad.
 function PointsList({ state, table, outcome, meId }: { state: GameState; table: ImposterTable; outcome: ImposterOutcome; meId: string }) {
   const ids = [...table.order].sort((a, b) => (outcome.points[b] ?? 0) - (outcome.points[a] ?? 0) || (state.scores[b] ?? 0) - (state.scores[a] ?? 0))
@@ -356,11 +342,11 @@ function PointsList({ state, table, outcome, meId }: { state: GameState; table: 
           >
             {player && <Emoji emoji={player.avatar} className="shrink-0 text-xl sm:text-2xl" />}
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-sm font-bold sm:text-base">{id === meId ? 'Du' : (player?.name ?? 'Någon')}</span>
-              <span className="block truncate text-[11px] text-muted-foreground sm:text-xs">
-                {pointsReason(table, outcome, id)}
-                {pointsReason(table, outcome, id) && ' · '}
-                {state.scores[id] ?? 0} totalt
+              {/* Inget klipps: ett långt namn bryts, och raden under bryts mellan orsaken och totalen. */}
+              <span className="block text-sm font-bold [overflow-wrap:anywhere] sm:text-base">{id === meId ? 'Du' : (player?.name ?? 'Någon')}</span>
+              <span className="flex flex-wrap gap-x-1 text-[11px] text-muted-foreground sm:text-xs">
+                {pointsReason(table, outcome, id) && <span className="whitespace-nowrap">{pointsReason(table, outcome, id)} ·</span>}
+                <span className="whitespace-nowrap">{state.scores[id] ?? 0} totalt</span>
               </span>
             </span>
             <span className={cn('relative shrink-0 font-heading text-base font-bold tabular-nums sm:text-lg', gained === 0 && 'text-muted-foreground')}>
