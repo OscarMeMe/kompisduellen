@@ -41,11 +41,20 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             tant i paret eller tretalet. Tantsnaran kan aldrig ingå i ett par eller tretal. Sist kvar vinner.
           </li>
         </ul>
-        {/* Krediten för musiken (se docs/ljud-licenser.md). */}
+        {/* Krediterna för musiken och trombonen (se docs/ljud-licenser.md). */}
         <p className="border-t pt-3 text-xs text-muted-foreground">
           Musik: ”Happy” av{' '}
           <a href="https://soundcloud.com/rezoner" target="_blank" rel="noreferrer" className="underline">
             Rezoner
+          </a>
+          <br />
+          Ljud:{' '}
+          <a href="https://freesound.org/people/Benboncan/sounds/73581/" target="_blank" rel="noreferrer" className="underline">
+            ”Sad Trombone”
+          </a>{' '}
+          av Benboncan (Freesound),{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline">
+            CC BY 4.0
           </a>
         </p>
       </DialogContent>

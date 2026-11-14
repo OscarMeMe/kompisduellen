@@ -3,10 +3,11 @@
 // gäller. Ett ljud som inte hunnit laddas spelas inte. Har ett ögonblick flera varianter slumpas en av dem, aldrig
 // samma två gånger i rad. Källor och licenser står i docs/ljud-licenser.md.
 // Explosionen (playBoom), Nope! (playPop), nedräkningen och turkoppen görs fortfarande i kod (ljud.ts).
+// Alla filer är CC0 utom trombonen (utslagen), som är CC BY 4.0 och har sin kredit i regelvyn (TantMenyer).
 
 import { loadSoundFiles, playSoundFile } from '@/lib/ljud'
 
-export type TantSound = 'dra' | 'lagga' | 'vanda' | 'blanda' | 'stjala' | 'desarmera' | 'vinst'
+export type TantSound = 'dra' | 'lagga' | 'vanda' | 'blanda' | 'stjala' | 'desarmera' | 'utslagen' | 'vinst'
 
 const DIR = '/ljud/tantpanik'
 
@@ -24,6 +25,8 @@ export const TANT_SOUNDS: Record<TantSound, { files: readonly string[]; volume: 
   stjala: { files: [`${DIR}/stjala-kort.mp3`], volume: 0.7 },
   // Desarmera räddar den som drog tanten.
   desarmera: { files: [`${DIR}/desarmera.mp3`], volume: 0.7 },
+  // En spelare exploderar och är ute: en sorglig trombon (CC BY 4.0, krediten står i regelvyn).
+  utslagen: { files: [`${DIR}/utslagen.mp3`], volume: 0.7 },
   // Någon är sist kvar och vinner.
   vinst: { files: [`${DIR}/vinst.mp3`], volume: 0.7 },
 }

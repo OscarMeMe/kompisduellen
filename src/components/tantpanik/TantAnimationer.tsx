@@ -194,6 +194,7 @@ export function TableAnimations({
           name={name(bomb.player)}
           avatar={state.players[bomb.player]?.avatar ?? ''}
           soundOn={soundOn}
+          last={!!state.tantpanik?.winner}
           onShake={() => onShake(bomb.n)}
           onDone={() => setBomb((current) => (current?.n === bomb.n ? null : current))}
         />
@@ -377,6 +378,7 @@ function BombShow({
   name,
   avatar,
   soundOn,
+  last,
   onShake,
   onDone,
 }: {
@@ -385,6 +387,8 @@ function BombShow({
   name: string
   avatar: string
   soundOn: boolean
+  // Matchens sista explosion: vinnarens jubel kommer strax efter, så trombonen spelas inte.
+  last: boolean
   onShake: () => void
   onDone: () => void
 }) {
@@ -423,6 +427,11 @@ function BombShow({
                 tantMusic.duck(2000)
                 playTantSound('desarmera')
               }, 350)
+          }
+          // Ute: en sorglig trombon (knappt 4 s).
+          if (!bomb.saved && soundOn && !last) {
+            tantMusic.duck(3500)
+            playTantSound('utslagen')
           }
         },
         bomb.saved ? DEFUSE_AT : OUT_AT,
