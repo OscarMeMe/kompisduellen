@@ -96,6 +96,13 @@ function readAll(host: HostState, ids = ABC): HostState {
   return ids.reduce((next, id) => hostMove(next, id, { type: 'read' }, ids, NOW), host)
 }
 
+// Går vidare tills en oskyldig har tur (impostern passar eller säger sitt ord).
+function innocentTurn(host: HostState, ids = ABC): HostState {
+  const turn = currentTurn(table(host))!
+  if (turn !== secretsOf(host).imposter) return host
+  return hostMove(host, turn, table(host).aloud ? { type: 'said' } : { type: 'pass' }, ids, NOW)
+}
+
 // Alla blir redo att rösta, och den korta nedräkningen går ut, så att omröstningen öppnas.
 function readyAll(host: HostState, ids = ABC): HostState {
   const ready = ids.reduce((next, id) => hostMove(next, id, { type: 'ready', on: true }, ids, NOW + 20_000), host)
@@ -347,11 +354,12 @@ describe('Imposterjakten: en omgång', () => {
   })
 
   it('avvisar ett ogiltigt ord bara för den spelaren, och turen står kvar', () => {
-    const host = readAll(start())
+    // En oskyldig har tur (impostern får aldrig beskedet för det hemliga ordet, se imposterjakten.genomgang.test.ts).
+    const host = innocentTurn(readAll(start()))
     const turn = currentTurn(table(host))!
     const secret = findWord(secretsOf(host).wordId)!.ord
     const rejected = hostMove(host, turn, { type: 'clue', word: secret }, ABC, NOW + 5)
-    expect(table(rejected).clues).toHaveLength(0)
+    expect(table(rejected).clues).toHaveLength(table(host).clues.length)
     expect(currentTurn(table(rejected))).toBe(turn)
     expect(myImposterCard(secretsOf(rejected), table(rejected), turn).rejectedAt).toBe(NOW + 5)
     const other = ABC.find((id) => id !== turn)!
@@ -368,13 +376,13 @@ describe('Imposterjakten: en omgång', () => {
   })
 
   it('visar ett inskrivet ord i bubblan när man säger orden högt, men aldrig det hemliga ordet', () => {
-    const host = readAll(start(ABC, { aloud: true }))
+    const host = innocentTurn(readAll(start(ABC, { aloud: true })))
     const turn = currentTurn(table(host))!
     const typed = hostMove(host, turn, { type: 'said', word: ' paraply ' }, ABC, NOW)
-    expect(table(typed).clues[0]).toMatchObject({ player: turn, kind: 'sagt' })
+    expect(table(typed).clues.at(-1)).toMatchObject({ player: turn, kind: 'sagt' })
     const secret = findWord(secretsOf(host).wordId)!.ord
     const blocked = hostMove(host, turn, { type: 'said', word: secret }, ABC, NOW)
-    expect(table(blocked).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
+    expect(table(blocked).clues.at(-1)).toEqual({ player: turn, kind: 'sagt', word: null })
     expect(currentTurn(table(blocked))).not.toBe(turn)
   })
 

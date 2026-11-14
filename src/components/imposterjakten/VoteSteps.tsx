@@ -71,7 +71,8 @@ export function TableCenter({ state, table, me, online, secondsLeft }: Omit<Step
     const name = state.players[table.caught ?? '']?.name ?? 'Impostern'
     return <Center title="Impostern är fast!" line={table.caught === me.id ? 'Gissa ordet' : `${name} gissar…`} tone="text-primary-button" />
   }
-  if (table.step === 'facit' && table.outcome) return <Center title={table.outcome.word} line="var ordet" />
+  // Efter ett värdbyte mitt i en omgång vet den nya värden inte ordet, så då står bara att omgången avbröts.
+  if (table.step === 'facit' && table.outcome) return table.outcome.word ? <Center title={table.outcome.word} line="var ordet" /> : <Center title="Omgången avbröts" />
   return null
 }
 
@@ -298,7 +299,7 @@ export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) 
         {outcome.imposterWord && outcome.kind === 'undan' && outcome.imposter === me.id && <p className="text-sm font-semibold">Det var du hela tiden!</p>}
       </div>
 
-      <p className="text-center text-sm leading-snug sm:text-base">
+      {outcome.word && <p className="text-center text-sm leading-snug sm:text-base">
         Ordet var <strong className="font-heading">{outcome.word}</strong>. {imposterName} var impostern
         {guessed && (
           <>
@@ -309,7 +310,7 @@ export function FacitStep({ state, table, me, isHost, onNextRound }: StepProps) 
         {outcome.kind === 'gav-upp' && ' och gav upp'}.
         {outcome.hint && <span className="text-muted-foreground"> Ledtråd: {outcome.hint}.</span>}
         {outcome.imposterWord && <span className="text-muted-foreground"> Imposterns ord: {outcome.imposterWord}.</span>}
-      </p>
+      </p>}
 
       {/* Värdens knapp står före poänglistan, så att den alltid syns utan att skrolla, även med många spelare. */}
       {isHost && (

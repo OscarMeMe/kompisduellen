@@ -247,8 +247,15 @@ describe('botar i lobbyn', () => {
       expect(botIds(back)).toEqual(['bot0'])
       // Även när en annan tar över som värd mitt i matchen.
       const takenOver = takeOverState(host.state, 0)
-      expect(botIds(takenOver)).toEqual(['bot0'])
-      expect(takenOver.benchBots).toEqual({})
+      if (game === 'imposterjakten') {
+        // Imposterjakten fortsätter efter ett värdbyte, så botarna står över tills matchen är slut.
+        expect(takenOver.phase).toBe('playing')
+        expect(takenOver.benchBots.bot0?.bot).toBe('normal')
+        expect(botIds(abortMatch(takenOver))).toEqual(['bot0'])
+      } else {
+        expect(botIds(takenOver)).toEqual(['bot0'])
+        expect(takenOver.benchBots).toEqual({})
+      }
     }
   })
 

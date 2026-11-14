@@ -2,6 +2,7 @@
 // tillståndet (värden skickar ut hela tillståndet vid varje ändring), så den nya värden fortsätter där den förra slutade.
 // Rena funktioner utan React eller Supabase, så att de är lätta att testa.
 
+import { IMPOSTER_GAME, imposterTakeOver } from '@/lib/imposterjakten'
 import type { GameState } from '@/lib/match'
 
 // Så länge måste värden ha varit borta innan efterträdaren tar över av sig själv (en omladdning hinner komma tillbaka).
@@ -33,6 +34,8 @@ export function shouldYieldHost(me: Present, others: readonly Present[]): boolea
 // match avbryts och gruppen kommer tillbaka till väntrummet med en förklaring.
 export function takeOverState(state: GameState, offset: number): GameState {
   const moved = (time: number | null) => (time === null ? null : time + offset)
+  // Imposterjakten: matchen fortsätter. Bara en pågående omgång avbryts (se imposterTakeOver).
+  if (state.phase === 'playing' && state.game === IMPOSTER_GAME && state.imposter) return { ...imposterTakeOver(state) }
   if (state.phase === 'playing') {
     // Botar som stod över matchen (spel utan botar) kommer tillbaka.
     const players = { ...state.players, ...(state.benchBots ?? {}) }
