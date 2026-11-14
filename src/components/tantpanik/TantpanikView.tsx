@@ -382,7 +382,8 @@ export function TantpanikView({
         />
         {/* Värden: en spelare har varit borta länge. En bot kan ta över handen tills spelaren kommer tillbaka. */}
         {standInFor && !nopeOpen && (
-          <div className="absolute inset-x-0 top-full z-10 mt-1 flex justify-center px-3">
+          // Under turkoppen, som står under platsen när det är spelarens tur.
+          <div className="absolute inset-x-0 top-full z-10 mt-9 flex justify-center px-3">
             <Button className="max-w-full rounded-full shadow-soft-sm motion-safe:animate-pop" onClick={() => onStandIn?.(standInFor)}>
               <Bot aria-hidden />
               <span className="truncate">Låt en bot spela åt {state.players[standInFor]?.name ?? 'spelaren'}</span>
@@ -800,20 +801,19 @@ const FRESH_MS = 5000
 // spelarna (den korsade korten och texten), målets plats visar i stället vem kortet gäller.
 // De som varit frånkopplade i minst ms, räknat från att vyn först såg dem borta.
 function useLongAway(away: string[], ms: number): string[] {
-  const [since, setSince] = useState<Record<string, number>>({})
-  const [now, setNow] = useState(() => Date.now())
+  const [long, setLong] = useState<string[]>([])
+  const sinceRef = useRef<Record<string, number>>({})
   const key = away.join()
   useEffect(() => {
     const ids = key ? key.split(',') : []
-    setSince((before) => Object.fromEntries(ids.map((id) => [id, before[id] ?? Date.now()])))
-  }, [key])
-  useEffect(() => {
-    const next = Math.min(...Object.values(since).map((at) => at + ms).filter((at) => at > now))
-    if (!Number.isFinite(next)) return
-    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, next - Date.now()) + 50)
-    return () => clearTimeout(timer)
-  }, [since, now, ms])
-  return away.filter((id) => since[id] !== undefined && now - since[id] >= ms)
+    const now = Date.now()
+    const since = Object.fromEntries(ids.map((id) => [id, sinceRef.current[id] ?? now]))
+    sinceRef.current = since
+    const update = () => setLong(ids.filter((id) => Date.now() - since[id] >= ms))
+    const timers = ids.map((id) => setTimeout(update, Math.max(0, since[id] + ms - now) + 20))
+    return () => timers.forEach(clearTimeout)
+  }, [key, ms])
+  return long.filter((id) => away.includes(id))
 }
 
 function HandGlow() {
