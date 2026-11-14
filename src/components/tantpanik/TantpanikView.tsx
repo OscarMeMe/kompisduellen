@@ -18,7 +18,7 @@ import { Konfetti } from '@/components/Konfetti'
 import { tantMusic } from '@/lib/tantmusik'
 import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
-import { loadSoundOn, playBullseye, saveSoundOn } from '@/lib/ljud'
+import { loadSoundOn, playTantWin, preloadSound, saveSoundOn, TANT_WIN_SOUND } from '@/lib/ljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -179,6 +179,8 @@ export function TantpanikView({
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])
   useEffect(() => () => tantMusic.setWanted(false), [])
+  // Vinstjublet hämtas i förväg, så att det spelas direkt när någon vinner.
+  useEffect(() => preloadSound(TANT_WIN_SOUND), [])
   // Lite snabbare när det är få kort kvar i högen, eller bara två kvar av fler.
   const tense = !!table && (table.deckCount <= 8 || (table.order.length > 2 && table.order.length - table.out.length === 2))
   useEffect(() => tantMusic.setFast(tense), [tense])
@@ -545,8 +547,9 @@ function WinnerCelebration({
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
   useEffect(() => {
     if (soundOn) {
-      tantMusic.duck(1500)
-      playBullseye()
+      // Jublet är cirka 2 s långt.
+      tantMusic.duck(2500)
+      playTantWin()
     }
     // Bara en gång.
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -60,6 +60,64 @@ function effectsOut(ctx: AudioContext): GainNode {
   return effectsGain
 }
 
+// Ljudeffekter från filer (public/ljud). Källor och licenser står i docs/ljud-licenser.md. Filen hämtas i förväg
+// (preloadSound) och avkodas först när den spelas, så att inget ljud startas före ett tryck.
+export const TANT_WIN_SOUND = '/ljud/tant-vinst.mp3'
+const TANT_WIN_VOLUME = 0.7
+const fileData = new Map<string, Promise<ArrayBuffer | null>>()
+const fileBuffers = new Map<string, AudioBuffer>()
+
+function fetchSound(url: string): Promise<ArrayBuffer | null> {
+  if (!fileData.has(url)) {
+    fileData.set(
+      url,
+      fetch(url)
+        .then((response) => (response.ok && (response.headers.get('content-type') ?? '').startsWith('audio') ? response.arrayBuffer() : null))
+        .catch(() => null),
+    )
+  }
+  return fileData.get(url)!
+}
+
+// Hämtar en ljudfil i förväg, så att den spelas utan väntan när det är dags.
+export function preloadSound(url: string) {
+  void fetchSound(url)
+}
+
+// Spelar en ljudfil genom ljudeffekternas volym. Ger false om filen inte gick att spela.
+async function playFile(url: string, volume: number): Promise<boolean> {
+  try {
+    context ??= new AudioContext()
+    if (context.state === 'suspended') void context.resume()
+    const ctx = context
+    let buffer = fileBuffers.get(url)
+    if (!buffer) {
+      const data = await fetchSound(url)
+      if (!data) return false
+      // decodeAudioData tömmer sin indata, så den får en kopia.
+      buffer = await ctx.decodeAudioData(data.slice(0))
+      fileBuffers.set(url, buffer)
+    }
+    const source = ctx.createBufferSource()
+    const gain = ctx.createGain()
+    gain.gain.value = volume
+    source.buffer = buffer
+    source.connect(gain).connect(effectsOut(ctx))
+    source.start()
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Exploderande Tanter: någon är sist kvar och vinner. Ett jubel från en fil. Går filen inte att spela (t.ex. utan
+// nät) spelas fanfaren som görs i kod i stället.
+export function playTantWin() {
+  void playFile(TANT_WIN_SOUND, TANT_WIN_VOLUME).then((played) => {
+    if (!played) playBullseye()
+  })
+}
+
 // Turkoppen landar hos mig i Exploderande Tanter: ett litet klirr, som en kopp mot ett fat. Två korta höga toner med
 // en svag överton, så att det låter som porslin.
 export function playCupClink() {
