@@ -1,12 +1,14 @@
-import { useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
+import { useState, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { Brain, Crosshair, Eye, Search, VenetianMask, type LucideIcon } from 'lucide-react'
 import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
+import { useButtonsBelowContent } from '@/hooks/useButtonsBelowContent'
 import { findBlob } from '@/lib/figurer'
 import type { ImposterRound } from '@/lib/imposterjakten'
 import { imposterAwards, imposterStats, imposterStatsLine, outcomeText, winnerLine, type ImposterAward, type ImposterAwardId } from '@/lib/imposterslut'
 import { matchParticipants, matchWinners, rankPlayers, type GameState } from '@/lib/match'
+import { ordinal } from '@/lib/tantslut'
 import { cn } from '@/lib/utils'
 
 const PATTERN = '/images/imposterjakten/monster-mork.webp'
@@ -25,8 +27,8 @@ const ROUNDS_ON_MOBILE = 3
 
 // Imposterjaktens slutskärm "Fallet avslutat", i stilen Nattspanarna: mappen med stämpeln landar på bordet, vinnaren står
 // under lampan med kronan, de andra står som rader i utredningen, omgångarna står som en akt (ordet, impostern och hur
-// det gick), och under dem utmärkelserna som någon faktiskt fått och matchens siffror. Revansch och Byt spel ligger fast
-// längst ner. Ett tryck var som helst hoppar över animationen. Med "minska rörelse" syns allt direkt.
+// det gick), och under dem utmärkelserna som någon faktiskt fått och matchens siffror. Revansch och Byt spel ligger
+// direkt under innehållet när allt får plats på skärmen, annars fast längst ner. Ett tryck var som helst hoppar över animationen. Med "minska rörelse" syns allt direkt.
 export function ImposterSlutskarm({
   state,
   meId,
@@ -42,18 +44,8 @@ export function ImposterSlutskarm({
 }) {
   const [skipped, setSkipped] = useState(false)
   const [allRounds, setAllRounds] = useState(false)
-  // Knapparnas höjd, så att innehållet får lika mycket luft nedtill.
-  const buttonsRef = useRef<HTMLDivElement>(null)
-  const [buttonsHeight, setButtonsHeight] = useState(160)
-  useLayoutEffect(() => {
-    const element = buttonsRef.current
-    if (!element) return
-    const measure = () => setButtonsHeight(element.offsetHeight)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+  // Knapparna ligger direkt under innehållet när allt får plats på skärmen, annars fast längst ned.
+  const { mainRef, buttonsRef, buttonsHeight, inline } = useButtonsBelowContent()
   const reduced = typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const still = skipped || reduced
   // En del som kommer fram: rörelsen (med "minska rörelse" ingen) och när den börjar. Överhoppad: allt på plats direkt.
@@ -67,8 +59,10 @@ export function ImposterSlutskarm({
   const awards = imposterAwards(history, matchParticipants(state))
   const name = (id: string) => (id === meId ? 'Du' : (state.players[id]?.name ?? 'Någon'))
   const topScore = ranked[0]?.score ?? 0
-  // Två kolumner så fort de är fler än en, så att akten och utmärkelserna får plats utan att skrolla.
-  const many = rest.length > 1
+  // Placeringen: lika poäng ger samma placering.
+  const place = (score: number) => 1 + ranked.filter((player) => player.score > score).length
+  // Två kolumner på bredare skärm när de andra är många.
+  const many = rest.length > 3
   const hiddenRounds = Math.max(0, history.length - ROUNDS_ON_MOBILE)
 
   return (
@@ -81,11 +75,12 @@ export function ImposterSlutskarm({
     >
       {/* Väntrummets musik fortsätter på slutskärmen. */}
       <ImposterMusik level="lobby" />
-      {/* Luft nedtill lika hög som knapparna som ligger fast längst ner, så att Kvällens ställning går att skrolla fram helt. */}
+      {/* Ligger knapparna fast längst ner får sidan lika mycket luft nedtill, så att Kvällens ställning går att skrolla fram helt. */}
       <div
-        className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))]"
-        style={{ paddingBottom: buttonsHeight + 16 }}
+        className="relative mx-auto flex min-h-full max-w-md flex-col items-center px-4 pt-[max(0.625rem,env(safe-area-inset-top))] lg:max-w-2xl"
+        style={{ paddingBottom: inline ? 24 : buttonsHeight + 16 }}
       >
+       <div ref={mainRef} className="flex w-full flex-col items-center">
         <img src={LOGO} alt="Imposterjakten" width={800} height={245} style={enter('motion-safe:animate-slut-fade', 0).style} className={cn('h-7 w-auto short:h-5', enter('motion-safe:animate-slut-fade', 0).className)} />
 
         {/* Mappen med stämpeln landar på bordet. Texten står i bilden, så rubriken är bara för skärmläsare. */}
@@ -136,21 +131,24 @@ export function ImposterSlutskarm({
           <p className="mt-4 text-center font-heading text-xl font-bold">Ingen fick poäng den här gången.</p>
         )}
 
-        {/* De andra, som rader i utredningen, med poängen till höger. */}
+        {/* De andra, som tydliga rader: placeringen, figuren, namnet och poängen utskriven. */}
         {rest.length > 0 && (
-          <ul className={cn('mt-4 grid w-full gap-1.5 short:mt-2.5 short:gap-1', many && 'grid-cols-2')} aria-label="De andra spelarna">
+          <ul className={cn('mt-4 grid w-full gap-1.5 short:mt-2.5 short:gap-1', many && 'sm:grid-cols-2')} aria-label="De andra spelarna">
             {rest.map((player, i) => (
               <li
                 key={player.id}
                 style={enter('motion-safe:animate-slut-up', AT.rest + i * AT.restStep).style}
                 className={cn(
-                  'flex min-w-0 items-center gap-2 rounded-xl border border-border bg-card py-1 pr-3 pl-2 short:py-0.5',
+                  'flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-card py-1.5 pr-3.5 pl-3 short:py-1',
                   enter('motion-safe:animate-slut-up', AT.rest + i * AT.restStep).className,
                 )}
               >
-                <Emoji emoji={player.avatar} className={cn('shrink-0', many ? 'text-2xl' : 'text-3xl short:text-2xl')} />
-                <span className={cn('min-w-0 flex-1 truncate font-heading font-bold', many ? 'text-base' : 'text-lg short:text-base')}>{name(player.id)}</span>
-                <span className="shrink-0 font-heading text-base font-bold text-muted-foreground tabular-nums">{player.score} p</span>
+                <span className="w-9 shrink-0 font-heading text-lg font-bold text-[var(--natt-lampa)] tabular-nums lg:text-xl">{ordinal(place(player.score))}</span>
+                <Emoji emoji={player.avatar} className="shrink-0 text-3xl short:text-2xl lg:text-4xl" />
+                <span className="min-w-0 flex-1 truncate font-heading text-lg font-bold lg:text-xl">{name(player.id)}</span>
+                <span className="shrink-0 font-heading text-base font-bold whitespace-nowrap tabular-nums lg:text-lg">
+                  {player.score} poäng
+                </span>
               </li>
             ))}
           </ul>
@@ -162,10 +160,10 @@ export function ImposterSlutskarm({
             data-yta="papper"
             aria-label="Akten: omgångarna"
             style={enter('motion-safe:animate-slut-up', AT.file).style}
-            className={cn('mt-3 w-full rounded-lg border-2 border-[var(--natt)] bg-background px-3 py-2 text-foreground shadow-[0_3px_0_rgb(0_0_0/0.4)] short:mt-2', enter('motion-safe:animate-slut-up', AT.file).className)}
+            className={cn('mt-3 w-full rounded-lg border-2 border-[var(--natt)] bg-background px-3 py-2 text-foreground shadow-[0_3px_0_rgb(0_0_0/0.4)] short:mt-2 lg:px-5 lg:py-3.5', enter('motion-safe:animate-slut-up', AT.file).className)}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="text-base">Akten</h2>
+            <h2 className="text-base lg:text-xl">Akten</h2>
             <ol className="mt-1 space-y-0.5">
               {history.map((round, i) => (
                 <RoundRow key={i} n={i + 1} round={round} imposter={name(round.imposter)} hiddenOnMobile={!allRounds && i < hiddenRounds} />
@@ -179,9 +177,10 @@ export function ImposterSlutskarm({
           </section>
         )}
 
-        {/* Utmärkelserna, bara de som någon fått, som brickor bredvid varandra. */}
+        {/* Utmärkelserna, bara de som någon fått: under varandra på smal mobil (så att namn och text inte bryts), och som
+            brickor bredvid varandra på bredare skärm. */}
         {awards.length > 0 && (
-          <ul className={cn('mt-3 grid w-full gap-2 short:mt-2', awards.length === 1 ? 'grid-cols-1' : awards.length === 2 ? 'grid-cols-2' : 'grid-cols-3')} aria-label="Utmärkelser">
+          <ul className={cn('mt-3 grid w-full gap-2 short:mt-2', awards.length === 1 ? 'sm:mx-auto sm:max-w-xs' : awards.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')} aria-label="Utmärkelser">
             {awards.map((award, i) => (
               <AwardTile
                 key={award.id}
@@ -195,29 +194,50 @@ export function ImposterSlutskarm({
         )}
 
         {history.length > 0 && (
-          <p style={enter('motion-safe:animate-slut-fade', AT.stats).style} className={cn('mt-2.5 text-center text-sm font-extrabold text-muted-foreground short:mt-1.5 short:text-[13px]', enter('motion-safe:animate-slut-fade', AT.stats).className)}>
+          <p style={enter('motion-safe:animate-slut-fade', AT.stats).style} className={cn('mt-2.5 text-center text-sm font-extrabold text-muted-foreground short:mt-1.5 short:text-[13px] lg:mt-4 lg:text-lg', enter('motion-safe:animate-slut-fade', AT.stats).className)}>
             {imposterStatsLine(imposterStats(history))}
           </p>
         )}
 
-        <div data-yta="papper" className="mt-8 w-full text-foreground" onClick={(event) => event.stopPropagation()}>
+       </div>
+
+        {/* Får allt plats på skärmen ligger knapparna direkt under innehållet. */}
+        {inline && (
+          <div
+            ref={buttonsRef}
+            style={enter('motion-safe:animate-slut-fade', AT.buttons).style}
+            onClick={(event) => event.stopPropagation()}
+            className={cn('mt-5 flex w-full max-w-md flex-col items-center gap-1.5', enter('motion-safe:animate-slut-fade', AT.buttons).className)}
+          >
+            {actions}
+          </div>
+        )}
+
+        {/* Kvällens ställning i spelets stil: krämvitt papper med lampgul kant. */}
+        <div
+          data-yta="papper"
+          className="mt-8 w-full max-w-md text-foreground [&>section]:border-[3px] [&>section]:border-[var(--natt-lampa)] [&>section]:shadow-[0_4px_0_color-mix(in_oklch,var(--natt-lampa)_45%,black)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           {leaderboard}
         </div>
       </div>
 
-      {/* Revansch och Byt spel ligger alltid fast längst ner, och tonas in sist. Raden har samma mönster som sidan, så att
+      {/* Annars ligger Revansch och Byt spel fast längst ner, och tonas in sist. Raden har samma mönster som sidan, så att
           mönstret går ända ned, och det som skrollas tonas bort under radens överkant. */}
-      <div
-        ref={buttonsRef}
-        style={{ ...PATTERN_STYLE, ...enter('motion-safe:animate-slut-fade', AT.buttons).style }}
-        onClick={(event) => event.stopPropagation()}
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-20 bg-background bg-repeat [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-4 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
-          enter('motion-safe:animate-slut-fade', AT.buttons).className,
-        )}
-      >
-        <div className="mx-auto flex max-w-md flex-col items-center gap-1.5">{actions}</div>
-      </div>
+      {!inline && (
+        <div
+          ref={buttonsRef}
+          style={{ ...PATTERN_STYLE, ...enter('motion-safe:animate-slut-fade', AT.buttons).style }}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            'fixed inset-x-0 bottom-0 z-20 bg-background bg-repeat [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-4 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
+            enter('motion-safe:animate-slut-fade', AT.buttons).className,
+          )}
+        >
+          <div className="mx-auto flex max-w-md flex-col items-center gap-1.5">{actions}</div>
+        </div>
+      )}
     </div>
   )
 }
@@ -226,7 +246,7 @@ export function ImposterSlutskarm({
 function RoundRow({ n, round, imposter, hiddenOnMobile }: { n: number; round: ImposterRound; imposter: string; hiddenOnMobile: boolean }) {
   const escaped = round.kind === 'undan'
   return (
-    <li className={cn('flex items-baseline gap-2 text-sm leading-snug', hiddenOnMobile && 'max-sm:hidden')}>
+    <li className={cn('flex items-baseline gap-2 text-sm leading-snug lg:text-lg', hiddenOnMobile && 'max-sm:hidden')}>
       <span className="w-4 shrink-0 text-right font-heading font-bold text-muted-foreground tabular-nums">{n}</span>
       <span className="min-w-0 flex-1">
         <strong className="font-heading">{round.word}</strong>
@@ -278,29 +298,32 @@ const AWARD_ICONS: Record<ImposterAwardId, LucideIcon> = {
   blaogd: Eye,
 }
 
-// En utmärkelse som en liten bricka: symbol, titel, vem och vad.
+// En utmärkelse som en bricka: symbol, titel, vem och vad. På smal mobil ligger den på en rad med symbolen till vänster,
+// så att namn och text får hela bredden.
 function AwardTile({ award, who, className, style }: { award: ImposterAward; who: string[]; className: string; style?: CSSProperties }) {
   const Icon = AWARD_ICONS[award.id]
   return (
     <li
       className={cn(
-        'flex min-w-0 flex-col items-center gap-0.5 rounded-[14px] border-2 border-[var(--natt-lampa)] bg-card px-1 pt-2 pb-1.5 text-center shadow-[0_2px_0_color-mix(in_oklch,var(--natt-lampa)_55%,black)] short:gap-0 short:pt-1 short:pb-1',
+        'flex min-w-0 items-center gap-3 rounded-[14px] border-2 border-[var(--natt-lampa)] bg-card px-3 py-2 shadow-[0_2px_0_color-mix(in_oklch,var(--natt-lampa)_55%,black)] short:py-1.5 sm:flex-col sm:gap-0.5 sm:px-2 sm:pt-2.5 sm:pb-2 sm:text-center lg:px-3 lg:pt-3.5 lg:pb-3',
         className,
       )}
       style={style}
     >
-      <Icon aria-hidden className="size-7 text-[var(--natt-lampa)] short:size-5" strokeWidth={2.2} />
-      <span className="font-heading text-sm leading-tight font-bold short:text-[11px]">{award.title}</span>
-      {/* Delade utmärkelser radbryts mellan namnen, aldrig mitt i ett namn, så att alla syns. */}
-      <span className="max-w-full text-[13px] leading-tight font-extrabold break-words text-[var(--natt-lampa)] short:text-[11px] short:leading-[1.15]">
-        {who.map((one, i) => (
-          <span key={i}>
-            <span className="whitespace-nowrap">{one}</span>
-            {i < who.length - 2 ? ', ' : i === who.length - 2 ? ' och ' : ''}
-          </span>
-        ))}
+      <Icon aria-hidden className="size-8 shrink-0 text-[var(--natt-lampa)] short:size-6 lg:size-9" strokeWidth={2.2} />
+      <span className="flex min-w-0 flex-1 flex-col sm:flex-none sm:items-center">
+        <span className="font-heading text-base leading-tight font-bold lg:text-lg">{award.title}</span>
+        {/* Delade utmärkelser radbryts mellan namnen, aldrig mitt i ett namn, så att alla syns. */}
+        <span className="max-w-full text-sm leading-tight font-extrabold text-[var(--natt-lampa)] lg:text-base">
+          {who.map((one, i) => (
+            <span key={i}>
+              <span className="whitespace-nowrap">{one}</span>
+              {i < who.length - 2 ? ', ' : i === who.length - 2 ? ' och ' : ''}
+            </span>
+          ))}
+        </span>
       </span>
-      <span className="mt-auto text-[11.5px] font-bold text-muted-foreground">{award.what}</span>
+      <span className="shrink-0 text-right text-[13px] font-bold text-muted-foreground sm:mt-auto sm:text-center lg:text-[15px]">{award.what}</span>
     </li>
   )
 }
