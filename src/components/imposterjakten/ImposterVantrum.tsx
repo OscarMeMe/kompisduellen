@@ -144,6 +144,20 @@ export function ImposterVantrum({
           <p role="status" className="mt-1 text-center font-semibold text-muted-foreground">
             {tableStatus}
           </p>
+          {/* På dator ligger mappen långt under bordet, så värden har Starta jakten direkt här också (avstängd med
+              förklaringen på raden ovanför när ni är för få). På mobil gäller den fasta knappen längst ned. */}
+          {isHost && (
+            <Button
+              key={blockedText ? 'vantar' : 'redo'}
+              size="lg"
+              className={cn('mx-auto mt-3 hidden w-full max-w-xs text-lg lg:flex', !blockedText && 'motion-safe:animate-wiggle')}
+              disabled={blockedText !== null || rematching}
+              onClick={onStartCountdown}
+            >
+              Starta jakten
+              <ArrowRight aria-hidden />
+            </Button>
+          )}
           {dressWearer && (
             <p data-yta="papper" className="mt-3 rounded-lg border-2 border-tant-guld-mork bg-sun-soft px-3 py-2.5 text-center text-sm leading-snug font-bold text-foreground">
               {lobbyName(dressWearer)} bär tantklänningen tills någon annan vinner. Den följer med i alla spel i lobbyn.
