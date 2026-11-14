@@ -195,7 +195,14 @@ export function HomePage() {
 
       {/* Kommande spel på ljus persika: ett tryck visar hur spelet spelas (ingen Skapa lobby), och under dem kan man
           önska ett spel. */}
-      <VagSektion color="var(--startsida-kommande)" flip aria-labelledby="kommande-rubrik" innerClassName="space-y-5">
+      <VagSektion
+        color="var(--startsida-kommande)"
+        flip
+        squish
+        above="var(--startsida-spel)"
+        aria-labelledby="kommande-rubrik"
+        innerClassName="space-y-5"
+      >
         <h2 id="kommande-rubrik" className="text-3xl text-balance sm:text-4xl">
           Fler dueller är på väg.
         </h2>
@@ -207,6 +214,8 @@ export function HomePage() {
       {/* Extra luft nedtill, så att Sjusovaren som vilar på vågen under aldrig täcker stegen. */}
       <VagSektion
         color="var(--startsida-steg)"
+        squish
+        above="var(--startsida-kommande)"
         id="sa-funkar"
         aria-labelledby="sa-funkar-rubrik"
         className="scroll-mt-16 pb-32 sm:pb-44 lg:pb-44"

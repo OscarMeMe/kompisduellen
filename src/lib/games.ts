@@ -121,7 +121,7 @@ export const GAMES: GameInfo[] = [
   },
   {
     id: 'tantpanik',
-    // Arbetsnamn. Namnet står bara här (och i kortens texter i tantpanik-kort.ts).
+    // Namnet står bara här (och i kortens texter i tantpanik-kort.ts). I koden heter spelet tantpanik.
     name: 'Exploderande Tanter',
     tagline: 'Dra kort och håll tummarna. Den som drar en exploderande tant utan Desarmera-kort åker ut.',
     quickRule: 'Spela kort och dra ur högen. Drar du en exploderande tant utan Desarmera-kort är du ute.',
