@@ -74,39 +74,14 @@ const PREVIEWS: Record<string, ReactNode> = {
     </div>
   ),
   imposterjakten: (
-    // En mörk scen med en rad figurer. Spotlighten söker över spelarna och stannar på impostern, som då blir röd med
-    // glasögon och vickar till. Utan rörelse står ljuset på impostern direkt.
-    <svg viewBox="0 0 220 84" className="h-22 w-auto">
-      <rect width="220" height="84" rx="14" className="fill-foreground" />
-      {[
-        [34, 'fill-sky'],
-        [80, 'fill-mint'],
-        [188, 'fill-lilac'],
-      ].map(([x, color]) => (
-        <g key={x} className={String(color)} opacity="0.75">
-          <circle cx={Number(x)} cy="42" r="13" />
-          <path d={`M${Number(x) - 19} 84 a19 22 0 0 1 38 0 Z`} />
-        </g>
-      ))}
-      <g className="origin-[138px_60px] motion-safe:group-hover:animate-wiggle motion-safe:group-data-[play=true]:animate-wiggle" style={{ animationDelay: '1.5s' }}>
-        <circle cx="138" cy="42" r="14" className="fill-destructive" />
-        <path d="M117 84 a21 24 0 0 1 42 0 Z" className="fill-destructive" />
-        <rect x="124" y="36" width="13" height="10" rx="3.5" className="fill-foreground" />
-        <rect x="139" y="36" width="13" height="10" rx="3.5" className="fill-foreground" />
-        <rect x="136" y="39" width="4" height="2" className="fill-foreground" />
-        <circle cx="128" cy="39" r="1.3" className="fill-card" />
-        <circle cx="143" cy="39" r="1.3" className="fill-card" />
-      </g>
-      {/* Täcker impostern medan ljuset söker, så att den ser ut som de andra tills ljuset stannar. */}
-      <g className="fill-sky-soft opacity-0 motion-safe:group-hover:animate-spot-hide motion-safe:group-data-[play=true]:animate-spot-hide">
-        <circle cx="138" cy="42" r="15" />
-        <path d="M116 84 a22 25 0 0 1 44 0 Z" />
-      </g>
-      <path
-        d="M126 0 H150 L184 84 H92 Z"
-        className="fill-sun opacity-45 motion-safe:group-hover:animate-spot-sweep motion-safe:group-data-[play=true]:animate-spot-sweep"
-      />
-    </svg>
+    // Detektiven i ljuskäglan (stilen Nattspanarna). Lampan blinkar till och tänds, och detektiven hajar till.
+    <img
+      src="/images/imposterjakten/spelkort-detektiv.webp"
+      alt=""
+      width={420}
+      height={463}
+      className="-mt-5 -mb-2 h-28 w-auto origin-bottom motion-safe:group-hover:animate-detektiv motion-safe:group-data-[play=true]:animate-detektiv"
+    />
   ),
   tantpanik: (
     // Loggan till vänster och riktiga kortbilder i en liten solfjäder: två baksidor och den exploderande tanten överst.
@@ -178,19 +153,21 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
   const page = gamePageFor(game.id)
   // Exploderande Tanter har sin egen stil på kortet: krämvitt med mönstret svagt bakom, vinröd kant och loggan.
   const tant = game.id === 'tantpanik'
+  // Imposterjakten också: krämvitt med det ljusa mönstret bakom, marinblå kant och detektiven i ljuskäglan.
+  const natt = game.id === 'imposterjakten'
   const title = game.name
   return (
     <article
       ref={ref}
       data-play={playing}
       data-spel={game.id}
-      data-spelkort={tant ? 'tantpanik' : undefined}
+      data-spelkort={tant ? 'tantpanik' : natt ? 'imposterjakten' : undefined}
       onAnimationEnd={(event) => {
         if (event.target === event.currentTarget && reveal.state === 'shown') reveal.done()
       }}
       style={{
         ...(reveal.state === 'shown' ? { animationDelay: `${index * 90}ms` } : {}),
-        ...(tant ? TANT_CARD_BACKGROUND : {}),
+        ...(tant ? TANT_CARD_BACKGROUND : natt ? NATT_CARD_BACKGROUND : {}),
       }}
       className={cn(
         // Lyfter och lutar lite med större skugga när musen är över kortet (hover gäller bara enheter med mus), åt olika
@@ -201,6 +178,7 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
         highlight && 'motion-safe:animate-pop ring-4 ring-primary/40',
         // Kanten ritas inåt, så att kortet blir lika stort som de andra.
         tant && 'ring-2 ring-tant-vinrod ring-inset',
+        natt && 'ring-2 ring-[var(--natt)] ring-inset',
       )}
     >
       <div
@@ -218,7 +196,7 @@ export function SpelKort({ game, highlight = false, index = 0, note, tillfalle =
           <span
             className={cn(
               'absolute top-2 left-2 z-10 rounded-full px-3 py-0.5 text-sm font-bold shadow-soft-sm',
-              tant ? 'bg-tant-vinrod text-tant-kram-2' : 'bg-card text-foreground',
+              tant ? 'bg-tant-vinrod text-tant-kram-2' : natt ? 'bg-[var(--natt)] text-[var(--natt-kram)]' : 'bg-card text-foreground',
             )}
           >
             {game.feel}
@@ -265,6 +243,13 @@ const TANT_CARD_BACKGROUND = {
   backgroundImage:
     'linear-gradient(color-mix(in oklch, var(--tant-kram-2) 91%, transparent), color-mix(in oklch, var(--tant-kram-2) 91%, transparent)), url(/images/tantpanik/vantrum-monster.webp)',
   backgroundSize: 'auto, 260px 260px',
+}
+
+// Imposterjaktens kort: krämvitt med spelets ljusa mönster bakom (ett krämvitt lager över mönstret, så att texten syns).
+const NATT_CARD_BACKGROUND = {
+  backgroundImage:
+    'linear-gradient(color-mix(in oklch, var(--natt-kram) 78%, transparent), color-mix(in oklch, var(--natt-kram) 78%, transparent)), url(/images/imposterjakten/monster-ljus.webp)',
+  backgroundSize: 'auto, 240px 240px',
 }
 
 // Så länge räknas animationen som igång. Spotlighten i Imposterjakten är längst.

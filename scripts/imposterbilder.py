@@ -5,6 +5,8 @@ Läser originalen i docs/skisser/imposterjakten/ (ändras aldrig) och skriver We
 - logga.webp och logga-800.webp: loggan med genomskinlig bakgrund, beskuren till det som syns, i två storlekar.
 - monster-mork.webp: mönstret för väntrummet och bordet, på spelets marinblå.
 - monster-ljus.webp: mönstret för spelkortet på startsidan, på spelets krämvita.
+- spelkort-detektiv.webp: detektiven i ljuskäglan, bilden på spelkortet på startsidan.
+- fallet-avslutat.webp och fallet-avslutat-720.webp: mappen med stämpeln, till slutskärmen.
 
 Mönstren är 512 × 512 och sömlösa. Originalen är det inte: figurer skärs av i kanterna och bakgrunden är inte helt
 jämn. Så här rättas det:
@@ -39,6 +41,14 @@ TILE = 512
 LOGO_WIDTHS = {'logga.webp': 1400, 'logga-800.webp': 800}
 # Luft runt loggan efter beskärningen, som andel av bredden.
 LOGO_PAD = 0.012
+
+# Genomskinliga bilder: originalet och målfilerna med bredd (px). De beskärs till det som syns (alfa över ALPHA_EDGE, så
+# att svagt skräp längs kanten inte räknas) och skalas ned.
+PICTURES = [
+    ('spelkort-detektiv.png', {'spelkort-detektiv.webp': 420}),
+    ('fallet-avslutat.png', {'fallet-avslutat.webp': 1200, 'fallet-avslutat-720.webp': 720}),
+]
+ALPHA_EDGE = 40
 
 # Mönstren: originalet, målfilen, bakgrundsfärgen och kontrasten mellan bläcket och bakgrunden (WCAG-kvot). Exploderande
 # Tanters mönster har 1,5. Det mörka är lite svagare, eftersom ljus text på mörk botten störs mer av ett mönster.
@@ -175,6 +185,19 @@ def logo() -> Image.Image:
     return cropped
 
 
+def picture(source: str, targets: dict[str, int]) -> None:
+    original = Image.open(SOURCE / source).convert('RGBA')
+    alpha = np.asarray(original)[..., 3]
+    rows = np.where((alpha > ALPHA_EDGE).mean(axis=1) > 0.01)[0]
+    columns = np.where((alpha > ALPHA_EDGE).mean(axis=0) > 0.01)[0]
+    cropped = original.crop((int(columns[0]), int(rows[0]), int(columns[-1]) + 1, int(rows[-1]) + 1))
+    TARGET.mkdir(parents=True, exist_ok=True)
+    for name, width in targets.items():
+        height = round(cropped.height * width / cropped.width)
+        cropped.resize((width, height), Image.LANCZOS).save(TARGET / name, 'WEBP', quality=88, method=6)
+        print(f'{name}: {width} × {height}, {(TARGET / name).stat().st_size // 1024} kB')
+
+
 def tiled(image: Image.Image) -> Image.Image:
     sheet = Image.new('RGB', (image.width * 2, image.height * 2))
     for x in (0, image.width):
@@ -199,6 +222,8 @@ def preview(patterns: dict[str, Image.Image], logo_image: Image.Image) -> None:
 
 def main() -> None:
     logo_image = logo()
+    for source, targets in PICTURES:
+        picture(source, targets)
     patterns = {target: pattern(source, target, background, wanted) for source, target, background, wanted in PATTERNS}
     if '--forhandsvisning' in sys.argv:
         preview(patterns, logo_image)
