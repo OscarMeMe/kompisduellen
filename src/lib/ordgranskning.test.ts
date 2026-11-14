@@ -78,8 +78,10 @@ describe('granskningen av Imposterjaktens ord', () => {
     expect(newWordId('Zlatan Ibrahimović', [])).toBe('zlatan-ibrahimovic')
     expect(newWordId('Stand-up', [])).toBe('stand-up')
     expect(newWordId(' Ölprovning ', ['olprovning', 'olprovning-2'])).toBe('olprovning-3')
-    // De id:n som redan finns i ordlistan följer samma regel.
-    for (const item of WORDS) expect(newWordId(item.ord, []), item.ord).toBe(item.id)
+    // De id:n som redan finns i ordlistan har samma format, och är unika. (Ett id ändras aldrig, så det behöver inte
+    // längre stämma med ordet när ordet har skrivits om.)
+    for (const item of WORDS) expect(item.id, item.ord).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+    expect(new Set(WORDS.map((item) => item.id)).size).toBe(WORDS.length)
   })
 
   it('lägger till ett nytt ord sist, med samma regler som när ett ord ändras', () => {

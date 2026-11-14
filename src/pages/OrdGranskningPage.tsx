@@ -4,6 +4,7 @@ import { Stamp } from '@/components/Stamp'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { checkClue } from '@/lib/imposterjakten'
 import {
   categoryCounts,
   LEVEL_LABELS,
@@ -36,6 +37,21 @@ const STATUSES: { value: Status; label: string }[] = [
 // Så länge står ett ord kvar i listan efter ett beslut (ms), så att det går att ångra direkt. Sedan flyttar det till sin
 // flik: ett godkänt ord till Godkänd, och ett ord vars godkännande ångrats tillbaka till Ej granskad.
 const STAY_MS = 5000
+
+// Det som är fel i ett ord, i klartext, eller null: reglerna för att spara (wordError), och att ledtråden och nära-ordet
+// inte spärras av ordet självt i spelet (checkClue, t.ex. Kickboxning som nära-ord till Boxning).
+function wordProblem(word: ReviewWord, words: readonly ReviewWord[]): string | null {
+  const error = wordError(word, words)
+  if (error) return error
+  for (const [label, text] of [
+    ['Ledtråden', word.ledtrad],
+    ['Nära-ordet', word.nara],
+  ] as const) {
+    const joined = text.replace(/\s+/g, '')
+    if (/^[\p{L}\p{N}-]+$/u.test(joined) && !checkClue(joined, word, []).ok) return `${label} spärras av ordet självt i spelet (det liknar ordet eller en godkänd form).`
+  }
+  return null
+}
 
 // Ett kastat ord som går att lägga tillbaka: ordet, platsen det stod på och om det var godkänt.
 type Thrown = { word: ReviewWord; index: number; approved: boolean }
@@ -73,6 +89,8 @@ export function OrdGranskningPage() {
   }, [])
 
   const counts = useMemo(() => (files ? categoryCounts(files.words) : []), [files])
+  // Ord som inte klarar reglerna, t.ex. nya ord som lagts in i filen för hand.
+  const broken = useMemo(() => (files ? files.words.filter((word) => wordProblem(word, files.words) !== null) : []), [files])
   if (error && !files) return <p className="py-10 text-center font-semibold text-destructive">{error}</p>
   if (!files) return <p className="py-10 text-center text-muted-foreground">Laddar orden…</p>
 
@@ -167,6 +185,15 @@ export function OrdGranskningPage() {
             <span>
               För få ord: {small.map((entry) => `${entry.category} har ${entry.count}`).join(', ')}. Varje kategori behöver minst {MIN_PER_CATEGORY}, annars slår testerna fel och orden kan ta slut
               under en match.
+            </span>
+          </p>
+        )}
+
+        {broken.length > 0 && (
+          <p role="alert" className="flex items-start gap-2 rounded-lg border-2 border-destructive bg-coral-soft px-4 py-3 font-bold">
+            <TriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0 text-destructive" />
+            <span>
+              {broken.length} ord behöver rättas innan testerna går igenom: {broken.map((word) => word.ord).join(', ')}. Felet står på varje kort.
             </span>
           </p>
         )}
@@ -325,7 +352,8 @@ function WordCard({
   const [draft, setDraft] = useState({ ord: word.ord, kategori: word.kategori, ledtrad: word.ledtrad, nara: word.nara, godkanda: word.godkanda.join(', '), svarighet: word.svarighet })
   const changed: ReviewWord = { id: word.id, ord: draft.ord, kategori: draft.kategori, ledtrad: draft.ledtrad, nara: draft.nara, godkanda: parseForms(draft.godkanda), svarighet: draft.svarighet }
   const dirty = JSON.stringify({ ...changed, ord: changed.ord.trim(), ledtrad: changed.ledtrad.trim(), nara: changed.nara.trim() }) !== JSON.stringify(word)
-  const problem = dirty ? wordError(changed, words) : null
+  // Felet visas alltid, även på ett ord som ingen ändrat (t.ex. ett nytt ord som lagts in i filen för hand).
+  const problem = wordProblem(changed, words)
   const moving = dirty ? tooSmallAfterMoving(words, word.id, draft.kategori) : null
   const set = (field: keyof typeof draft) => (value: string) => setDraft((now) => ({ ...now, [field]: value }))
 
@@ -364,8 +392,8 @@ function WordCard({
             Ångra godkänd
           </Button>
         ) : (
-          // Osparade ändringar sparas först, så att det som godkänns är det som står i filen.
-          <Button disabled={dirty} title={dirty ? 'Spara ändringarna först' : undefined} onClick={() => onApprove(true)}>
+          // Osparade ändringar sparas först, så att det som godkänns är det som står i filen. Ett ord med fel går inte att godkänna.
+          <Button disabled={dirty || problem !== null} title={dirty ? 'Spara ändringarna först' : problem ? 'Rätta felet först' : undefined} onClick={() => onApprove(true)}>
             <Check aria-hidden />
             Godkänn
           </Button>
@@ -441,7 +469,7 @@ function NewWordCard({
   const fields = { ord: draft.ord, kategori: draft.kategori, ledtrad: draft.ledtrad, nara: draft.nara, godkanda: parseForms(draft.godkanda), svarighet: draft.svarighet }
   // Felet visas först när något är ifyllt, så att det tomma kortet inte börjar med en varning.
   const started = [draft.ord, draft.ledtrad, draft.nara, draft.godkanda].some((text) => text.trim() !== '')
-  const problem = wordError({ ...fields, id: '' }, words)
+  const problem = wordProblem({ ...fields, id: '' }, words)
   return (
     <section aria-label="Nytt ord" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
       <h2 className="text-xl">Nytt ord</h2>
