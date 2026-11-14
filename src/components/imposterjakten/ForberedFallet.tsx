@@ -8,7 +8,6 @@ import {
   Clapperboard,
   Coffee,
   Folder,
-  Gift,
   Leaf,
   MapPin,
   Paperclip,
@@ -31,14 +30,13 @@ import { cn } from '@/lib/utils'
 // fälls ut, om ni sitter tillsammans, kast, och längst ned sammanfattningen och Starta jakten. Värden ändrar valen.
 // Gästerna ser samma mapp men kan inte ändra något, och i stället för knappen står vem de väntar på.
 
-// En liten ikon per kategori. En kategori utan ikon får en mapp.
+// En liten ikon per kategori. En kategori utan ikon får en mapp. Svenska traditioner har en svensk flagga (SvenskFlagga).
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   'Vardag och saker': Sofa,
   'Mat och fika': Coffee,
   'Djur och natur': Leaf,
   Platser: MapPin,
   'Sport och fritid': Trophy,
-  'Svenska traditioner': Gift,
   'Kändisar och kultur': Star,
   'Fest och uteliv': PartyPopper,
   'Jobb och plugg': Briefcase,
@@ -48,7 +46,22 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 }
 // Kategorins ikon (Blandat = null).
 const categoryIcon = (category: string | null) =>
-  createElement(category === null ? Shuffle : (CATEGORY_ICONS[category] ?? Folder), { 'aria-hidden': true, className: 'size-5 shrink-0' })
+  category === 'Svenska traditioner' ? (
+    <SvenskFlagga />
+  ) : (
+    createElement(category === null ? Shuffle : (CATEGORY_ICONS[category] ?? Folder), { 'aria-hidden': true, className: 'size-5 shrink-0' })
+  )
+
+// En liten svensk flagga i färg, lika stor som de andra ikonerna (lucide har ingen).
+function SvenskFlagga() {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0">
+      <rect x="1" y="3.5" width="18" height="13" rx="1.5" fill="#1b6aa5" stroke="var(--natt)" strokeWidth="1.25" />
+      <path d="M7 3.5v13M1 10h18" stroke="#f2c230" strokeWidth="2.6" />
+      <rect x="1" y="3.5" width="18" height="13" rx="1.5" fill="none" stroke="var(--natt)" strokeWidth="1.25" />
+    </svg>
+  )
+}
 
 const DIFFICULTIES = [
   { value: 0, name: 'Normal', text: 'Impostern får en vag ledtråd.' },

@@ -354,10 +354,18 @@ function Spaningsbord({ guests: all, meId, code, playing, playersLabel: label, m
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids])
   // Figurens storlek följer bordets bredd, och är mindre när många sitter runt det.
-  const figure = count <= 6 ? 'text-[min(17cqw,5rem)]' : count <= 8 ? 'text-[min(14cqw,4.25rem)]' : 'text-[min(11.5cqw,3.75rem)]'
+  // På mobil är bordet ovalt på höjden när många sitter runt det (från sju platser), så att ringen blir längre och
+  // figurerna kan vara större.
+  const tall = count >= 7
+  const figure =
+    count <= 6
+      ? 'text-[min(17cqw,5rem)]'
+      : count <= 8
+        ? 'text-[min(14cqw,4.25rem)] max-sm:text-[min(17cqw,4.25rem)]'
+        : 'text-[min(11.5cqw,3.75rem)] max-sm:text-[min(15cqw,3.75rem)]'
 
   return (
-    <div ref={rootRef} className="relative mx-auto mt-2 mb-5 aspect-[1/0.92] w-full max-w-[34rem] [container-type:inline-size]">
+    <div ref={rootRef} className={cn('relative mx-auto mt-2 mb-5 aspect-[1/0.92] w-full max-w-[34rem] [container-type:inline-size]', tall && 'max-sm:aspect-[1/1.32]')}>
       {/* Lampan hänger utanför bild. Bara ljuset syns. */}
       <div aria-hidden className="pointer-events-none absolute -inset-x-[12%] -top-[10%] h-[112%] bg-[radial-gradient(ellipse_closest_side_at_50%_42%,color-mix(in_oklch,var(--natt-lampa)_30%,transparent),color-mix(in_oklch,var(--natt-lampa)_10%,transparent)_60%,transparent_100%)]" />
       <div
