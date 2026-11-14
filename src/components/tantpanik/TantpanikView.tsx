@@ -20,6 +20,7 @@ import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
 import { loadSoundOn, saveSoundOn } from '@/lib/ljud'
 import { loadTantSounds, markWinHeard, playTantSound, winSoundKey, type TantSound } from '@/lib/tantljud'
+import { useSkipGuard } from '@/hooks/useSkipGuard'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -1531,11 +1532,13 @@ function DealIntro({ state, table, meId }: { state: GameState; table: TantTable;
     const timer = setTimeout(() => setStage('done'), START_BANNER_MS)
     return () => clearTimeout(timer)
   }, [stage])
+  // Ett tryck hoppar över, men aldrig ett tryck som var på väg när utdelningen började (t.ex. trycket på Starta).
+  const skipGuard = useSkipGuard(() => setStage('done'))
   if (stage === 'done') return null
   const starter = table.order[0]
   const width = 56
   return (
-    <button type="button" aria-label="Hoppa över utdelningen" onClick={() => setStage('done')} className="fixed inset-0 z-[58] cursor-default">
+    <button type="button" aria-label="Hoppa över utdelningen" {...skipGuard} className="fixed inset-0 z-[58] cursor-default">
       {stage === 'deal' &&
         flights.map((flight) => (
           <span
