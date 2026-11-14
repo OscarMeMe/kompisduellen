@@ -22,7 +22,7 @@ import { loadSoundOn, saveSoundOn } from '@/lib/ljud'
 import { loadTantSounds, markWinHeard, playTantSound, winSoundKey, type TantSound } from '@/lib/tantljud'
 import { useSkipGuard } from '@/hooks/useSkipGuard'
 import { useThrowWait } from '@/hooks/useThrowWait'
-import { THROW_ITEMS } from '@/lib/kast'
+import { loadThrowHint, saveThrowHint, shouldShowThrowHint, THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
 import {
   bombsInDeck,
@@ -254,6 +254,8 @@ export function TantpanikView({
       window.removeEventListener('resize', measure)
     }
   }, [])
+  // Tipset om kast, när någon vid bordet går att kasta på (inte botar, inte de som stängt av kast).
+  const throwHint = useThrowHint(table ? table.order.filter((id) => !table.out.includes(id)) : [])
   if (!table) return null
   const inMatch = table.order.includes(me.id)
   const out = table.out.includes(me.id)
@@ -381,15 +383,30 @@ export function TantpanikView({
           standIns={standIns}
         />
         {/* Värden: en spelare har varit borta länge. En bot kan ta över handen tills spelaren kommer tillbaka. */}
-        {standInFor && !nopeOpen && (
-          // En egen rad under motspelarna, så att knappen aldrig täcker högarna (bordet under krymper lite). Har spelaren
-          // tur står turkoppen under platsen, och då börjar raden under koppen.
+        {/* En egen rad under motspelarna, för knappen som låter en bot ta över och för tipset om kast. Raden tar egen
+            plats (bordet under krymper lite), så att inget av dem hamnar över högarna. Har en motspelare tur står
+            turkoppen under platsen, och då börjar raden under koppen. Knappen går före tipset. */}
+        {standInFor && !nopeOpen ? (
           <div data-tant-botknapp className={cn('flex justify-center px-3 pb-1', table.current === standInFor && 'pt-7')}>
             <Button className="max-w-full rounded-full shadow-soft-sm motion-safe:animate-pop" onClick={() => onStandIn?.(standInFor)}>
               <Bot aria-hidden />
               <span className="truncate">Låt en bot spela åt {state.players[standInFor]?.name ?? 'spelaren'}</span>
             </Button>
           </div>
+        ) : (
+          throwHint &&
+          !hostAway &&
+          !nopeOpen && (
+            <div data-tant-kasttips className={cn('flex justify-center px-3 pb-1', table.current !== me.id && !table.winner && 'pt-7')}>
+              <p
+                role="status"
+                className="pointer-events-none flex w-fit max-w-full items-center gap-1.5 rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm motion-safe:animate-pop motion-reduce:animate-fade"
+              >
+                <Emoji emoji="🍅" />
+                <span className="truncate">Tryck på en spelare för att kasta något</span>
+              </p>
+            </div>
+          )
         )}
         {/* Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här. */}
         {hostAway && (
@@ -815,6 +832,35 @@ function useLongAway(away: string[], ms: number): string[] {
     return () => timers.forEach(clearTimeout)
   }, [key, ms])
   return long.filter((id) => away.includes(id))
+}
+
+// Tipset om att man kan kasta saker på motspelarna: visas THROW_HINT_MS, en stund in i matchen (efter utdelningen), när
+// någon vid bordet går att kasta på. Högst några gånger per webbläsare (kast.ts), och aldrig mer när man kastat något.
+const THROW_HINT_AFTER_MS = 4000
+const THROW_HINT_MS = 6000
+function useThrowHint(seated: string[]): boolean {
+  const throws = useThrows()
+  const [on, setOn] = useState(false)
+  const possible = !!throws?.allowed && throws.targets.some((target) => seated.includes(target.id))
+  // En gång per match: sätts först när tipset verkligen visats.
+  const shownRef = useRef(false)
+  useEffect(() => {
+    if (!possible || shownRef.current || !shouldShowThrowHint(loadThrowHint())) return
+    const timer = setTimeout(() => {
+      shownRef.current = true
+      setOn(true)
+      saveThrowHint()
+      // Försvinner av sig självt, även om vilka som går att kasta på ändras under tiden.
+      setTimeout(() => setOn(false), THROW_HINT_MS)
+    }, THROW_HINT_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [possible])
+  // Har man kastat något behövs tipset inte mer.
+  const lastThrowAt = throws?.lastThrowAt ?? null
+  useEffect(() => {
+    if (lastThrowAt !== null) saveThrowHint(true)
+  }, [lastThrowAt])
+  return on && possible && lastThrowAt === null
 }
 
 function HandGlow() {

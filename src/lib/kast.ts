@@ -66,6 +66,38 @@ export function throwTargets<T extends { id: string; noThrows?: boolean }>(onlin
   return online.filter((player) => player.id !== meId && !player.noThrows)
 }
 
+// Tipset vid Exploderande Tanters bord ("Tryck på en spelare för att kasta något"): visas en kort stund i början av en
+// match, högst THROW_HINT_SHOWS gånger per webbläsare, och aldrig mer när man väl kastat något (kd-kasttips).
+export const THROW_HINT_SHOWS = 3
+const HINT_KEY = 'kd-kasttips'
+
+// Hur många gånger tipset har visats. shown = värdet som sparats (null om inget).
+export function throwHintCount(saved: string | null): number {
+  const count = Number(saved)
+  return saved !== null && Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+}
+
+export function shouldShowThrowHint(saved: string | null): boolean {
+  return throwHintCount(saved) < THROW_HINT_SHOWS
+}
+
+export function loadThrowHint(): string | null {
+  try {
+    return localStorage.getItem(HINT_KEY)
+  } catch {
+    return null
+  }
+}
+
+// Tipset har visats en gång till, eller behövs inte mer (done: spelaren har kastat något).
+export function saveThrowHint(done = false) {
+  try {
+    localStorage.setItem(HINT_KEY, String(done ? THROW_HINT_SHOWS : throwHintCount(localStorage.getItem(HINT_KEY)) + 1))
+  } catch {
+    // Går det inte att spara visas tipset igen nästa gång.
+  }
+}
+
 // En splatt som visas för den som träffas, och var på skärmen (splatt.ts).
 export type Splat = { key: string; from: string; item: ThrowItemId; place: SplatPlace }
 

@@ -16,7 +16,7 @@ export type GamePageInfo = {
   steps: string[]
   time: string
   faq: Faq[]
-  // Egen bild när sidan delas (1200 × 630 i public/og). Saknas den visas loggan.
+  // Egen bild när sidan delas (1200 × 630 i public/og, png eller jpg). Saknas den visas loggan.
   image?: { path: string; alt: string }
 }
 
@@ -164,6 +164,60 @@ export const GAME_PAGES: GamePageInfo[] = [
         question: 'Kan impostern få hjälp?',
         answer:
           'Värden väljer svårighet. I Normal får impostern en vag ledtråd och i Svår ingenting. I Lurig får impostern ett liknande ord och vet inte om att den är impostern. Värden kan också välja en kategori, som alla ser.',
+      },
+    ],
+  },
+  {
+    slug: 'exploderande-tanter',
+    gameId: 'tantpanik',
+    title: 'Exploderande Tanter: kortspel online med kompisar | Kompisduellen',
+    description:
+      'Dra kort och hoppas att du slipper den exploderande tanten. Sist kvar vinner. Ett gratis kortspel online för 2–10 spelare, med botar om ni är få.',
+    heading: 'Exploderande Tanter: kortspelet där sist kvar vinner',
+    intro: [
+      'Någonstans i högen väntar en exploderande tant. Alla turas om att spela kort och dra ett nytt ur högen. Den som drar tanten utan ett Desarmera-kort på handen är ute, och den som är sist kvar vinner.',
+      'Korten hjälper dig att slippa undan. Hoppa över din tur, titta på de tre översta korten, blanda högen eller skicka en attack till nästa spelare. Med Nope! stoppar du någon annans kort, och med två lika kort tar du ett kort ur en motspelares hand. Alla spelar på sin egen mobil, och är ni få kan värden lägga till botar.',
+    ],
+    steps: [
+      'En av er skapar en lobby och delar koden på fyra bokstäver. Ni behöver vara minst två, och värden kan fylla på med botar.',
+      'Alla går med från sin egen mobil eller dator och får sju kort och ett Desarmera-kort på handen.',
+      'På din tur spelar du så många kort du vill, eller inga alls. Du avslutar turen med att dra ett kort ur högen.',
+      'När någon spelar ett kort har de andra sex sekunder på sig att stoppa det med Nope!.',
+      'Drar du en exploderande tant räddar Desarmera dig, och du får gömma tanten var du vill i högen. Har du inget Desarmera är du ute.',
+      'Den som är sist kvar vinner matchen. Sen är det dags för revansch.',
+    ],
+    time: '5–20 minuter',
+    image: { path: '/og/exploderande-tanter.jpg', alt: 'Exploderande Tanter: spelets logga med en arg tant som pekar, på en krämvit ruta med vinröd kant. Kortspel online för 2–10 spelare' },
+    faq: [
+      ...commonFaq('Exploderande Tanter', 2),
+      {
+        question: 'Hur många kan spela?',
+        answer: 'Ni kan vara 2–10 spelare. Ju fler ni är, desto fler kort och tanter blandas in i högen.',
+      },
+      {
+        question: 'Kan jag spela mot botar?',
+        answer:
+          'Ja. Värden kan lägga till upp till fyra botar i väntrummet och välja om de ska vara lätta, normala eller svåra. Du kan också spela helt själv mot botar.',
+      },
+      {
+        question: 'Vad gör Nope!?',
+        answer:
+          'Nope! stoppar ett kort som någon just har spelat, även när det inte är din tur. Ett Nope! kan stoppas av ett nytt Nope!. En exploderande tant och Desarmera går inte att stoppa.',
+      },
+      {
+        question: 'Vad är Tantsnaran?',
+        answer:
+          'En fälla som ligger dold på handen. Tar någon just det kortet från dig med ett par eller tre lika slår fällan igen, och du får ta upp till två kort ur tjuvens hand. Värden kan stänga av Tantsnaran i väntrummet.',
+      },
+      {
+        question: 'Går det att göra spelet svårare?',
+        answer:
+          'Ja. I Normal ligger en tant färre än antalet spelare i högen. Svår lägger till en tant och Kaos två. Kaos kräver att ni är minst fem.',
+      },
+      {
+        question: 'Vad händer om någon lämnar mitt i matchen?',
+        answer:
+          'Matchen väntar på spelaren. Dröjer det kan värden låta en bot spela vidare åt den, och spelaren tar över igen när den kommer tillbaka.',
       },
     ],
   },

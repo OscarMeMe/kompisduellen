@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  shouldShowThrowHint,
+  THROW_HINT_SHOWS,
+  throwHintCount,
   acceptThrow,
   addThrow,
   EMPTY_THROW_STATS,
@@ -119,5 +122,20 @@ describe('kasträknaren', () => {
 
   it('ignorerar okända saker från läget', () => {
     expect(throwCounterText({ items: { sten: 5 }, received: {} })).toBe('Ingen har kastat något än.')
+  })
+})
+
+describe('tipset om kast vid Exploderande Tanters bord', () => {
+  it('visas högst tre gånger, och aldrig med ett konstigt sparat värde som räknas som visat', () => {
+    expect(THROW_HINT_SHOWS).toBe(3)
+    expect(shouldShowThrowHint(null)).toBe(true)
+    expect(shouldShowThrowHint('0')).toBe(true)
+    expect(shouldShowThrowHint('2')).toBe(true)
+    expect(shouldShowThrowHint('3')).toBe(false)
+    expect(shouldShowThrowHint('7')).toBe(false)
+    // Ett trasigt värde räknas som att tipset inte visats.
+    expect(throwHintCount('hej')).toBe(0)
+    expect(throwHintCount('-2')).toBe(0)
+    expect(throwHintCount('2.9')).toBe(2)
   })
 })
