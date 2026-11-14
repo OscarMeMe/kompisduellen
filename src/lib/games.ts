@@ -41,7 +41,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 12,
     feel: 'Klurigt',
     playable: true,
-    popularOrder: 2,
+    popularOrder: 3,
     addedAt: '2026-10-25',
     bots: true,
     intro: {
@@ -92,7 +92,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 9,
     feel: 'Pratigt',
     playable: true,
-    popularOrder: 3,
+    popularOrder: 4,
     addedAt: '2026-10-27',
   },
   {
@@ -107,7 +107,7 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 10,
     feel: 'Bluffigt',
     playable: true,
-    popularOrder: 4,
+    popularOrder: 2,
     addedAt: '2026-11-01',
     intro: {
       emoji: '🔍',
