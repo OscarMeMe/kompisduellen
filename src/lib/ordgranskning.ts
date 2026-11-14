@@ -75,6 +75,43 @@ export function updateWord(words: readonly ReviewWord[], changed: ReviewWord): R
   return words.map((word, i) => (i === index ? saved : word))
 }
 
+// Ett nytt ords id, i samma format som de andra: små bokstäver utan å, ä och ö, och bindestreck mellan orden
+// ("Allsång på Skansen" blir allsang-pa-skansen). Är id:t upptaget får det en siffra efter sig.
+export function newWordId(ord: string, taken: readonly string[]): string {
+  const base =
+    ord
+      .trim()
+      .toLocaleLowerCase('sv')
+      .replace(/[åä]/g, 'a')
+      .replace(/ö/g, 'o')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'ord'
+  if (!taken.includes(base)) return base
+  let n = 2
+  while (taken.includes(`${base}-${n}`)) n += 1
+  return `${base}-${n}`
+}
+
+// Lägger till ett nytt ord sist i listan, med ett nytt id. Samma regler som när ett ord ändras (wordError), så ett ord
+// som redan finns går inte att lägga till. Kastar ett fel om ordet inte går att spara.
+export function addWord(words: readonly ReviewWord[], fields: Omit<ReviewWord, 'id'>): { words: ReviewWord[]; added: ReviewWord } {
+  const error = wordError({ ...fields, id: '' }, words)
+  if (error) throw new Error(error)
+  const clean = cleanWord({ ...fields, id: '' })
+  const added: ReviewWord = {
+    id: newWordId(clean.ord, words.map((word) => word.id)),
+    ord: clean.ord,
+    kategori: clean.kategori,
+    ledtrad: clean.ledtrad,
+    nara: clean.nara,
+    godkanda: clean.godkanda,
+    svarighet: clean.svarighet,
+  }
+  return { words: [...words, added], added }
+}
+
 // Kastar ett ord: det tas bort ur listan. Ger också ordet och platsen det stod på, så att det går att lägga tillbaka.
 export function removeWord(words: readonly ReviewWord[], id: string): { words: ReviewWord[]; removed: ReviewWord; index: number } {
   const index = words.findIndex((word) => word.id === id)

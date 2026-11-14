@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { WORDS } from '@/lib/imposterjakten'
 import {
+  addWord,
   categoryCounts,
   MIN_PER_CATEGORY,
+  newWordId,
   parseForms,
   removeWord,
   restoreWord,
@@ -69,6 +71,27 @@ describe('granskningen av Imposterjaktens ord', () => {
     expect(saved[1]).toEqual({ id: 'bord', ord: 'Matbord', kategori: 'Saker', ledtrad: 'kök', nara: 'nära-bord', godkanda: ['matbord', 'matbordet'], svarighet: 'latt' })
     expect(() => updateWord(words, word('finns-inte'))).toThrow('Ordet finns inte längre i listan.')
     expect(() => updateWord(words, word('bord', { nara: '' }))).toThrow('Nära-ordet får inte vara tomt.')
+  })
+
+  it('ger ett nytt ord ett id i samma format som de andra', () => {
+    expect(newWordId('Allsång på Skansen', [])).toBe('allsang-pa-skansen')
+    expect(newWordId('Zlatan Ibrahimović', [])).toBe('zlatan-ibrahimovic')
+    expect(newWordId('Stand-up', [])).toBe('stand-up')
+    expect(newWordId(' Ölprovning ', ['olprovning', 'olprovning-2'])).toBe('olprovning-3')
+    // De id:n som redan finns i ordlistan följer samma regel.
+    for (const item of WORDS) expect(newWordId(item.ord, []), item.ord).toBe(item.id)
+  })
+
+  it('lägger till ett nytt ord sist, med samma regler som när ett ord ändras', () => {
+    const words = [word('stol'), word('bord')]
+    const fields = { ord: ' Soffa ', kategori: 'Saker', ledtrad: 'vardagsrum', nara: 'Fåtölj', godkanda: ['soffa', 'soffan'], svarighet: 'mellan' }
+    const { words: more, added } = addWord(words, fields)
+    expect(more.map((item) => item.id)).toEqual(['stol', 'bord', 'soffa'])
+    expect(added).toEqual({ id: 'soffa', ord: 'Soffa', kategori: 'Saker', ledtrad: 'vardagsrum', nara: 'Fåtölj', godkanda: ['soffa', 'soffan'], svarighet: 'mellan' })
+    // Ett ord som redan finns stoppas, utan hänsyn till stora och små bokstäver.
+    expect(() => addWord(words, { ...fields, ord: 'STOL', godkanda: ['stol'] })).toThrow('Ordet finns redan i listan.')
+    expect(() => addWord(words, { ...fields, nara: 'nära-bord' })).toThrow('Nära-ordet används redan av Bord.')
+    expect(() => addWord(words, { ...fields, ledtrad: '' })).toThrow('Ledtråden får inte vara tom.')
   })
 
   it('kastar ett ord och lägger tillbaka det på samma plats', () => {

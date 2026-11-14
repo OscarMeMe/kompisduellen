@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Save, Trash2, TriangleAlert, Undo2 } from 'lucide-react'
+import { Check, Plus, Save, Trash2, TriangleAlert, Undo2 } from 'lucide-react'
 import { Stamp } from '@/components/Stamp'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -9,6 +9,7 @@ import {
   LEVEL_LABELS,
   LEVELS,
   MIN_PER_CATEGORY,
+  newWordId,
   parseForms,
   reviewedCount,
   smallCategories,
@@ -52,6 +53,8 @@ export function OrdGranskningPage() {
   const [thrown, setThrown] = useState<Thrown[]>([])
   // Frågan en gång till innan ett ord kastas ur en kategori som då får för få ord.
   const [confirm, setConfirm] = useState<{ word: ReviewWord; category: string; count: number } | null>(null)
+  // Det tomma kortet för ett nytt ord, med kategorin förvald. null = inget öppet.
+  const [adding, setAdding] = useState<string | null>(null)
 
   useEffect(() => {
     call('/data')
@@ -82,6 +85,15 @@ export function OrdGranskningPage() {
 
   const approve = (id: string, on: boolean) => run(() => call('/godkann', { id, approved: on }), () => remember(id))
   const save = (word: ReviewWord) => run(() => call('/spara', { word }))
+  // Ett nytt ord läggs sist i filen, räknas som godkänt direkt och står kvar i listan oavsett filter.
+  const add = (word: Omit<ReviewWord, 'id'>) =>
+    run(
+      () => call('/lagg-till', { word }),
+      (data) => {
+        remember((data.added as ReviewWord).id)
+        setAdding(null)
+      },
+    )
   const reallyThrow = (word: ReviewWord) =>
     run(
       () => call('/kasta', { id: word.id }),
@@ -116,9 +128,16 @@ export function OrdGranskningPage() {
             <h1 className="text-3xl">Granska orden i Imposterjakten</h1>
             <p className="text-muted-foreground">Bara lokalt. Ändringar skrivs direkt till imposterjakten.json.</p>
           </div>
-          <p className="rounded-full bg-mint-soft px-4 py-2 font-heading text-lg font-bold tabular-nums" role="status">
-            {done} av {words.length} granskade
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="rounded-full bg-mint-soft px-4 py-2 font-heading text-lg font-bold tabular-nums" role="status">
+              {done} av {words.length} granskade
+            </p>
+            {/* Lägg till ord, med kategorin som är vald förvald (annars den första). */}
+            <Button onClick={() => setAdding(category === 'alla' ? (counts[0]?.category ?? '') : category)}>
+              <Plus aria-hidden />
+              {category === 'alla' ? 'Lägg till ord' : `Lägg till ord i ${category}`}
+            </Button>
+          </div>
         </div>
 
         {small.length > 0 && (
@@ -174,6 +193,11 @@ export function OrdGranskningPage() {
           </p>
         )}
       </header>
+
+      {/* Det tomma kortet för ett nytt ord. Ny key när kategorin byts, så att den förvalda kategorin följer med. */}
+      {adding !== null && (
+        <NewWordCard key={adding} category={adding} words={words} categories={counts.map((entry) => entry.category)} onAdd={(word) => void add(word)} onCancel={() => setAdding(null)} />
+      )}
 
       {/* Kastade ord, som går att lägga tillbaka tills sidan laddas om. */}
       {shownThrown.length > 0 && (
@@ -283,45 +307,13 @@ function WordCard({
   const problem = dirty ? wordError(changed, words) : null
   const moving = dirty ? tooSmallAfterMoving(words, word.id, draft.kategori) : null
   const set = (field: keyof typeof draft) => (value: string) => setDraft((now) => ({ ...now, [field]: value }))
-  const select = 'h-11 w-full rounded-md border bg-background px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
 
   return (
     <li className={cn('relative space-y-3 rounded-lg border-2 bg-card p-4 shadow-soft', approved ? 'border-accent' : 'border-border')}>
       {approved && (
         <Stamp className="pointer-events-none absolute top-3 right-3 z-10 border-accent bg-card/85 text-lg text-accent">Godkänd</Stamp>
       )}
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Ordet" className="col-span-2">
-          <Input value={draft.ord} onChange={(event) => set('ord')(event.target.value)} className="font-heading text-lg font-bold" />
-        </Field>
-        <Field label="Kategori">
-          <select value={draft.kategori} onChange={(event) => set('kategori')(event.target.value)} className={select}>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Svårighet">
-          <select value={draft.svarighet} onChange={(event) => set('svarighet')(event.target.value)} className={select}>
-            {LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {LEVEL_LABELS[level]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Ledtråd till impostern (Normal)">
-          <Input value={draft.ledtrad} onChange={(event) => set('ledtrad')(event.target.value)} />
-        </Field>
-        <Field label="Nära-ord (Lurig)">
-          <Input value={draft.nara} onChange={(event) => set('nara')(event.target.value)} />
-        </Field>
-        <Field label="Godkända former, med komma emellan" className="col-span-2">
-          <Input value={draft.godkanda} onChange={(event) => set('godkanda')(event.target.value)} />
-        </Field>
-      </div>
+      <Fields draft={draft} set={set} categories={categories} />
 
       {problem && (
         <p role="alert" className="text-sm font-semibold text-destructive">
@@ -363,6 +355,94 @@ function WordCard({
         </Button>
       </div>
     </li>
+  )
+}
+
+type Draft = { ord: string; kategori: string; ledtrad: string; nara: string; godkanda: string; svarighet: string }
+
+// Fälten på ett kort: ordet, kategorin, svårigheten, ledtråden, nära-ordet och de godkända formerna.
+function Fields({ draft, set, categories }: { draft: Draft; set: (field: keyof Draft) => (value: string) => void; categories: string[] }) {
+  const select = 'h-11 w-full rounded-md border bg-background px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50'
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <Field label="Ordet" className="col-span-2">
+        <Input value={draft.ord} onChange={(event) => set('ord')(event.target.value)} className="font-heading text-lg font-bold" />
+      </Field>
+      <Field label="Kategori">
+        <select value={draft.kategori} onChange={(event) => set('kategori')(event.target.value)} className={select}>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Svårighet">
+        <select value={draft.svarighet} onChange={(event) => set('svarighet')(event.target.value)} className={select}>
+          {LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {LEVEL_LABELS[level]}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Ledtråd till impostern (Normal)">
+        <Input value={draft.ledtrad} onChange={(event) => set('ledtrad')(event.target.value)} />
+      </Field>
+      <Field label="Nära-ord (Lurig)">
+        <Input value={draft.nara} onChange={(event) => set('nara')(event.target.value)} />
+      </Field>
+      <Field label="Godkända former, med komma emellan" className="col-span-2">
+        <Input value={draft.godkanda} onChange={(event) => set('godkanda')(event.target.value)} />
+      </Field>
+    </div>
+  )
+}
+
+// Det tomma kortet för ett nytt ord, med kategorin förvald. Samma regler och felmeddelanden som när ett ord ändras,
+// och ett ord som redan finns i listan stoppas (utan hänsyn till stora och små bokstäver). Sparas ordet läggs det sist
+// i filen med ett nytt id och räknas som godkänt direkt.
+function NewWordCard({
+  category,
+  words,
+  categories,
+  onAdd,
+  onCancel,
+}: {
+  category: string
+  words: readonly ReviewWord[]
+  categories: string[]
+  onAdd: (word: Omit<ReviewWord, 'id'>) => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState<Draft>({ ord: '', kategori: category, ledtrad: '', nara: '', godkanda: '', svarighet: 'mellan' })
+  const set = (field: keyof Draft) => (value: string) => setDraft((now) => ({ ...now, [field]: value }))
+  const fields = { ord: draft.ord, kategori: draft.kategori, ledtrad: draft.ledtrad, nara: draft.nara, godkanda: parseForms(draft.godkanda), svarighet: draft.svarighet }
+  // Felet visas först när något är ifyllt, så att det tomma kortet inte börjar med en varning.
+  const started = [draft.ord, draft.ledtrad, draft.nara, draft.godkanda].some((text) => text.trim() !== '')
+  const problem = wordError({ ...fields, id: '' }, words)
+  return (
+    <section aria-label="Nytt ord" className="space-y-3 rounded-lg border-2 border-primary bg-card p-4 shadow-soft">
+      <h2 className="text-xl">Nytt ord</h2>
+      <Fields draft={draft} set={set} categories={categories} />
+      <p className="text-sm text-muted-foreground">
+        Ordet läggs sist i imposterjakten.json, får ett eget id{draft.ord.trim() ? ` (${newWordId(draft.ord, words.map((word) => word.id))})` : ''} och räknas som godkänt direkt.
+      </p>
+      {started && problem && (
+        <p role="alert" className="text-sm font-semibold text-destructive">
+          {problem}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={problem !== null} onClick={() => onAdd(fields)}>
+          <Save aria-hidden />
+          Spara nytt ord
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          Avbryt
+        </Button>
+      </div>
+    </section>
   )
 }
 

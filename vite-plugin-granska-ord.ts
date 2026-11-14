@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { removeWord, restoreWord, serializeWords, setApproved, updateWord, type ReviewWord, type WordFiles, type WordReviews } from './src/lib/ordgranskning.ts'
+import { addWord, removeWord, restoreWord, serializeWords, setApproved, updateWord, type ReviewWord, type WordFiles, type WordReviews } from './src/lib/ordgranskning.ts'
 
 // Läser och skriver Imposterjaktens ordlista åt granskningssidan (/granska-ord). Körs bara av dev-servern
 // (apply: 'serve'), så varken sidan eller omdömena följer med när sajten byggs.
@@ -79,6 +79,15 @@ export function granskaOrdPlugin(): Plugin {
             const words = updateWord(files.words, word)
             writeWords(words)
             send(res, 200, { words, reviews: files.reviews })
+          } else if (req.method === 'POST' && req.url === '/lagg-till') {
+            // Ett nytt ord läggs sist i ordlistan och räknas som godkänt direkt.
+            const { word } = (await readBody(req)) as { word: Omit<ReviewWord, 'id'> }
+            const files = readFiles()
+            const { words, added } = addWord(files.words, word)
+            const reviews = setApproved(files.reviews, added.id, true, new Date())
+            writeWords(words)
+            writeReviews(reviews)
+            send(res, 200, { words, reviews, added })
           } else if (req.method === 'POST' && req.url === '/kasta') {
             // Ordet tas bort ur ordlistan. Svaret har ordet och platsen, så att sidan kan lägga tillbaka det.
             const { id } = (await readBody(req)) as { id: string }
