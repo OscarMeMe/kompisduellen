@@ -293,9 +293,11 @@
        undantag från regeln om korta rörelser, och rörelsen slutar där den började. */
     --animate-tag-swing: tag-swing 1.2s ease-out;
     --animate-tag-roll: tag-roll 1.1s cubic-bezier(0.25, 0.7, 0.3, 1);
-    /* animate-detektiv: Imposterjaktens spelkort. Lampan blinkar till och tänds, och detektiven hajar till. Också ett
-       undantag från regeln om korta rörelser, som de andra spelkorten. */
-    --animate-detektiv: detektiv 0.9s ease-out;
+    /* Imposterjaktens spelkort: ljuskäglan söker över kortet och landar på detektiven (kagla-sok, käglan lutas från
+       lampan så att golvet ligger still), och detektiven står i dunklet tills ljuset landar och hajar då till
+       (detektiv). Också ett undantag från regeln om korta rörelser, och den spelas bara en gång åt gången. */
+    --animate-kagla-sok: kagla-sok 1.5s ease-in-out;
+    --animate-detektiv: detektiv 1.9s ease-out;
     /* Avslöjandet vid Imposterjaktens bord: rummet mörknar en stund (lights-out) och ljuskäglan tänds på impostern
        (spot-in). Med fördröjning (--d) så att rösterna hinner ritas först. */
     --animate-lights-out: lights-out 1.5s ease-in-out both;
@@ -620,13 +622,18 @@
         100% { opacity: 1; }
     }
 
+    @keyframes kagla-sok {
+        0% { transform: skewX(-31deg); }
+        30% { transform: skewX(-17deg); }
+        65% { transform: skewX(24deg); }
+        100% { transform: skewX(0deg); }
+    }
+
     @keyframes detektiv {
-        0% { opacity: 0.15; translate: 0 0; }
-        12% { opacity: 0.9; }
-        22% { opacity: 0.3; }
-        36% { opacity: 1; translate: 0 0; rotate: 0deg; }
-        55% { translate: 0 -5px; rotate: -3deg; }
-        75% { translate: 0 0; rotate: 2deg; }
+        0%, 74% { opacity: 0.5; translate: 0 0; rotate: 0deg; }
+        79% { opacity: 1; translate: 0 0; rotate: 0deg; }
+        86% { translate: 0 -5px; rotate: -3deg; }
+        94% { translate: 0 0; rotate: 2deg; }
         100% { opacity: 1; translate: 0 0; rotate: 0deg; }
     }
 

@@ -74,14 +74,22 @@ const PREVIEWS: Record<string, ReactNode> = {
     </div>
   ),
   imposterjakten: (
-    // Detektiven i ljuskäglan (stilen Nattspanarna). Lampan blinkar till och tänds, och detektiven hajar till.
-    <img
-      src="/images/imposterjakten/spelkort-detektiv.webp"
-      alt=""
-      width={420}
-      height={463}
-      className="-mt-5 -mb-2 h-28 w-auto origin-bottom motion-safe:group-hover:animate-detektiv motion-safe:group-data-[play=true]:animate-detektiv"
-    />
+    // Detektiven i ljuskäglan (stilen Nattspanarna). Käglan ritas här i lampgult och söker över kortet innan den landar
+    // på detektiven, som står i dunklet så länge och hajar till när ljuset träffar. Utan rörelse står käglan på detektiven.
+    <svg viewBox="0 0 200 120" className="-mt-5 -mb-2 h-28 w-auto overflow-visible">
+      <path
+        d="M100 -44 L20 107 A80 11 0 0 0 180 107 Z"
+        className="origin-[100px_-44px] fill-[var(--natt-lampa)] motion-safe:group-hover:animate-kagla-sok motion-safe:group-data-[play=true]:animate-kagla-sok"
+      />
+      <image
+        href="/images/imposterjakten/spelkort-detektiv.webp"
+        x="53.5"
+        y="21"
+        width="93"
+        height="96"
+        className="origin-bottom [transform-box:fill-box] motion-safe:group-hover:animate-detektiv motion-safe:group-data-[play=true]:animate-detektiv"
+      />
+    </svg>
   ),
   tantpanik: (
     // Loggan till vänster och riktiga kortbilder i en liten solfjäder: två baksidor och den exploderande tanten överst.
@@ -252,7 +260,7 @@ const NATT_CARD_BACKGROUND = {
   backgroundSize: 'auto, 240px 240px',
 }
 
-// Så länge räknas animationen som igång. Spotlighten i Imposterjakten är längst.
+// Så länge räknas animationen som igång. Ljuskäglan i Imposterjakten är längst.
 const PLAY_MS = 2000
 
 // Illustrationens animation spelas en gång när kortet kommer in i bild, och på pekskärmar (utan hover) igen när man

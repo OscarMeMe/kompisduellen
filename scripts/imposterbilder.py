@@ -5,7 +5,8 @@ Läser originalen i docs/skisser/imposterjakten/ (ändras aldrig) och skriver We
 - logga.webp och logga-800.webp: loggan med genomskinlig bakgrund, beskuren till det som syns, i två storlekar.
 - monster-mork.webp: mönstret för väntrummet och bordet, på spelets marinblå.
 - monster-ljus.webp: mönstret för spelkortet på startsidan, på spelets krämvita.
-- spelkort-detektiv.webp: detektiven i ljuskäglan, bilden på spelkortet på startsidan.
+- spelkort-detektiv.webp: detektiven utan ljuskägla, beskuren till figuren, till spelkortet på startsidan (käglan ritas i
+  koden, så att den kan söka över kortet).
 - fallet-avslutat.webp och fallet-avslutat-720.webp: mappen med stämpeln, till slutskärmen.
 
 Mönstren är 512 × 512 och sömlösa. Originalen är det inte: figurer skärs av i kanterna och bakgrunden är inte helt
@@ -45,7 +46,7 @@ LOGO_PAD = 0.012
 # Genomskinliga bilder: originalet och målfilerna med bredd (px). De beskärs till det som syns (alfa över ALPHA_EDGE, så
 # att svagt skräp längs kanten inte räknas) och skalas ned.
 PICTURES = [
-    ('spelkort-detektiv.png', {'spelkort-detektiv.webp': 420}),
+    ('spelkort-detektiv-utan-kagla.png', {'spelkort-detektiv.webp': 420}),
     ('fallet-avslutat.png', {'fallet-avslutat.webp': 1200, 'fallet-avslutat-720.webp': 720}),
 ]
 ALPHA_EDGE = 40
