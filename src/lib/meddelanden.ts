@@ -172,6 +172,13 @@ const isTantTable = (value: unknown): value is TantTable =>
 
 const isImposterSettings = shape({ hard: isBoolean, category: orNull(isString), aloud: isBoolean })
 
+const isImposterRound = shape({
+  word: isString,
+  imposter: isString,
+  kind: (kind: unknown) => kind === 'undan' || kind === 'gissade-ratt' || kind === 'gissade-fel' || kind === 'gav-upp',
+  guess: orNull(isString),
+  votes: recordOf(isString),
+})
 const isGameState = shape({
   game: isString,
   phase: (phase) => isString(phase) && PHASES.includes(phase),
@@ -205,7 +212,12 @@ const isGameState = shape({
   imposter: orNull(isImposterTable),
   imposterSettings: isImposterSettings,
   usedWordIds: listOf(isString),
-  imposterMatch: shape({ wordIds: listOf(isString), imposterCounts: recordOf(isNumber) }),
+  imposterMatch: shape({
+    wordIds: listOf(isString),
+    imposterCounts: recordOf(isNumber),
+    // Omgångarna till slutskärmen. Saknas hos en värd med en äldre version.
+    history: (history: unknown) => history === undefined || listOf(isImposterRound)(history),
+  }),
   tantpanik: orNull(isTantTable),
   tantSettings: shape({ trap: isBoolean, level: (level: unknown) => level === undefined || isTantLevel(level) }),
   matchPlayerIds: listOf(isString),

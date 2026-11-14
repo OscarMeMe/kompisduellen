@@ -268,6 +268,8 @@
     --animate-slut-smoke: slut-smoke 1.3s ease-out both;
     --animate-slut-pop: slut-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
     --animate-slut-up: slut-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+    /* animate-mapp-landar: mappen "Fallet avslutat" faller ned och landar på bordet (Imposterjaktens slutskärm). */
+    --animate-mapp-landar: mapp-landar 0.65s cubic-bezier(0.3, 0.7, 0.3, 1) both;
     --animate-slut-flip: slut-flip 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
     --animate-slut-fade: slut-fade 0.5s ease-out both;
     --animate-slut-boom: slut-boom 0.5s ease-out both;
@@ -860,6 +862,25 @@
       100% {
         opacity: 1;
         transform: scale(1);
+      }
+    }
+    @keyframes mapp-landar {
+      0% {
+        opacity: 0;
+        transform: translateY(-70vh) rotate(-22deg) scale(1.35);
+      }
+      25% {
+        opacity: 1;
+      }
+      72% {
+        transform: translateY(0) rotate(2deg) scale(1.04, 0.94);
+      }
+      86% {
+        transform: translateY(-6px) rotate(-1deg) scale(0.99, 1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) rotate(0) scale(1);
       }
     }
     @keyframes slut-up {
