@@ -2,9 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Stjarnstank } from '@/components/Stjarnstank'
 import { TantBaksida, TantKort } from '@/components/tantpanik/TantKort'
 import { useReactions } from '@/hooks/useReactions'
+import { useSkipGuard } from '@/hooks/useSkipGuard'
+import { BOMB_RESULT_MS, BOMB_SKIP_AFTER_MS, skipDelay } from '@/lib/hoppaover'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { Stamp } from '@/components/Stamp'
-import { loadSoundOn, playBoom, playTurn } from '@/lib/ljud'
+import { loadSoundOn, playBoom } from '@/lib/ljud'
+import { playTantSound } from '@/lib/tantljud'
 import { tantMusic } from '@/lib/tantmusik'
 import { cn } from '@/lib/utils'
 import type { GameState } from '@/lib/match'
@@ -148,6 +151,8 @@ export function TableAnimations({
     setLanding(null)
     onIncoming(null)
   }
+  // Ett tryck hoppar över, men aldrig ett tryck som var på väg när kortet visades (t.ex. trycket på Dra!).
+  const showGuard = useSkipGuard(finish, undefined, show?.n ?? null)
 
   // Kortet visas en stund och glider sedan ner till handen (tanten tonas bort).
   useEffect(() => {
@@ -193,6 +198,7 @@ export function TableAnimations({
           name={name(bomb.player)}
           avatar={state.players[bomb.player]?.avatar ?? ''}
           soundOn={soundOn}
+          last={!!state.tantpanik?.winner}
           onShake={() => onShake(bomb.n)}
           onDone={() => setBomb((current) => (current?.n === bomb.n ? null : current))}
         />
@@ -231,7 +237,7 @@ export function TableAnimations({
             (leaving ? 'bg-transparent' : 'bg-foreground/45 motion-safe:animate-fade')
           }
           // Ett tryck hoppar över animationen: mitt kort hamnar direkt i handen.
-          onClick={finish}
+          {...showGuard}
         >
           <div
             key={show.n}
@@ -369,13 +375,15 @@ function FlyingCard({ flight }: { flight: Flight }) {
 // En exploderande tant, för alla: kortet lyfts från högen och vänds stort i mitten, skärmen blinkar och skakar, det
 // smäller och BOOM! slås ned. Med Desarmera flyger Desarmera-kortet upp (ur min hand, eller från spelarens plats) och
 // smäller ned ovanpå tanten med "Räddad!". Utan blir skärmen grå, och spelarens figur får en smäll och blir grå. Ett
-// tryck hoppar över. Med "minska rörelse" blinkar och skakar inget, men texterna och ordningen är desamma.
+// tryck hoppar över, men tidigast efter 1,5 s, och resultatet syns alltid i minst en sekund (hoppaover.ts). Med "minska
+// rörelse" blinkar och skakar inget, men texterna, ordningen och tiderna är desamma.
 function BombShow({
   bomb,
   meId,
   name,
   avatar,
   soundOn,
+  last,
   onShake,
   onDone,
 }: {
@@ -384,6 +392,8 @@ function BombShow({
   name: string
   avatar: string
   soundOn: boolean
+  // Matchens sista explosion: vinnarens jubel kommer strax efter, så trombonen spelas inte.
+  last: boolean
   onShake: () => void
   onDone: () => void
 }) {
@@ -397,7 +407,19 @@ function BombShow({
   })
   const reduced = reducedMotion()
   const mine = bomb.player === meId
+  // Ett tryck hoppar över, men inte de första BOMB_SKIP_AFTER_MS och aldrig ett tryck som var på väg när explosionen
+  // visades. Även då står tanten och resultatet ("Räddad!", "exploderade!") kvar i minst BOMB_RESULT_MS, så att ingen
+  // missar att den exploderat. Tiderna är desamma med "minska rörelse".
+  const startedRef = useRef(0)
+  const skippingRef = useRef(false)
+  const skipGuard = useSkipGuard(() => {
+    if (skippingRef.current) return
+    skippingRef.current = true
+    const elapsed = performance.now() - startedRef.current
+    setTimeout(onDone, skipDelay(elapsed, bomb.saved ? DEFUSE_AT : OUT_AT, BOMB_RESULT_MS))
+  }, BOMB_SKIP_AFTER_MS)
   useEffect(() => {
+    startedRef.current = performance.now()
     const timers = [
       setTimeout(() => {
         setStage('boom')
@@ -418,9 +440,15 @@ function BombShow({
             requestAnimationFrame(() => requestAnimationFrame(() => setDefuse('landed')))
             if (soundOn)
               setTimeout(() => {
-                tantMusic.duck()
-                playTurn()
+                // Lättnaden är drygt 2 s lång.
+                tantMusic.duck(2000)
+                playTantSound('desarmera')
               }, 350)
+          }
+          // Ute: en sorglig trombon (knappt 4 s).
+          if (!bomb.saved && soundOn && !last) {
+            tantMusic.duck(3500)
+            playTantSound('utslagen')
           }
         },
         bomb.saved ? DEFUSE_AT : OUT_AT,
@@ -455,7 +483,7 @@ function BombShow({
         'fixed inset-0 z-[56] flex flex-col items-center justify-center gap-3 px-3 transition-[background-color,backdrop-filter] duration-500',
         out ? 'bg-foreground/70 backdrop-grayscale' : 'bg-foreground/55',
       )}
-      onClick={onDone}
+      {...skipGuard}
     >
       {/* Skärmen blinkar till när det smäller. */}
       <div aria-hidden className={cn('pointer-events-none fixed inset-0 bg-background transition-opacity duration-300', flash ? 'opacity-90 duration-0' : 'opacity-0')} />
@@ -543,11 +571,13 @@ function StolenShow({
     // En gång per stöld.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // Ett tryck stänger rutan, men aldrig ett tryck som var på väg när den visades.
+  const skipGuard = useSkipGuard(onDone)
   return (
     <div
       role="status"
       className="pointer-events-auto fixed inset-x-3 top-1/2 z-[55] mx-auto flex max-w-sm -translate-y-1/2 flex-col items-center gap-2 rounded-3xl border-4 border-destructive bg-card px-4 py-4 text-center shadow-lift motion-safe:animate-pop"
-      onClick={onDone}
+      {...skipGuard}
     >
       <p className="flex items-center gap-2 font-heading text-xl leading-tight font-bold sm:text-2xl">
         <LobbyFigur playerId={playerId} avatar={avatar} className="shrink-0 text-4xl" />
@@ -572,8 +602,10 @@ function TrapShow({ text, soundOn, onShake, onDone }: { text: string; soundOn: b
     // En gång per fälla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // Ett tryck hoppar över, men aldrig ett tryck som var på väg när fällan visades.
+  const skipGuard = useSkipGuard(onDone)
   return (
-    <div role="status" className="fixed inset-0 z-[56] flex flex-col items-center justify-center gap-3 bg-foreground/55 px-3 motion-safe:animate-fade" onClick={onDone}>
+    <div role="status" className="fixed inset-0 z-[56] flex flex-col items-center justify-center gap-3 bg-foreground/55 px-3 motion-safe:animate-fade" {...skipGuard}>
       <div className="relative">
         <TantKort type="snara" size="zoom" sizes="320px" className="w-[min(70vw,calc((100dvh-12rem)*107/147),320px)] drop-shadow-[0_18px_28px_rgb(0_0_0/0.45)] motion-safe:animate-pop" />
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center">

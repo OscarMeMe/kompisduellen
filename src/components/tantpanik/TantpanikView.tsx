@@ -18,7 +18,9 @@ import { Konfetti } from '@/components/Konfetti'
 import { tantMusic } from '@/lib/tantmusik'
 import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
-import { loadSoundOn, playBullseye, saveSoundOn } from '@/lib/ljud'
+import { loadSoundOn, saveSoundOn } from '@/lib/ljud'
+import { loadTantSounds, markWinHeard, playTantSound, winSoundKey, type TantSound } from '@/lib/tantljud'
+import { useSkipGuard } from '@/hooks/useSkipGuard'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -49,6 +51,11 @@ const NOTICE_MS = 2500
 // högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
 // Prispallen efteråt är gemensam för alla spel.
 // onBotsOnly: värden spolar fram eller tar revansch direkt när bara botar är kvar (se fastForwardBots).
+// Så länge ska vinnaren ha visats innan jublet spelas (ms), så att en vy som bara blinkar till inte låter.
+const WIN_SOUND_AFTER_MS = 200
+// Så långt efter draget vänds kortet jag drog upp (ms), och då spelas ljudet.
+const CARD_FLIP_SOUND_MS = 250
+
 export function TantpanikView({
   state,
   me,
@@ -179,6 +186,31 @@ export function TantpanikView({
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])
   useEffect(() => () => tantMusic.setWanted(false), [])
+  // Spelets ljud från filer (tantljud.ts) hämtas när bordet visas, och spelas när något händer vid bordet: ett kort dras
+  // (och mitt eget vänds upp), ett kort läggs, ett kort byter hand och högen blandas. Det som redan hänt när bordet
+  // visas (t.ex. efter en omladdning) låter inte. Desarmera och vinsten spelas där de visas (BombShow,
+  // WinnerCelebration).
+  useEffect(() => loadTantSounds(), [])
+  const heardRef = useRef<{ action: number; event: number } | null>(null)
+  useEffect(() => {
+    if (!table) return
+    const action = table.lastAction
+    const heard = heardRef.current
+    heardRef.current = { action: action?.n ?? 0, event: table.log.at(-1)?.n ?? 0 }
+    if (!heard || !soundOn) return
+    const play = (sound: TantSound, after = 0) =>
+      setTimeout(() => {
+        if (playTantSound(sound)) tantMusic.duck(400)
+      }, after)
+    if (action && action.n !== heard.action) {
+      if (action.kind === 'draw' || action.kind === 'bomb') play('dra')
+      // Kortet jag drog lyfts och vänds upp.
+      if (action.kind === 'draw' && action.player === me.id) play('vanda', CARD_FLIP_SOUND_MS)
+      if (action.kind === 'play') play('lagga')
+      if (action.kind === 'take') play('stjala')
+    }
+    if (table.log.some((event) => event.n > heard.event && event.deck === 'shuffle')) play('blanda')
+  }, [table, soundOn, me.id])
   // Lite snabbare när det är få kort kvar i högen, eller bara två kvar av fler.
   const tense = !!table && (table.deckCount <= 8 || (table.order.length > 2 && table.order.length - table.out.length === 2))
   useEffect(() => tantMusic.setFast(tense), [tense])
@@ -489,6 +521,7 @@ export function TantpanikView({
         <WinnerCelebration
           state={state}
           winner={table.winner}
+          soundKey={winSoundKey(table)}
           meId={me.id}
           canSkip={inMatch}
           // Tidigast FINISH_AFTER_MS efter vinsten (värdens klocka), så att alla hinner se slutet.
@@ -519,6 +552,7 @@ export function TantpanikView({
 function WinnerCelebration({
   state,
   winner,
+  soundKey,
   meId,
   canSkip: inMatch,
   skipAt,
@@ -527,6 +561,8 @@ function WinnerCelebration({
 }: {
   state: GameState
   winner: string
+  // Matchens vinst, så att jublet bara spelas en gång (markWinHeard).
+  soundKey: string
   meId: string
   canSkip: boolean
   // Värdens klocka när det går att hoppa vidare, och skillnaden mellan min klocka och värdens.
@@ -543,11 +579,18 @@ function WinnerCelebration({
   const canSkip = inMatch && waited
   const reactions = useReactions()
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
+  // Jublet spelas exakt en gång per vinst, när vinnaren visas. Vyn kan blinka till innan den sista explosionen visas
+  // (då tas den bort direkt igen), så ljudet väntar ett ögonblick, och samma vinst låter aldrig två gånger, inte heller
+  // efter en omladdning (markWinHeard).
   useEffect(() => {
-    if (soundOn) {
-      tantMusic.duck(1500)
-      playBullseye()
-    }
+    if (!soundOn) return
+    const timer = setTimeout(() => {
+      if (!markWinHeard(soundKey)) return
+      // Jublet är cirka 2 s långt.
+      tantMusic.duck(2500)
+      playTantSound('vinst')
+    }, WIN_SOUND_AFTER_MS)
+    return () => clearTimeout(timer)
     // Bara en gång.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1489,11 +1532,13 @@ function DealIntro({ state, table, meId }: { state: GameState; table: TantTable;
     const timer = setTimeout(() => setStage('done'), START_BANNER_MS)
     return () => clearTimeout(timer)
   }, [stage])
+  // Ett tryck hoppar över, men aldrig ett tryck som var på väg när utdelningen började (t.ex. trycket på Starta).
+  const skipGuard = useSkipGuard(() => setStage('done'))
   if (stage === 'done') return null
   const starter = table.order[0]
   const width = 56
   return (
-    <button type="button" aria-label="Hoppa över utdelningen" onClick={() => setStage('done')} className="fixed inset-0 z-[58] cursor-default">
+    <button type="button" aria-label="Hoppa över utdelningen" {...skipGuard} className="fixed inset-0 z-[58] cursor-default">
       {stage === 'deal' &&
         flights.map((flight) => (
           <span
