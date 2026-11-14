@@ -1189,7 +1189,8 @@ describe('Imposterjakten: hur långt spelet blir', () => {
     const almostAll = WORDS.slice(0, WORDS.length - 4).map((word) => word.id)
     expect(wordsRunningOutText(DEFAULT_SETTINGS, 5, almostAll)).toBe('Ni har redan spelat de flesta orden, så ord kan komma tillbaka.')
     const kategori = 'Mat och fika'
-    const usedInCategory = WORDS.filter((word) => word.kategori === kategori).slice(0, 22).map((word) => word.id)
+    // Alla utom tre i kategorin är spelade, hur många ord den än har.
+    const usedInCategory = WORDS.filter((word) => word.kategori === kategori).slice(0, -3).map((word) => word.id)
     expect(wordsRunningOutText({ ...DEFAULT_SETTINGS, category: kategori }, 5, usedInCategory)).toBe(
       'Ni har redan spelat de flesta orden i kategorin, så ord kan komma tillbaka.',
     )
