@@ -14,6 +14,8 @@ export type LobbyTheme = {
   lines: readonly string[]
   // Ikonen som rör sig sakta i rubrikraden (en emoji, som Emoji visar).
   icon: string
+  // Spelets egen bild i stället för emojin, när spelet har en (icon i games.ts).
+  image?: string
 }
 
 export const LOBBY_THEMES: Record<string, LobbyTheme> = {
@@ -60,7 +62,8 @@ export const LOBBY_LINE_MS = 3000
 
 // Temat för ett spel. Spel utan eget tema får rubriken Spelare, spelets egen ikon och inga repliker.
 export function lobbyThemeFor(game: GameInfo): LobbyTheme {
-  return LOBBY_THEMES[game.id] ?? { playersTitle: 'Spelare', lines: [], icon: game.emoji }
+  const theme = LOBBY_THEMES[game.id] ?? { playersTitle: 'Spelare', lines: [], icon: game.emoji }
+  return game.icon ? { ...theme, image: game.icon } : theme
 }
 
 // Väntrummets status i klartext. tooMany kommer från tooManyPlayers i match.ts (bara spel med en hård gräns).

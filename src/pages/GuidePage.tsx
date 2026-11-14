@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
+import { SpelIkon } from '@/components/SpelIkon'
 import { Button } from '@/components/ui/button'
 import { findGame, playersLabel } from '@/lib/games'
 import type { GuidePageInfo } from '@/lib/guider'
@@ -102,7 +102,7 @@ export function GuidePage({ page }: { page: GuidePageInfo }) {
               <li key={item.gameId} className="space-y-3 rounded-lg border bg-card p-5 shadow-soft-sm">
                 <div className="flex items-center gap-3">
                   <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-2xl', game.color)}>
-                    <Emoji emoji={game.emoji} />
+                    <SpelIkon game={game} />
                   </span>
                   <h3 className="text-xl leading-tight">
                     {gamePage ? (

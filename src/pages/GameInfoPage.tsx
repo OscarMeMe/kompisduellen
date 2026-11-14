@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Clock, Play, Users } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
+import { SpelIkon } from '@/components/SpelIkon'
 import { Button } from '@/components/ui/button'
 import { findGame, playersLabel } from '@/lib/games'
 import { GUIDE_PAGES } from '@/lib/guider'
@@ -61,7 +61,7 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
           </div>
         ) : (
           <div className={cn('flex h-24 items-center justify-center sm:h-28', game.color)}>
-            <Emoji emoji={game.emoji} className="text-5xl sm:text-6xl" />
+            <SpelIkon game={game} className="text-5xl sm:text-6xl" />
           </div>
         )}
         <div className="space-y-5 p-5 sm:p-8">
@@ -171,7 +171,7 @@ export function GameInfoPage({ page }: { page: GamePageInfo }) {
                       otherGame.color,
                     )}
                   >
-                    <Emoji emoji={otherGame.emoji} />
+                    <SpelIkon game={otherGame} />
                   </span>
                   <span className="min-w-0">
                     <span className="block font-heading text-lg leading-tight font-bold">{otherGame.name}</span>

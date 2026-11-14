@@ -7,6 +7,8 @@ export type GameInfo = {
   // En kort regelmening som visas under nedräkningen innan första rundan.
   quickRule?: string
   emoji: string
+  // Spelets egen bild i stället för emojin där ikonen visas i liten storlek (SpelIkon). 256 × 256, från scripts/spelikoner.py.
+  icon?: string
   color: string // Tailwind-klass för kortets pastellfärg
   // Minsta antal spelare för en vanlig match. Det finns ingen övre gräns i lobbyn.
   minPlayers: number
@@ -99,6 +101,7 @@ export const GAMES: GameInfo[] = [
     tagline: 'Alla utom en får ett hemligt ord. Ge ledtrådar och avslöja den som bluffar.',
     quickRule: 'Alla utom en har samma ord. Ge ett ord var och lista ut vem som bluffar.',
     emoji: '🔍',
+    icon: '/images/imposterjakten/ikon.webp',
     color: 'bg-mint-soft',
     minPlayers: 3,
     maxPlayers: 10,
@@ -126,6 +129,7 @@ export const GAMES: GameInfo[] = [
     tagline: 'Dra kort och håll tummarna. Den som drar en exploderande tant utan Desarmera-kort åker ut.',
     quickRule: 'Spela kort och dra ur högen. Drar du en exploderande tant utan Desarmera-kort är du ute.',
     emoji: '💥',
+    icon: '/images/tantpanik/ikon.webp',
     color: 'bg-sky-soft',
     minPlayers: 2,
     maxPlayers: 10,

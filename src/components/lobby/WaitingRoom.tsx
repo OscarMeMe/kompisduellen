@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
-import { Emoji } from '@/components/Emoji'
+import { SpelIkon } from '@/components/SpelIkon'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { Choice, NextQuestionChoice } from '@/components/lobby/Choice'
@@ -315,7 +315,7 @@ export function WaitingRoom({
                       )}
                     >
                       <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-md text-2xl', option.color)}>
-                        <Emoji emoji={option.emoji} />
+                        <SpelIkon game={option} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block font-heading text-base font-bold">{option.name}</span>

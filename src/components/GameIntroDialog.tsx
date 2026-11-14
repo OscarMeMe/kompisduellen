@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { Emoji } from '@/components/Emoji'
+import { SpelIkon } from '@/components/SpelIkon'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { playersLabel, type GameInfo } from '@/lib/games'
@@ -25,7 +25,7 @@ export function GameIntroDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-5 sm:max-w-md">
         <div className={cn('-mx-6 -mt-6 flex justify-center rounded-t-lg py-6', game.color)}>
-          <Emoji emoji={game.intro?.emoji ?? game.emoji} className="animate-pop text-7xl" />
+          <SpelIkon game={{ emoji: game.intro?.emoji ?? game.emoji, icon: game.icon }} className="animate-pop text-7xl" />
         </div>
         <div className="space-y-2 text-center">
           <DialogTitle className="text-2xl leading-tight font-bold">{game.name}</DialogTitle>
