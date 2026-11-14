@@ -11,6 +11,7 @@
 //   att tanten ligger överst (Se framtiden, eller för att den själv gömde den där) drar den aldrig om den har ett
 //   skyddskort. Nope! mot attacker och stölder mot sig, gömmer tanten på en slumpad plats (oftast överst, se
 //   placeTantPosition), och stjäl från den som har flest kort utan att slösa Nope! eller Desarmera.
+// Ingen bot spelar Blanda när högen har färre än två kort (SHUFFLE_MIN_DECK), eftersom det inte ändrar något.
 // - Svår: som Normal, men tar risken på större allvar, och försöker skicka tanten vidare: lägger den överst med Ändra
 //   framtiden innan den spelar Hoppa över eller Attack. Ber om Desarmera med tretal.
 
@@ -148,8 +149,13 @@ function findCombo(hand: TantCard[], size: 2 | 3, careful: boolean): TantCard[] 
   return null
 }
 
+// Så många kort måste ligga i draghögen för att det ska vara någon mening med att blanda den.
+export const SHUFFLE_MIN_DECK = 2
+
 function playSingle(table: TantTable, me: string, card: TantCard, random: Random, smart: boolean): TantMove | null {
   if (!playableAlone(card.type)) return null
+  // Att blanda en hög med ett enda kort ändrar ingenting.
+  if (card.type === 'blanda' && table.deckCount < SHUFFLE_MIN_DECK) return null
   if (card.type === 'dudar') {
     const targets = validTargets(table, me, false)
     if (targets.length === 0) return null

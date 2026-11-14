@@ -19,7 +19,7 @@ import { tantMusic } from '@/lib/tantmusik'
 import { SoundControl } from '@/components/lobby/LjudKnapp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
 import { loadSoundOn, saveSoundOn } from '@/lib/ljud'
-import { loadTantSounds, playTantSound, type TantSound } from '@/lib/tantljud'
+import { loadTantSounds, markWinHeard, playTantSound, winSoundKey, type TantSound } from '@/lib/tantljud'
 import { useThrowWait } from '@/hooks/useThrowWait'
 import { THROW_ITEMS } from '@/lib/kast'
 import type { GameState } from '@/lib/match'
@@ -50,6 +50,8 @@ const NOTICE_MS = 2500
 // högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
 // Prispallen efteråt är gemensam för alla spel.
 // onBotsOnly: värden spolar fram eller tar revansch direkt när bara botar är kvar (se fastForwardBots).
+// Så länge ska vinnaren ha visats innan jublet spelas (ms), så att en vy som bara blinkar till inte låter.
+const WIN_SOUND_AFTER_MS = 200
 // Så långt efter draget vänds kortet jag drog upp (ms), och då spelas ljudet.
 const CARD_FLIP_SOUND_MS = 250
 
@@ -518,6 +520,7 @@ export function TantpanikView({
         <WinnerCelebration
           state={state}
           winner={table.winner}
+          soundKey={winSoundKey(table)}
           meId={me.id}
           canSkip={inMatch}
           // Tidigast FINISH_AFTER_MS efter vinsten (värdens klocka), så att alla hinner se slutet.
@@ -548,6 +551,7 @@ export function TantpanikView({
 function WinnerCelebration({
   state,
   winner,
+  soundKey,
   meId,
   canSkip: inMatch,
   skipAt,
@@ -556,6 +560,8 @@ function WinnerCelebration({
 }: {
   state: GameState
   winner: string
+  // Matchens vinst, så att jublet bara spelas en gång (markWinHeard).
+  soundKey: string
   meId: string
   canSkip: boolean
   // Värdens klocka när det går att hoppa vidare, och skillnaden mellan min klocka och värdens.
@@ -572,12 +578,18 @@ function WinnerCelebration({
   const canSkip = inMatch && waited
   const reactions = useReactions()
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
+  // Jublet spelas exakt en gång per vinst, när vinnaren visas. Vyn kan blinka till innan den sista explosionen visas
+  // (då tas den bort direkt igen), så ljudet väntar ett ögonblick, och samma vinst låter aldrig två gånger, inte heller
+  // efter en omladdning (markWinHeard).
   useEffect(() => {
-    if (soundOn) {
+    if (!soundOn) return
+    const timer = setTimeout(() => {
+      if (!markWinHeard(soundKey)) return
       // Jublet är cirka 2 s långt.
       tantMusic.duck(2500)
       playTantSound('vinst')
-    }
+    }, WIN_SOUND_AFTER_MS)
+    return () => clearTimeout(timer)
     // Bara en gång.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

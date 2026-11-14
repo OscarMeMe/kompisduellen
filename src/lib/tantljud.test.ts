@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickVariant, playTantSound, TANT_SOUND_FILES, TANT_SOUNDS } from '@/lib/tantljud'
+import { markWinHeard, pickVariant, playTantSound, TANT_SOUND_FILES, TANT_SOUNDS, winSoundKey } from '@/lib/tantljud'
 
 // Alla ljudfiler för spelet i public, som sökvägar på sajten (/ljud/tantpanik/…).
 const files = Object.keys(import.meta.glob('/public/ljud/tantpanik/*.mp3')).map((path) => path.replace('/public', ''))
@@ -36,5 +36,21 @@ describe('ljuden i Exploderande Tanter', () => {
   it('ett ljud som inte är laddat spelas inte, och det är inget fel', () => {
     expect(playTantSound('dra')).toBe(false)
     expect(playTantSound('vinst')).toBe(false)
+  })
+
+  it('vinstjublet spelas exakt en gång per vinst, även efter en omladdning', () => {
+    const saved = new Map<string, string>()
+    const storage = { getItem: (key: string) => saved.get(key) ?? null, setItem: (key: string, value: string) => void saved.set(key, value) }
+    const table = { order: ['a', 'b', 'c'], winner: 'b', log: [{ n: 41 }, { n: 42 }] }
+    const key = winSoundKey(table)
+    expect(markWinHeard(key, storage)).toBe(true)
+    // Vinnarens ögonblick visas igen, sidan laddas om eller slutskärmen kommer: samma vinst, inget ljud.
+    expect(markWinHeard(key, storage)).toBe(false)
+    expect(markWinHeard(winSoundKey({ ...table }), storage)).toBe(false)
+    // Nästa match är en ny vinst.
+    expect(markWinHeard(winSoundKey({ ...table, log: [{ n: 57 }] }), storage)).toBe(true)
+    expect(markWinHeard(winSoundKey({ ...table, winner: 'a', log: [{ n: 57 }] }), storage)).toBe(true)
+    // Utan lagring spelas ljudet.
+    expect(markWinHeard(key, null)).toBe(true)
   })
 })

@@ -315,6 +315,35 @@ describe('risk och kunskap', () => {
   }
   const protective = ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda', 'tjuvkika', 'mobblera']
 
+  it('ingen bot spelar Blanda när högen har färre än två kort', () => {
+    const levels: BotLevel[] = ['latt', 'normal', 'svar']
+    for (const deck of [0, 1]) {
+      // Bara Blanda, och Blanda tillsammans med andra kort.
+      for (const hand of [['blanda'], ['blanda', 'kupong', 'regnbage'], ['blanda', 'tjuvkika', 'fika']] as CardType[][]) {
+        const { host, me } = setup(hand, deck)
+        const shuffleIds = host.secrets.hands[me].filter((card) => card.type === 'blanda').map((card) => card.id)
+        const sight = botSight(host, me)!
+        expect(sight.table.deckCount).toBe(deck)
+        for (const level of levels) {
+          for (let seed = 1; seed <= 200; seed++) {
+            // Även när boten vet att tanten ligger överst och Blanda är dess enda skyddskort.
+            for (const memory of [undefined, { n: 0, bombAt: 0 }]) {
+              const move = decideBotMove(sight, level, seeded(seed), memory)
+              const single = move?.type === 'tPlay' && move.cards.length === 1 && shuffleIds.includes(move.cards[0])
+              expect(single, `${level}, ${deck} kort, hand ${hand.join()}`).toBe(false)
+            }
+          }
+        }
+        // Reservdraget spelar aldrig kort: det drar.
+        expect(botFallbackMove(sight)).toEqual({ type: 'tDraw' })
+      }
+    }
+    // Med två kort i högen får Blanda spelas igen (boten vet att tanten ligger överst).
+    const { host, me } = setup(['blanda'], 2)
+    const move = decideBotMove(botSight(host, me)!, 'normal', seeded(1), { n: 0, bombAt: 0 })
+    expect(move).toEqual({ type: 'tPlay', cards: [host.secrets.hands[me][0].id] })
+  })
+
   it('en bot som vet att tanten ligger överst drar aldrig om den har ett skyddskort', () => {
     for (const card of ['intemin', 'dubbelpass', 'dudar', 'underifran', 'blanda', 'mobblera'] as CardType[]) {
       const { host, me } = setup([card, 'kupong'], 20)

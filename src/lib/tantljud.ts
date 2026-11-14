@@ -53,3 +53,30 @@ export function playTantSound(sound: TantSound, random: () => number = Math.rand
   lastPlayed[sound] = file
   return playSoundFile(file, volume)
 }
+
+// Vinstjublet spelas en gång per vinst: inte igen när vinnarens ögonblick visas på nytt (det blinkar till före den sista
+// explosionen), inte efter en omladdning och inte på slutskärmen. key = matchens vinst (winSoundKey). Den senaste
+// vinsten som låtit sparas i fliken. Ger true första gången, och då ska ljudet spelas.
+const WIN_HEARD_KEY = 'kd-tant-vinst'
+
+export function winSoundKey(table: { order: readonly string[]; winner: string | null; log: readonly { n: number }[] }): string {
+  return `${table.order.join()}|${table.winner ?? ''}|${table.log.at(-1)?.n ?? 0}`
+}
+
+export function markWinHeard(key: string, storage: Pick<Storage, 'getItem' | 'setItem'> | null = safeSessionStorage()): boolean {
+  try {
+    if (storage?.getItem(WIN_HEARD_KEY) === key) return false
+    storage?.setItem(WIN_HEARD_KEY, key)
+  } catch {
+    // Går det inte att spara spelas ljudet ändå.
+  }
+  return true
+}
+
+function safeSessionStorage(): Storage | null {
+  try {
+    return typeof sessionStorage === 'undefined' ? null : sessionStorage
+  } catch {
+    return null
+  }
+}

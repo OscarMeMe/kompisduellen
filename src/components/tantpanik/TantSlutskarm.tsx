@@ -3,6 +3,10 @@ import { Emoji } from '@/components/Emoji'
 import { Figur } from '@/components/figurer/Figur'
 import { TantKonfetti } from '@/components/tantpanik/TantKonfetti'
 import { useCountUp } from '@/hooks/useCountUp'
+import { useMusicVolume } from '@/hooks/useMusicVolume'
+import { useReactions } from '@/hooks/useReactions'
+import { loadSoundOn } from '@/lib/ljud'
+import { tantMusic } from '@/lib/tantmusik'
 import { findBlob } from '@/lib/figurer'
 import type { GameState } from '@/lib/match'
 import { EMPTY_TANT_STATS, type TantTable } from '@/lib/tantpanik'
@@ -11,6 +15,9 @@ import { cn } from '@/lib/utils'
 
 const PATTERN = '/images/tantpanik/vantrum-monster.webp'
 const LOGO = '/images/tantpanik/logga-800.webp'
+// Mönstret räknas från skärmens nedre vänstra hörn, både på sidan och på raden med knapparna längst ner, så att det
+// fortsätter utan skarv bakom knapparna ända ned till skärmens nederkant.
+const PATTERN_STYLE: CSSProperties = { backgroundImage: `url(${PATTERN})`, backgroundSize: '300px 300px', backgroundPosition: 'left bottom' }
 
 // När varje del kommer fram (ms), som i skissen (docs/skisser/slutskarm): röken lättar, vinnaren hoppar upp, "Sist kvar!",
 // namnskylten, de utslagna en i taget, utmärkelserna, siffrorna och sist knapparna.
@@ -35,6 +42,17 @@ export function TantSlutskarm({
   leaderboard: ReactNode
 }) {
   const [skipped, setSkipped] = useState(false)
+  // Väntrummets musik tonas in på slutskärmen, lika lågt som i väntrummet, och fortsätter utan avbrott när man går
+  // vidare dit (Revansch, Byt spel). Följer ljudknappen och musikreglaget. Vinstjublet spelas inte här.
+  const musicVolume = useMusicVolume()
+  const reactions = useReactions()
+  const soundOn = reactions ? reactions.soundOn : loadSoundOn()
+  const musicWanted = soundOn && musicVolume > 0
+  useEffect(() => {
+    tantMusic.setLevel('lobby')
+    tantMusic.setWanted(musicWanted)
+  }, [musicWanted])
+  useEffect(() => () => tantMusic.setWanted(false), [])
   // Knapparnas höjd, så att innehållet får lika mycket luft nedtill.
   const buttonsRef = useRef<HTMLDivElement>(null)
   const [buttonsHeight, setButtonsHeight] = useState(160)
@@ -68,7 +86,7 @@ export function TantSlutskarm({
     <div
       data-spel="tantpanik"
       className="fixed inset-0 z-10 overflow-y-auto bg-tant-kram bg-repeat text-tant-ink"
-      style={{ backgroundImage: `url(${PATTERN})`, backgroundSize: '300px 300px' }}
+      style={PATTERN_STYLE}
       onClick={() => setSkipped(true)}
     >
       {/* Luft nedtill lika hög som knapparna som ligger fast längst ner, så att Kvällens ställning går att skrolla fram helt. */}
@@ -158,13 +176,14 @@ export function TantSlutskarm({
         </div>
       </div>
 
-      {/* Revansch och Byt spel ligger alltid fast längst ner, och tonas in sist. */}
+      {/* Revansch och Byt spel ligger alltid fast längst ner, och tonas in sist. Raden har samma mönster som sidan, så att
+          mönstret går ända ned, och det som skrollas (Kvällens ställning) tonas bort under radens överkant. */}
       <div
         ref={buttonsRef}
-        style={enter('motion-safe:animate-slut-fade', AT.buttons).style}
+        style={{ ...PATTERN_STYLE, ...enter('motion-safe:animate-slut-fade', AT.buttons).style }}
         onClick={(event) => event.stopPropagation()}
         className={cn(
-          'fixed inset-x-0 bottom-0 z-20 bg-linear-to-b from-tant-kram/0 via-tant-kram via-30% to-tant-kram px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-2 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
+          'fixed inset-x-0 bottom-0 z-20 bg-tant-kram bg-repeat [mask-image:linear-gradient(to_bottom,transparent,black_1rem)] px-4 pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] short:pt-4 short:pb-[max(0.375rem,env(safe-area-inset-bottom))]',
           enter('motion-safe:animate-slut-fade', AT.buttons).className,
         )}
       >
