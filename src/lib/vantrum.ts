@@ -108,3 +108,17 @@ export function settingsLine(state: Pick<GameState, 'game' | 'rounds' | 'guessSe
   if (state.game === 'imposterjakten') parts.push(...imposterSettingsParts(state.imposterSettings))
   return parts.join(' · ')
 }
+
+// "A, B och C"
+function listed(names: readonly string[]): string {
+  return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} och ${names.at(-1)}`
+}
+
+// Raden överst i spelvalet (Byt spel), en gång för hela rutan: att man är själv, eller vilka spel ni är för få eller för
+// många för. null när alla spel går att starta. tooMany = spelen med en hård övre gräns som ni är för många för.
+export function gameChoiceNote(players: number, games: readonly Pick<GameInfo, 'name' | 'minPlayers'>[], tooMany: readonly string[] = []): string | null {
+  if (players <= 1) return 'Du är själv här just nu. Bjud in fler för att starta.'
+  const tooFew = games.filter((game) => players < game.minPlayers).map((game) => game.name)
+  const parts = [tooFew.length > 0 ? `För få för ${listed(tooFew)}.` : '', tooMany.length > 0 ? `För många för ${listed(tooMany)}.` : ''].filter(Boolean)
+  return parts.length > 0 ? `Ni är ${players}. ${parts.join(' ')}` : null
+}

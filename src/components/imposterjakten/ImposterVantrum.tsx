@@ -10,7 +10,7 @@ import { AcceptThrowsChoice, ThrowBar, ThrowCounter } from '@/components/lobby/K
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { ReactionBar } from '@/components/lobby/Reactions'
 import { VannSenast } from '@/components/lobby/VannSenast'
-import { RematchCountdown, SpelVal } from '@/components/lobby/VantrumDelar'
+import { BytSpel, RematchCountdown } from '@/components/lobby/VantrumDelar'
 import type { WaitingRoomProps } from '@/components/lobby/WaitingRoom'
 import { SpelIkon } from '@/components/SpelIkon'
 import { TantBotar } from '@/components/tantpanik/TantBotar'
@@ -79,17 +79,6 @@ export function ImposterVantrum({
   onStartCountdown,
 }: WaitingRoomProps) {
   useNattspanarna()
-  // Efter Byt spel scrollar sidan till spelvalet. Ett dubbeltryck på Byt spel ska inte också välja ett spel.
-  const gamesRef = useRef<HTMLElement>(null)
-  const [canChoose, setCanChoose] = useState(false)
-  useEffect(() => {
-    const timer = setTimeout(() => setCanChoose(true), 700)
-    return () => clearTimeout(timer)
-  }, [])
-  useEffect(() => {
-    if (scrollToGames && isHost) gamesRef.current?.scrollIntoView({ block: 'start' })
-  }, [scrollToGames, isHost])
-  const [showGames, setShowGames] = useState(false)
   // Syns mappen med Starta jakten? När den inte gör det har värden en liten startknapp fast längst ned på mobil.
   const [folderSeen, setFolderSeen] = useState(true)
   useEffect(() => {
@@ -99,7 +88,6 @@ export function ImposterVantrum({
     observer.observe(folder)
     return () => observer.disconnect()
   }, [])
-  const gamesOpen = showGames || state.choosingGame || scrollToGames === true
 
   // Botar kan inte spela Imposterjakten. De tittar på och räknas inte som spelare.
   const playing = online.filter((p) => !p.bot)
@@ -168,8 +156,8 @@ export function ImposterVantrum({
             <InviteCard code={code} game={game} />
           </div>
 
-          {/* Spelet som är valt. Värden byter spel här, och ser då alla spel. */}
-          <section ref={gamesRef} data-yta="papper" aria-label="Spel" className="scroll-mt-4 space-y-3 rounded-lg border bg-background p-4 text-foreground shadow-soft">
+          {/* Spelet som är valt. Värden byter spel med Byt spel, som öppnar spelvalet mitt på skärmen. */}
+          <section data-yta="papper" aria-label="Spel" className="space-y-3 rounded-lg border bg-background p-4 text-foreground shadow-soft">
             <div className="flex items-center gap-2.5 sm:gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center text-3xl sm:size-12 sm:text-4xl">
                 <SpelIkon game={game} />
@@ -178,23 +166,8 @@ export function ImposterVantrum({
                 <p className="font-heading text-[0.9375rem] leading-tight font-bold sm:text-lg">{game.name}</p>
                 <p className="text-sm text-muted-foreground">{[playersLabel(game), game.feel].filter(Boolean).join(' · ')}</p>
               </div>
-              {isHost && !gamesOpen && (
-                <Button variant="outline" className="h-12 shrink-0 px-3" onClick={() => setShowGames(true)}>
-                  Byt spel
-                </Button>
-              )}
+              {isHost && <BytSpel game={game} players={online.length} choosingGame={state.choosingGame} openAtStart={scrollToGames} onSetGame={onSetGame} className="px-3" />}
             </div>
-            {isHost && gamesOpen && (
-              <SpelVal
-                game={game}
-                players={online.length}
-                onlySelected={false}
-                onChoose={(id) => {
-                  if (state.choosingGame && !canChoose) return
-                  onSetGame(id)
-                }}
-              />
-            )}
             {/* Botar från ett annat spel: värden kan bara ta bort dem. */}
             {bots.length > 0 &&
               (isHost && botActions ? (

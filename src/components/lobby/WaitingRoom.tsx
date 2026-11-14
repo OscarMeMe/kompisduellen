@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
 import { Leaderboard } from '@/components/Leaderboard'
 import { InviteCard } from '@/components/lobby/InviteCard'
 import { Choice, NextQuestionChoice } from '@/components/lobby/Choice'
 import { LobbyHeader } from '@/components/lobby/LobbyHeader'
 import { Wide } from '@/components/lobby/LobbyLayout'
 import { LobbyPlayers } from '@/components/lobby/LobbyPlayers'
-import { HowToPlay, RematchCountdown, SpelVal } from '@/components/lobby/VantrumDelar'
+import { BytSpel, HowToPlay, RematchCountdown, ValtSpel } from '@/components/lobby/VantrumDelar'
 import { ImposterVantrum } from '@/components/imposterjakten/ImposterVantrum'
 import { AcceptThrowsChoice, ThrowBar, ThrowCounter } from '@/components/lobby/Kast'
 import { ReactionBar } from '@/components/lobby/Reactions'
@@ -86,21 +85,6 @@ function StandardWaitingRoom({
   onStart,
   onStartCountdown,
 }: WaitingRoomProps) {
-  // Efter Byt spel scrollar sidan till inställningarna med spelvalet.
-  const settingsRef = useRef<HTMLElement>(null)
-  // Ett dubbeltryck på Byt spel ska inte också välja ett spel: det andra trycket landar på spelvalet i väntrummet.
-  const [canChoose, setCanChoose] = useState(false)
-  useEffect(() => {
-    const timer = setTimeout(() => setCanChoose(true), 700)
-    return () => clearTimeout(timer)
-  }, [])
-  function chooseGame(id: string) {
-    if (state.choosingGame && !canChoose) return
-    onSetGame(id)
-  }
-  useEffect(() => {
-    if (scrollToGames && isHost) settingsRef.current?.scrollIntoView({ block: 'start' })
-  }, [scrollToGames, isHost])
   const rules = rulesFor(state.game)
   // Kortspelen har egen beskrivning och poängförklaring.
   const cardRules = cardRulesFor(state.game)
@@ -124,11 +108,9 @@ function StandardWaitingRoom({
   // Namnen från läget, där den som heter likadant som någon annan har fått en siffra.
   const lobbyName = (player: OnlinePlayer) => state.players[player.id]?.name ?? player.name
   const hostPlayer = online.find((p) => p.host)
-  // Exploderande Tanter: raden när man är för få, om en bot får plats, och om spellistan är utfälld (Byt spel).
+  // Exploderande Tanter: raden när man är för få, och om en bot får plats.
   const tantWaiting = tant ? waitingText(playing.length, game.minPlayers) : null
   const canAddBot = hasBots && online.filter((p) => p.bot).length < MAX_BOTS && !tooManyPlayers(state.game, playing.length + 1)
-  const [showGames, setShowGames] = useState(false)
-  const gamesOpen = showGames || state.choosingGame || scrollToGames === true
   const status = lobbyStatus({
     count: playing.length,
     game,
@@ -272,24 +254,18 @@ function StandardWaitingRoom({
 
       {/* Inställningarna syns alltid. Värden ändrar dem, de andra ser en sammanfattning. */}
       <section
-        ref={settingsRef}
-        className="scroll-mt-4 space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
+        className="space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
         aria-label="Inställningar"
       >
         <h2 className="text-xl">Inställningar</h2>
         {isHost ? (
           <>
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-bold">Spel</p>
-                {/* Exploderande Tanter: bara det valda spelet, och de andra bakom Byt spel. */}
-                {tant && !gamesOpen && (
-                  <Button variant="outline" size="sm" className="h-9" onClick={() => setShowGames(true)}>
-                    Byt spel
-                  </Button>
-                )}
-              </div>
-              <SpelVal game={game} players={online.length} onlySelected={tant && !gamesOpen} onChoose={chooseGame} />
+              <p className="font-bold">Spel</p>
+              {/* Det valda spelet. De andra finns bakom Byt spel, som öppnar spelvalet mitt på skärmen. */}
+              <ValtSpel game={game}>
+                <BytSpel game={game} players={online.length} choosingGame={state.choosingGame} openAtStart={scrollToGames} onSetGame={onSetGame} />
+              </ValtSpel>
             </div>
 
             {/* Exploderande Tanter har inga rundor: sist kvar vinner. */}
