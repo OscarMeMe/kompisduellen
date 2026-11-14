@@ -128,8 +128,9 @@ export type FaceExtras = { lively?: boolean; asleep?: boolean; look?: -1 | 0 | 1
 
 // Pupillerna flyttas med CSS-variabler, så att React inte behöver rita om figuren när blicken ändras.
 const GAZE_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*9px)_calc(var(--gaze-y,0)*6px)]'
-// Bara i sidled, för ögon som redan tittar ned (hero-figuren med mobilen), så att pupillerna aldrig hamnar utanför ögat.
-const GAZE_X_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*7px)_0]'
+// För ögon som redan tittar ned (hero-figuren med mobilen): blicken följer åt alla håll, men räknas från viloläget längst
+// ned (utan mus är --gaze-y 1, alltså mobilen) och uppåt, så att pupillerna aldrig hamnar utanför ögat.
+const GAZE_DOWN_CLASS = 'transition-[translate] duration-150 ease-out [translate:calc(var(--gaze-x,0)*7px)_calc((var(--gaze-y,1)-1)*7px)]'
 
 function Waiting({ figure, animated, lively = false, look = 0, gaze = false }: { figure: BlobFigure; animated: boolean } & FaceExtras) {
   if (figure.traits?.hero) return <HeroFace kind={figure.traits.hero} animated={animated} gaze={gaze} />
@@ -229,7 +230,7 @@ const ROUND_EYES: Eyes = { xs: EYE_X, scale: 1, cyclops: false, ...EYE_SHAPES.ro
 function HeroFace({ kind, animated, gaze }: { kind: HeroExpression; animated: boolean; gaze: boolean }) {
   const eyes = ROUND_EYES
   const open = (lookY = 0) => (
-    <OpenEyes eyes={eyes} lookY={lookY} blink={animated} pupilClass={gaze ? (lookY ? GAZE_X_CLASS : GAZE_CLASS) : undefined} />
+    <OpenEyes eyes={eyes} lookY={lookY} blink={animated} pupilClass={gaze ? (lookY ? GAZE_DOWN_CLASS : GAZE_CLASS) : undefined} />
   )
   switch (kind) {
     case 'musik':
