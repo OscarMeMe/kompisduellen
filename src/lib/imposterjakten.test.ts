@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES, roundWords } from '@/lib/games'
-import { parseImposterCard } from '@/lib/meddelanden'
+import { parseImposterCard, parseStateMessage } from '@/lib/meddelanden'
 import {
   CATEGORIES,
   canChangeWord,
@@ -20,7 +20,12 @@ import {
   wordsRunningOutText,
   COUNTDOWN_SECONDS,
   MIN_DISCUSSION_SECONDS,
-  INNOCENTS_WIN,
+  IMPOSTER_CAUGHT,
+  IMPOSTER_SCORING,
+  VOTED_RIGHT,
+  hostSkipAt,
+  hostSkipKind,
+  HOST_SKIP_SECONDS,
   IMPOSTER_ESCAPES,
   imposterInstruction,
   IMPOSTER_GUESSES_RIGHT,
@@ -738,7 +743,8 @@ describe('Imposterjakten: Anklaga', () => {
     expect(table(host).accusation).toBeNull()
     expect(host.state.deadline).toBeNull()
     const done = hostMove(host, 'a', { type: 'giveUp' }, ABCD, NOW)
-    expect(table(done).outcome?.points).toEqual({ b: 2, c: 2, d: 2 })
+    // De som röstade ja på impostern får 2 för rösten och 1 för att impostern fångades. Den som röstade nej får bara 1.
+    expect(table(done).outcome?.points).toEqual({ b: 3, c: 3, d: 1 })
   })
 
   it('låter impostern komma undan med majoritet ja på en oskyldig', () => {
@@ -782,7 +788,7 @@ describe('Imposterjakten: Anklaga', () => {
       const host = accused(SIX, 'b', ['c', 'd', 'e'])
       expect(table(host).step).toBe('facit')
       expect(table(host).outcome?.imposter).toBe('a')
-      expect(host.state.scores.a).toBe(2)
+      expect(host.state.scores.a).toBe(IMPOSTER_ESCAPES)
       expect(host.state.scores.c ?? 0).toBe(0)
     })
 
@@ -890,7 +896,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     const host = tie(readyAll(tie(voting()), ABCD))
     expect(table(host).step).toBe('facit')
     expect(table(host).outcome).toMatchObject({ kind: 'undan', imposter: 'a', points: { a: IMPOSTER_ESCAPES } })
-    expect(host.state.scores.a).toBe(2)
+    expect(host.state.scores.a).toBe(IMPOSTER_ESCAPES)
   })
 
   it('låter impostern gissa när den får ensamt flest röster, och bara impostern', () => {
@@ -915,9 +921,9 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
 
   it('ger poäng för varje utfall', () => {
     expect(roundPoints('undan', 'a', ABCD)).toEqual({ a: IMPOSTER_ESCAPES })
-    expect(roundPoints('gissade-ratt', 'a', ABCD)).toEqual({ a: IMPOSTER_GUESSES_RIGHT, b: INNOCENTS_WIN, c: INNOCENTS_WIN, d: INNOCENTS_WIN })
-    expect(roundPoints('gissade-fel', 'a', ABCD)).toEqual({ b: INNOCENTS_WIN, c: INNOCENTS_WIN, d: INNOCENTS_WIN })
-    expect(roundPoints('gav-upp', 'a', ABCD)).toEqual({ b: 2, c: 2, d: 2 })
+    expect(roundPoints('gissade-ratt', 'a', ABCD)).toEqual({ a: IMPOSTER_GUESSES_RIGHT, b: IMPOSTER_CAUGHT, c: IMPOSTER_CAUGHT, d: IMPOSTER_CAUGHT })
+    expect(roundPoints('gissade-fel', 'a', ABCD)).toEqual({ b: IMPOSTER_CAUGHT, c: IMPOSTER_CAUGHT, d: IMPOSTER_CAUGHT })
+    expect(roundPoints('gav-upp', 'a', ABCD)).toEqual({ b: IMPOSTER_CAUGHT, c: IMPOSTER_CAUGHT, d: IMPOSTER_CAUGHT })
     expect(roundPoints('avbruten', 'a', ABCD)).toEqual({})
   })
 
@@ -926,11 +932,12 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     const word = findWord(secretsOf(caught).wordId)!
     const right = hostMove(caught, 'a', { type: 'guess', word: ` ${word.ord.toUpperCase()} ` }, ABCD, NOW)
     expect(table(right).outcome).toMatchObject({ kind: 'gissade-ratt', word: word.ord, imposter: 'a', hint: word.ledtrad })
-    expect(right.state.scores).toMatchObject({ a: 1, b: 2, c: 2, d: 2 })
+    // Alla oskyldiga röstade på impostern: 2 för rösten och 1 för att den fångades.
+    expect(right.state.scores).toMatchObject({ a: 1, b: 3, c: 3, d: 3 })
     expect(right.state.usedWordIds).toContain(word.id)
     const wrong = hostMove(caught, 'a', { type: 'guess', word: 'Ingenting' }, ABCD, NOW)
     expect(table(wrong).outcome).toMatchObject({ kind: 'gissade-fel', guess: 'Ingenting' })
-    expect(wrong.state.scores).toMatchObject({ a: 0, b: 2, c: 2, d: 2 })
+    expect(wrong.state.scores).toMatchObject({ a: 0, b: 3, c: 3, d: 3 })
     const gaveUp = hostMove(caught, 'a', { type: 'giveUp' }, ABCD, NOW)
     expect(table(gaveUp).outcome).toMatchObject({ kind: 'gav-upp', guess: null })
     // I Svår visas ingen ledtråd i facit.
@@ -992,7 +999,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     host = hostMove(host, 'a', { type: 'giveUp' }, ids, NOW)
     expect(table(host).outcome?.points[leaving]).toBeUndefined()
     expect(host.state.scores[leaving]).toBe(0)
-    for (const id of ids.filter((id) => id !== 'a')) expect(host.state.scores[id]).toBe(2)
+    for (const id of ids.filter((id) => id !== 'a')) expect(host.state.scores[id]).toBe(VOTED_RIGHT + IMPOSTER_CAUGHT)
   })
 
   it('stryker rösten från en oskyldig som lämnar, och låter den som röstat på spelaren rösta om', () => {
@@ -1010,7 +1017,7 @@ describe('Imposterjakten: lika röster, sista gissningen och poängen', () => {
     const tied = tie(voting())
     const done = hostImposterNextRound(tie(readyAll(tied, ABCD)), ABCD)
     expect(table(done)).toMatchObject({ tied: null, caught: null, outcome: null, votes: null })
-    expect(done.state.scores.a).toBe(2)
+    expect(done.state.scores.a).toBe(IMPOSTER_ESCAPES)
   })
 })
 
@@ -1277,5 +1284,182 @@ describe('Imposterjakten: hur långt spelet blir', () => {
     const practiceAgain = startGame({ ...gissa, players: { a: gissa.players.a }, scores: { a: 0 } }, ['a'], NOW)
     expect(practiceAgain).toMatchObject({ practice: true, savedRounds: 10 })
     expect(abortMatch(practiceAgain)).toMatchObject({ rounds: 10, savedRounds: null })
+  })
+})
+
+describe('Imposterjakten: poängen efter rösterna', () => {
+  it('ger 2 till den som röstade på impostern, 1 till alla oskyldiga när den fångas och 3 till en imposter som kommer undan', () => {
+    expect([VOTED_RIGHT, IMPOSTER_CAUGHT, IMPOSTER_ESCAPES, IMPOSTER_GUESSES_RIGHT]).toEqual([2, 1, 3, 1])
+    // Fångad: b och c röstade rätt, d röstade fel.
+    const votes = { a: 'b', b: 'a', c: 'a', d: 'b' }
+    expect(roundPoints('gissade-fel', 'a', ABCD, votes)).toEqual({ b: 3, c: 3, d: 1 })
+    expect(roundPoints('gav-upp', 'a', ABCD, votes)).toEqual({ b: 3, c: 3, d: 1 })
+    expect(roundPoints('gissade-ratt', 'a', ABCD, votes)).toEqual({ a: 1, b: 3, c: 3, d: 1 })
+    // Undan: den som ändå röstade på impostern får sina 2.
+    expect(roundPoints('undan', 'a', ABCD, { a: 'c', b: 'a', c: 'd', d: 'c' })).toEqual({ a: 3, b: 2 })
+    // Ingen röstade rätt.
+    expect(roundPoints('undan', 'a', ABCD, { a: 'b', b: 'c', c: 'b', d: 'b' })).toEqual({ a: 3 })
+  })
+
+  it('ger aldrig impostern poäng för sin egen röst, och inga poäng till den som lämnat', () => {
+    expect(roundPoints('undan', 'a', ABCD, { a: 'a' })).toEqual({ a: 3 })
+    // d röstade rätt men är inte kvar i omgången.
+    expect(roundPoints('gav-upp', 'a', ['a', 'b', 'c'], { b: 'a', c: 'a', d: 'a' })).toEqual({ b: 3, c: 3 })
+    expect(roundPoints('avbruten', 'a', ABCD, { b: 'a' })).toEqual({})
+  })
+
+  it('räknar rösten i en hel omgång: impostern kommer undan, men den som röstade rätt får 2', () => {
+    let host = toVoting(start(ABCD), ABCD)
+    const imposter = secretsOf(host).imposter
+    const [x, y, z] = ABCD.filter((id) => id !== imposter)
+    // x röstar på impostern. Impostern och z röstar på y, och y röstar på z: y får ensamt flest röster.
+    host = hostMove(host, x, { type: 'vote', target: imposter }, ABCD, NOW)
+    host = hostMove(host, imposter, { type: 'vote', target: y }, ABCD, NOW)
+    host = hostMove(host, z, { type: 'vote', target: y }, ABCD, NOW)
+    host = hostMove(host, y, { type: 'vote', target: z }, ABCD, NOW)
+    expect(table(host).outcome?.kind).toBe('undan')
+    expect(table(host).outcome?.points).toEqual({ [imposter]: 3, [x]: 2 })
+    expect(host.state.scores).toMatchObject({ [imposter]: 3, [x]: 2, [y]: 0, [z]: 0 })
+  })
+
+  it('räknar den extra omröstningen efter lika röster, inte den första', () => {
+    let host = toVoting(start(ABCD), ABCD)
+    const imposter = secretsOf(host).imposter
+    const [x, y, z] = ABCD.filter((id) => id !== imposter)
+    const vote = (voter: string, target: string) => {
+      host = hostMove(host, voter, { type: 'vote', target }, ABCD, NOW)
+    }
+    // Första omröstningen: x och y röstar på impostern, impostern och z på y. Lika mellan impostern och y.
+    vote(x, imposter)
+    vote(y, imposter)
+    vote(imposter, y)
+    vote(z, y)
+    expect(table(host)).toMatchObject({ step: 'diskussion', tied: expect.arrayContaining([imposter, y]) })
+    host = readyAll(host, ABCD)
+    expect(table(host).step).toBe('rostning')
+    // Den extra omröstningen: nu röstar x fel och z rätt. Lika igen, så impostern kommer undan.
+    vote(x, y)
+    vote(z, imposter)
+    vote(y, imposter)
+    vote(imposter, y)
+    expect(table(host).outcome?.kind).toBe('undan')
+    // y och z röstade på impostern i den extra omröstningen. x gjorde det bara i den första, och får inget.
+    expect(table(host).outcome?.points).toEqual({ [imposter]: 3, [y]: 2, [z]: 2 })
+  })
+
+  it('säger hur poängen räknas i väntrummet', () => {
+    expect(IMPOSTER_SCORING.join(' ')).toContain('2 poäng')
+    expect(IMPOSTER_SCORING.join(' ')).toContain('3 poäng')
+    expect(IMPOSTER_SCORING.some((line) => line.includes('även om impostern kommer undan'))).toBe(true)
+  })
+})
+
+describe('Imposterjakten: värden hoppar över den som dröjer', () => {
+  const SKIP = HOST_SKIP_SECONDS * 1000
+
+  it('sparar när spelet började vänta, och börjar om när turen byts', () => {
+    expect(HOST_SKIP_SECONDS).toBe(20)
+    let host = readAll(start(ABCD), ABCD)
+    expect(table(host)).toMatchObject({ step: 'ledtradar', waitSince: NOW })
+    expect(hostSkipKind(table(host))).toBe('tur')
+    expect(hostSkipAt(table(host))).toBe(NOW + SKIP)
+    host = hostMove(host, currentTurn(table(host))!, { type: 'clue', word: 'regn' }, ABCD, NOW + 5000)
+    expect(table(host).waitSince).toBe(NOW + 5000)
+    // Under korten finns inget att hoppa över.
+    expect(hostSkipKind(table(start(ABCD)))).toBeNull()
+    expect(hostSkipAt(table(start(ABCD)))).toBeNull()
+  })
+
+  it('hoppar inte över för tidigt, och räknar turen som pass efter 20 sekunder', () => {
+    const host = readAll(start(ABCD), ABCD)
+    const turn = currentTurn(table(host))!
+    expect(hostImposterSkipTurn(host, ABCD, NOW + SKIP - 1)).toBe(host)
+    const skipped = hostImposterSkipTurn(host, ABCD, NOW + SKIP)
+    expect(table(skipped).clues).toEqual([{ player: turn, kind: 'pass', word: null }])
+    expect(table(skipped).turn).toBe(1)
+    expect(table(skipped).skipNote).toContain('hoppade över')
+    expect(table(skipped).skipNote).toContain(skipped.state.players[turn].name)
+    // Tiden börjar om för nästa spelare, och raden försvinner när den ger sitt ord.
+    expect(table(skipped).waitSince).toBe(NOW + SKIP)
+    expect(hostImposterSkipTurn(skipped, ABCD, NOW + SKIP + 1000)).toBe(skipped)
+    const next = hostMove(skipped, currentTurn(table(skipped))!, { type: 'clue', word: 'sol' }, ABCD, NOW + SKIP + 2000)
+    expect(table(next).skipNote).toBeNull()
+  })
+
+  it('går vidare direkt när ni säger orden högt (Nästa)', () => {
+    const host = readAll(start(ABCD, { aloud: true }), ABCD)
+    const turn = currentTurn(table(host))!
+    expect(hostSkipAt(table(host))).toBe(0)
+    const next = hostImposterSkipTurn(host, ABCD, NOW)
+    expect(table(next).clues).toEqual([{ player: turn, kind: 'sagt', word: null }])
+    expect(table(next).skipNote).toBeNull()
+  })
+
+  it('räknar rösterna som de är när någon inte röstat', () => {
+    let host = toVoting(start(ABCD), ABCD)
+    const opened = table(host).waitSince!
+    expect(table(host).step).toBe('rostning')
+    expect(hostSkipKind(table(host))).toBe('rostning')
+    const imposter = secretsOf(host).imposter
+    const [x, y] = ABCD.filter((id) => id !== imposter)
+    host = hostMove(host, x, { type: 'vote', target: imposter }, ABCD, opened + 1000)
+    host = hostMove(host, y, { type: 'vote', target: imposter }, ABCD, opened + 2000)
+    // En röst ändrar inte vad spelet väntar på, så tiden räknas från att omröstningen öppnades.
+    expect(table(host).waitSince).toBe(opened)
+    expect(hostImposterSkipTurn(host, ABCD, opened + SKIP - 1)).toBe(host)
+    const counted = hostImposterSkipTurn(host, ABCD, opened + SKIP)
+    expect(table(counted)).toMatchObject({ step: 'gissning', caught: imposter, votes: { [x]: imposter, [y]: imposter } })
+    expect(table(counted).skipNote).toContain('räknade rösterna')
+    // De som röstade rätt får poäng för rösten. Den som inte röstade får bara poängen för att impostern fångades.
+    const done = hostMove(counted, imposter, { type: 'giveUp' }, ABCD, opened + SKIP + 1000)
+    const z = ABCD.find((id) => id !== imposter && id !== x && id !== y)!
+    expect(table(done).outcome?.points).toEqual({ [x]: 3, [y]: 3, [z]: 1 })
+  })
+
+  it('låter impostern komma undan om ingen har röstat', () => {
+    const host = toVoting(start(ABCD), ABCD)
+    const done = hostImposterSkipTurn(host, ABCD, table(host).waitSince! + SKIP)
+    expect(table(done).outcome).toMatchObject({ kind: 'undan', points: { [secretsOf(host).imposter]: IMPOSTER_ESCAPES } })
+  })
+
+  it('räknar sista gissningen som att impostern gav upp', () => {
+    let host = toVoting(start(ABCD), ABCD)
+    const imposter = secretsOf(host).imposter
+    host = voteOut(host, imposter, ABCD)
+    expect(table(host)).toMatchObject({ step: 'gissning', caught: imposter })
+    expect(hostSkipKind(table(host))).toBe('gissning')
+    const since = table(host).waitSince!
+    expect(hostImposterSkipTurn(host, ABCD, since + SKIP - 1)).toBe(host)
+    const done = hostImposterSkipTurn(host, ABCD, since + SKIP)
+    expect(table(done).outcome?.kind).toBe('gav-upp')
+    expect(table(done).skipNote).toContain('gissningen')
+    for (const id of ABCD.filter((id) => id !== imposter)) expect(done.state.scores[id]).toBe(VOTED_RIGHT + IMPOSTER_CAUGHT)
+    expect(done.state.scores[imposter]).toBe(0)
+  })
+
+  it('hoppar inte över något under en anklagelse, och raden nollställs i nästa omgång', () => {
+    let host = playClues(readAll(start(ABCD), ABCD), ABCD)
+    expect(table(host).step).toBe('diskussion')
+    expect(hostSkipKind(table(host))).toBeNull()
+    const [accuser, accused] = ABCD
+    host = hostMove(host, accuser, { type: 'accuse', target: accused }, ABCD, NOW)
+    expect(table(host).accusation).not.toBeNull()
+    expect(hostSkipKind(table(host))).toBeNull()
+    expect(hostImposterSkipTurn(host, ABCD, NOW + 10 * SKIP)).toBe(host)
+    // En ny omgång börjar utan rad och utan väntetid.
+    const voting = toVoting(start(ABCD), ABCD)
+    const done = hostImposterSkipTurn(voting, ABCD, table(voting).waitSince! + SKIP)
+    const next = hostImposterNextRound(done, ABCD)
+    expect(table(next)).toMatchObject({ step: 'kort', skipNote: null, waitSince: null })
+  })
+
+  it('läget med väntetiden och raden går igenom kontrollen', () => {
+    const host = readAll(start(ABCD), ABCD)
+    const skipped = hostImposterSkipTurn(host, ABCD, NOW + SKIP)
+    const parsed = parseStateMessage({ state: skipped.state, sentAt: 1 })
+    expect(parsed?.state.imposter?.waitSince).toBe(NOW + SKIP)
+    expect(parsed?.state.imposter?.skipNote).toBe(table(skipped).skipNote)
+    const bad = { state: { ...skipped.state, imposter: { ...table(skipped), skipNote: 5 } }, sentAt: 1 }
+    expect(parseStateMessage(bad)).toBeNull()
   })
 })

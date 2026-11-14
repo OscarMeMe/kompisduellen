@@ -25,8 +25,11 @@ import {
   COUNTDOWN_SECONDS,
   currentTurn,
   MAX_CLUE_LENGTH,
+  hostSkipAt,
+  hostSkipKind,
   type ImposterTable,
 } from '@/lib/imposterjakten'
+import type { GameState } from '@/lib/match'
 import { latestClue } from '@/lib/bord'
 import { hasFinePointer } from '@/lib/device'
 import { playTurn } from '@/lib/ljud'
@@ -110,6 +113,12 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.
         </p>
       )}
+      {/* Värden hoppade över någon som dröjde. Alla ser det, så att det inte ser ut som ett fel. */}
+      {table.skipNote && !accusing && (
+        <p className="rounded-md bg-sun-soft px-4 py-3 text-center font-semibold" role="status">
+          {table.skipNote}
+        </p>
+      )}
       {accusing && <AccusationStep {...stepProps} />}
       {!accusing && table.step === 'kort' && <CardStep {...props} table={table} inRound={inRound} />}
       {!accusing && table.step === 'ledtradar' && <CluesStep {...props} table={table} />}
@@ -117,6 +126,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
       {table.step === 'rostning' && !accusing && <VotingStep {...stepProps} choice={choice} />}
       {table.step === 'gissning' && !accusing && <GuessStep {...stepProps} />}
       {table.step === 'facit' && <FacitStep {...stepProps} />}
+      {isHost && <HostSkipButton state={state} table={table} meId={me.id} onSkip={props.onSkipTurn} />}
       </div>
       </div>
 
@@ -240,7 +250,7 @@ function CluesCenter({ table, state, meId }: { table: ImposterTable; state: Impo
 
 // Ett ord var i turordning, två eller tre varv. Den som har tur skriver sitt ord (eller passar), eller säger det högt och
 // trycker Klar. De andra ser vem som funderar.
-function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onTyping, onSkipTurn }: StepProps) {
+function CluesStep({ state, table, me, online, imposterCard, onMove, onTyping }: StepProps) {
   const myTurn = currentTurn(table) === me.id
   useYourTurn(myTurn)
 
@@ -267,14 +277,47 @@ function CluesStep({ state, table, me, online, isHost, imposterCard, onMove, onT
       {canAccuse(table, me.id) && (
         <p className="text-center text-sm font-semibold text-muted-foreground">Misstänker du någon? Tryck på spelaren och välj Anklaga!</p>
       )}
-      {/* Om den som har tur har glömt att trycka Klar. */}
-      {isHost && table.aloud && !myTurn && (
-        <Button variant="outline" className="mx-auto h-11" onClick={onSkipTurn}>
-          Nästa
-        </Button>
-      )}
     </>
   )
+}
+
+// Värdens knapp för att gå vidare när någon dröjer. När ni säger orden högt heter den Nästa och finns direkt (någon har
+// glömt att trycka Klar). Annars heter den Hoppa över och kommer först när spelet väntat i HOST_SKIP_SECONDS: på den som
+// har tur, på dem som inte röstat eller på imposterns sista gissning. Aldrig på värdens egen tur.
+function HostSkipButton({ state, table, meId, onSkip }: { state: GameState; table: ImposterTable; meId: string; onSkip: () => void }) {
+  const kind = hostSkipKind(table)
+  const at = hostSkipAt(table)
+  const ready = useReached(at)
+  if (!kind || !ready) return null
+  const turn = currentTurn(table)
+  if (kind === 'tur' && turn === meId) return null
+  if (kind === 'gissning' && table.caught === meId) return null
+  const name = (id: string | null) => (id ? (state.players[id]?.name ?? 'spelaren') : 'spelaren')
+  const text =
+    kind === 'tur'
+      ? table.aloud
+        ? 'Nästa'
+        : `Hoppa över ${name(turn)}`
+      : kind === 'rostning'
+        ? 'Hoppa över: räkna rösterna nu'
+        : `Hoppa över ${name(table.caught)}`
+  return (
+    <Button variant="outline" className="mx-auto h-11 max-w-full motion-safe:animate-fade" onClick={onSkip}>
+      <span className="truncate">{text}</span>
+    </Button>
+  )
+}
+
+// Har klockan passerat at (ms, värdens klocka)? null = aldrig. Ritar om när tiden är inne.
+function useReached(at: number | null): boolean {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (at === null) return
+    const wait = at - Date.now()
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, wait) + 50)
+    return () => clearTimeout(timer)
+  }, [at])
+  return at !== null && now >= at
 }
 
 // När det blir min tur: en kort vibration där det går och ett kort ljud som följer ljudknappen. En gång per tur.
