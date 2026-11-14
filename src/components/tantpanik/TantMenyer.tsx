@@ -41,7 +41,7 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
             tant i paret eller tretalet. Tantsnaran kan aldrig ingå i ett par eller tretal. Sist kvar vinner.
           </li>
         </ul>
-        {/* Krediterna för musiken och trombonen (se docs/ljud-licenser.md). */}
+        {/* Krediterna för musiken, trombonen och applåden (se docs/ljud-licenser.md). */}
         <p className="border-t pt-3 text-xs text-muted-foreground">
           Musik: ”Happy” av{' '}
           <a href="https://soundcloud.com/rezoner" target="_blank" rel="noreferrer" className="underline">
@@ -52,10 +52,19 @@ export function RulesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
           <a href="https://freesound.org/people/Benboncan/sounds/73581/" target="_blank" rel="noreferrer" className="underline">
             ”Sad Trombone”
           </a>{' '}
-          av Benboncan (Freesound),{' '}
+          av Benboncan (
           <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline">
             CC BY 4.0
           </a>
+          ) och{' '}
+          <a href="https://freesound.org/people/kwahmah_02/sounds/324323/" target="_blank" rel="noreferrer" className="underline">
+            ”Huge Applause”
+          </a>{' '}
+          av kwahmah_02 (
+          <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">
+            CC BY 3.0
+          </a>
+          ), Freesound. Ljuden är bearbetade.
         </p>
       </DialogContent>
     </Dialog>

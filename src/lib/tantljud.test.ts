@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { markWinHeard, pickVariant, playTantSound, TANT_SOUND_FILES, TANT_SOUNDS, winSoundKey } from '@/lib/tantljud'
+import { markHeardOnce, markWinHeard, pickVariant, playTantSound, TANT_SOUND_FILES, TANT_SOUNDS, winSoundKey } from '@/lib/tantljud'
 
 // Alla ljudfiler för spelet i public, som sökvägar på sajten (/ljud/tantpanik/…).
 const files = Object.keys(import.meta.glob('/public/ljud/tantpanik/*.mp3')).map((path) => path.replace('/public', ''))
@@ -52,5 +52,10 @@ describe('ljuden i Exploderande Tanter', () => {
     expect(markWinHeard(winSoundKey({ ...table, winner: 'a', log: [{ n: 57 }] }), storage)).toBe(true)
     // Utan lagring spelas ljudet.
     expect(markWinHeard(key, null)).toBe(true)
+    // Konfettin på slutskärmen har sin egen spärr: en gång för samma vinst, oberoende av jublet.
+    expect(markHeardOnce('konfetti', key, storage)).toBe(true)
+    expect(markHeardOnce('konfetti', key, storage)).toBe(false)
+    expect(markWinHeard(key, storage)).toBe(true)
+    expect(markHeardOnce('konfetti', key, storage)).toBe(false)
   })
 })

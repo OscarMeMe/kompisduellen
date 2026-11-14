@@ -6,6 +6,7 @@ import { useCountUp } from '@/hooks/useCountUp'
 import { useMusicVolume } from '@/hooks/useMusicVolume'
 import { useReactions } from '@/hooks/useReactions'
 import { loadSoundOn } from '@/lib/ljud'
+import { loadTantSounds, markHeardOnce, playTantSound, winSoundKey } from '@/lib/tantljud'
 import { tantMusic } from '@/lib/tantmusik'
 import { findBlob } from '@/lib/figurer'
 import type { GameState } from '@/lib/match'
@@ -21,7 +22,9 @@ const PATTERN_STYLE: CSSProperties = { backgroundImage: `url(${PATTERN})`, backg
 
 // När varje del kommer fram (ms), som i skissen (docs/skisser/slutskarm): röken lättar, vinnaren hoppar upp, "Sist kvar!",
 // namnskylten, de utslagna en i taget, utmärkelserna, siffrorna och sist knapparna.
-const AT = { winner: 600, title: 1050, name: 1550, out: 1550, outStep: 250, award: 2450, awardStep: 250, stats: 3400, buttons: 3750 }
+// confetti = när konfettin börjar falla (och låter), music = när väntrummets musik börjar tonas in, efter konfettiljudet
+// (smällen och applåden är 2,6 s).
+const AT = { confetti: 800, music: 3400, winner: 600, title: 1050, name: 1550, out: 1550, outStep: 250, award: 2450, awardStep: 250, stats: 3400, buttons: 3750 }
 
 // Exploderande Tanters slutskärm: vinnaren står på kafferepsbordet med krona och tantklänning, de utslagna sotiga i den
 // ordning de åkte ut, utmärkelserna som någon faktiskt fått och matchens siffror. Revansch och Byt spel ligger fast längst
@@ -47,7 +50,9 @@ export function TantSlutskarm({
   const musicVolume = useMusicVolume()
   const reactions = useReactions()
   const soundOn = reactions ? reactions.soundOn : loadSoundOn()
-  const musicWanted = soundOn && musicVolume > 0
+  // Musiken väntar tills konfettiljudet har spelats.
+  const musicTime = useDelayedFlag(AT.music, false)
+  const musicWanted = musicTime && soundOn && musicVolume > 0
   useEffect(() => {
     tantMusic.setLevel('lobby')
     tantMusic.setWanted(musicWanted)
@@ -67,6 +72,16 @@ export function TantSlutskarm({
   }, [])
   const reduced = typeof window !== 'undefined' && (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const still = skipped || reduced
+  // Konfettin låter när den börjar falla: en gång per vinst (inte efter en omladdning), och bara när konfettin visas.
+  const confettiKey = winSoundKey(table)
+  useEffect(() => loadTantSounds(), [])
+  useEffect(() => {
+    if (still || !soundOn) return
+    const timer = setTimeout(() => {
+      if (markHeardOnce('konfetti', confettiKey)) playTantSound('konfetti')
+    }, AT.confetti)
+    return () => clearTimeout(timer)
+  }, [still, soundOn, confettiKey])
   // En del som kommer fram: rörelsen (med "minska rörelse" ingen) och när den börjar. Överhoppad: allt på plats direkt.
   const enter = (animation: string, at: number): { className: string; style?: CSSProperties } =>
     still ? { className: '' } : { className: animation, style: { animationDelay: `${at}ms` } }
@@ -191,7 +206,7 @@ export function TantSlutskarm({
       </div>
 
       {/* Konfettin faller över hela skärmen, även över knapparna. */}
-      {!still && <TantKonfetti delay={800} />}
+      {!still && <TantKonfetti delay={AT.confetti} />}
 
       {/* Röken från sista explosionen lättar. */}
       {!still && (
