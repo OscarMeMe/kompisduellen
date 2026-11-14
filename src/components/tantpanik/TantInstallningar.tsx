@@ -134,26 +134,26 @@ export function TantInstallningar({
           {tantBombsLine(chosen, players)}
         </p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-0">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 md:gap-0">
           {/* Botarna: en rad per bot med figuren, svårigheten och papperskorgen. */}
-          <div className="min-w-0 sm:border-r-2 sm:border-tant-vinrod/25 sm:pr-5">
+          <div className="min-w-0 md:border-r-2 md:border-tant-vinrod/25 md:pr-5">
             <h3 className="text-xl text-tant-vinrod">
               Botar · {bots.length} av {MAX_BOTS}
             </h3>
             <p className="text-sm leading-snug">{isHost ? 'Svårighet per bot: Lätt, Normal eller Svår.' : 'Botarna spelar som vilka spelare som helst.'}</p>
             {bots.length > 0 && (
-              <ul className="mt-2 space-y-1.5">
+              <ul className="@container mt-2 space-y-1.5">
                 {bots.map((bot) => (
-                  <li key={bot.id} className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-tant-ink/20 bg-white/70 py-1 pr-1.5 pl-2 max-[400px]:gap-1 max-[400px]:pr-0.5 max-[400px]:pl-1">
-                    <LobbyFigur playerId={bot.id} avatar={bot.avatar} lively={false} className="shrink-0 text-3xl max-[400px]:text-2xl" />
-                    <span className="min-w-0 flex-1 truncate font-heading font-bold max-[400px]:text-[13px]">{bot.name}</span>
+                  <li key={bot.id} className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-tant-ink/20 bg-white/70 py-1 pr-1.5 pl-2 @max-[21.5rem]:gap-1 @max-[21.5rem]:pr-0.5 @max-[21.5rem]:pl-1">
+                    <LobbyFigur playerId={bot.id} avatar={bot.avatar} lively={false} className="shrink-0 text-3xl @max-[21.5rem]:text-2xl" />
+                    <span className="min-w-0 flex-1 truncate font-heading font-bold @max-[21.5rem]:text-xs">{bot.name}</span>
                     {botActions ? (
                       <>
                         <select
                           aria-label={`Svårighet för ${bot.name}`}
                           value={bot.level}
                           onChange={(event) => isBotLevel(event.target.value) && botActions.setBotLevel(bot.id, event.target.value)}
-                          className={cn('h-11 shrink-0 cursor-pointer rounded-lg border-2 border-tant-ink/45 bg-white px-1.5 font-bold max-[400px]:w-[4.9rem] max-[400px]:px-0.5 max-[400px]:text-sm', FOCUS)}
+                          className={cn('h-11 shrink-0 cursor-pointer rounded-lg border-2 border-tant-ink/45 bg-white px-1.5 font-bold @max-[21.5rem]:w-[5.6rem] @max-[21.5rem]:px-0.5 @max-[21.5rem]:text-[13px]', FOCUS)}
                         >
                           {BOT_LEVELS.map((level) => (
                             <option key={level} value={level}>
@@ -165,7 +165,7 @@ export function TantInstallningar({
                           type="button"
                           aria-label={`Ta bort ${bot.name}`}
                           onClick={() => botActions.removeBot(bot.id)}
-                          className={cn('flex size-11 shrink-0 items-center justify-center rounded-lg text-tant-vinrod hover:bg-tant-vinrod/10 max-[400px]:w-9', FOCUS)}
+                          className={cn('flex size-11 shrink-0 items-center justify-center rounded-lg text-tant-vinrod hover:bg-tant-vinrod/10 @max-[21.5rem]:w-9', FOCUS)}
                         >
                           <Trash2 aria-hidden className="size-5" />
                         </button>
@@ -178,28 +178,25 @@ export function TantInstallningar({
               </ul>
             )}
             {botActions && (
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <button
-                  type="button"
-                  disabled={!canAddBot}
-                  onClick={botActions.addBot}
-                  className={cn(
-                    'flex h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border-2 border-tant-vinrod bg-white px-4 font-heading font-bold text-tant-vinrod hover:bg-[#fdeeee] disabled:border-tant-ink/30 disabled:text-tant-ink/45 disabled:hover:bg-white',
-                    FOCUS,
-                  )}
-                >
-                  <Plus aria-hidden className="size-5" />
-                  Lägg till bot
-                </button>
-                <span className="text-sm font-semibold">Högst {MAX_BOTS} botar</span>
-              </div>
+              <button
+                type="button"
+                disabled={!canAddBot}
+                onClick={botActions.addBot}
+                className={cn(
+                  'mt-2 flex h-12 w-full items-center justify-center gap-1.5 rounded-full border-2 border-tant-vinrod bg-white px-4 font-heading font-bold text-tant-vinrod hover:bg-[#fdeeee] disabled:border-tant-ink/30 disabled:text-tant-ink/45 disabled:hover:bg-white',
+                  FOCUS,
+                )}
+              >
+                <Plus aria-hidden className="size-5" />
+                Lägg till bot
+              </button>
             )}
           </div>
 
-          {/* Extra bus: två brytare. */}
-          <div className="min-w-0 sm:pl-5">
+          {/* Extra bus: två brytare. På mobil ligger den under botarna, med en vågrät avdelare emellan. */}
+          <div className="min-w-0 border-t-2 border-tant-vinrod/25 pt-3 md:border-t-0 md:pt-0 md:pl-5">
             <h3 className="text-xl text-tant-vinrod">Extra bus</h3>
-            <div className="mt-1 divide-y-2 divide-tant-vinrod/20">
+            <div className="mt-1">
               <Brytare
                 label="Tantsnaran"
                 text="En fälla som slår igen när någon stjäl."
@@ -208,6 +205,8 @@ export function TantInstallningar({
                 disabled={locked}
                 onChange={(trap) => onSettings({ trap })}
               />
+              {/* En rak avdelare mellan raderna (inte en kant på knappen, som följde knappens rundning). */}
+              <div aria-hidden className="h-0.5 rounded-full bg-tant-vinrod/20" />
               <Brytare
                 label="Kasta saker"
                 text="Tomater, pajer och annat bus."

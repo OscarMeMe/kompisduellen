@@ -121,9 +121,9 @@ export function BytSpel({
 
 // Raden med spelet som är valt, i de vanliga väntrummen och Exploderande Tanters: ikonen, namnet och den korta
 // beskrivningen, och värdens Byt spel till höger (children).
-export function ValtSpel({ game, children }: { game: GameInfo; children?: ReactNode }) {
+export function ValtSpel({ game, children, className }: { game: GameInfo; children?: ReactNode; className?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border-2 bg-card p-3">
+    <div className={cn('flex items-center gap-3 rounded-lg border-2 bg-card p-3', className)}>
       <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-md text-3xl', game.color)}>
         <SpelIkon game={game} />
       </span>

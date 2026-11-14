@@ -38,8 +38,9 @@ describe('texterna i inställningsrutan', () => {
     expect(tantBombsLine('kaos', 6)).toBe('Kaos: 7 tanter med 6 spelare.')
     // Kaos med för få blir Svår, och det står då.
     expect(tantBombsLine('kaos', 4)).toBe('Kaos kräver minst 5 spelare. Med 4 blir det Svår: 4 tanter.')
-    // Ensam i väntrummet räknas som två, eftersom det behövs minst två för att starta.
-    expect(tantBombsLine('normal', 1)).toBe('Normal: 1 tant med 2 spelare.')
+    // Ensam i väntrummet: raden säger hur det blir när ni är två.
+    expect(tantBombsLine('normal', 1)).toBe('Normal: 1 tant när ni är 2.')
+    expect(tantBombsLine('svar', 1)).toBe('Svår: 2 tanter när ni är 2.')
   })
 
   it('sammanfattar valen', () => {

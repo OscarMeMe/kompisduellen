@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Plus, Share2 } from 'lucide-react'
+import { Bot, Share2 } from 'lucide-react'
 import { LobbyFigur } from '@/components/figurer/LobbyFigur'
 import { VannSenast } from '@/components/lobby/VannSenast'
 import { TantKort } from '@/components/tantpanik/TantKort'
@@ -47,20 +47,8 @@ export function TantRubrik() {
   )
 }
 
-// När man är för få: en hjälpsam rad med Dela och (för värden) Lägg till bot direkt där.
-export function TantVanta({
-  text,
-  code,
-  gameName,
-  canAddBot,
-  onAddBot,
-}: {
-  text: string
-  code: string
-  gameName: string
-  canAddBot: boolean
-  onAddBot: (() => void) | null
-}) {
+// När man är för få: en hjälpsam rad med Dela direkt där. Botar läggs till i inställningsrutan (TantInstallningar).
+export function TantVanta({ text, code, gameName }: { text: string; code: string; gameName: string }) {
   const [message, setMessage] = useState<string | null>(null)
   async function share() {
     const url = inviteLink(window.location.origin, code)
@@ -81,12 +69,6 @@ export function TantVanta({
           <Share2 aria-hidden />
           Dela
         </Button>
-        {onAddBot && (
-          <Button variant="secondary" className="h-11 bg-tant-kram text-tant-vin hover:bg-tant-kram/90" disabled={!canAddBot} onClick={onAddBot}>
-            <Plus aria-hidden />
-            Lägg till bot
-          </Button>
-        )}
       </div>
       {message && <p className="text-sm">{message}</p>}
     </div>
@@ -193,7 +175,7 @@ export function TantKortFlakt() {
   const shown = [0, 1, 2, 3, 4].map((offset) => FAN_CARDS[(front + offset) % FAN_CARDS.length])
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative mb-3 h-40 w-64 sm:h-48 sm:w-80">
+      <div className="relative mb-6 h-[7.5rem] w-64 sm:mb-7 sm:h-[9rem] sm:w-80">
         {shown.map((type, i) => {
           const angle = (i - 2) * 12
           return (

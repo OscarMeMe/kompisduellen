@@ -43,6 +43,8 @@ export function tantBombsLine(chosen: TantLevel, players: number): string {
   const bombs = bombCount(count, chosen)
   const tanter = `${bombs} ${bombs === 1 ? 'tant' : 'tanter'}`
   if (chosen === 'kaos' && levelFor(chosen, players) !== 'kaos') return `Kaos kräver minst ${KAOS_MIN_PLAYERS} spelare. Med ${count} blir det Svår: ${tanter}.`
+  // Ensam i väntrummet: så blir det när ni är två.
+  if (players < 2) return `${LEVEL_NAMES[levelFor(chosen, players)]}: ${tanter} när ni är 2.`
   return `${LEVEL_NAMES[levelFor(chosen, players)]}: ${tanter} med ${count} spelare.`
 }
 

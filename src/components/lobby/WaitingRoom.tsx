@@ -150,14 +150,8 @@ function StandardWaitingRoom({
         )}
 
         {tant && tantWaiting ? (
-          // Exploderande Tanter: en hjälpsam rad med Dela och Lägg till bot i stället för en knapp som väntar.
-          <TantVanta
-            text={tantWaiting}
-            code={code}
-            gameName={game.name}
-            canAddBot={canAddBot}
-            onAddBot={isHost && botActions ? botActions.addBot : null}
-          />
+          // Exploderande Tanter: en hjälpsam rad med Dela i stället för en knapp som väntar.
+          <TantVanta text={tantWaiting} code={code} gameName={game.name} />
         ) : isHost ? (
           <div className="space-y-2">
             {/* Knappen vickar en gång när tillräckligt många har gått med (ny key startar om vickningen). */}
@@ -256,17 +250,24 @@ function StandardWaitingRoom({
           val i en egen ruta under (TantInstallningar), så här står bara spelet, och bara för värden. */}
       {!(tant && !isHost) && (
       <section
-        className="space-y-5 rounded-lg border bg-card p-4 shadow-soft sm:p-6"
+        className={cn('space-y-5 rounded-lg p-4 shadow-soft sm:p-6', tant ? 'space-y-3 border-2 border-tant-vinrod bg-tant-kram-2 text-tant-ink' : 'border bg-card')}
         aria-label={tant ? 'Spel' : 'Inställningar'}
       >
-        <h2 className="text-xl">{tant ? 'Spel' : 'Inställningar'}</h2>
+        <h2 className={cn('text-xl', tant && 'text-tant-vinrod')}>{tant ? 'Spel' : 'Inställningar'}</h2>
         {isHost ? (
           <>
             <div className="space-y-3">
               {!tant && <p className="font-bold">Spel</p>}
               {/* Det valda spelet. De andra finns bakom Byt spel, som öppnar spelvalet mitt på skärmen. */}
-              <ValtSpel game={game}>
-                <BytSpel game={game} players={online.length} choosingGame={state.choosingGame} openAtStart={scrollToGames} onSetGame={onSetGame} />
+              <ValtSpel game={game} className={tant ? 'border-tant-ink/25 bg-white/70' : undefined}>
+                <BytSpel
+                  game={game}
+                  players={online.length}
+                  choosingGame={state.choosingGame}
+                  openAtStart={scrollToGames}
+                  onSetGame={onSetGame}
+                  className={tant ? 'rounded-full border-2 border-tant-vinrod bg-white font-heading font-bold text-tant-vinrod hover:bg-[#fdeeee] hover:text-tant-vinrod' : undefined}
+                />
               </ValtSpel>
             </div>
 
