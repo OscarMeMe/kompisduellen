@@ -38,7 +38,7 @@ export function findWord(id: string): ImposterWord | undefined {
 // bara finns på ett ställe. Den sista raden handlar om svårigheterna.
 export const IMPOSTER_SCORING: string[] = [
   'Röstar du på impostern får du 2 poäng, även om impostern kommer undan.',
-  'Fångas impostern får alla oskyldiga 1 poäng till.',
+  'Fångas impostern får alla oskyldiga dessutom 1 poäng, även de som röstade fel.',
   'Kommer impostern undan får den 3 poäng.',
   'Fångas impostern men gissar ordet rätt får den 1 poäng.',
   'I Normal får impostern en vag ledtråd. I Svår får den ingenting. I Lurig får den ett närliggande ord och vet inte om att den är impostern.',

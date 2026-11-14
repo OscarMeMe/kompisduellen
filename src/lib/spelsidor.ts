@@ -132,7 +132,7 @@ export const GAME_PAGES: GamePageInfo[] = [
       'Ge varsin ledtråd med ett ord, och kör två eller tre varv runt bordet. Skriv i spelet eller säg ledtrådarna högt.',
       'Efter näst sista varvet kan vem som helst trycka på en spelare och anklaga den. Då röstar de andra ja eller nej direkt.',
       'Annars diskuterar ni efter sista varvet vem som bluffar och röstar. Omröstningen är hemlig och alla har en röst.',
-      'Den som röstar på impostern får poäng, och fångar ni impostern får alla oskyldiga poäng. Impostern kan ta en poäng genom att gissa ordet, och får flest poäng om den kommer undan.',
+      'Röstar du på impostern får du 2 poäng, även om impostern kommer undan. Fångas impostern får alla oskyldiga dessutom 1 poäng, även de som röstade fel. Kommer impostern undan får den 3 poäng, och fångas den men gissar ordet rätt får den 1 poäng.',
       'Allt det är en omgång. Värden väljer 1 till 10 omgångar. Varje omgång får ett nytt ord och impostern lottas om, så det kan bli samma person igen. Flest poäng efter sista omgången vinner.',
     ],
     time: '5–40 minuter',

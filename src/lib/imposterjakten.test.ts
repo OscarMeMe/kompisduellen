@@ -1371,6 +1371,13 @@ describe('Imposterjakten: poängen efter rösterna', () => {
     expect(IMPOSTER_SCORING.join(' ')).toContain('2 poäng')
     expect(IMPOSTER_SCORING.join(' ')).toContain('3 poäng')
     expect(IMPOSTER_SCORING.some((line) => line.includes('även om impostern kommer undan'))).toBe(true)
+    // Poängreglerna står ordagrant, så att de är lika tydliga överallt (regelrutan, väntrummet).
+    expect(IMPOSTER_SCORING.slice(0, 4)).toEqual([
+      'Röstar du på impostern får du 2 poäng, även om impostern kommer undan.',
+      'Fångas impostern får alla oskyldiga dessutom 1 poäng, även de som röstade fel.',
+      'Kommer impostern undan får den 3 poäng.',
+      'Fångas impostern men gissar ordet rätt får den 1 poäng.',
+    ])
   })
 })
 
