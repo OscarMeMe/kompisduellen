@@ -62,6 +62,8 @@
   --coral-soft: color-mix(in oklch, var(--natt-korall) 28%, var(--natt));
   --wood-edge: #6b4a33;
   --chair: #4a3323;
+  /* Sajtens logga i sidhuvudet, när temat gäller hela sidan (Imposterjaktens väntrum): lampgul med en mörkare rand. */
+  --logga-rand: #dfae3c;
   color: var(--foreground);
 }
 /* Krämvita ytor i spelvyn (data-yta="papper"): svarsdelen och bordsskivan. Mörk text på ljus botten. Korallen är mörkare

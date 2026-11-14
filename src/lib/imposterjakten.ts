@@ -83,7 +83,7 @@ export const EMPTY_IMPOSTER_MATCH: ImposterMatch = { wordIds: [], imposterCounts
 // ja-rösterna när en anklagelse gick igenom).
 export type ImposterRound = { word: string; imposter: string; kind: Exclude<OutcomeKind, 'avbruten'>; guess: string | null; votes: Record<string, string> }
 
-function difficultyName(settings: ImposterSettings): string {
+export function difficultyName(settings: ImposterSettings): string {
   return settings.tricky ? 'Lurig' : settings.hard ? 'Svår' : 'Normal'
 }
 
