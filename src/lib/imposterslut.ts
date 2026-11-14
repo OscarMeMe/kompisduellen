@@ -17,6 +17,9 @@ export type ImposterAward = {
 
 // Högst så här många utmärkelser visas.
 export const MAX_AWARDS = 3
+// Spårhunden, Syndabocken och Blåögd kräver minst så här många (rätta röster, röster som oskyldig, fel röster). Hellre
+// ingen utmärkelse än en tunn ("1 röst, helt oskyldig").
+export const MIN_FOR_AWARD = 2
 
 const times = (n: number) => `${n} ${n === 1 ? 'gång' : 'gånger'}`
 
@@ -72,8 +75,8 @@ function leaders(all: Record<string, Tally>, value: (one: Tally) => number, min 
 }
 
 // Utmärkelserna, bara de som någon faktiskt fått, högst tre, i den här ordningen: Mästerbluffaren (kom undan flest
-// gånger), Spårhunden (röstade på impostern flest gånger), Syndabocken (den oskyldiga som fick flest röster),
-// Tankeläsaren (impostern som gissade ordet) och Blåögd (röstade fel flest gånger, minst två). players = de som var med
+// gånger), Spårhunden (röstade på impostern flest gånger, minst två), Syndabocken (den oskyldiga som fick flest röster,
+// minst två), Tankeläsaren (impostern som gissade ordet) och Blåögd (röstade fel flest gånger, minst två). players = de som var med
 // i matchen. Vid lika delas utmärkelsen.
 export function imposterAwards(history: readonly ImposterRound[], players: readonly string[]): ImposterAward[] {
   const all = tally(history, players)
@@ -82,16 +85,16 @@ export function imposterAwards(history: readonly ImposterRound[], players: reado
   const bluff = leaders(all, (one) => one.escapes)
   if (bluff) awards.push({ id: 'bluffare', title: 'Mästerbluffaren', ids: bluff.ids, what: `Kom undan ${times(bluff.best)}` })
 
-  const hound = leaders(all, (one) => one.right)
+  const hound = leaders(all, (one) => one.right, MIN_FOR_AWARD)
   if (hound) {
     // "Rätt 3 av 4" när alla som delar den röstade lika många gånger, annars bara antalet.
     const of = new Set(hound.ids.map((id) => all[id].votes))
     awards.push({ id: 'sparhund', title: 'Spårhunden', ids: hound.ids, what: of.size === 1 ? `Rätt ${hound.best} av ${[...of][0]}` : `Rätt ${times(hound.best)}` })
   }
 
-  const scapegoat = leaders(all, (one) => one.blamed)
+  const scapegoat = leaders(all, (one) => one.blamed, MIN_FOR_AWARD)
   if (scapegoat) {
-    awards.push({ id: 'syndabock', title: 'Syndabocken', ids: scapegoat.ids, what: `${scapegoat.best} ${scapegoat.best === 1 ? 'röst' : 'röster'}, helt oskyldig` })
+    awards.push({ id: 'syndabock', title: 'Syndabocken', ids: scapegoat.ids, what: `${scapegoat.best} röster, helt oskyldig` })
   }
 
   const reader = leaders(all, (one) => one.guessed.length)
@@ -105,7 +108,7 @@ export function imposterAwards(history: readonly ImposterRound[], players: reado
     })
   }
 
-  const naive = leaders(all, (one) => one.votes - one.right, 2)
+  const naive = leaders(all, (one) => one.votes - one.right, MIN_FOR_AWARD)
   if (naive) {
     const of = new Set(naive.ids.map((id) => all[id].votes))
     awards.push({ id: 'blaogd', title: 'Blåögd', ids: naive.ids, what: of.size === 1 ? `Fel ${naive.best} av ${[...of][0]}` : `Fel ${times(naive.best)}` })

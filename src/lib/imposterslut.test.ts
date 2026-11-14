@@ -54,11 +54,18 @@ describe('utmärkelserna i Imposterjakten', () => {
       round('c', 'undan', { a: 'd', b: 'd', c: 'd', d: 'a' }),
     ]
     const awards = imposterAwards(history, PLAYERS)
-    expect(awards.map((award) => award.id)).toEqual(['bluffare', 'sparhund', 'syndabock'])
-    // Utan någon som kom undan eller fick röster som oskyldig kommer Tankeläsaren med.
+    // Ingen röstade rätt två gånger, så Spårhunden delas inte ut och Tankeläsaren kommer med.
+    expect(awards.map((award) => award.id)).toEqual(['bluffare', 'syndabock', 'tankelasare'])
+    const four = [...history, round('d', 'gav-upp', { a: 'd', b: 'd', c: 'd', d: 'a' })]
+    expect(imposterAwards(four, PLAYERS).map((award) => award.id)).toEqual(['bluffare', 'sparhund', 'syndabock'])
     const caught = [round('b', 'gissade-ratt', { a: 'b', b: 'a', c: 'b', d: 'b' }, 'Zlatan')]
     const ids = imposterAwards(caught, PLAYERS)
     expect(ids.find((award) => award.id === 'tankelasare')).toEqual({ id: 'tankelasare', title: 'Tankeläsaren', ids: ['b'], what: 'Gissade Zlatan' })
+  })
+
+  it('ger hellre ingen utmärkelse än en tunn: en rätt röst eller en röst som oskyldig räcker inte', () => {
+    const history = [round('a', 'gav-upp', { a: 'b', b: 'a', c: 'd', d: 'c' })]
+    expect(imposterAwards(history, PLAYERS)).toEqual([])
   })
 
   it('räknar aldrig den som inte var med i matchen', () => {
