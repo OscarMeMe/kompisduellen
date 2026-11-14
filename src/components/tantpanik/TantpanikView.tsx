@@ -54,6 +54,9 @@ const NOTICE_MS = 2500
 // högarna i mitten, en rad med det senaste och min hand längst ner. Reglerna, menyn och historiken ligger bakom knappar.
 // Prispallen efteråt är gemensam för alla spel.
 // onBotsOnly: värden spolar fram eller tar revansch direkt när bara botar är kvar (se fastForwardBots).
+// Raden under motspelarna (knappen för boten, "Väntar på värden" och tipset om kast) och etiketterna på den.
+const ROW = 'flex justify-center px-3 pb-1'
+const ROW_TAG = 'pointer-events-none w-fit rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm'
 // Så länge ska vinnaren ha visats innan jublet spelas (ms), så att en vy som bara blinkar till inte låter.
 const WIN_SOUND_AFTER_MS = 200
 // Så långt efter draget vänds kortet jag drog upp (ms), och då spelas ljudet.
@@ -330,6 +333,8 @@ export function TantpanikView({
               : null
   const atPile = activity && (activity.kind === 'hide' || activity.kind === 'arrange' || activity.kind === 'peek') ? activity : null
   const nopeOpen = table.step === 'window' && table.pending !== null && !table.error
+  // Turkoppen står under en motspelares plats när den har tur, och då börjar raden under motspelarna längre ned.
+  const cupUnderSeat = table.current !== me.id && !table.winner
   // Jag kan säga Nope! just nu: då visas bara den stora knappen vid handen, ingen text.
   const pendingNow = table.pending
   const canNope =
@@ -383,37 +388,35 @@ export function TantpanikView({
           standIns={standIns}
         />
         {/* Värden: en spelare har varit borta länge. En bot kan ta över handen tills spelaren kommer tillbaka. */}
-        {/* En egen rad under motspelarna, för knappen som låter en bot ta över och för tipset om kast. Raden tar egen
-            plats (bordet under krymper lite), så att inget av dem hamnar över högarna. Har en motspelare tur står
-            turkoppen under platsen, och då börjar raden under koppen. Knappen går före tipset. */}
+        {/* En egen rad under motspelarna, för knappen som låter en bot ta över, "Väntar på värden" och tipset om kast.
+            Raden tar egen plats (bordet under krymper lite), så att inget av dem hamnar över högarna. Har en motspelare
+            tur står turkoppen under platsen, och då börjar raden under koppen. Bara en sak visas åt gången: knappen
+            (bara värden), sedan "Väntar på värden" (bara gästerna), sedan tipset. */}
         {standInFor && !nopeOpen ? (
-          <div data-tant-botknapp className={cn('flex justify-center px-3 pb-1', table.current === standInFor && 'pt-7')}>
+          <div data-tant-botknapp className={cn(ROW, table.current === standInFor && 'pt-7')}>
             <Button className="max-w-full rounded-full shadow-soft-sm motion-safe:animate-pop" onClick={() => onStandIn?.(standInFor)}>
               <Bot aria-hidden />
               <span className="truncate">Låt en bot spela åt {state.players[standInFor]?.name ?? 'spelaren'}</span>
             </Button>
           </div>
+        ) : hostAway ? (
+          // Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här.
+          <div data-tant-vantar className={cn(ROW, cupUnderSeat && 'pt-7')}>
+            <p role="status" className={cn(ROW_TAG, 'whitespace-nowrap')}>
+              Väntar på värden
+              <Dots />
+            </p>
+          </div>
         ) : (
           throwHint &&
-          !hostAway &&
           !nopeOpen && (
-            <div data-tant-kasttips className={cn('flex justify-center px-3 pb-1', table.current !== me.id && !table.winner && 'pt-7')}>
-              <p
-                role="status"
-                className="pointer-events-none flex w-fit max-w-full items-center gap-1.5 rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm motion-safe:animate-pop motion-reduce:animate-fade"
-              >
+            <div data-tant-kasttips className={cn(ROW, cupUnderSeat && 'pt-7')}>
+              <p role="status" className={cn(ROW_TAG, 'flex max-w-full items-center gap-1.5 motion-safe:animate-pop motion-reduce:animate-fade')}>
                 <Emoji emoji="🍅" />
                 <span className="truncate">Tryck på en spelare för att kasta något</span>
               </p>
             </div>
           )
-        )}
-        {/* Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här. */}
-        {hostAway && (
-          <p role="status" className="pointer-events-none absolute inset-x-0 top-full z-10 mx-auto mt-1 w-fit rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm">
-            Väntar på värden
-            <Dots />
-          </p>
         )}
       </div>
 
