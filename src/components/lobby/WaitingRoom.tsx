@@ -30,6 +30,7 @@ import { IMPOSTER_GAME, IMPOSTER_HOW_TO, IMPOSTER_SCORING, wordsRunningOutText, 
 import { TANT_GAME, TANT_HOW_TO, TANT_SCORING, type TantSettings } from '@/lib/tantpanik'
 import { TantSvarighet } from '@/components/tantpanik/TantSvarighet'
 import { TantVantrum } from '@/components/tantpanik/TantVantrum'
+import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
 import { TantBotar } from '@/components/tantpanik/TantBotar'
 import { TantKafferep, TantKortFlakt, TantRubrik, TantVanta } from '@/components/tantpanik/TantVantrumVy'
 import { waitingText } from '@/lib/tantvantrum'
@@ -144,6 +145,8 @@ export function WaitingRoom({
     <Wide>
       {/* Exploderande Tanter: mönstret, musiken och volymknappen. */}
       {tant && <TantVantrum />}
+      {/* Imposterjakten: musiken. */}
+      {state.game === IMPOSTER_GAME && <ImposterMusik level="lobby" />}
       {state.rematchAt !== null && (
         <RematchCountdown
           at={state.rematchAt}

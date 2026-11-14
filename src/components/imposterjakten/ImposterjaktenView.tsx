@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useCountdown } from '@/hooks/useCountdown'
+import { useGameMusic } from '@/hooks/useGameMusic'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import { useReactions } from '@/hooks/useReactions'
 import { useTimeWarning } from '@/hooks/useTimeWarning'
@@ -55,6 +56,8 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const [menu, setMenu] = useState(false)
   const [words, setWords] = useState(false)
   useLockPageScroll()
+  // Matchens musik, lågt så att den inte stör när man pratar. Tonas över från väntrummets spår.
+  useGameMusic('imposter', 'match')
   const keyboard = useKeyboardInset()
   // Svarsdelen skrollar för sig när innehållet inte får plats (t.ex. facit med tio spelare på en liten telefon). Då
   // visas en liten etikett, så att det syns att det finns mer nedanför.
@@ -112,7 +115,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           {instruction.text}
         </p>
         <span className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-card/80 backdrop-blur-sm">
-          <SoundControl soundOn={soundOn} onSoundOn={(on) => (reactions ? reactions.setSoundOn(on) : saveSoundOn(on))} music={false} />
+          <SoundControl soundOn={soundOn} onSoundOn={(on) => (reactions ? reactions.setSoundOn(on) : saveSoundOn(on))} music />
         </span>
         <RoundButton label="Meny" onClick={() => setMenu(true)}>
           <Menu aria-hidden className="size-5" />
@@ -229,6 +232,22 @@ export function ImposterjaktenView(props: ImposterViewProps) {
               <li key={line}>{line}</li>
             ))}
           </ul>
+          {/* Väntrummets musik är CC BY 3.0, så den har en kredit. Matchens (CC0) behöver ingen. */}
+          <p className="text-xs text-muted-foreground">
+            Musik:{' '}
+            <a href="https://opengameart.org/content/trouble-makers-coolriff-jazz" target="_blank" rel="noreferrer" className="underline">
+              Trouble Makers
+            </a>{' '}
+            av{' '}
+            <a href="https://www.matthewpablo.com" target="_blank" rel="noreferrer" className="underline">
+              Matthew Pablo
+            </a>{' '}
+            (OpenGameArt,{' '}
+            <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">
+              CC BY 3.0
+            </a>
+            )
+          </p>
         </DialogContent>
       </Dialog>
 

@@ -32,6 +32,7 @@ export function TantVantrum() {
 
   const wanted = soundOn && musicVolume > 0
   useEffect(() => {
+    tantMusic.setSet('tant')
     tantMusic.setLevel('lobby')
     tantMusic.setWanted(wanted)
   }, [wanted])

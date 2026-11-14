@@ -51,7 +51,15 @@ export function setEffectsVolume(volume: number) {
 }
 
 // Alla ljudeffekter går hit, och härifrån till högtalarna.
+// Den som vill veta när en ljudeffekt spelas (musiken, som sänks en stund). Anropas varje gång något kopplas till
+// ljudeffekternas utgång.
+let effectListener: (() => void) | null = null
+export function setEffectListener(listener: (() => void) | null) {
+  effectListener = listener
+}
+
 function effectsOut(ctx: AudioContext): GainNode {
+  effectListener?.()
   if (!effectsGain || effectsGain.context !== ctx) {
     effectsGain = ctx.createGain()
     effectsGain.gain.value = effectsVolume

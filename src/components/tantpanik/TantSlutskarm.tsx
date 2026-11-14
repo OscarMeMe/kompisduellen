@@ -54,6 +54,7 @@ export function TantSlutskarm({
   const musicTime = useDelayedFlag(AT.music, false)
   const musicWanted = musicTime && soundOn && musicVolume > 0
   useEffect(() => {
+    tantMusic.setSet('tant')
     tantMusic.setLevel('lobby')
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])

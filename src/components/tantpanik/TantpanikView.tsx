@@ -194,6 +194,7 @@ export function TantpanikView({
   const playing = !!table && state.phase === 'playing' && table.order.includes(me.id)
   const musicWanted = playing && soundOn && musicVolume > 0
   useEffect(() => {
+    tantMusic.setSet('tant')
     tantMusic.setLevel('match')
     tantMusic.setWanted(musicWanted)
   }, [musicWanted])

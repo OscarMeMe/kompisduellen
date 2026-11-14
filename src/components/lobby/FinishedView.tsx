@@ -28,6 +28,8 @@ import {
   roundOptionsFor,
 } from '@/lib/match'
 import { rulesFor } from '@/lib/spelregler'
+import { ImposterMusik } from '@/components/imposterjakten/ImposterMusik'
+import { IMPOSTER_GAME } from '@/lib/imposterjakten'
 import { cn } from '@/lib/utils'
 
 type FinishedViewProps = {
@@ -155,6 +157,8 @@ export function FinishedView({
 
   return (
     <Wide>
+      {/* Imposterjakten: väntrummets musik fortsätter på slutskärmen. */}
+      {state.game === IMPOSTER_GAME && <ImposterMusik level="lobby" />}
       <div className="text-center">
         <h1 className="text-4xl">{state.practice ? 'Provrundan är klar!' : 'Matchen är slut!'}</h1>
         <p className="mt-1 text-muted-foreground">
