@@ -11,7 +11,6 @@ import type { ImposterViewProps } from '@/components/lobby/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { useCountdown } from '@/hooks/useCountdown'
 import { useGameMusic } from '@/hooks/useGameMusic'
 import { useKeyboardInset } from '@/hooks/useKeyboardInset'
 import { useReactions } from '@/hooks/useReactions'
@@ -57,7 +56,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const [menu, setMenu] = useState(false)
   const [words, setWords] = useState(false)
   useLockPageScroll()
-  // Matchens musik, lågt så att den inte stör när man pratar. Tonas över från väntrummets spår.
+  // Matchen är tyst med flit (inget eget spår): väntrummets musik tonas ut här och in igen på slutskärmen.
   useGameMusic('imposter', 'match')
   const keyboard = useKeyboardInset()
   // Svarsdelen skrollar för sig när innehållet inte får plats (t.ex. facit med tio spelare på en liten telefon). Då
@@ -73,9 +72,10 @@ export function ImposterjaktenView(props: ImposterViewProps) {
   const choice = picked?.round === voteRound ? picked.id : null
   // Nedräkningen till omröstningen varnar på samma sätt som tiden i de andra spelen.
   const accusing = table?.accusation != null
-  const totalSeconds = accusing ? ACCUSE_SECONDS : COUNTDOWN_SECONDS
+  // Stapeln börjar full, vare sig nedräkningen är 30 sekunder eller den korta på 5 när alla är redo.
+  const totalSeconds = accusing ? ACCUSE_SECONDS : (table?.countdownSeconds ?? COUNTDOWN_SECONDS)
   const countdown = useTimeWarning(state.deadline, clockOffset, totalSeconds, false)
-  const { progress } = useCountdown(state.deadline, clockOffset, totalSeconds)
+  const { progress } = countdown
   if (!table) return null
   const inRound = table.order.includes(me.id)
   const stepProps = { ...props, table, inRound, secondsLeft: countdown.secondsLeft }
@@ -125,7 +125,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
 
       {/* Under raden: loggan (inte på mobil, där platsen behövs), omgången och varvet som tydliga brickor, och på smal
           skärm knappen till listan med allas ord. Raden bryts aldrig, så att bordet inte hoppar. */}
-      <div className="relative z-30 flex shrink-0 items-center justify-center gap-1.5 px-2 pt-0.5 sm:gap-2.5 sm:px-3 sm:pt-1">
+      <div className="relative z-30 flex shrink-0 items-center justify-center gap-1 px-1 pt-0.5 sm:gap-2.5 sm:px-3 sm:pt-1">
         <img src={LOGO} alt="Imposterjakten" width={800} height={245} className="h-7 w-auto max-sm:hidden lg:h-8" />
         <RoundBadges state={state} table={table} />
         {table.clues.length > 0 && (
@@ -178,7 +178,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
           // Medan korten läses får svarsdelen ta mer av höjden, så att hela kortet och knappen syns utan att skrolla.
           data-steg={table.step}
           // På bred skärm slutar kolumnen där innehållet slutar (lg:self-start), och skrollar först om den inte får plats.
-          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[min(23.5rem,36vw)] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
+          className="relative z-30 flex shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-[1.4rem] bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground shadow-[0_-8px_26px_rgb(0_0_0/0.45)] sm:gap-3 sm:px-5 max-lg:max-h-[58%] max-lg:tiny:max-h-[52%] max-lg:data-[steg=kort]:max-h-[68%] lg:my-2 lg:max-h-[calc(100%-1.25rem)] lg:w-[min(var(--svarsdel,23.5rem),36vw)] min-[1700px]:text-lg min-[1700px]:[--svarsdel:30rem] lg:self-start lg:rounded-l-[1.4rem] lg:rounded-tr-none lg:py-5 lg:shadow-[-8px_0_26px_rgb(0_0_0/0.45)]"
         >
           {table.failedAccusation && !accusing && (
             <Note>Ingen majoritet. {state.players[table.failedAccusation]?.name ?? 'Spelaren'} är kvar, och spelet fortsätter.</Note>
@@ -231,7 +231,7 @@ export function ImposterjaktenView(props: ImposterViewProps) {
             <DialogDescription>Alla vet ordet. Utom en.</DialogDescription>
           </DialogHeader>
           <ImposterRegler className="text-sm" />
-          {/* Väntrummets musik är CC BY 3.0, så den har en kredit. Matchens (CC0) behöver ingen. */}
+          {/* Väntrummets musik är CC BY 3.0, så den har en kredit. Matchen är tyst. */}
           <p className="text-xs text-muted-foreground">
             Musik:{' '}
             <a href="https://opengameart.org/content/trouble-makers-coolriff-jazz" target="_blank" rel="noreferrer" className="underline">
@@ -481,7 +481,8 @@ function CluesStep({ table, me, imposterCard, onMove, onTyping }: StepProps) {
 
 // Värdens knapp för att gå vidare när någon dröjer. När ni säger orden högt heter den Nästa och finns direkt (någon har
 // glömt att trycka Klar). Annars heter den Hoppa över och kommer först när spelet väntat i HOST_SKIP_SECONDS: på den som
-// har tur, på dem som inte röstat eller på imposterns sista gissning. Aldrig på värdens egen tur.
+// har tur, på dem som inte röstat eller på imposterns sista gissning. Aldrig på värdens egen tur. Under diskussionen
+// heter den Öppna omröstningen och kommer efter DISCUSSION_SKIP_SECONDS, om för få trycker Redo.
 function HostSkipButton({ state, table, meId, onSkip }: { state: GameState; table: ImposterTable; meId: string; onSkip: () => void }) {
   const kind = hostSkipKind(table)
   const at = hostSkipAt(table)
@@ -496,9 +497,11 @@ function HostSkipButton({ state, table, meId, onSkip }: { state: GameState; tabl
       ? table.aloud
         ? 'Nästa'
         : `Hoppa över ${name(turn)}`
-      : kind === 'rostning'
-        ? 'Hoppa över: räkna rösterna nu'
-        : `Hoppa över ${name(table.caught)}`
+      : kind === 'diskussion'
+        ? 'Öppna omröstningen'
+        : kind === 'rostning'
+          ? 'Hoppa över: räkna rösterna nu'
+          : `Hoppa över ${name(table.caught)}`
   return (
     <Button variant="outline" className="mx-auto h-11 max-w-full motion-safe:animate-fade" onClick={onSkip}>
       <span className="truncate">{text}</span>
@@ -668,7 +671,7 @@ function RoundBadges({ state, table }: { state: GameState; table: ImposterTable 
   const lap = Math.min(laps, clueRound(table))
   const showLap = table.step === 'ledtradar' && !table.accusation
   const lastLap = lap >= laps
-  const badge = 'flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border-2 border-[var(--natt)] px-2.5 font-heading text-[13px] leading-none font-bold whitespace-nowrap text-[var(--natt)] sm:min-h-9 sm:px-3.5 sm:text-base lg:text-lg'
+  const badge = 'flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border-2 border-[var(--natt)] px-2 font-heading text-[13px] leading-none font-bold whitespace-nowrap text-[var(--natt)] sm:min-h-9 sm:px-3.5 sm:text-base lg:text-lg'
   return (
     <>
       <span className={cn(badge, 'bg-[var(--natt-kram)]')}>{lastRound ? 'Sista omgången' : `Omgång ${state.round} av ${state.rounds}`}</span>

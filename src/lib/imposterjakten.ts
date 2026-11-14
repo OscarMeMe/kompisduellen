@@ -145,6 +145,15 @@ export type ImposterTable = {
   // Rösterna från den första omröstningen när det blev lika, så att bordet kan visa dem innan den nya diskussionen.
   // Försvinner när den extra omröstningen öppnas.
   tieVotes: Record<string, string> | null
+  // Rösterna som visas är ja-svaren på en anklagelse som gick igenom, inte en omröstning. Då står det "svarade nej" i
+  // facit för dem som inte höll med. Saknas hos en värd med en äldre version.
+  byAccusation?: boolean
+  // Så lång är nedräkningen till omröstningen som går nu (30 eller 5 sekunder), så att tidsstapeln börjar full. Saknas
+  // hos en värd med en äldre version.
+  countdownSeconds?: number
+  // Det har redan blivit lika en gång i omgången. Blir det lika igen kommer impostern undan, även om de lika placerade
+  // inte längre är utpekade (en av dem har lämnat). Saknas hos en värd med en äldre version.
+  tiedOnce?: boolean
   // Peka ut (vem → på vem) under diskussionen. Offentligt och skilt från den hemliga omröstningen. Försvinner när
   // omröstningen öppnas.
   pointers: Record<string, string>
@@ -307,6 +316,7 @@ export function dealRound(
       countdownStarted: false,
       votes: null,
       tied: null,
+      tiedOnce: false,
       tieVotes: null,
       pointers: {},
       accusation: null,
@@ -367,12 +377,20 @@ export function clueRound(table: ImposterTable): number {
   return Math.min(clueRoundsFor(table), Math.floor(table.turn / Math.max(1, table.order.length)) + 1)
 }
 
-// Hur en spärrad form jämförs med en ledtråd. anywhere: formen får inte finnas någonstans i ledtråden. start: ledtråden
-// får inte vara formen eller börja med den. whole: ledtråden får bara inte vara exakt formen.
-export type BlockRule = { form: string; how: 'anywhere' | 'start' | 'whole' }
+// Hur en spärrad form jämförs med en ledtråd.
+// - anywhere: formen får inte finnas någonstans i ledtråden.
+// - start: ledtråden får inte börja med formen (eller vara den).
+// - compound: ledtråden får inte vara formen, en böjning av den (formen plus en kort ändelse) eller en sammansättning
+//   som börjar med den (minst tre bokstäver till). "torgstånd" och "torgs" spärras för Torg, men inte "galax" för Gala.
+// - inflect: ledtråden får inte vara formen eller en böjning av den. Sammansättningar går bra ("saxofon" för Sax).
+// - end: ledtråden får inte sluta med formen ("nagelsax" för Sax).
+// - whole: ledtråden får bara inte vara exakt formen.
+export type BlockRule = { form: string; how: 'anywhere' | 'start' | 'compound' | 'inflect' | 'end' | 'whole' }
 
 // Kortare former än så här spärras inte var de än står.
 const SHORT_FORM = 5
+// Ändelser som gör en kort form till en böjning av samma ord (skogs, skogar, saxen).
+const ENDINGS = ['s', 'n', 't', 'en', 'et', 'ar', 'er', 'or', 'na', 'an', 'ns', 'ts']
 
 // Ett personnamn: flera ord som alla börjar med stor bokstav (Charlotte Kalla, Carl XVI Gustaf). Titlar som Allsång på
 // Skansen och Beer pong räknas inte.
@@ -381,48 +399,78 @@ function isPersonName(ord: string): boolean {
   return parts.length > 1 && parts.every((part) => /^\p{Lu}/u.test(part))
 }
 
-// Former som en ledtråd inte får likna: ordet, de godkända formerna och varje del på minst 4 bokstäver i ett ord med
-// mellanslag (så att "Skansen" spärras för Allsång på Skansen).
+// Former som en ledtråd inte får likna: ordet, de godkända formerna och delarna i former med mellanslag.
 // - Former på minst 5 bokstäver spärras var de än står (fredagsafterwork för Afterwork).
-// - Är själva ordet kort, som Torg, spärras dess korta former också i början av ledtråden (torgstånd, men inte storgata).
+// - En förkortning av ordet på minst 5 bokstäver (insta för Instagram) spärras bara i början av ledtråden, så att
+//   bensinstation går igenom.
+// - Är själva ordet kort, som Torg, spärras dess korta former som böjningar, i slutet av ledtråden (stortorg, nagelsax)
+//   och, för ord på fyra bokstäver, som början på en sammansättning (torgstånd, men inte storgata). Ord på högst tre
+//   bokstäver spärrar inte sammansättningar som börjar likadant (saxofon för Sax, fyrverkeri för Fyr).
 // - Övriga korta former, som förkortningar och smeknamn (ps, qr, bea), spärras bara som exakt samma ord.
+// - Delar på minst 4 bokstäver i själva ordet spärras (Skansen för Allsång på Skansen). Delar i de andra godkända
+//   formerna (station i "play station", rings i "lord of the rings") spärras bara som hela ord.
 // - Delar av personnamn och personens smeknamn (kalla, mede, håkan, carl) spärras bara som hela ord, så att kallare och
 //   medeltid går igenom.
+// - Ett ord som slutar på a eller e spärras också på stammen, när den är minst 4 bokstäver, eftersom sammansättningar
+//   ofta tappar vokalen (ekorrhjul för Ekorre).
 export function blockRules(word: ImposterWord): BlockRule[] {
   const ord = normalizeWord(word.ord)
-  const shortWord = !ord.includes(' ') && ord.length < SHORT_FORM
+  const single = !ord.includes(' ')
+  const shortWord = single && ord.length < SHORT_FORM
   const person = isPersonName(word.ord)
   const forms = [...new Set([ord, ...word.godkanda.map(normalizeWord)])]
-  const parts = forms.flatMap((form) => form.split(' ')).filter((part) => part.length >= 4 && !forms.includes(part))
-  const rules = new Map<string, BlockRule['how']>()
-  for (const form of [...forms, ...parts]) {
-    const single = !form.includes(' ')
-    let how: BlockRule['how']
-    if (person && single) how = 'whole'
-    else if (form.length >= SHORT_FORM) how = 'anywhere'
-    else how = shortWord ? 'start' : 'whole'
-    if (!rules.has(form)) rules.set(form, how)
+  const rules: BlockRule[] = []
+  const seen = new Set<string>()
+  const add = (form: string, how: BlockRule['how']) => {
+    if (!form || seen.has(`${form}|${how}`)) return
+    seen.add(`${form}|${how}`)
+    rules.push({ form, how })
   }
-  return [...rules].map(([form, how]) => ({ form, how }))
+  for (const form of forms) {
+    // En form med mellanslag går inte att skriva som ledtråd, men hopskriven gör den det (pippilångstrump).
+    if (form.includes(' ')) add(form.replace(/ /g, ''), 'anywhere')
+    else if (person) add(form, 'whole')
+    else if (form.length >= SHORT_FORM) add(form, form !== ord && ord.startsWith(form) ? 'start' : 'anywhere')
+    else if (!shortWord) add(form, 'whole')
+    else {
+      add(form, form.length >= 4 ? 'compound' : 'inflect')
+      if (form.length >= 3) add(form, 'end')
+    }
+  }
+  // Delarna i former med mellanslag. Bara delarna i själva ordet spärras var de än står.
+  for (const form of forms) {
+    if (!form.includes(' ')) continue
+    for (const part of form.split(' ')) {
+      if (part.length < 4 || forms.includes(part)) continue
+      add(part, !person && form === ord && part.length >= SHORT_FORM ? 'anywhere' : 'whole')
+    }
+  }
+  if (single && !person && ord.length >= SHORT_FORM && /[ae]$/.test(ord)) add(ord.slice(0, -1), 'start')
+  return rules
 }
 
 function looksLike(clue: string, { form, how }: BlockRule): boolean {
   if (how === 'anywhere') return clue.includes(form)
   if (how === 'start') return clue.startsWith(form)
-  return clue === form
+  if (how === 'end') return clue.endsWith(form)
+  if (how === 'whole' || clue === form) return clue === form
+  if (!clue.startsWith(form)) return false
+  const rest = clue.slice(form.length)
+  return ENDINGS.includes(rest) || (how === 'compound' && rest.length >= 3)
 }
 
 // Kontroll av ett skrivet ord: exakt ett ord (sammansatta ord är okej), inte det hemliga ordet, en godkänd form av
-// det eller något som liknar det (se blockRules), och inte ett ord som redan sagts i omgången.
+// det eller något som liknar det (se blockRules), och inte ett ord som redan sagts i omgången. word = null: ordet
+// jämförs inte med något hemligt ord (impostern, se checkPlayerClue).
 export function checkClue(
   text: string,
-  word: ImposterWord,
+  word: ImposterWord | null,
   earlier: readonly Clue[],
 ): { ok: true; word: string } | { ok: false } {
   const trimmed = text.trim()
   if (!trimmed || trimmed.length > MAX_CLUE_LENGTH || !/^[\p{L}\p{N}-]+$/u.test(trimmed)) return { ok: false }
   const normalized = normalizeWord(trimmed)
-  if (blockRules(word).some((rule) => looksLike(normalized, rule))) return { ok: false }
+  if (word && blockRules(word).some((rule) => looksLike(normalized, rule))) return { ok: false }
   if (earlier.some((clue) => clue.word !== null && normalizeWord(clue.word) === normalized)) return { ok: false }
   return { ok: true, word: trimmed }
 }
@@ -572,15 +620,13 @@ function applyMove(
   if (move.type === 'said') {
     if (!table.aloud) return host
     // Ordet är redan sagt, så turen går vidare även om det inskrivna ordet inte går att visa (t.ex. det hemliga ordet).
-    const secret = clueWordFor(host, playerId)
-    const typed = move.word?.trim() && secret ? checkClue(move.word, secret, table.clues) : null
+    const typed = move.word?.trim() ? checkPlayerClue(host, playerId, move.word) : null
     return addClue(host, { player: playerId, kind: 'sagt', word: typed?.ok ? typed.word : null }, activeIds, now)
   }
   if (table.aloud) return host
   if (move.type === 'pass') return addClue(host, { player: playerId, kind: 'pass', word: null }, activeIds, now)
 
-  const word = clueWordFor(host, playerId)
-  const checked = word ? checkClue(move.word, word, table.clues) : { ok: false as const }
+  const checked = checkPlayerClue(host, playerId, move.word)
   if (!checked.ok) {
     return { ...host, secrets: { ...host.secrets, rejected: { ...host.secrets.rejected, [playerId]: now } } }
   }
@@ -590,12 +636,17 @@ function applyMove(
 // Så länge ska spelet ha väntat innan värden får hoppa över den som dröjer.
 export const HOST_SKIP_SECONDS = 20
 
-// Det värden kan hoppa över: turen i ledtrådsvarven, omröstningen när någon inte röstat, eller sista gissningen.
-export type HostSkip = 'tur' | 'rostning' | 'gissning'
+// Det värden kan hoppa över: turen i ledtrådsvarven, diskussionen när för få trycker Redo, omröstningen när någon inte
+// röstat, eller sista gissningen.
+export type HostSkip = 'tur' | 'diskussion' | 'rostning' | 'gissning'
+
+// Så länge ska diskussionen ha pågått innan värden får öppna omröstningen själv.
+export const DISCUSSION_SKIP_SECONDS = 60
 
 export function hostSkipKind(table: ImposterTable): HostSkip | null {
   if (table.accusation) return null
   if (table.step === 'ledtradar' && currentTurn(table) !== null) return 'tur'
+  if (table.step === 'diskussion') return 'diskussion'
   if (table.step === 'rostning') return 'rostning'
   if (table.step === 'gissning') return 'gissning'
   return null
@@ -607,7 +658,7 @@ export function hostSkipAt(table: ImposterTable): number | null {
   const kind = hostSkipKind(table)
   if (!kind) return null
   if (kind === 'tur' && table.aloud) return 0
-  return (table.waitSince ?? 0) + HOST_SKIP_SECONDS * 1000
+  return (table.waitSince ?? 0) + (kind === 'diskussion' ? DISCUSSION_SKIP_SECONDS : HOST_SKIP_SECONDS) * 1000
 }
 
 function possessive(name: string): string {
@@ -616,6 +667,7 @@ function possessive(name: string): string {
 
 // Värden hoppar över den som dröjer (Hoppa över, eller Nästa när ni säger orden högt). Tidigast vid hostSkipAt.
 // - Turen i ledtrådsvarven: räknas som pass (eller som sagt, när ni säger orden högt).
+// - Diskussionen: omröstningen öppnas, även om för få har tryckt Redo. Tidigast efter DISCUSSION_SKIP_SECONDS.
 // - Omröstningen: rösterna räknas som de är. Den som inte röstat har ingen röst.
 // - Sista gissningen: räknas som att impostern gav upp.
 export function imposterSkipTurn(host: ImposterHost, activeIds: readonly string[], now: number): ImposterHost {
@@ -634,6 +686,7 @@ function hostSkip(host: ImposterHost, activeIds: readonly string[], now: number)
     const name = host.state.players[turn]?.name ?? 'Spelaren'
     return addClue(host, { player: turn, kind: 'pass', word: null }, activeIds, now, `Värden hoppade över ${possessive(name)} tur.`)
   }
+  if (kind === 'diskussion') return openVoting(withTable(host, { ...table, skipNote: 'Värden öppnade omröstningen.' }))
   const players = present(table, activeIds)
   if (kind === 'rostning') {
     const voted = players.filter((id) => host.secrets.votes[id] !== undefined)
@@ -662,12 +715,16 @@ export function imposterNewWord(host: ImposterHost, activeIds: readonly string[]
   return startImposterRound(markUsed(state, secrets), state.round, players.length > 0 ? players : state.imposter!.order, random)
 }
 
-// Ordet som spelarens ledtråd kontrolleras mot. Lurig: impostern har ett annat ord, och får inte märka det. Den får
-// därför säga de andras ord, för annars skulle beskedet avslöja rollen.
-function clueWordFor(host: ImposterHost, playerId: string): ImposterWord | undefined {
+// Kontrollen av en spelares ord. De oskyldiga kontrolleras mot det hemliga ordet. Impostern kontrolleras aldrig mot
+// det: ett besked om att ordet inte går skulle avslöja att den skrivit det hemliga ordet, och då kunde den prova sig
+// fram till det. Skriver impostern det hemliga ordet syns det på bordet som vilket ord som helst. I Lurig har impostern
+// ett annat ord och får inte märka det, så där kontrolleras den mot sitt eget ord, precis som de andra mot sitt.
+function checkPlayerClue(host: ImposterHost, playerId: string, text: string): { ok: true; word: string } | { ok: false } {
+  const table = host.state.imposter!
   const word = findWord(host.secrets.wordId)
-  if (!word || !host.state.imposter?.tricky || playerId !== host.secrets.imposter) return word
-  return { ...word, ord: word.nara, godkanda: [] }
+  if (!word) return { ok: false }
+  if (playerId !== host.secrets.imposter) return checkClue(text, word, table.clues)
+  return checkClue(text, table.tricky ? { ...word, ord: word.nara, godkanda: [] } : null, table.clues)
 }
 
 // Spelarna i omgången som fortfarande är med.
@@ -754,9 +811,10 @@ function accuse(host: ImposterHost, accuser: string, accused: string, activeIds:
     state: {
       ...host.state,
       deadline: now + ACCUSE_SECONDS * 1000,
-      imposter: { ...table, accusation: { accuser, accused, answered: 0, voters }, failedAccusation: null },
+      // Den som anklagar har redan sagt sitt: det räknas som ett ja.
+      imposter: { ...table, accusation: { accuser, accused, answered: 1, voters }, failedAccusation: null },
     },
-    secrets: { ...host.secrets, accuseVotes: {}, resumeMs: host.state.deadline === null ? null : Math.max(0, host.state.deadline - now) },
+    secrets: { ...host.secrets, accuseVotes: { [accuser]: true }, resumeMs: host.state.deadline === null ? null : Math.max(0, host.state.deadline - now) },
   }
 }
 
@@ -789,7 +847,7 @@ function settleAccusation(host: ImposterHost, activeIds: readonly string[], now:
   if (moreThanHalf(yes.length, voters.length)) {
     const votes = Object.fromEntries(yes.map((id) => [id, accused]))
     const revealed: ImposterHost = {
-      state: { ...host.state, deadline: null, imposter: { ...table, accusation: null, votes, votedCount: yes.length, pointers: {} } },
+      state: { ...host.state, deadline: null, imposter: { ...table, accusation: null, votes, votedCount: yes.length, pointers: {}, byAccusation: true } },
       secrets,
     }
     if (accused === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: accused })
@@ -837,7 +895,7 @@ function checkReady(host: ImposterHost, activeIds: readonly string[], now: numbe
     if (deadline === counted.state.deadline && table.countdownStarted) return counted
     return {
       ...counted,
-      state: { ...counted.state, deadline, imposter: { ...counted.state.imposter!, countdownStarted: true } },
+      state: { ...counted.state, deadline, imposter: { ...counted.state.imposter!, countdownStarted: true, countdownSeconds: deadline === short ? ALL_READY_SECONDS : (table.countdownSeconds ?? COUNTDOWN_SECONDS) } },
     }
   }
   if (!table.countdownStarted && moreThanHalf(ready.length, players.length)) {
@@ -846,7 +904,7 @@ function checkReady(host: ImposterHost, activeIds: readonly string[], now: numbe
       state: {
         ...counted.state,
         deadline: now + COUNTDOWN_SECONDS * 1000,
-        imposter: { ...counted.state.imposter!, countdownStarted: true },
+        imposter: { ...counted.state.imposter!, countdownStarted: true, countdownSeconds: COUNTDOWN_SECONDS },
       },
     }
   }
@@ -925,7 +983,7 @@ function settleVotes(host: ImposterHost, voted: readonly string[], players: read
     if (top[0] === host.secrets.imposter) return withTable(revealed, { ...revealed.state.imposter!, step: 'gissning', caught: top[0] })
     return finishRound(revealed, 'undan', null, null, players)
   }
-  if (top.length > 1 && table.tied === null) {
+  if (top.length > 1 && table.tied === null && !table.tiedOnce) {
     return {
       state: {
         ...host.state,
@@ -934,6 +992,7 @@ function settleVotes(host: ImposterHost, voted: readonly string[], players: read
           ...table,
           step: 'diskussion',
           tied: top,
+          tiedOnce: true,
           tieVotes: votes,
           readyCount: 0,
           votedCount: 0,
@@ -955,11 +1014,21 @@ export function tallyVotes(votes: Record<string, string>): { counts: Record<stri
   return { counts, top: most > 0 ? Object.keys(counts).filter((id) => counts[id] === most) : [] }
 }
 
-// Sista gissningen: rätt om den är ordet eller en godkänd form, utan hänsyn till stora och små bokstäver och onödiga
-// mellanslag. Å, ä och ö skiljs åt. Det räcker inte att gissningen innehåller ordet.
+// Så jämförs en gissning med ordet: utan stora och små bokstäver, mellanslag, bindestreck, punkter, apostrofer och
+// accenter (é blir e, ć blir c). Å, ä och ö skiljs åt och blir aldrig a och o.
+export function guessKey(text: string): string {
+  return text
+    .normalize('NFC')
+    .toLocaleLowerCase('sv')
+    .replace(/[^åäö]+/g, (part) => part.normalize('NFD').replace(/\p{M}/gu, ''))
+    .replace(/[\s\-.'’:]/g, '')
+}
+
+// Sista gissningen: rätt om den är ordet eller en godkänd form (se guessKey för vad som inte spelar någon roll).
+// Det räcker inte att gissningen innehåller ordet.
 export function isCorrectGuess(guess: string, word: ImposterWord): boolean {
-  const normalized = normalizeWord(guess)
-  return normalized.length > 0 && [word.ord, ...word.godkanda].map(normalizeWord).includes(normalized)
+  const key = guessKey(guess)
+  return key.length > 0 && [word.ord, ...word.godkanda].map(guessKey).includes(key)
 }
 
 // Poängen för en omgång:
@@ -993,6 +1062,25 @@ export function roundPoints(
     if (kind === 'gissade-ratt') add(imposter, IMPOSTER_GUESSES_RIGHT)
   }
   return points
+}
+
+// Varför spelaren fick sina poäng i omgången, i ett par ord, för poänglistan i facit. Efter en anklagelse som gick
+// igenom har ingen röstat: de som svarade ja räknas som att de röstade på den anklagade, de andra "svarade nej", och den
+// anklagade själv fick inte svara.
+export function pointsReason(table: Pick<ImposterTable, 'votes' | 'byAccusation'>, outcome: ImposterOutcome, id: string): string {
+  if (outcome.kind === 'avbruten') return ''
+  if (id === outcome.imposter) {
+    if (outcome.kind === 'undan') return 'kom undan'
+    if (outcome.kind === 'gissade-ratt') return 'gissade rätt'
+    if (outcome.kind === 'gissade-fel') return 'gissade fel'
+    return 'gav upp'
+  }
+  const vote = table.votes?.[id]
+  if (!vote) {
+    if (!table.byAccusation) return 'röstade inte'
+    return Object.values(table.votes ?? {}).includes(id) ? 'anklagad' : 'svarade nej'
+  }
+  return vote === outcome.imposter ? 'röstade rätt' : 'röstade fel'
 }
 
 // Omgången är slut: poängen läggs till och facit visas. Ordet räknas som använt. scorers = spelarna i omgången som
@@ -1041,6 +1129,22 @@ export function imposterAbortRound(host: ImposterHost, reason = 'Värden avbröt
   const table = host.state.imposter
   if (host.state.phase !== 'playing' || !table || table.step === 'facit') return host
   return finishRound(host, 'avbruten', null, reason)
+}
+
+// En ny värd tar över mitt i en match (se takeOverState i vardbyte.ts). Ordet och impostern fanns bara hos den förra
+// värden. Är omgången redan i facit behövs de inte längre, och matchen fortsätter som den är. Annars avbryts bara
+// omgången, utan poäng, och poängen från de tidigare omgångarna står kvar. Den nya värden går vidare med Nästa omgång.
+export function imposterTakeOver(state: GameState): GameState {
+  const table = state.imposter
+  if (state.game !== IMPOSTER_GAME || state.phase !== 'playing' || !table || table.step === 'facit') return state
+  const outcome: ImposterOutcome = { kind: 'avbruten', word: '', imposter: '', hint: null, guess: null, points: {}, reason: 'Omgången avbröts eftersom värden lämnade.' }
+  return { ...state, deadline: null, imposter: { ...table, step: 'facit', outcome, accusation: null, votes: null, tieVotes: null, pointers: {}, caught: null, skipNote: null } }
+}
+
+// Den nya värdens hemliga data efter ett värdbyte. Omgången är alltid i facit då (imposterTakeOver), så inget i den
+// används: nästa omgång får ett nytt ord och en ny imposter.
+export function takeOverSecrets(): ImposterSecrets {
+  return { kind: 'imposter', wordId: '', imposter: '', rejected: {}, ready: [], votes: {}, discussionAt: null, accuseVotes: {}, resumeMs: null }
 }
 
 // Värdens timer: nedräkningen är slut och omröstningen öppnas. Gör bara något om klockan som löpte ut fortfarande är
@@ -1100,6 +1204,11 @@ function presenceChanged(host: ImposterHost, activeIds: readonly string[], now: 
   const table = host.state.imposter
   if (host.state.phase !== 'playing' || !table || table.step === 'facit') return host
   if (!activeIds.includes(host.secrets.imposter)) {
+    // Impostern är redan fast och lämnar i stället för att gissa: det räknas som att den gav upp, så att de andra får
+    // sina poäng. Annars kunde en fångad imposter stryka omgången genom att stänga fliken.
+    if (table.step === 'gissning' && table.caught === host.secrets.imposter) {
+      return finishRound(withTable(host, { ...table, skipNote: 'Impostern lämnade, så det räknas som att den gav upp.' }), 'gav-upp', null, null, present(table, activeIds))
+    }
     return finishRound(host, 'avbruten', null, 'Omgången avbröts eftersom impostern lämnade.')
   }
   if (present(table, activeIds).length < MIN_PLAYERS) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { findGame } from '@/lib/games'
-import { currentTurn, isImposterSecrets, myImposterCard, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
+import { currentTurn, isImposterSecrets, myImposterCard, takeOverSecrets, type ImposterMove, type ImposterSettings, type MyImposterCard } from '@/lib/imposterjakten'
 import { isTantSecrets, myTantView, setTantSettings, standInIds, TANT_GAME, type MyTantView, type TantHost, type TantMove, type TantSettings } from '@/lib/tantpanik'
 import { workerTimeout } from '@/lib/arbetstimer'
 import { botGuess, botGuessDelay } from '@/lib/botgissning'
@@ -798,7 +798,10 @@ export function useLobby(code: string, me: Player | null, isHost: boolean, game?
             const takeover = takeoverRef.current
             if (takeover) {
               takeoverRef.current = null
-              publish(takeOverState(stateRef.current, takeover.offset))
+              const next = takeOverState(stateRef.current, takeover.offset)
+              // Imposterjakten fortsätter efter ett värdbyte, med omgången i facit (se imposterTakeOver).
+              if (next.phase === 'playing' && next.imposter) secretsRef.current = takeOverSecrets()
+              publish(next)
             }
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {

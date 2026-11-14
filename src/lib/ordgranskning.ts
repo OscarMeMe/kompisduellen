@@ -37,7 +37,9 @@ export function parseForms(text: string): string[] {
 // Fälten som går att ändra, städade: inga onödiga mellanslag.
 export function cleanWord(word: ReviewWord): ReviewWord {
   const tidy = (text: string) => text.trim().replace(/\s+/g, ' ')
-  return { ...word, ord: tidy(word.ord), kategori: tidy(word.kategori), ledtrad: tidy(word.ledtrad), nara: tidy(word.nara), godkanda: word.godkanda.map(tidy).filter(Boolean) }
+  // Ledtråden börjar alltid med stor bokstav, som den visas på imposterns kort.
+  const capital = (text: string) => text.charAt(0).toLocaleUpperCase('sv') + text.slice(1)
+  return { ...word, ord: tidy(word.ord), kategori: tidy(word.kategori), ledtrad: capital(tidy(word.ledtrad)), nara: tidy(word.nara), godkanda: word.godkanda.map(tidy).filter(Boolean) }
 }
 
 // Går ordet att spara? Ger felet i klartext, eller null. others = alla andra ord i listan. Reglerna är de som spelet
