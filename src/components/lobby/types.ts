@@ -84,4 +84,6 @@ export type TantViewProps = {
   onLeave: () => void
   // Bara botar kvar: värden spolar fram eller tar revansch direkt.
   onBotsOnly?: (choice: 'spola' | 'revansch') => void
+  // Värden låter en bot spela åt en spelare som lämnat.
+  onStandIn?: (id: string) => void
 }

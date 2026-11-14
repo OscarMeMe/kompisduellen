@@ -27,7 +27,10 @@ import type { GameState } from '@/lib/match'
 import {
   bombsInDeck,
   canFinish,
+  canStandIn,
   disconnectedPlayers,
+  STAND_IN_AFTER_MS,
+  standInIds,
   END_MS,
   FINISH_AFTER_MS,
   hostSeemsAway,
@@ -67,8 +70,14 @@ export function TantpanikView({
   onAbort,
   onLeave,
   onBotsOnly,
+  onStandIn,
 }: TantViewProps) {
   const table = state.tantpanik
+  // Riktiga spelare som tappat anslutningen, och de av dem som varit borta så länge att värden kan låta en bot ta över.
+  const away = table ? disconnectedPlayers(table, state.players, online.map((player) => player.id)) : []
+  const longAway = useLongAway(away, STAND_IN_AFTER_MS)
+  const standIns = standInIds(table)
+  const standInFor = isHost && onStandIn && table ? (longAway.find((id) => canStandIn(table, state.players, id)) ?? null) : null
   // Gästerna: värden verkar inte hänga med (en bot borde ha spelat, eller en nedräkning borde ha gått ut).
   const hostAway = useHostAway(table ?? null, state, isHost, clockOffset)
   // Bara drag som är tillåtna just nu skickas (moveAllowed, samma regel som spelmotorn), så att ett tryck på något som
@@ -368,8 +377,18 @@ export function TantpanikView({
           meId={me.id}
           playingId={nopeOpen ? (table.pending?.by ?? null) : null}
           targetId={nopeOpen ? (table.pending?.target ?? null) : null}
-          away={disconnectedPlayers(table, state.players, online.map((player) => player.id))}
+          away={away}
+          standIns={standIns}
         />
+        {/* Värden: en spelare har varit borta länge. En bot kan ta över handen tills spelaren kommer tillbaka. */}
+        {standInFor && !nopeOpen && (
+          <div className="absolute inset-x-0 top-full z-10 mt-1 flex justify-center px-3">
+            <Button className="max-w-full rounded-full shadow-soft-sm motion-safe:animate-pop" onClick={() => onStandIn?.(standInFor)}>
+              <Bot aria-hidden />
+              <span className="truncate">Låt en bot spela åt {state.players[standInFor]?.name ?? 'spelaren'}</span>
+            </Button>
+          </div>
+        )}
         {/* Värden spelar för botarna och räknar ned. Hänger värden inte med (t.ex. en annan app) ser de andra det här. */}
         {hostAway && (
           <p role="status" className="pointer-events-none absolute inset-x-0 top-full z-10 mx-auto mt-1 w-fit rounded-full bg-foreground/90 px-3 py-1 text-sm font-semibold text-background shadow-soft-sm">
@@ -779,6 +798,24 @@ const FRESH_MS = 5000
 
 // Ett kort i Nope!-fönstret är riktat mot mig: en tunn röd glöd längs handens överkant i en sekund. Ingen pil mellan
 // spelarna (den korsade korten och texten), målets plats visar i stället vem kortet gäller.
+// De som varit frånkopplade i minst ms, räknat från att vyn först såg dem borta.
+function useLongAway(away: string[], ms: number): string[] {
+  const [since, setSince] = useState<Record<string, number>>({})
+  const [now, setNow] = useState(() => Date.now())
+  const key = away.join()
+  useEffect(() => {
+    const ids = key ? key.split(',') : []
+    setSince((before) => Object.fromEntries(ids.map((id) => [id, before[id] ?? Date.now()])))
+  }, [key])
+  useEffect(() => {
+    const next = Math.min(...Object.values(since).map((at) => at + ms).filter((at) => at > now))
+    if (!Number.isFinite(next)) return
+    const timer = setTimeout(() => setNow(Date.now()), Math.max(0, next - Date.now()) + 50)
+    return () => clearTimeout(timer)
+  }, [since, now, ms])
+  return away.filter((id) => since[id] !== undefined && now - since[id] >= ms)
+}
+
 function HandGlow() {
   const [hand] = useState(() => document.querySelector('[data-tant-hand]')?.getBoundingClientRect() ?? null)
   const [on, setOn] = useState(true)
@@ -1059,6 +1096,7 @@ function Opponents({
   playingId,
   targetId,
   away,
+  standIns,
 }: {
   state: GameState
   table: TantTable
@@ -1067,6 +1105,8 @@ function Opponents({
   // Den som ett kort i Nope!-fönstret är riktat mot: platsen får en vinröd ring och etiketten Mål.
   targetId: string | null
   away: string[]
+  // Spelare som lämnat och som en bot spelar åt: platsen visar "Bot spelar".
+  standIns: string[]
 }) {
   const start = Math.max(0, table.order.indexOf(meId))
   const ids = [...table.order.slice(start + 1), ...table.order.slice(0, start)].filter((id) => id !== meId)
@@ -1093,6 +1133,7 @@ function Opponents({
               id={id}
               out={out}
               away={away.includes(id)}
+              standIn={standIns.includes(id)}
               turn={turn}
               playing={playingId === id}
               target={targetId === id}
@@ -1112,6 +1153,7 @@ function Opponent({
   id,
   out,
   away,
+  standIn,
   turn,
   playing,
   target,
@@ -1123,6 +1165,8 @@ function Opponent({
   out: boolean
   // Har tappat anslutningen (riktig spelare). Matchen väntar på den som vanligt.
   away: boolean
+  // En bot spelar åt spelaren tills den kommer tillbaka.
+  standIn: boolean
   turn: boolean
   playing: boolean
   target: boolean
@@ -1149,7 +1193,8 @@ function Opponent({
         target && 'z-10 bg-tant-kram-2 shadow-[0_0_18px_6px] shadow-tant-vinrod/45 ring-4 ring-tant-vinrod motion-safe:animate-shake',
         out && 'opacity-45 grayscale',
         // Frånkopplad: platsen får bli bredare på smal skärm, så att hela ordet syns.
-        away && !out && 'opacity-70 max-[420px]:max-w-none',
+        (away || standIn) && !out && 'max-[420px]:max-w-none',
+        away && !standIn && !out && 'opacity-70',
       )}
     >
       {target && (
@@ -1173,6 +1218,11 @@ function Opponent({
         </span>
         {out ? (
           <span className="text-[11px] font-semibold text-muted-foreground">Ute</span>
+        ) : standIn ? (
+          <span className="flex items-center gap-0.5 text-[11px] font-semibold whitespace-nowrap text-muted-foreground">
+            <Bot aria-hidden className="size-3 shrink-0" />
+            Bot spelar
+          </span>
         ) : away ? (
           <span className="text-[11px] font-semibold text-muted-foreground">Frånkopplad</span>
         ) : (

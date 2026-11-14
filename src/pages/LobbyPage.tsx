@@ -454,6 +454,7 @@ function Lobby({ code, me }: { code: string; me: Player }) {
             onAbort={() => setAborting(true)}
             onLeave={() => requestLeave('/')}
             onBotsOnly={actions.tantBotsOnly}
+            onStandIn={actions.tantStandIn}
           />
         )
       }

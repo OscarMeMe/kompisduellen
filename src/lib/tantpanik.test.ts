@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hostDeadline, hostMove, hostStart, initialState, type GameState, type HostState } from '@/lib/match'
+import { hostDeadline, hostMove, hostStart, hostTantStandIn, initialState, type GameState, type HostState } from '@/lib/match'
 import { parseMove, parseStateMessage, parseTantView } from '@/lib/meddelanden'
 import {
   countAllCards,
@@ -33,7 +33,11 @@ import {
   HOST_LATE_MS,
   moveAllowed,
   validTargets,
+  canStandIn,
+  setStandIn,
+  standInIds,
 } from '@/lib/tantpanik'
+import { botFallbackMove, botMustAct, botSight, decideBotMove } from '@/lib/tantbot'
 import { CARDS, NOPE_SECONDS, trapCount, type CardType } from '@/lib/tantpanik-kort'
 
 // Styrbar slump (mulberry32), så att testerna blir likadana varje gång.
@@ -1289,5 +1293,89 @@ describe('ett drag i taget', () => {
     expect(moveInFlight(sent, [], 1000 + MOVE_LOCK_MS - 1)).toBe(true)
     expect(moveInFlight(sent, [], 1000 + MOVE_LOCK_MS)).toBe(false)
     expect(moveInFlight(sent, undefined, 2000)).toBe(true)
+  })
+})
+
+describe('en bot spelar åt en spelare som lämnat', () => {
+  const start = () => setup({ a: ['regnbage', 'fika'], b: ['kupong', 'fika'], c: ['blanda', 'fika'] }, ['regnbage', 'kupong', 'vild', 'tant', 'tant'])
+
+  it('boten tar över samma plats, hand och tur, och spelaren är fortfarande en riktig spelare', () => {
+    const before = start()
+    const after = setStandIn(before, 'a', true)
+    expect(standInIds(table(after))).toEqual(['a'])
+    expect(table(after).log.at(-1)?.text).toBe('En bot spelar åt Spelare 1.')
+    expect(table(after).current).toBe('a')
+    expect(table(after).order).toEqual(table(before).order)
+    expect(types(after, 'a')).toEqual(types(before, 'a'))
+    expectSameCount(before, after)
+    expect(after.state.players.a.bot).toBeUndefined()
+    // Fortfarande frånkopplad för de andra, och gästerna ser att värden spelar åt den.
+    expect(disconnectedPlayers(table(after), after.state.players, ['b', 'c'])).toEqual(['a'])
+    expect(hostSeemsAway(table(after), after.state.players, null, 0, HOST_AWAY_MS + 1)).toBe(true)
+    expect(hostSeemsAway(table(before), before.state.players, null, 0, HOST_AWAY_MS + 1)).toBe(false)
+  })
+
+  it('går bara för en riktig spelare som är kvar i matchen, och bara en gång', () => {
+    const host = start()
+    expect(canStandIn(table(host), host.state.players, 'a')).toBe(true)
+    expect(setStandIn(host, 'finns-inte', true)).toBe(host)
+    const once = setStandIn(host, 'a', true)
+    expect(setStandIn(once, 'a', true)).toBe(once)
+    const withBot: TantHost = { ...host, state: { ...host.state, players: { ...host.state.players, b: { ...host.state.players.b, bot: 'normal' } } } }
+    expect(setStandIn(withBot, 'b', true)).toBe(withBot)
+    const out: TantHost = { ...host, state: { ...host.state, tantpanik: { ...table(host), out: ['c'] } } }
+    expect(setStandIn(out, 'c', true)).toBe(out)
+    const won: TantHost = { ...host, state: { ...host.state, tantpanik: { ...table(host), winner: 'b' } } }
+    expect(setStandIn(won, 'a', true)).toBe(won)
+    // Att ta bort en bot som inte finns gör ingenting.
+    expect(setStandIn(host, 'a', false)).toBe(host)
+  })
+
+  it('spelaren tar över igen när den är tillbaka', () => {
+    const away = setStandIn(start(), 'a', true)
+    const back = setStandIn(away, 'a', false)
+    expect(standInIds(table(back))).toEqual([])
+    expect(table(back).log.at(-1)?.text).toBe('Spelare 1 är tillbaka.')
+    expect(types(back, 'a')).toEqual(types(away, 'a'))
+    expect(table(back).current).toBe('a')
+    // Genom värdens steg i match.ts.
+    const viaMatch = hostTantStandIn(start(), 'b', true) as TantHost
+    expect(standInIds(table(viaMatch))).toEqual(['b'])
+    expect(standInIds(table(hostTantStandIn(viaMatch, 'b', false) as TantHost))).toEqual([])
+  })
+
+  it('läget med en bot som spelar åt någon går igenom kontrollen', () => {
+    const host = setStandIn(start(), 'a', true)
+    expect(parseStateMessage({ state: host.state, sentAt: 1 })?.state.tantpanik?.standIns).toEqual(['a'])
+    const bad = { state: { ...host.state, tantpanik: { ...table(host), standIns: [1] } }, sentAt: 1 }
+    expect(parseStateMessage(bad)).toBeNull()
+  })
+
+  it('boten spelar klart matchen åt spelaren, och placeringen räknas för spelaren', () => {
+    const slump = seeded(11)
+    let host: TantHost = setStandIn(startTantMatch(lobby(3), slump), 'p2', true)
+    const total = countAllCards(host.secrets)
+    let nr = 0
+    for (let step = 0; step < 2000 && host.state.phase === 'playing'; step++) {
+      const now = step * 10_000
+      const t = table(host)
+      expect(t.error).toBeNull()
+      expect(countAllCards(host.secrets)).toBe(total)
+      const actor = t.order.find((id) => botMustAct(t, id))
+      if (t.winner || !actor) {
+        host = tantDeadline(host, host.state.deadline!, host.state.deadline!, slump)
+        continue
+      }
+      const sight = botSight(host, actor)!
+      // Spelaren som lämnat spelas av boten (Normal, som i useLobby), de andra gör ett enkelt giltigt drag.
+      const chosen = actor === 'p2' ? (decideBotMove(sight, 'normal', slump) ?? botFallbackMove(sight)) : botFallbackMove(sight)
+      expect(chosen).not.toBeNull()
+      const next = tantMove(host, actor, chosen!, `s${++nr}`, now, slump)
+      host = JSON.stringify(next.state.tantpanik) === JSON.stringify(host.state.tantpanik) ? tantMove(host, actor, botFallbackMove(sight)!, `s${++nr}`, now, slump) : next
+    }
+    expect(host.state.phase).toBe('finished')
+    expect(host.state.scores.p2).toBeGreaterThanOrEqual(1)
+    expect(host.state.players.p2.bot).toBeUndefined()
+    expect(standInIds(table(host))).toEqual(['p2'])
   })
 })
