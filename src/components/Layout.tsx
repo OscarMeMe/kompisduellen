@@ -44,6 +44,11 @@ export function Layout() {
           (där spelen kan ha egen bakgrund, och prickarna står still). */}
       {!home && !inLobby && <Prickar />}
       <header className="pt-[env(safe-area-inset-top)]">
+        {!inMatch && (
+          <p className="bg-primary-button px-4 py-2 text-center font-heading text-sm font-semibold text-white">
+            Bra sällskap - Hej fredrik
+          </p>
+        )}
         <div
           className={cn(
             'relative mx-auto flex w-full max-w-5xl items-center justify-between px-4 sm:px-6',
